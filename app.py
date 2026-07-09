@@ -3,14 +3,12 @@ app.py — Twilio SMS webhook for TextAnOffer.
 """
 from flask import Flask, request, send_from_directory, Response
 from twilio.twiml.messaging_response import MessagingResponse
-from twilio.request_validator import RequestValidator
 from datetime import datetime
 import os
 from parser import parse_offer_sms
 from pdf_filler import fill_offer_pdf, OUTPUT_DIR
 
 app = Flask(__name__)
-validator = RequestValidator(os.environ.get("TWILIO_AUTH_TOKEN", ""))
 
 def lookup_mls(address: str) -> dict:
     return {
@@ -22,14 +20,6 @@ def lookup_mls(address: str) -> dict:
 
 @app.route("/sms", methods=["POST"])
 def sms_reply():
-    # Validate Twilio request
-    twilio_signature = request.headers.get('X-Twilio-Signature', '')
-    url = request.url
-    post_vars = request.form.to_dict()
-    
-    if not validator.validate(url, post_vars, twilio_signature):
-        return Response("Unauthorized", status=403)
-    
     incoming_msg = request.values.get("Body", "")
     agent_phone = request.values.get("From", "")
     
