@@ -1,0 +1,88 @@
+"""
+parser.py — turns a freeform SMS like:
+ "725k 3% 21day 1740 Grand Ave"
+into structured offer data.
+No LLM call needed for the common patterns. Falls back to
+returning an 'error' key with a hint message if it can't parse.
+"""
+import re
+
+PRICE_RE = re.compile(r'(\d+(?:\.\d+)?)\s*([kK]|million|mil|m\b)?')
+PCT_RE = re.compile(r'(\d+(?:\.\d+)?)\s*%')
+DAYS_RE = re.compile(r'(\d+)\s*day')
+
+def _parse_price(text):
+    # look for a number followed by k/m, prioritizing this over bare percentages/days
+    for m in re.finditer(r'(\d+(?:\.\d+)?)\s*(k|m|million|mil)\b', text, re.IGNORECASE):
+        num = float(m.group(1))
+        unit = m.group(2).lower()
+        if unit == 'k':
+            return int(num * 1_000)
+        else:
+            return int(num * 1_000_000)
+    return None
+
+def _parse_pct(text):
+    m = PCT_RE.search(text)
+    return float(m.group(1)) / 100 if m else None
+
+def _parse_days(text):
+    m = DAYS_RE.search(text)
+    return int(m.group(1)) if m else None
+
+def _parse_address(text):
+    # crude heuristic: strip out the price/pct/day tokens, what's left (minus stray words)
+    # is treated as the address. Real version should geocode + validate against MLS/county records.
+    stripped = re.sub(r'\d+(?:\.\d+)?\s*(k|m|million|mil)\b', '', text, flags=re.IGNORECASE)
+    stripped = re.sub(r'\d+(?:\.\d+)?\s*%', '', stripped)
+    stripped = re.sub(r'\d+\s*day\w*', '', stripped, flags=re.IGNORECASE)
+    address = stripped.strip(' ,.-')
+    return address if address else None
+
+def parse_offer_sms(text: str) -> dict:
+    """
+    Returns:
+    {
+        "price": int,
+        "down_payment_pct": float, # e.g. 0.03
+        "close_days": int,
+        "address": str
+    }
+    or:
+    {"error": "explanation", "raw_text": text}
+    """
+    text = text.strip()
+    price = _parse_price(text)
+    pct = _parse_pct(text)
+    days = _parse_days(text)
+    address = _parse_address(text)
+    
+    missing = [name for name, val in
+        [("price", price), ("down_payment_pct", pct),
+         ("close_days", days), ("address", address)]
+        if val is None]
+    
+    if missing:
+        return {
+            "error": f"Missing: {', '.join(missing)}. "
+                     f"Try format: 725k 3% 21day 1740 Grand Ave",
+            "raw_text": text
+        }
+    
+    return {
+        "price": price,
+        "down_payment_pct": pct,
+        "close_days": days,
+        "address": address
+    }
+
+if __name__ == "__main__":
+    # quick manual tests
+    tests = [
+        "725k 3% 21day 1740 Grand Ave",
+        "650k 3% 30day 123 Main St Long Beach",
+        "1.2m 10% 45 days 500 Ocean Blvd",
+    ]
+    for t in tests:
+        print(t, "->", parse_offer_sms(t))
+
