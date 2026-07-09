@@ -9,7 +9,7 @@ Flow:
 Env vars needed:
  TWILIO_AUTH_TOKEN (optional, for request validation — recommended for prod)
 """
-from flask import Flask, request, send_from_directory
+from flask import Flask, request, send_from_directory, Response
 from twilio.twiml.messaging_response import MessagingResponse
 from datetime import datetime
 import os
@@ -38,7 +38,7 @@ def sms_reply():
     parsed = parse_offer_sms(incoming_msg)
     if "error" in parsed:
         resp.message(parsed["error"])
-        return str(resp)
+        return Response(str(resp), mimetype='application/xml')
     
     mls_data = lookup_mls(parsed["address"])
     parsed.update(mls_data)
@@ -47,7 +47,7 @@ def sms_reply():
         pdf_path = fill_offer_pdf(parsed, agent_phone)
     except Exception as e:
         resp.message(f"Parsed OK but couldn't generate the PDF yet: {e}")
-        return str(resp)
+        return Response(str(resp), mimetype='application/xml')
     
     filename = os.path.basename(pdf_path)
     pdf_url = request.host_url.rstrip("/") + f"/offers/{filename}"
@@ -61,7 +61,7 @@ def sms_reply():
         f"(TREC 20-19 draft -- agent must review before signing)"
     )
     resp.message(reply)
-    return str(resp)
+    return Response(str(resp), mimetype='application/xml')
 
 @app.route("/offers/<path:filename>")
 def serve_offer(filename):
@@ -70,4 +70,3 @@ def serve_offer(filename):
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
-
