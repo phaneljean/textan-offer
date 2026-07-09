@@ -1,25 +1,17 @@
 """
 app.py — Twilio SMS webhook for TextAnOffer.
-Flow:
- Agent texts "725k 3% 21day 1740 Grand Ave"
- -> parse_offer_sms() extracts structured data
- -> (stub) pull real bed/bath/sqft from MLS -- replace with real API call
- -> fill_offer_pdf() writes values into 20-19_2.pdf
- -> reply with a summary + link to review/sign
-Env vars needed:
- TWILIO_AUTH_TOKEN (optional, for request validation — recommended for prod)
 """
 from flask import Flask, request, send_from_directory, Response
 from twilio.twiml.messaging_response import MessagingResponse
+from twilio.request_validator import RequestValidator
 from datetime import datetime
 import os
 from parser import parse_offer_sms
 from pdf_filler import fill_offer_pdf, OUTPUT_DIR
 
 app = Flask(__name__)
+validator = RequestValidator(os.environ.get("TWILIO_AUTH_TOKEN", ""))
 
-# --- stub MLS lookup ---------------------------------------------------
-# Replace this with a real MLS API call (e.g. Bridge Interactive, Spark API)
 def lookup_mls(address: str) -> dict:
     return {
         "bed": 3,
@@ -30,6 +22,14 @@ def lookup_mls(address: str) -> dict:
 
 @app.route("/sms", methods=["POST"])
 def sms_reply():
+    # Validate Twilio request
+    twilio_signature = request.headers.get('X-Twilio-Signature', '')
+    url = request.url
+    post_vars = request.form.to_dict()
+    
+    if not validator.validate(url, post_vars, twilio_signature):
+        return Response("Unauthorized", status=403)
+    
     incoming_msg = request.values.get("Body", "")
     agent_phone = request.values.get("From", "")
     
