@@ -207,6 +207,8 @@ DEMO_FORM = """
   .disclaimer{{margin-top:14px;font-size:11.5px;color:var(--text-muted);line-height:1.5;font-style:italic;}}
   .error{{margin-top:22px;padding:14px 16px;background:rgba(139,58,44,0.08);
     border:1px solid rgba(139,58,44,0.3);border-radius:2px;font-size:13px;color:#7A3527;}}
+  .warning-note{{margin:2px 0 10px;padding:8px 12px;background:rgba(169,119,47,0.1);
+    border:1px solid rgba(169,119,47,0.3);border-radius:2px;font-size:12px;color:#8A6423;}}
   .foot{{text-align:center;margin-top:24px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;
     color:var(--text-on-ink-muted);letter-spacing:0.03em;}}
 </style>
@@ -255,12 +257,16 @@ def demo():
                 close_date_str = (close_dt + timedelta(days=parsed["close_days"])).strftime("%B %d, %Y")
             except Exception:
                 close_date_str = f"{parsed['close_days']} days"
+            warning_html = ""
+            if warnings:
+                warning_html = f'<div class="warning-note">{" / ".join(warnings)}</div>'
             result_html = f"""
             <div class="result">
               <div class="result-stamp">Ready to sign</div>
               <div class="result-addr">{parsed['address']}</div>
               <div class="result-row"><span class="k">Sales price</span><span class="v">${parsed['price']:,}</span></div>
               <div class="result-row"><span class="k">Closing date</span><span class="v">{close_date_str}</span></div>
+              {warning_html}
               <a href="{pdf_url}" target="_blank" class="download-btn">Download filled TREC 20-19 &rarr;</a>
               <div class="disclaimer">Draft only -- agent must review before signing. TREC NO. 20-19.</div>
             </div>
