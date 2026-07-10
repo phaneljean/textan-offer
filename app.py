@@ -5,290 +5,462 @@ from flask import Flask, request, jsonify, render_template_string
 
 app = Flask(__name__)
 
-# ─── PARSER ───
-def parse_offer(text):
-    offer = {}
-    price_match = re.search(r'(\d+\.?\d*)\s*k', text, re.IGNORECASE)
-    if price_match:
-        offer['price'] = int(float(price_match.group(1)) * 1000)
-    down_match = re.search(r'(\d+\.?\d*)\s*%', text)
-    if down_match:
-        offer['down_percent'] = float(down_match.group(1))
-        if 'price' in offer:
-            offer['down_amount'] = int(offer['price'] * offer['down_percent'] / 100)
-            offer['loan_amount'] = offer['price'] - offer['down_amount']
-    close_match = re.search(r'(\d+)\s*day', text, re.IGNORECASE)
-    if close_match:
-        days = int(close_match.group(1))
-        offer['close_days'] = days
-        offer['close_date'] = (datetime.date.today() + datetime.timedelta(days=days)).strftime('%m/%d/%Y')
-    addr_match = re.search(r'\d+\s+[A-Za-z0-9\s\.]+(?:St|Ave|Blvd|Dr|Ln|Rd|Way|Ct|Pl|Cir)', text, re.IGNORECASE)
-    if addr_match:
-        offer['address'] = addr_match.group(0).strip()
-    return offer
+DEMO_HTML = """
 
-# ─── DEMO PAGE ───
-DEMO_HTML = '''
 
 
 <meta>
 <meta>
 <title>TextAnOffer</title>
-<link>
-<link>
 <style>
-  :root{
-    --ink:#171B24;
-    --ink-soft:#242938;
-    --paper:#F3EEDF;
-    --paper-line:#DCD3B8;
-    --brass:#A9772F;
-    --brass-soft:#C9A466;
-    --green:#3A5744;
-    --green-bg:#26332B;
-    --text-on-paper:#211E17;
-    --text-muted:#847C68;
-    --text-on-ink:#E7E4D8;
-    --text-on-ink-muted:#8B8A82;
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #0a0a0a;
+    color: #fff;
+    min-height: 100vh;
   }
-  *{box-sizing:border-box;}
-  html,body{margin:0;padding:0;}
-  body{
-    background:var(--ink);
-    background-image:
-      radial-gradient(circle at 15% 10%, rgba(169,119,47,0.06), transparent 45%),
-      radial-gradient(circle at 85% 90%, rgba(169,119,47,0.04), transparent 40%);
-    min-height:100vh;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    padding:48px 20px;
-    font-family:'Inter',sans-serif;
+  .hero {
+    text-align: center;
+    padding: 80px 24px 48px;
+    background: linear-gradient(135deg, #0a0a0a 0%, #111827 100%);
   }
-  .stage{width:100%;max-width:460px;}
-  .corner-mark{
-    display:flex;
-    justify-content:space-between;
-    align-items:baseline;
-    font-family:'IBM Plex Mono',monospace;
-    font-size:10.5px;
-    letter-spacing:0.06em;
-    color:var(--text-on-ink-muted);
-    margin-bottom:14px;
-    padding:0 4px;
+  .badge {
+    display: inline-block;
+    background: rgba(99,102,241,0.15);
+    border: 1px solid rgba(99,102,241,0.4);
+    color: #818cf8;
+    padding: 6px 16px;
+    border-radius: 999px;
+    font-size: 13px;
+    letter-spacing: 0.05em;
+    margin-bottom: 28px;
   }
-  .corner-mark span.brass{color:var(--brass-soft);}
-  h1{
-    font-family:'Source Serif 4',serif;
-    font-weight:600;
-    font-size:32px;
-    color:var(--text-on-ink);
-    margin:0 0 6px;
-    letter-spacing:-0.01em;
+  h1 {
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 800;
+    line-height: 1.1;
+    margin-bottom: 20px;
+    background: linear-gradient(135deg, #fff 0%, #a5b4fc 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
   }
-  .sub{
-    color:var(--text-on-ink-muted);
-    font-size:14px;
-    line-height:1.55;
-    margin:0 0 32px;
-    max-width:380px;
+  .subtitle {
+    font-size: 1.1rem;
+    color: #9ca3af;
+    max-width: 600px;
+    margin: 0 auto 48px;
+    line-height: 1.6;
   }
-  .card{
-    background:var(--paper);
-    border-radius:2px;
-    padding:28px 26px 26px;
-    box-shadow:0 24px 60px -20px rgba(0,0,0,0.5);
-    border-top:2px solid var(--brass);
+  .demo-box {
+    background: #111827;
+    border: 1px solid #1f2937;
+    border-radius: 20px;
+    padding: 40px;
+    max-width: 720px;
+    margin: 0 auto;
+    box-shadow: 0 25px 60px rgba(0,0,0,0.5);
   }
-  .field-label{
-    font-family:'IBM Plex Mono',monospace;
-    font-size:10.5px;
-    letter-spacing:0.08em;
-    text-transform:uppercase;
-    color:var(--text-muted);
-    margin-bottom:8px;
-    display:block;
+  .phone-mock {
+    background: #1f2937;
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 24px;
+    border: 1px solid #374151;
   }
-  input[type=text]{
-    width:100%;
-    font-family:'IBM Plex Mono',monospace;
-    font-size:14px;
-    padding:13px 14px;
-    border:1px solid var(--paper-line);
-    background:#FFFDF7;
-    color:var(--text-on-paper);
-    border-radius:2px;
-    outline:none;
+  .phone-label {
+    font-size: 11px;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 12px;
   }
-  input[type=text]:focus{border-color:var(--brass);}
-  input[type=text]::placeholder{color:var(--text-muted);}
-  button{
-    width:100%;
-    margin-top:14px;
-    background:var(--ink);
-    color:var(--text-on-ink);
-    border:none;
-    padding:14px;
-    font-family:'Inter',sans-serif;
-    font-size:14px;
-    font-weight:500;
-    border-radius:2px;
-    cursor:pointer;
-    letter-spacing:0.01em;
+  .sms-bubble {
+    background: #4f46e5;
+    color: #fff;
+    padding: 12px 16px;
+    border-radius: 18px 18px 4px 18px;
+    font-size: 15px;
+    display: inline-block;
+    max-width: 80%;
+    line-height: 1.4;
   }
-  button:hover{background:var(--ink-soft);}
-  button:active{transform:scale(0.99);}
-  .hint{
-    font-family:'IBM Plex Mono',monospace;
-    font-size:11px;
-    color:var(--text-muted);
-    margin-top:10px;
+  .input-area {
+    margin-bottom: 20px;
   }
-  .result{
-    margin-top:22px;
-    padding-top:20px;
-    border-top:1px dashed var(--paper-line);
+  label {
+    display: block;
+    font-size: 13px;
+    color: #9ca3af;
+    margin-bottom: 8px;
+    letter-spacing: 0.03em;
   }
-  .result-stamp{
-    display:inline-flex;
-    align-items:center;
-    gap:6px;
-    font-family:'IBM Plex Mono',monospace;
-    font-size:10px;
-    letter-spacing:0.08em;
-    text-transform:uppercase;
-    color:var(--green);
-    background:rgba(58,87,68,0.1);
-    border:1px solid rgba(58,87,68,0.35);
-    padding:4px 10px;
-    border-radius:20px;
-    margin-bottom:14px;
+  textarea {
+    width: 100%;
+    background: #1f2937;
+    border: 1px solid #374151;
+    border-radius: 12px;
+    color: #fff;
+    font-size: 16px;
+    padding: 16px;
+    resize: none;
+    height: 100px;
+    outline: none;
+    transition: border-color 0.2s;
+    font-family: inherit;
   }
-  .result-addr{
-    font-family:'Source Serif 4',serif;
-    font-size:19px;
-    color:var(--text-on-paper);
-    margin:0 0 12px;
+  textarea:focus { border-color: #4f46e5; }
+  textarea::placeholder { color: #4b5563; }
+  button {
+    width: 100%;
+    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    padding: 16px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.1s;
+    letter-spacing: 0.02em;
   }
-  .result-row{
-    display:flex;
-    justify-content:space-between;
-    font-size:13.5px;
-    padding:7px 0;
-    border-bottom:1px solid rgba(220,211,184,0.6);
+  button:hover { opacity: 0.9; transform: translateY(-1px); }
+  button:active { transform: translateY(0); }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  .result {
+    margin-top: 28px;
+    display: none;
   }
-  .result-row .k{color:var(--text-muted);font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:0.04em;}
-  .result-row .v{color:var(--text-on-paper);font-weight:500;}
-  .download-btn{
-    margin-top:18px;
-    display:block;
-    text-align:center;
-    background:var(--brass);
-    color:#2A1D08;
-    text-decoration:none;
-    font-weight:500;
-    font-size:14px;
-    padding:13px;
-    border-radius:2px;
+  .result-header {
+    font-size: 13px;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 16px;
   }
-  .download-btn:hover{background:var(--brass-soft);}
-  .disclaimer{
-    margin-top:14px;
-    font-size:11.5px;
-    color:var(--text-muted);
-    line-height:1.5;
-    font-style:italic;
+  .field-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
   }
-  .error{
-    margin-top:22px;
-    padding:14px 16px;
-    background:rgba(139,58,44,0.08);
-    border:1px solid rgba(139,58,44,0.3);
-    border-radius:2px;
-    font-size:13px;
-    color:#7A3527;
+  .field-card {
+    background: #1f2937;
+    border: 1px solid #374151;
+    border-radius: 12px;
+    padding: 16px;
   }
-  .foot{
-    text-align:center;
-    margin-top:24px;
-    font-family:'IBM Plex Mono',monospace;
-    font-size:10.5px;
-    color:var(--text-on-ink-muted);
-    letter-spacing:0.03em;
+  .field-label {
+    font-size: 11px;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 6px;
+  }
+  .field-value {
+    font-size: 18px;
+    font-weight: 700;
+    color: #a5b4fc;
+  }
+  .pdf-link {
+    display: block;
+    margin-top: 16px;
+    background: rgba(99,102,241,0.1);
+    border: 1px solid rgba(99,102,241,0.3);
+    border-radius: 12px;
+    padding: 16px;
+    text-align: center;
+    color: #818cf8;
+    text-decoration: none;
+    font-weight: 600;
+    transition: background 0.2s;
+  }
+  .pdf-link:hover { background: rgba(99,102,241,0.2); }
+  .error-box {
+    background: rgba(239,68,68,0.1);
+    border: 1px solid rgba(239,68,68,0.3);
+    border-radius: 12px;
+    padding: 16px;
+    color: #fca5a5;
+    margin-top: 16px;
+    display: none;
+  }
+  .how-section {
+    max-width: 720px;
+    margin: 64px auto;
+    padding: 0 24px;
+  }
+  .how-section h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 32px;
+    text-align: center;
+    color: #e5e7eb;
+  }
+  .steps {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+  }
+  .step {
+    background: #111827;
+    border: 1px solid #1f2937;
+    border-radius: 16px;
+    padding: 24px;
+    text-align: center;
+  }
+  .step-icon {
+    font-size: 2rem;
+    margin-bottom: 12px;
+  }
+  .step h3 {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #e5e7eb;
+  }
+  .step p {
+    font-size: 13px;
+    color: #6b7280;
+    line-height: 1.5;
+  }
+  .turbo-section {
+    max-width: 720px;
+    margin: 0 auto 80px;
+    padding: 0 24px;
+  }
+  .turbo-card {
+    background: linear-gradient(135deg, #111827, #1e1b4b);
+    border: 1px solid #3730a3;
+    border-radius: 20px;
+    padding: 40px;
+    text-align: center;
+  }
+  .turbo-card h2 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin-bottom: 16px;
+    color: #e0e7ff;
+  }
+  .turbo-card p {
+    color: #a5b4fc;
+    line-height: 1.7;
+    font-size: 15px;
+  }
+  .status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(16,185,129,0.1);
+    border: 1px solid rgba(16,185,129,0.3);
+    color: #6ee7b7;
+    padding: 8px 16px;
+    border-radius: 999px;
+    font-size: 13px;
+    margin-top: 24px;
+  }
+  .dot {
+    width: 8px;
+    height: 8px;
+    background: #10b981;
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+  @media (max-width: 600px) {
+    .field-grid { grid-template-columns: 1fr; }
+    .steps { grid-template-columns: 1fr; }
+    .demo-box { padding: 24px; }
   }
 </style>
 
 
+
+
+  ⚡ Live Demo
+  Text an offer.Get a contract.
+  
+    Type your offer details the way you'd say them out loud.
+    TextAnOffer reads it, understands it, and fills out the
+    real official TREC contract — automatically.
+  
+
   
     
-      TEXTANOFFER
+      📱 Incoming SMS from Agent
+      725k 3% 21day 1740 Grand Ave
+    
+
+    
+      <label>Try it — type an offer like you'd text it:</label>
+      <textarea></textarea>
+    
+
+    <button>
+      ⚡ Parse Offer & Generate Contract
+    </button>
+
+    
+
+    
+      ✅ Parsed — ready to fill contract
+      
+      
+        📄 Download Filled TREC Contract (PDF)
       
     
-    Text a price.Get a real offer.
-    Type an offer the way you would text it. This generates the actual TREC 20-19 contract — same form, same fields, ready for review.
-
-    
-      <label>Offer details</label>
-      <input>
-      <button>Generate offer</button>
-      price · down % · closing days · address
-
-      
-    
-
-    SMS delivery pending carrier registration — this demo runs the same logic directly
   
+
+
+
+  How it works
+  
+    
+      💬
+      Agent texts the offer
+      Price, commission, closing days, address — however they naturally say it
+    
+    
+      🧠
+      AI reads it instantly
+      Parses every detail — price, terms, dates — no form to fill out
+    
+    
+      📄
+      Contract appears
+      The real official TREC form, filled in and ready for review and signature
+    
+  
+
+
+
+  
+    Like TurboTax — but for real estate contracts
+    
+      Same official paperwork your clients already sign.
+      Instead of typing every field by hand, you just say what you want —
+      and it fills every box for you. The parser and PDF filler are built
+      and tested. SMS delivery is the final step, currently finishing
+      carrier registration.
+    
+    
+      
+      Parser & PDF engine: live
+    
+  
+
 
 <script>
-document.getElementById('dateStamp').textContent = new Date().toLocaleDateString('en-US', {month:'2-digit', day:'2-digit', year:'numeric'});
+async function runParse() {
+  const msg = document.getElementById('msgInput').value.trim();
+  if (!msg) return;
 
-function parsePrice(text){
-  const m = text.match(/(\\d+(?:\\.\\d+)?)\\s*(k|m|million|mil)\\b/i);
-  if(!m) return null;
-  const num = parseFloat(m[1]);
-  return m[2].toLowerCase() === 'k' ? Math.round(num*1000) : Math.round(num*1000000);
-}
-function parsePct(text){ const m = text.match(/(\\d+(?:\\.\\d+)?)\\s*%/); return m ? parseFloat(m[1])/100 : null; }
-function parseDays(text){ const m = text.match(/(\\d+)\\s*day/i); return m ? parseInt(m[1]) : null; }
-function parseAddress(text){
-  let s = text.replace(/\\d+(?:\\.\\d+)?\\s*(k|m|million|mil)\\b/ig,'').replace(/\\d+(?:\\.\\d+)?\\s*%/g,'').replace(/\\d+\\s*day\\w*/ig,'');
-  return s.trim().replace(/^[,.\\-\\s]+|[,.\\-\\s]+$/g,'');
-}
+  const btn = document.getElementById('parseBtn');
+  const resultBox = document.getElementById('resultBox');
+  const errorBox = document.getElementById('errorBox');
+  const fieldGrid = document.getElementById('fieldGrid');
+  const pdfLink = document.getElementById('pdfLink');
 
-function generateOffer(){
-  const text = document.getElementById('offerInput').value.trim();
-  const resultArea = document.getElementById('resultArea');
-  const price = parsePrice(text), pct = parsePct(text), days = parseDays(text), address = parseAddress(text);
-  const missing = [];
-  if(price===null) missing.push('price');
-  if(pct===null) missing.push('down %');
-  if(days===null) missing.push('closing days');
-  if(!address) missing.push('address');
+  btn.disabled = true;
+  btn.textContent = 'Parsing...';
+  resultBox.style.display = 'none';
+  errorBox.style.display = 'none';
 
-  if(missing.length){
-    resultArea.innerHTML = '<div class="error">Missing: '+missing.join(', ')+'. Try: 725k 3% 21day 1740 Grand Ave</div>';
-    return;
+  try {
+    const res = await fetch('/parse', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: msg })
+    });
+    const data = await res.json();
+
+    if (!res.ok) throw new Error(data.error || 'Server error');
+
+    const p = data.parsed;
+    const fields = [
+      { label: 'Price', value: p.price ? '$' + Number(p.price).toLocaleString() : '—' },
+      { label: 'Commission', value: p.commission ? p.commission + '%' : '—' },
+      { label: 'Closing', value: p.closing_days ? p.closing_days + ' days' : '—' },
+      { label: 'Address', value: p.address || '—' },
+      { label: 'Closing Date', value: p.closing_date || '—' },
+      { label: 'Down Payment', value: p.down_payment ? '$' + Number(p.down_payment).toLocaleString() : '—' },
+    ];
+
+    fieldGrid.innerHTML = fields.map(f => `
+      <div class="field-card">
+        <div class="field-label">${f.label}</div>
+        <div class="field-value">${f.value}</div>
+      </div>
+    `).join('');
+
+    if (data.pdf_path) {
+      pdfLink.href = '/download/' + encodeURIComponent(data.pdf_path);
+      pdfLink.style.display = 'block';
+    } else {
+      pdfLink.style.display = 'none';
+    }
+
+    resultBox.style.display = 'block';
+
+  } catch (err) {
+    errorBox.textContent = '❌ ' + err.message;
+    errorBox.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '⚡ Parse Offer & Generate Contract';
   }
-
-  const closeDate = new Date(Date.now() + days*86400000).toLocaleDateString('en-US', {month:'long', day:'numeric', year:'numeric'});
-
-  resultArea.innerHTML = '<div class="result">'
-    +'<div class="result-stamp">Ready to sign</div>'
-    +'<div class="result-addr">'+address+'</div>'
-    +'<div class="result-row"><span class="k">Sales price</span><span class="v">$'+price.toLocaleString()+'</span></div>'
-    +'<div class="result-row"><span class="k">Down payment</span><span class="v">'+Math.round(pct*100)+'%</span></div>'
-    +'<div class="result-row"><span class="k">Closing date</span><span class="v">'+closeDate+'</span></div>'
-    +'<a href="#" class="download-btn">Download filled TREC 20-19 &rarr;</a>'
-    +'<div class="disclaimer">Draft only — agent must review before signing. TREC NO. 20-19.</div>'
-    +'</div>';
 }
 
-document.getElementById('offerInput').addEventListener('keydown', function(e){ if(e.key === 'Enter') generateOffer(); });
+document.getElementById('msgInput').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    runParse();
+  }
+});
 </script>
 
-'''
 
-# ─── ROUTES ───
+"""
+
+def parse_offer(message):
+    result = {}
+    msg = message.lower()
+
+    price_match = re.search(r'\$?([\d,]+\.?\d*)\s*k\b', msg)
+    if price_match:
+        result['price'] = float(price_match.group(1).replace(',', '')) * 1000
+    else:
+        price_match = re.search(r'\$?([\d,]+)', msg)
+        if price_match:
+            val = float(price_match.group(1).replace(',', ''))
+            if val > 10000:
+                result['price'] = val
+
+    comm_match = re.search(r'(\d+\.?\d*)\s*%', msg)
+    if comm_match:
+        result['commission'] = float(comm_match.group(1))
+
+    day_match = re.search(r'(\d+)\s*day', msg)
+    if day_match:
+        days = int(day_match.group(1))
+        result['closing_days'] = days
+        closing_date = datetime.date.today() + datetime.timedelta(days=days)
+        result['closing_date'] = closing_date.strftime('%B %d, %Y')
+
+    addr_match = re.search(r'\d+\s+[A-Za-z][\w\s]*(?:ave|st|rd|blvd|dr|ln|ct|way|pl)\b', message, re.IGNORECASE)
+    if addr_match:
+        result['address'] = addr_match.group(0).strip()
+
+    if 'price' in result:
+        result['down_payment'] = result['price'] * 0.20
+
+    return result
+
+def fill_contract(parsed):
+    return None
+
 @app.route('/')
 def home():
     return jsonify({"status": "TextAnOffer API is running"})
@@ -302,11 +474,14 @@ def parse():
     data = request.get_json()
     message = data.get('message', '')
     parsed = parse_offer(message)
-    return jsonify({"parsed": parsed})
+    pdf_path = fill_contract(parsed)
+    return jsonify({
+        "parsed": parsed,
+        "pdf_generated": pdf_path is not None,
+        "pdf_path": pdf_path
+    })
 
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 8080))
-    app.run(host='0.0.0.0', port=port)
-
-# rebuild
-# rebuild
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
+ 
