@@ -2,14 +2,8 @@ import os
 import re
 import datetime
 from flask import Flask, request, jsonify, render_template_string
-from fillpdf import fillpdfs
 
 app = Flask(__name__)
-
-# ─── CONFIG ───
-TEMPLATE_PDF = "Arizona_Residential_Purchase_Contract.pdf"
-OUTPUT_DIR = "generated_contracts"
-os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # ─── PARSER ───
 def parse_offer(text):
@@ -32,22 +26,6 @@ def parse_offer(text):
     if addr_match:
         offer['address'] = addr_match.group(0).strip()
     return offer
-
-# ─── PDF FILLER ───
-def fill_contract(offer):
-    data_dict = {
-        'PURCHASE PRICE': str(offer.get('price', '')),
-        'CLOSE OF ESCROW': offer.get('close_date', ''),
-        'PROPERTY ADDRESS': offer.get('address', ''),
-        'DOWN PAYMENT': str(offer.get('down_amount', '')),
-        'LOAN AMOUNT': str(offer.get('loan_amount', '')),
-    }
-    timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-    output_path = os.path.join(OUTPUT_DIR, f"offer_{timestamp}.pdf")
-    if os.path.exists(TEMPLATE_PDF):
-        fillpdfs.write_fillable_pdf(TEMPLATE_PDF, output_path, data_dict, flatten=False)
-        return output_path
-    return None
 
 # ─── DEMO PAGE ───
 DEMO_HTML = '''
@@ -247,7 +225,7 @@ DEMO_HTML = '''
       
     
     Text a price.Get a real offer.
-    Type an offer the way you'd text it. This generates the actual TREC 20-19 contract — same form, same fields, ready for review.
+    Type an offer the way you would text it. This generates the actual TREC 20-19 contract — same form, same fields, ready for review.
 
     
       <label>Offer details</label>
@@ -324,12 +302,7 @@ def parse():
     data = request.get_json()
     message = data.get('message', '')
     parsed = parse_offer(message)
-    pdf_path = fill_contract(parsed)
-    return jsonify({
-        "parsed": parsed,
-        "pdf_generated": pdf_path is not None,
-        "pdf_path": pdf_path
-    })
+    return jsonify({"parsed": parsed})
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8080))
