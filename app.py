@@ -25,6 +25,62 @@ from pdf_filler import fill_offer_pdf, OUTPUT_DIR
 app = Flask(__name__)
 
 
+# --- address validation --------------------------------------------------
+# Fast, dependency-free sanity check on the parsed address before it goes
+# anywhere near a legal contract. NOT full USPS/geocoding validation -- it
+# catches the most common parser failures (missing street number, missing
+# street suffix) before they get silently baked into a PDF.
+import re as _re
+
+_STREET_SUFFIXES = r"""(?:
+    st|street|ave|avenue|rd|road|blvd|boulevard|dr|drive|ln|lane|
+    ct|court|way|pl|place|cir|circle|ter|terrace|pkwy|parkway|
+    hwy|highway|trl|trail|loop|xing|crossing|sq|square|walk
+)"""
+_STREET_SUFFIX_RE = _re.compile(r"\b\d+\b.*\b" + _STREET_SUFFIXES + r"\b\.?", _re.IGNORECASE | _re.VERBOSE)
+_STREET_NUMBER_RE = _re.compile(r"^\s*\d{1,6}\b")
+_TX_ZIP_RE = _re.compile(r"\b7[0-9]{4}\b")
+_STATE_RE = _re.compile(r"\bTX\b|\btexas\b", _re.IGNORECASE)
+
+
+def validate_address(address: str) -> dict:
+    """
+    Returns:
+        {"valid": bool, "reason": str|None, "warnings": list[str], "normalized": str}
+    """
+    result = {"valid": False, "reason": None, "warnings": [], "normalized": ""}
+
+    if not address or not address.strip():
+        result["reason"] = "No address found in the message."
+        return result
+
+    cleaned = _re.sub(r"\s+", " ", address.strip())
+    result["normalized"] = cleaned
+
+    if not _STREET_NUMBER_RE.search(cleaned):
+        result["reason"] = (
+            f'"{cleaned}" doesn\'t start with a street number. '
+            f"Include the full address, e.g. 1740 Grand Ave."
+        )
+        return result
+
+    if not _STREET_SUFFIX_RE.search(cleaned):
+        result["reason"] = (
+            f'"{cleaned}" is missing a recognizable street type '
+            f"(St, Ave, Rd, Blvd, Dr, Ln, etc). Double check the address."
+        )
+        return result
+
+    if not _STATE_RE.search(cleaned) and not _TX_ZIP_RE.search(cleaned):
+        result["warnings"].append("No TX or Texas ZIP code detected -- confirm this is the right state.")
+    if len(cleaned.split()) < 3:
+        result["warnings"].append("Address looks short -- confirm city is included.")
+
+    result["valid"] = True
+    return result
+
+
+
 # --- stub MLS lookup ---------------------------------------------------
 # Replace this with a real MLS API call (e.g. Bridge Interactive, Spark API)
 def lookup_mls(address: str) -> dict:
@@ -37,10 +93,17 @@ def lookup_mls(address: str) -> dict:
 
 
 def process_offer(incoming_msg: str, source_id: str):
-    """Shared logic: parse -> lookup MLS -> fill PDF. Returns (parsed, pdf_path_or_None, error_or_None)."""
+    """Shared logic: parse -> validate address -> lookup MLS -> fill PDF.
+    Returns (parsed, pdf_path_or_None, error_or_None, warnings)."""
     parsed = parse_offer_sms(incoming_msg)
     if "error" in parsed:
-        return parsed, None, parsed["error"]
+        return parsed, None, parsed["error"], []
+
+    addr_check = validate_address(parsed.get("address", ""))
+    if not addr_check["valid"]:
+        return parsed, None, addr_check["reason"], []
+    parsed["address"] = addr_check["normalized"]
+    warnings = addr_check["warnings"]
 
     mls_data = lookup_mls(parsed["address"])
     parsed.update(mls_data)
@@ -48,9 +111,9 @@ def process_offer(incoming_msg: str, source_id: str):
     try:
         pdf_path = fill_offer_pdf(parsed, source_id)
     except Exception as e:
-        return parsed, None, f"Parsed OK but couldn't generate the PDF yet: {e}"
+        return parsed, None, f"Parsed OK but couldn't generate the PDF yet: {e}", warnings
 
-    return parsed, pdf_path, None
+    return parsed, pdf_path, None, warnings
 
 
 @app.route("/sms", methods=["POST"])
@@ -59,7 +122,7 @@ def sms_reply():
     agent_phone = request.values.get("From", "")
 
     resp = MessagingResponse()
-    parsed, pdf_path, error = process_offer(incoming_msg, agent_phone)
+    parsed, pdf_path, error, warnings = process_offer(incoming_msg, agent_phone)
 
     if error:
         resp.message(error)
@@ -68,11 +131,14 @@ def sms_reply():
     filename = os.path.basename(pdf_path)
     pdf_url = request.host_url.rstrip("/") + f"/offers/{filename}"
 
+    warning_line = f"\nNote: {' / '.join(warnings)}" if warnings else ""
+
     reply = (
         f"Offer ready for {parsed['address']}\n"
         f"Price: ${parsed['price']:,}\n"
         f"Close: {parsed['close_days']} days\n"
-        f"Generated in <1s\n\n"
+        f"Generated in <1s"
+        f"{warning_line}\n\n"
         f"Review: {pdf_url}\n"
         f"(TREC 20-19 draft -- agent must review before signing)"
     )
@@ -175,7 +241,7 @@ def demo():
     if request.method == "POST":
         offer_text = request.form.get("offer_text", "")
         prefill = offer_text
-        parsed, pdf_path, error = process_offer(offer_text, "demo-web")
+        parsed, pdf_path, error, warnings = process_offer(offer_text, "demo-web")
 
         if error:
             result_html = f'<div class="error">{error}</div>'
