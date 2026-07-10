@@ -56,19 +56,60 @@ def parse_offer_sms(text: str) -> dict:
     pct = _parse_pct(text)
     days = _parse_days(text)
     address = _parse_address(text)
-    
+
     missing = [name for name, val in
         [("price", price), ("down_payment_pct", pct),
          ("close_days", days), ("address", address)]
         if val is None]
-    
+
     if missing:
         return {
             "error": f"Missing: {', '.join(missing)}. "
                      f"Try format: 725k 3% 21day 1740 Grand Ave",
             "raw_text": text
         }
-    
+
+    # Validate ranges
+    if price <= 0:
+        return {
+            "error": f"Price must be greater than $0 (got ${price:,})",
+            "raw_text": text
+        }
+    if price > 50_000_000:
+        return {
+            "error": f"Price ${price:,} seems too high. Max $50M for residential TX real estate.",
+            "raw_text": text
+        }
+
+    if pct <= 0:
+        return {
+            "error": f"Down payment must be greater than 0% (got {pct*100:.1f}%)",
+            "raw_text": text
+        }
+    if pct > 0.5:
+        return {
+            "error": f"Down payment {pct*100:.1f}% seems too high. Max 50% for typical offers.",
+            "raw_text": text
+        }
+
+    if days < 7:
+        return {
+            "error": f"Closing in {days} days is too fast. Minimum 7 days.",
+            "raw_text": text
+        }
+    if days > 365:
+        return {
+            "error": f"Closing in {days} days is too far out. Maximum 365 days.",
+            "raw_text": text
+        }
+
+    # Validate address has meaningful content (more than just 1-2 characters)
+    if len(address.strip()) < 5:
+        return {
+            "error": f'Address "{address}" is too short. Include street number, name, and type (e.g., 1740 Grand Ave)',
+            "raw_text": text
+        }
+
     return {
         "price": price,
         "down_payment_pct": pct,
