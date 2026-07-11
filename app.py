@@ -211,8 +211,6 @@ DEMO_FORM = """
   .corner-mark span.brass{{color:var(--brass-soft);}}
   h1{{font-family:'Source Serif 4',serif;font-weight:600;font-size:32px;color:var(--text-on-ink);
     margin:0 0 6px;letter-spacing:-0.01em;min-height:80px;}}
-  .typing-line{{display:inline;border-right:2px solid var(--brass-soft);animation:blink 0.7s step-end infinite;}}
-  @keyframes blink{{from,to{{border-color:transparent;}}50%{{border-color:var(--brass-soft);}}}}
   .sub{{color:var(--text-on-ink-muted);font-size:14px;line-height:1.55;margin:0 0 32px;max-width:380px;}}
   .card{{background:var(--paper);border-radius:2px;padding:28px 26px 26px;
     box-shadow:0 24px 60px -20px rgba(0,0,0,0.5);border-top:2px solid var(--brass);}}
@@ -265,38 +263,30 @@ DEMO_FORM = """
 <body>
   <div class="stage">
     <div class="corner-mark"><span>TEXTANOFFER</span><span class="brass">{date_stamp}</span></div>
-    <h1 id="headline"><span class="typing-line"></span></h1>
+    <h1 id="headline"></h1>
     <p class="sub">Type an offer the way you'd text it. This generates the actual TREC 20-19 contract -- same form, same fields, ready for review.</p>
     <script>
       const lines = ['Text a price.', 'Get a real offer.'];
       const headline = document.getElementById('headline');
-      let typingEl = headline.querySelector('.typing-line');
-      let lineIdx = 0, charIdx = 0;
+      let lineIdx = 0, charIdx = 0, currentText = '';
 
       function type() {{{{
-        if (lineIdx >= lines.length) {{{{
-          typingEl.style.borderRight = 'none';
-          return;
-        }}}}
+        if (lineIdx >= lines.length) return;
+
         const line = lines[lineIdx];
         if (charIdx < line.length) {{{{
-          typingEl.textContent = line.slice(0, charIdx + 1);
+          currentText += line[charIdx];
+          headline.innerHTML = currentText + (lineIdx === 0 ? '' : '');
           charIdx++;
           setTimeout(type, 80);
         }}}} else {{{{
           if (lineIdx < lines.length - 1) {{{{
             setTimeout(() => {{{{
-              headline.innerHTML += '<br>';
-              const newSpan = document.createElement('span');
-              newSpan.className = 'typing-line';
-              headline.appendChild(newSpan);
-              typingEl = headline.querySelector('.typing-line:last-child');
+              currentText += '<br>';
               lineIdx++;
               charIdx = 0;
               type();
             }}}}, 400);
-          }}}} else {{{{
-            typingEl.style.borderRight = 'none';
           }}}}
         }}}}
       }}}}
