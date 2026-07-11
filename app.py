@@ -23,6 +23,8 @@ import stripe
 from parser import parse_offer_sms
 from pdf_filler import fill_offer_pdf, OUTPUT_DIR
 from agent_profiles import get_agent_profile
+from subscriptions import can_generate_offer, increment_offer_count, activate_subscription, deactivate_subscription, FREE_OFFER_LIMIT
+from analytics import track_event, get_conversion_metrics, get_revenue_metrics
 
 app = Flask(__name__)
 
@@ -155,16 +157,58 @@ def sms_reply():
     agent_phone = request.values.get("From", "")
 
     resp = MessagingResponse()
+
+    # Check subscription status
+    can_generate, reason, user = can_generate_offer(agent_phone)
+
+    if not can_generate:
+        # Track paywall hit
+        track_event("limit_reached", agent_phone)
+
+        # Send payment link
+        payment_url = request.host_url.rstrip("/") + "/pricing"
+        reply = (
+            f"You've used your {FREE_OFFER_LIMIT} free offers! 🎉\n\n"
+            f"Subscribe for unlimited offers:\n"
+            f"{payment_url}\n\n"
+            f"$49/mo • Cancel anytime\n"
+            f"Saves 45min per offer"
+        )
+        resp.message(reply)
+        return Response(str(resp), mimetype="application/xml")
+
+    # Process offer
     parsed, pdf_path, error, warnings = process_offer(incoming_msg, agent_phone)
 
     if error:
         resp.message(error)
         return Response(str(resp), mimetype="application/xml")
 
+    # Track offer generation
+    track_event("offer_generated", agent_phone, {"price": parsed.get("price")})
+
+    # Increment usage count
+    new_count = increment_offer_count(agent_phone)
+
+    # Check if trial just completed
+    if new_count == FREE_OFFER_LIMIT and reason == "free_trial":
+        track_event("trial_completed", agent_phone)
+
     filename = os.path.basename(pdf_path)
     pdf_url = request.host_url.rstrip("/") + f"/offers/{filename}"
 
     warning_line = f"\nNote: {' / '.join(warnings)}" if warnings else ""
+
+    # Status line based on subscription
+    if reason == "subscribed":
+        status_line = ""
+    else:
+        remaining = FREE_OFFER_LIMIT - new_count
+        if remaining > 0:
+            status_line = f"\n✨ {remaining} free offers remaining"
+        else:
+            payment_url = request.host_url.rstrip("/") + "/pricing"
+            status_line = f"\n🎉 Last free offer! Subscribe for unlimited:\n{payment_url}"
 
     reply = (
         f"Offer ready for {parsed['address']}\n\n"
@@ -177,7 +221,8 @@ def sms_reply():
         f"🏠 Property: {parsed['bed']}bed/{parsed['bath']}bath/{parsed['sqft']:,}sf\n\n"
         f"⚡️ Generated in <1s (vs 45min manual)\n"
         f"{warning_line}\n"
-        f"Review: {pdf_url}\n\n"
+        f"Review: {pdf_url}\n"
+        f"{status_line}\n\n"
         f"Share with your team:\n"
         f"textanoffer-production.up.railway.app/demo\n"
         f"(TREC 20-19 draft -- agent must review before signing)"
@@ -613,13 +658,89 @@ def stripe_webhook():
     # Handle subscription events
     if event['type'] == 'checkout.session.completed':
         session = event['data']['object']
-        # TODO: Store customer subscription in database
-        # customer_email = session['customer_details']['email']
-        # customer_id = session['customer']
-        # subscription_id = session['subscription']
-        pass
+        customer_email = session['customer_details']['email']
+        customer_id = session['customer']
+        subscription_id = session['subscription']
+
+        # Track conversion
+        track_event("subscription_created", metadata={
+            "customer_id": customer_id,
+            "email": customer_email
+        })
+
+        # NOTE: Phone number linking happens manually for now
+        # In production: add phone field to checkout or link via email
+
+    elif event['type'] == 'customer.subscription.deleted':
+        subscription = event['data']['object']
+        deactivate_subscription(subscription['id'])
+        track_event("subscription_canceled", metadata={
+            "subscription_id": subscription['id']
+        })
 
     return jsonify(success=True)
+
+
+@app.route("/analytics")
+def analytics_dashboard():
+    """Simple analytics dashboard (password protect in production!)"""
+    metrics = get_conversion_metrics(days=30)
+    revenue = get_revenue_metrics()
+
+    return f"""
+<!DOCTYPE html>
+<html><head><title>TextAnOffer Analytics</title>
+<style>
+body{{font-family:system-ui;max-width:800px;margin:40px auto;padding:20px;}}
+.metric{{background:#f5f5f5;padding:20px;margin:10px 0;border-radius:8px;}}
+.metric h3{{margin:0 0 10px;color:#333;}}
+.metric .value{{font-size:32px;font-weight:bold;color:#A9772F;}}
+.metric .label{{color:#666;font-size:14px;}}
+</style></head><body>
+<h1>TextAnOffer Analytics</h1>
+<h2>Last 30 Days</h2>
+<div class="metric">
+  <h3>Conversion Funnel</h3>
+  <div class="value">{metrics['overall_conversion_rate']}%</div>
+  <div class="label">Free → Paid Conversion Rate</div>
+  <p>{metrics['signups']} signups → {metrics['conversions']} paid</p>
+</div>
+<div class="metric">
+  <h3>Trial Activation</h3>
+  <div class="value">{metrics['trial_activation_rate']}%</div>
+  <div class="label">Users who complete 3 free offers</div>
+  <p>{metrics['trial_completions']} / {metrics['signups']} users</p>
+</div>
+<div class="metric">
+  <h3>Paywall → Paid</h3>
+  <div class="value">{metrics['paywall_to_paid_rate']}%</div>
+  <div class="label">Users who pay after hitting limit</div>
+  <p>{metrics['conversions']} / {metrics['hit_paywall']} users</p>
+</div>
+<div class="metric">
+  <h3>Usage</h3>
+  <div class="value">{metrics['total_offers']}</div>
+  <div class="label">Total offers generated</div>
+  <p>{metrics['avg_offers_per_user']} offers per user average</p>
+</div>
+<h2>Revenue</h2>
+<div class="metric">
+  <h3>Active Subscribers</h3>
+  <div class="value">{revenue['active_subscribers']}</div>
+  <div class="label">Paying customers</div>
+</div>
+<div class="metric">
+  <h3>MRR</h3>
+  <div class="value">${revenue['mrr']:,}</div>
+  <div class="label">Monthly Recurring Revenue</div>
+</div>
+<div class="metric">
+  <h3>ARR</h3>
+  <div class="value">${revenue['arr']:,}</div>
+  <div class="label">Annual Recurring Revenue</div>
+</div>
+</body></html>
+"""
 
 
 @app.route("/offers/<path:filename>")
