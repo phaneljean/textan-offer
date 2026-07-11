@@ -205,6 +205,18 @@ DEMO_FORM = """
     text-decoration:none;font-weight:500;font-size:14px;padding:13px;border-radius:2px;}}
   .download-btn:hover{{background:var(--brass-soft);}}
   .disclaimer{{margin-top:14px;font-size:11.5px;color:var(--text-muted);line-height:1.5;font-style:italic;}}
+  .share-section{{margin-top:20px;padding-top:18px;border-top:1px dashed var(--paper-line);}}
+  .share-label{{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:0.08em;
+    text-transform:uppercase;color:var(--text-muted);margin-bottom:10px;display:block;text-align:center;}}
+  .share-buttons{{display:flex;gap:8px;justify-content:center;}}
+  .share-btn{{flex:1;max-width:140px;padding:10px 14px;text-align:center;text-decoration:none;
+    border-radius:2px;font-size:13px;font-weight:500;transition:opacity 0.2s;display:flex;
+    align-items:center;justify-content:center;gap:6px;}}
+  .share-btn:hover{{opacity:0.85;}}
+  .share-twitter{{background:#1DA1F2;color:white;}}
+  .share-linkedin{{background:#0A66C2;color:white;}}
+  .share-copy{{background:var(--ink-soft);color:var(--text-on-ink);cursor:pointer;border:1px solid rgba(255,255,255,0.1);}}
+  .share-copy.copied{{background:var(--green);border-color:var(--green);}}
   .error{{margin-top:22px;padding:14px 16px;background:rgba(139,58,44,0.08);
     border:1px solid rgba(139,58,44,0.3);border-radius:2px;font-size:13px;color:#7A3527;}}
   .warning-note{{margin:2px 0 10px;padding:8px 12px;background:rgba(169,119,47,0.1);
@@ -260,6 +272,12 @@ def demo():
             warning_html = ""
             if warnings:
                 warning_html = f'<div class="warning-note">{" / ".join(warnings)}</div>'
+            # Social share URLs
+            share_text = "Just generated a TREC 20-19 contract in 3 seconds by texting an address 🤯 TextAnOffer turns '725k 3% 21day 1740 Grand Ave' into a filled PDF instantly."
+            share_url = "https://textanoffer-production.up.railway.app/demo"
+            twitter_share = f"https://twitter.com/intent/tweet?text={share_text.replace(' ', '%20')}&url={share_url}"
+            linkedin_share = f"https://www.linkedin.com/sharing/share-offsite/?url={share_url}"
+
             result_html = f"""
             <div class="result">
               <div class="result-stamp">Ready to sign</div>
@@ -269,6 +287,26 @@ def demo():
               {warning_html}
               <a href="{pdf_url}" target="_blank" class="download-btn">Download filled TREC 20-19 &rarr;</a>
               <div class="disclaimer">Draft only -- agent must review before signing. TREC NO. 20-19.</div>
+
+              <div class="share-section">
+                <span class="share-label">Save 45 minutes per offer</span>
+                <div class="share-buttons">
+                  <a href="{twitter_share}" target="_blank" class="share-btn share-twitter">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                    Tweet
+                  </a>
+                  <a href="{linkedin_share}" target="_blank" class="share-btn share-linkedin">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+                    Share
+                  </a>
+                  <button class="share-btn share-copy" onclick="
+                    navigator.clipboard.writeText('{share_url}');
+                    this.textContent='✓ Copied!';
+                    this.classList.add('copied');
+                    setTimeout(()=>{{this.textContent='🔗 Copy link';this.classList.remove('copied');}},2000)
+                  ">🔗 Copy link</button>
+                </div>
+              </div>
             </div>
             """
 
