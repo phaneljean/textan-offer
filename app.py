@@ -303,7 +303,7 @@ def demo():
                     navigator.clipboard.writeText('{share_url}');
                     this.textContent='✓ Copied!';
                     this.classList.add('copied');
-                    setTimeout(()=>{{this.textContent='🔗 Copy link';this.classList.remove('copied');}},2000)
+                    setTimeout(()=>{{{{this.textContent='🔗 Copy link';this.classList.remove('copied');}}}},2000)
                   ">🔗 Copy link</button>
                 </div>
               </div>
