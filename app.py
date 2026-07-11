@@ -162,77 +162,87 @@ def sms_reply():
 
     resp = MessagingResponse()
 
-    # Check subscription status
-    can_generate, reason, user = can_generate_offer(agent_phone)
+    try:
+        # Check subscription status
+        can_generate, reason, user = can_generate_offer(agent_phone)
+        print(f"[SMS] Subscription check: can_generate={can_generate}, reason={reason}")
 
-    if not can_generate:
-        # Track paywall hit
-        track_event("limit_reached", agent_phone)
+        if not can_generate:
+            # Track paywall hit
+            track_event("limit_reached", agent_phone)
 
-        # Send payment link
-        payment_url = request.host_url.rstrip("/") + "/pricing"
+            # Send payment link
+            payment_url = request.host_url.rstrip("/") + "/pricing"
+            reply = (
+                f"You've used your {FREE_OFFER_LIMIT} free offers! 🎉\n\n"
+                f"Subscribe for unlimited offers:\n"
+                f"{payment_url}\n\n"
+                f"$49/mo • Cancel anytime\n"
+                f"Saves 45min per offer"
+            )
+            resp.message(reply)
+            return Response(str(resp), mimetype="application/xml")
+
+        # Process offer
+        parsed, pdf_path, error, warnings = process_offer(incoming_msg, agent_phone)
+
+        if error:
+            resp.message(error)
+            return Response(str(resp), mimetype="application/xml")
+
+        # Track offer generation
+        track_event("offer_generated", agent_phone, {"price": parsed.get("price")})
+
+        # Increment usage count
+        new_count = increment_offer_count(agent_phone)
+
+        # Check if trial just completed
+        if new_count == FREE_OFFER_LIMIT and reason == "free_trial":
+            track_event("trial_completed", agent_phone)
+
+        filename = os.path.basename(pdf_path)
+        pdf_url = request.host_url.rstrip("/") + f"/offers/{filename}"
+
+        warning_line = f"\nNote: {' / '.join(warnings)}" if warnings else ""
+
+        # Status line based on subscription
+        if reason == "subscribed":
+            status_line = ""
+        else:
+            remaining = FREE_OFFER_LIMIT - new_count
+            if remaining > 0:
+                status_line = f"\n✨ {remaining} free offers remaining"
+            else:
+                payment_url = request.host_url.rstrip("/") + "/pricing"
+                status_line = f"\n🎉 Last free offer! Subscribe for unlimited:\n{payment_url}"
+
         reply = (
-            f"You've used your {FREE_OFFER_LIMIT} free offers! 🎉\n\n"
-            f"Subscribe for unlimited offers:\n"
-            f"{payment_url}\n\n"
-            f"$49/mo • Cancel anytime\n"
-            f"Saves 45min per offer"
+            f"Offer ready for {parsed['address']}\n\n"
+            f"💰 Price: ${parsed['price']:,}\n"
+            f"📅 Close: {parsed['close_days']} days\n"
+            f"💵 Down: ${parsed['down_payment_amount']:,} ({parsed['down_payment_pct']*100:.0f}%)\n"
+            f"🏦 Loan: ${parsed['loan_amount']:,}\n"
+            f"✅ Earnest: ${parsed['earnest_money']:,}\n"
+            f"🎯 Option: ${parsed['option_fee']}\n"
+            f"🏠 Property: {parsed['bed']}bed/{parsed['bath']}bath/{parsed['sqft']:,}sf\n\n"
+            f"⚡️ Generated in <1s (vs 45min manual)\n"
+            f"{warning_line}\n"
+            f"Review: {pdf_url}\n"
+            f"{status_line}\n\n"
+            f"Share with your team:\n"
+            f"textanoffer-production.up.railway.app/demo\n"
+            f"(TREC 20-19 draft -- agent must review before signing)"
         )
         resp.message(reply)
+        print(f"[SMS] Sending reply, length: {len(reply)} chars")
         return Response(str(resp), mimetype="application/xml")
 
-    # Process offer
-    parsed, pdf_path, error, warnings = process_offer(incoming_msg, agent_phone)
-
-    if error:
-        resp.message(error)
+    except Exception as e:
+        print(f"[SMS] ERROR: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        resp.message("Error generating offer. Please try again or contact support.")
         return Response(str(resp), mimetype="application/xml")
-
-    # Track offer generation
-    track_event("offer_generated", agent_phone, {"price": parsed.get("price")})
-
-    # Increment usage count
-    new_count = increment_offer_count(agent_phone)
-
-    # Check if trial just completed
-    if new_count == FREE_OFFER_LIMIT and reason == "free_trial":
-        track_event("trial_completed", agent_phone)
-
-    filename = os.path.basename(pdf_path)
-    pdf_url = request.host_url.rstrip("/") + f"/offers/{filename}"
-
-    warning_line = f"\nNote: {' / '.join(warnings)}" if warnings else ""
-
-    # Status line based on subscription
-    if reason == "subscribed":
-        status_line = ""
-    else:
-        remaining = FREE_OFFER_LIMIT - new_count
-        if remaining > 0:
-            status_line = f"\n✨ {remaining} free offers remaining"
-        else:
-            payment_url = request.host_url.rstrip("/") + "/pricing"
-            status_line = f"\n🎉 Last free offer! Subscribe for unlimited:\n{payment_url}"
-
-    reply = (
-        f"Offer ready for {parsed['address']}\n\n"
-        f"💰 Price: ${parsed['price']:,}\n"
-        f"📅 Close: {parsed['close_days']} days\n"
-        f"💵 Down: ${parsed['down_payment_amount']:,} ({parsed['down_payment_pct']*100:.0f}%)\n"
-        f"🏦 Loan: ${parsed['loan_amount']:,}\n"
-        f"✅ Earnest: ${parsed['earnest_money']:,}\n"
-        f"🎯 Option: ${parsed['option_fee']}\n"
-        f"🏠 Property: {parsed['bed']}bed/{parsed['bath']}bath/{parsed['sqft']:,}sf\n\n"
-        f"⚡️ Generated in <1s (vs 45min manual)\n"
-        f"{warning_line}\n"
-        f"Review: {pdf_url}\n"
-        f"{status_line}\n\n"
-        f"Share with your team:\n"
-        f"textanoffer-production.up.railway.app/demo\n"
-        f"(TREC 20-19 draft -- agent must review before signing)"
-    )
-    resp.message(reply)
-    return Response(str(resp), mimetype="application/xml")
 
 
 DEMO_FORM = """
