@@ -110,9 +110,15 @@ def process_offer(incoming_msg: str, source_id: str):
     parsed["address"] = addr_check["normalized"]
     warnings = addr_check["warnings"]
 
-    # Get MLS data (includes county lookup)
+    # Get MLS data
     mls_data = lookup_mls(parsed["address"])
-    parsed.update(mls_data)
+
+    # Use agent-specified county if provided, otherwise use MLS lookup
+    if "county" not in parsed:
+        parsed["county"] = mls_data.get("county", "Travis")  # Default to Travis
+
+    # Add other MLS data (bed/bath/sqft)
+    parsed.update({k: v for k, v in mls_data.items() if k != "county"})
 
     # Get agent profile
     agent = get_agent_profile(source_id)
@@ -259,9 +265,9 @@ DEMO_FORM = """
     <div class="card">
       <form method="POST" action="/demo">
         <label class="field-label">Offer details</label>
-        <input type="text" name="offer_text" placeholder="725k 3% 21day 1740 Grand Ave" value="{prefill}">
+        <input type="text" name="offer_text" placeholder="725k 3% 21day Travis 1740 Grand Ave" value="{prefill}">
         <button type="submit">Generate offer</button>
-        <div class="hint">price &middot; down % &middot; closing days &middot; address</div>
+        <div class="hint">price &middot; down % &middot; closing days &middot; county (optional) &middot; address</div>
       </form>
       {result_html}
     </div>
