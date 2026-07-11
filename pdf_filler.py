@@ -14,8 +14,10 @@ why some are verbose ("Texas known as") and some are generic
 ("undefined_3") -- that's TREC's export, not a choice we made.
 """
 import os
+import io
 from datetime import datetime, timedelta
 from pypdf import PdfReader, PdfWriter
+from cover_page import generate_cover_page
 
 TEMPLATE_PATH = os.environ.get("TREC_TEMPLATE_PATH", "20-19_2.pdf")
 OUTPUT_DIR = os.environ.get("OFFER_OUTPUT_DIR", "generated_offers")
@@ -97,19 +99,33 @@ def fill_offer_pdf(parsed: dict, agent_phone: str) -> str:
     
     for page in writer.pages:
         writer.update_page_form_field_values(page, values)
-    
+
     # Ensure filled values render even if the PDF viewer doesn't regenerate appearances.
     if writer._root_object.get("/AcroForm") is not None:
         writer._root_object["/AcroForm"][__import__("pypdf").generic.NameObject("/NeedAppearances")] = \
             __import__("pypdf").generic.BooleanObject(True)
-    
+
+    # Generate premium cover page
+    cover_pdf_bytes = generate_cover_page(parsed, parsed.get('agent', {}))
+
+    # Merge cover page with TREC form
+    cover_reader = PdfReader(io.BytesIO(cover_pdf_bytes))
+    final_writer = PdfWriter()
+
+    # Add cover page first
+    final_writer.add_page(cover_reader.pages[0])
+
+    # Then add all TREC form pages
+    for page in writer.pages:
+        final_writer.add_page(page)
+
     safe_addr = "".join(ch for ch in (parsed.get("address") or "offer") if ch.isalnum())[:30]
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     out_path = os.path.join(OUTPUT_DIR, f"TREC20-19_{safe_addr}_{timestamp}.pdf")
-    
+
     with open(out_path, "wb") as f:
-        writer.write(f)
-    
+        final_writer.write(f)
+
     return out_path
 
 def inspect_fields(pdf_path: str = TEMPLATE_PATH):
