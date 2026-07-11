@@ -21,6 +21,7 @@ import os
 
 from parser import parse_offer_sms
 from pdf_filler import fill_offer_pdf, OUTPUT_DIR
+from agent_profiles import get_agent_profile
 
 app = Flask(__name__)
 
@@ -105,8 +106,22 @@ def process_offer(incoming_msg: str, source_id: str):
     parsed["address"] = addr_check["normalized"]
     warnings = addr_check["warnings"]
 
+    # Get MLS data
     mls_data = lookup_mls(parsed["address"])
     parsed.update(mls_data)
+
+    # Get agent profile
+    agent = get_agent_profile(source_id)
+    parsed["agent"] = agent
+
+    # Smart calculations
+    price = parsed["price"]
+    down_pct = parsed["down_payment_pct"]
+
+    parsed["down_payment_amount"] = int(price * down_pct)
+    parsed["loan_amount"] = price - parsed["down_payment_amount"]
+    parsed["earnest_money"] = int(price * agent["default_earnest_pct"])
+    parsed["option_fee"] = agent["default_option_fee"]
 
     try:
         pdf_path = fill_offer_pdf(parsed, source_id)
@@ -134,10 +149,15 @@ def sms_reply():
     warning_line = f"\nNote: {' / '.join(warnings)}" if warnings else ""
 
     reply = (
-        f"Offer ready for {parsed['address']}\n"
-        f"Price: ${parsed['price']:,}\n"
-        f"Close: {parsed['close_days']} days\n"
-        f"Generated in <1s (vs 45min manual)\n"
+        f"Offer ready for {parsed['address']}\n\n"
+        f"💰 Price: ${parsed['price']:,}\n"
+        f"📅 Close: {parsed['close_days']} days\n"
+        f"💵 Down: ${parsed['down_payment_amount']:,} ({parsed['down_payment_pct']*100:.0f}%)\n"
+        f"🏦 Loan: ${parsed['loan_amount']:,}\n"
+        f"✅ Earnest: ${parsed['earnest_money']:,}\n"
+        f"🎯 Option: ${parsed['option_fee']}\n"
+        f"🏠 Property: {parsed['bed']}bed/{parsed['bath']}bath/{parsed['sqft']:,}sf\n\n"
+        f"⚡️ Generated in <1s (vs 45min manual)\n"
         f"{warning_line}\n"
         f"Review: {pdf_url}\n\n"
         f"Share with your team:\n"
@@ -285,7 +305,12 @@ def demo():
               <div class="result-stamp">Ready to sign</div>
               <div class="result-addr">{parsed['address']}</div>
               <div class="result-row"><span class="k">Sales price</span><span class="v">${parsed['price']:,}</span></div>
+              <div class="result-row"><span class="k">Down payment</span><span class="v">${parsed['down_payment_amount']:,} ({parsed['down_payment_pct']*100:.0f}%)</span></div>
+              <div class="result-row"><span class="k">Loan amount</span><span class="v">${parsed['loan_amount']:,}</span></div>
+              <div class="result-row"><span class="k">Earnest money</span><span class="v">${parsed['earnest_money']:,}</span></div>
+              <div class="result-row"><span class="k">Option fee</span><span class="v">${parsed['option_fee']}</span></div>
               <div class="result-row"><span class="k">Closing date</span><span class="v">{close_date_str}</span></div>
+              <div class="result-row"><span class="k">Property</span><span class="v">{parsed['bed']}bed / {parsed['bath']}bath / {parsed['sqft']:,}sqft</span></div>
               {warning_html}
               <a href="{pdf_url}" target="_blank" class="download-btn">Download filled TREC 20-19 &rarr;</a>
               <div class="disclaimer">Draft only -- agent must review before signing. TREC NO. 20-19.</div>
