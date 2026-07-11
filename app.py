@@ -14,16 +14,21 @@ Flow (demo, no SMS/Twilio needed):
   parse/fill logic runs -> result + PDF link shown directly on the page.
 """
 
-from flask import Flask, request, send_from_directory, Response
+from flask import Flask, request, send_from_directory, Response, redirect, jsonify
 from twilio.twiml.messaging_response import MessagingResponse
 from datetime import datetime
 import os
+import stripe
 
 from parser import parse_offer_sms
 from pdf_filler import fill_offer_pdf, OUTPUT_DIR
 from agent_profiles import get_agent_profile
 
 app = Flask(__name__)
+
+# Stripe configuration
+stripe.api_key = os.environ.get("STRIPE_SECRET_KEY", "")
+STRIPE_PRICE_ID = os.environ.get("STRIPE_PRICE_ID", "")  # Your $49/mo price ID from Stripe dashboard
 
 
 # --- address validation --------------------------------------------------
@@ -483,9 +488,9 @@ def pricing():
         <li><span class="check">✓</span> <strong>No contracts</strong> — Cancel anytime</li>
       </ul>
 
-      <a href="mailto:hello@textanoffer.com?subject=Early%20Adopter%20Signup" class="cta-btn">
-        Get Early Access →
-      </a>
+      <form action="/create-checkout-session" method="POST">
+        <button type="submit" class="cta-btn">Get Early Access →</button>
+      </form>
     </div>
 
     <div class="value-props">
@@ -510,6 +515,111 @@ def pricing():
 </body>
 </html>
 """
+
+
+@app.route("/create-checkout-session", methods=["POST"])
+def create_checkout_session():
+    """Create Stripe checkout session for subscription"""
+    if not stripe.api_key or not STRIPE_PRICE_ID:
+        # Fallback if Stripe not configured: email signup
+        return redirect("mailto:hello@textanoffer.com?subject=Early%20Adopter%20Signup")
+
+    try:
+        checkout_session = stripe.checkout.Session.create(
+            line_items=[{
+                'price': STRIPE_PRICE_ID,
+                'quantity': 1,
+            }],
+            mode='subscription',
+            success_url=request.host_url + 'success?session_id={CHECKOUT_SESSION_ID}',
+            cancel_url=request.host_url + 'pricing',
+            allow_promotion_codes=True,
+        )
+        return redirect(checkout_session.url, code=303)
+    except Exception as e:
+        return jsonify(error=str(e)), 400
+
+
+@app.route("/success")
+def success():
+    """Payment success page"""
+    session_id = request.args.get('session_id')
+    return f"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Welcome to TextAnOffer!</title>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{{--ink:#171B24;--paper:#F3EEDF;--brass:#A9772F;--green:#3A5744;}}
+  body{{background:var(--ink);min-height:100vh;margin:0;display:flex;align-items:center;
+    justify-content:center;padding:20px;font-family:'Inter',sans-serif;}}
+  .card{{background:var(--paper);padding:48px;border-radius:4px;max-width:500px;text-align:center;
+    border-top:3px solid var(--green);}}
+  h1{{font-family:'Source Serif 4',serif;font-size:32px;margin:0 0 16px;color:#211E17;}}
+  p{{color:#847C68;font-size:16px;line-height:1.6;margin-bottom:24px;}}
+  .next-steps{{text-align:left;background:#FFFDF7;padding:20px;border-radius:4px;margin-bottom:24px;}}
+  .next-steps h3{{font-size:14px;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 12px;}}
+  .next-steps ol{{margin:0;padding-left:20px;}}
+  .next-steps li{{margin:8px 0;font-size:14px;}}
+  .btn{{display:inline-block;padding:14px 32px;background:var(--ink);color:#E7E4D8;
+    text-decoration:none;border-radius:4px;font-weight:500;}}
+  .btn:hover{{background:#242938;}}
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>🎉 Welcome aboard!</h1>
+    <p>Your subscription is active. You're locked in at <strong>$49/month forever</strong>.</p>
+
+    <div class="next-steps">
+      <h3>Next Steps:</h3>
+      <ol>
+        <li>Check your email for your receipt and account details</li>
+        <li>Text your first offer to <strong>+1 940 217 2911</strong></li>
+        <li>Or use the web demo at <strong>textanoffer.com/demo</strong></li>
+        <li>Your agent profile will be set up within 24 hours</li>
+      </ol>
+    </div>
+
+    <a href="/demo" class="btn">Generate Your First Offer →</a>
+  </div>
+</body>
+</html>
+"""
+
+
+@app.route("/webhook", methods=["POST"])
+def stripe_webhook():
+    """Handle Stripe webhooks for subscription events"""
+    payload = request.data
+    sig_header = request.headers.get('Stripe-Signature')
+    webhook_secret = os.environ.get('STRIPE_WEBHOOK_SECRET', '')
+
+    if not webhook_secret:
+        return jsonify(success=True)
+
+    try:
+        event = stripe.Webhook.construct_event(
+            payload, sig_header, webhook_secret
+        )
+    except ValueError:
+        return jsonify(error='Invalid payload'), 400
+    except stripe.error.SignatureVerificationError:
+        return jsonify(error='Invalid signature'), 400
+
+    # Handle subscription events
+    if event['type'] == 'checkout.session.completed':
+        session = event['data']['object']
+        # TODO: Store customer subscription in database
+        # customer_email = session['customer_details']['email']
+        # customer_id = session['customer']
+        # subscription_id = session['subscription']
+        pass
+
+    return jsonify(success=True)
 
 
 @app.route("/offers/<path:filename>")

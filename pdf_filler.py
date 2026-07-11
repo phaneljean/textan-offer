@@ -25,9 +25,12 @@ OUTPUT_DIR = os.environ.get("OFFER_OUTPUT_DIR", "generated_offers")
 FIELD_MAP = {
     # Paragraph 2A: Property description
     "address": "Texas known as",
-    "city": "Addition City of",  # Actually the "City of" field in 2A
+    "city": "Addition City of",
     "county": "County of",
+
+    # Paragraph 9A: Closing date
     "closing_date": "A The closing of the sale will be on or before",
+    "closing_year_prefix": "20",  # The "20" prefix before the year digits
 
     # Payment structure (Paragraph 3)
     # TREC 20-19 has: 3A (cash portion), 3B (sum of financing), 3C (total sales price)
@@ -78,10 +81,15 @@ def fill_offer_pdf(parsed: dict, agent_phone: str) -> str:
     if parsed.get("option_fee") is not None:
         values[FIELD_MAP["option_fee"]] = f"${parsed['option_fee']}"
 
-    # Closing date
+    # Closing date (Paragraph 9A)
+    # Format: "July 31, 20__" where "20" is separate field and last 2 digits follow
     if parsed.get("close_days") is not None:
         close_dt = datetime.now() + timedelta(days=parsed["close_days"])
-        values[FIELD_MAP["closing_date"]] = close_dt.strftime("%B %d, %Y")
+        # Main field gets "Month Day," (with comma, no year)
+        values[FIELD_MAP["closing_date"]] = close_dt.strftime("%B %d,")
+        # "20" field gets the century prefix
+        values[FIELD_MAP["closing_year_prefix"]] = "20"
+        # Note: Last 2 year digits (e.g., "26") may auto-fill or need separate field
 
     # Property details (bed/bath/sqft) - need to find PDF fields for these
     # Agent info (name, license, brokerage) - need to find PDF fields

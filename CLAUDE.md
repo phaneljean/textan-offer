@@ -90,10 +90,18 @@ Railway will:
 
 ## Environment Variables
 
+### SMS & PDF Generation
 - `TWILIO_AUTH_TOKEN` (optional, recommended for prod) — Twilio auth token for request validation
 - `TREC_TEMPLATE_PATH` (default: `20-19_2.pdf`) — Path to the clean TREC form template
 - `OFFER_OUTPUT_DIR` (default: `generated_offers`) — Directory to store generated PDFs
 - `PORT` (default: `5000`) — Server port for Flask/Gunicorn
+
+### Payment Processing (Stripe)
+- `STRIPE_SECRET_KEY` — Stripe secret key (sk_test_... or sk_live_...)
+- `STRIPE_PRICE_ID` — Stripe price ID for $49/mo subscription (price_...)
+- `STRIPE_WEBHOOK_SECRET` (optional) — Stripe webhook signing secret (whsec_...)
+
+See `STRIPE_SETUP.md` for detailed payment setup instructions.
 
 ## Code Organization
 
