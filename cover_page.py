@@ -57,7 +57,7 @@ def generate_cover_page(parsed: dict, agent: dict) -> bytes:
 
     # Card dimensions — centered
     card_w = 4.2 * inch
-    card_h = 6.5 * inch
+    card_h = 7.5 * inch
     card_x = (width - card_w) / 2
     card_y = (height - card_h) / 2
 
@@ -95,7 +95,7 @@ def generate_cover_page(parsed: dict, agent: dict) -> bytes:
     c.drawCentredString(cx, y, address)
 
     # City/County
-    y -= 0.25 * inch
+    y -= 0.3 * inch
     city = parsed.get('city', '')
     county = parsed.get('county', '')
     location_parts = []
@@ -133,10 +133,10 @@ def generate_cover_page(parsed: dict, agent: dict) -> bytes:
 
     for line in lines:
         if line == "":
-            y -= 0.15 * inch
+            y -= 0.2 * inch
             continue
         c.drawCentredString(cx, y, line)
-        y -= 0.28 * inch
+        y -= 0.32 * inch
 
     # Second divider
     y -= 0.25 * inch
@@ -144,26 +144,27 @@ def generate_cover_page(parsed: dict, agent: dict) -> bytes:
     c.line(cx - div_w/2, y, cx + div_w/2, y)
 
     # Agent contact info
-    y -= 0.45 * inch
+    y -= 0.5 * inch
     c.setFillColor(TEXT_MUTED)
     c.setFont("Helvetica", 9)
 
     if agent.get('phone'):
         c.drawCentredString(cx, y, agent['phone'])
-        y -= 0.22 * inch
+        y -= 0.26 * inch
     if agent.get('email'):
         c.drawCentredString(cx, y, agent['email'])
-        y -= 0.22 * inch
+        y -= 0.26 * inch
     if agent.get('brokerage'):
         c.drawCentredString(cx, y, agent['brokerage'])
+        y -= 0.26 * inch
 
-    # Footer — draft notice
+    # Footer — draft notice (anchored to bottom of card)
     c.setFont("Helvetica", 7.5)
     c.setFillColor(TEXT_MUTED)
-    c.drawCentredString(cx, card_y + 0.45*inch, "TREC No. 20-19  •  Draft — agent must review before signing")
+    c.drawCentredString(cx, card_y + 0.5*inch, "TREC No. 20-19  •  Draft — agent must review before signing")
 
     timestamp = datetime.now().strftime("%m/%d/%Y %I:%M %p")
-    c.drawCentredString(cx, card_y + 0.25*inch, f"Generated {timestamp}")
+    c.drawCentredString(cx, card_y + 0.28*inch, f"Generated {timestamp}")
 
     c.save()
     buffer.seek(0)
