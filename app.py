@@ -137,9 +137,11 @@ def sms_reply():
         f"Offer ready for {parsed['address']}\n"
         f"Price: ${parsed['price']:,}\n"
         f"Close: {parsed['close_days']} days\n"
-        f"Generated in <1s"
-        f"{warning_line}\n\n"
-        f"Review: {pdf_url}\n"
+        f"Generated in <1s (vs 45min manual)\n"
+        f"{warning_line}\n"
+        f"Review: {pdf_url}\n\n"
+        f"Share with your team:\n"
+        f"textanoffer-production.up.railway.app/demo\n"
         f"(TREC 20-19 draft -- agent must review before signing)"
     )
     resp.message(reply)
