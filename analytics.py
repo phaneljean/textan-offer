@@ -137,4 +137,32 @@ def get_revenue_metrics() -> dict:
         "arr": arr,
     }
 
+def get_recent_sms(limit: int = 50) -> list:
+    """Get recent SMS activity"""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT phone, metadata, created_at
+        FROM events
+        WHERE event_type = 'sms_received'
+        ORDER BY created_at DESC
+        LIMIT ?
+    """, (limit,))
+
+    rows = cursor.fetchall()
+    conn.close()
+
+    import json
+    results = []
+    for row in rows:
+        metadata = json.loads(row[1]) if row[1] else {}
+        results.append({
+            "phone": row[0],
+            "body": metadata.get("body", ""),
+            "created_at": row[2]
+        })
+
+    return results
+
 init_analytics_tables()

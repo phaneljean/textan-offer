@@ -24,7 +24,7 @@ from parser import parse_offer_sms
 from pdf_filler import fill_offer_pdf, OUTPUT_DIR
 from agent_profiles import get_agent_profile
 from subscriptions import can_generate_offer, increment_offer_count, activate_subscription, deactivate_subscription, FREE_OFFER_LIMIT
-from analytics import track_event, get_conversion_metrics, get_revenue_metrics
+from analytics import track_event, get_conversion_metrics, get_revenue_metrics, get_recent_sms
 
 app = Flask(__name__)
 
@@ -155,6 +155,10 @@ def process_offer(incoming_msg: str, source_id: str):
 def sms_reply():
     incoming_msg = request.values.get("Body", "")
     agent_phone = request.values.get("From", "")
+
+    # Log all incoming SMS for debugging
+    print(f"[SMS] From: {agent_phone}, Body: {incoming_msg}")
+    track_event("sms_received", agent_phone, {"body": incoming_msg})
 
     resp = MessagingResponse()
 
@@ -686,6 +690,15 @@ def analytics_dashboard():
     """Simple analytics dashboard (password protect in production!)"""
     metrics = get_conversion_metrics(days=30)
     revenue = get_revenue_metrics()
+    recent_sms = get_recent_sms(limit=20)
+
+    sms_rows = ""
+    for sms in recent_sms:
+        # Format timestamp
+        from datetime import datetime
+        dt = datetime.fromisoformat(sms['created_at'])
+        time_str = dt.strftime("%m/%d %H:%M")
+        sms_rows += f"<tr><td>{time_str}</td><td>{sms['phone']}</td><td>{sms['body'][:50]}</td></tr>"
 
     return f"""
 <!DOCTYPE html>
@@ -739,6 +752,18 @@ body{{font-family:system-ui;max-width:800px;margin:40px auto;padding:20px;}}
   <div class="value">${revenue['arr']:,}</div>
   <div class="label">Annual Recurring Revenue</div>
 </div>
+<h2>Recent SMS Activity</h2>
+<table style="width:100%;border-collapse:collapse;">
+  <tr style="background:#f5f5f5;text-align:left;">
+    <th style="padding:10px;">Time</th>
+    <th style="padding:10px;">Phone</th>
+    <th style="padding:10px;">Message</th>
+  </tr>
+  {sms_rows}
+</table>
+<p style="color:#666;font-size:12px;margin-top:20px;">
+  Check Twilio dashboard for full logs: <a href="https://console.twilio.com/us1/monitor/logs/sms" target="_blank">console.twilio.com/monitor/logs/sms</a>
+</p>
 </body></html>
 """
 
