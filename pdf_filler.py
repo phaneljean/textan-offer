@@ -25,6 +25,7 @@ OUTPUT_DIR = os.environ.get("OFFER_OUTPUT_DIR", "generated_offers")
 FIELD_MAP = {
     # Verified working fields
     "address": "Texas known as",
+    "county": "County of",
     "closing_date": "A The closing of the sale will be on or before",
 
     # Payment structure (Paragraph 3)
@@ -54,9 +55,11 @@ def fill_offer_pdf(parsed: dict, agent_phone: str) -> str:
     
     values = {}
 
-    # Property address
+    # Property address and county (Paragraph 2)
     if parsed.get("address"):
         values[FIELD_MAP["address"]] = parsed["address"]
+    if parsed.get("county"):
+        values[FIELD_MAP["county"]] = parsed["county"]
 
     # Payment structure (Paragraph 3: A, B, C)
     if parsed.get("down_payment_amount") is not None:

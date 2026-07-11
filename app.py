@@ -84,12 +84,16 @@ def validate_address(address: str) -> dict:
 
 # --- stub MLS lookup ---------------------------------------------------
 # Replace this with a real MLS API call (e.g. Bridge Interactive, Spark API)
+# Real version should geocode address and query MLS for property data + county
 def lookup_mls(address: str) -> dict:
+    # Stub: Default to Travis County (Austin) for demo
+    # Real implementation should use geocoding API to determine actual county
     return {
         "bed": 3,
         "bath": 2,
         "sqft": 1450,
         "apn": "714-123-45",
+        "county": "Travis",  # Travis County = Austin, TX
     }
 
 
@@ -106,7 +110,7 @@ def process_offer(incoming_msg: str, source_id: str):
     parsed["address"] = addr_check["normalized"]
     warnings = addr_check["warnings"]
 
-    # Get MLS data
+    # Get MLS data (includes county lookup)
     mls_data = lookup_mls(parsed["address"])
     parsed.update(mls_data)
 
