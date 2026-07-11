@@ -258,6 +258,8 @@ DEMO_FORM = """
     border:1px solid rgba(169,119,47,0.3);border-radius:2px;font-size:12px;color:#8A6423;}}
   .foot{{text-align:center;margin-top:24px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;
     color:var(--text-on-ink-muted);letter-spacing:0.03em;}}
+  .foot a{{color:var(--brass-soft);text-decoration:none;}}
+  .foot a:hover{{text-decoration:underline;}}
 </style>
 </head>
 <body>
@@ -301,7 +303,10 @@ DEMO_FORM = """
       </form>
       {result_html}
     </div>
-    <div class="foot">SMS delivery pending carrier registration -- this demo runs the same backend directly</div>
+    <div class="foot">
+      SMS delivery pending carrier registration -- this demo runs the same backend directly
+      <br><a href="/pricing">View Pricing →</a>
+    </div>
   </div>
 </body>
 </html>
@@ -378,6 +383,133 @@ def demo():
             """
 
     return DEMO_FORM.format(prefill=prefill, result_html=result_html, date_stamp=date_stamp)
+
+
+@app.route("/pricing")
+def pricing():
+    return """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pricing - TextAnOffer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#171B24; --ink-soft:#242938; --paper:#F3EEDF; --paper-line:#DCD3B8;
+    --brass:#A9772F; --brass-soft:#C9A466; --green:#3A5744;
+    --text-on-paper:#211E17; --text-muted:#847C68;
+    --text-on-ink:#E7E4D8; --text-on-ink-muted:#8B8A82;
+  }
+  *{box-sizing:border-box;}
+  body{
+    background:var(--ink);
+    background-image:radial-gradient(circle at 15% 10%, rgba(169,119,47,0.06), transparent 45%),
+                      radial-gradient(circle at 85% 90%, rgba(169,119,47,0.04), transparent 40%);
+    min-height:100vh; margin:0; padding:48px 20px; font-family:'Inter',sans-serif;
+  }
+  .container{max-width:900px;margin:0 auto;}
+  .header{text-align:center;margin-bottom:48px;}
+  .logo{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.08em;
+    color:var(--brass-soft);margin-bottom:16px;}
+  h1{font-family:'Source Serif 4',serif;font-weight:600;font-size:42px;color:var(--text-on-ink);
+    margin:0 0 12px;letter-spacing:-0.01em;}
+  .tagline{color:var(--text-on-ink-muted);font-size:18px;line-height:1.6;max-width:600px;margin:0 auto;}
+
+  .pricing-card{background:var(--paper);border-radius:4px;padding:40px;margin-bottom:24px;
+    border-top:3px solid var(--brass);box-shadow:0 24px 60px -20px rgba(0,0,0,0.5);}
+  .plan-badge{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:10px;
+    letter-spacing:0.08em;text-transform:uppercase;color:var(--brass);
+    background:rgba(169,119,47,0.15);border:1px solid rgba(169,119,47,0.4);
+    padding:4px 10px;border-radius:20px;margin-bottom:16px;}
+  .plan-name{font-family:'Source Serif 4',serif;font-size:28px;font-weight:600;
+    color:var(--text-on-paper);margin:0 0 8px;}
+  .price-row{display:flex;align-items:baseline;gap:8px;margin-bottom:16px;}
+  .price-original{font-size:24px;color:var(--text-muted);text-decoration:line-through;}
+  .price-current{font-size:48px;font-weight:600;color:var(--text-on-paper);}
+  .price-period{font-size:18px;color:var(--text-muted);}
+  .price-note{font-size:13px;color:var(--brass);margin-bottom:24px;font-weight:500;}
+
+  .features{list-style:none;padding:0;margin:0 0 32px;}
+  .features li{padding:12px 0;border-bottom:1px solid var(--paper-line);font-size:15px;
+    color:var(--text-on-paper);display:flex;align-items:start;gap:12px;}
+  .features li:last-child{border:none;}
+  .check{color:var(--green);font-weight:600;}
+
+  .cta-btn{display:block;width:100%;padding:16px;background:var(--ink);color:var(--text-on-ink);
+    border:none;font-family:'Inter',sans-serif;font-size:16px;font-weight:600;
+    border-radius:4px;cursor:pointer;text-decoration:none;text-align:center;}
+  .cta-btn:hover{background:var(--ink-soft);}
+
+  .value-props{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:24px;
+    margin-top:48px;}
+  .value-card{background:rgba(243,238,223,0.08);padding:24px;border-radius:4px;
+    border:1px solid rgba(243,238,223,0.12);}
+  .value-title{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.08em;
+    text-transform:uppercase;color:var(--brass-soft);margin-bottom:8px;}
+  .value-text{color:var(--text-on-ink-muted);font-size:14px;line-height:1.6;}
+
+  .back-link{text-align:center;margin-top:32px;}
+  .back-link a{color:var(--brass-soft);text-decoration:none;font-size:14px;}
+  .back-link a:hover{text-decoration:underline;}
+</style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="logo">TEXTANOFFER</div>
+      <h1>Simple pricing.<br>Massive time savings.</h1>
+      <p class="tagline">Join Texas agents saving 45 minutes per offer with instant TREC 20-19 generation.</p>
+    </div>
+
+    <div class="pricing-card">
+      <span class="plan-badge">🚀 Early Adopter Pricing</span>
+      <h2 class="plan-name">Professional Plan</h2>
+      <div class="price-row">
+        <span class="price-original">$79</span>
+        <span class="price-current">$49</span>
+        <span class="price-period">/month</span>
+      </div>
+      <p class="price-note">Lock in this rate forever • Normally $79/mo</p>
+
+      <ul class="features">
+        <li><span class="check">✓</span> <strong>Unlimited offers</strong> — Generate as many as you need</li>
+        <li><span class="check">✓</span> <strong>Instant calculations</strong> — Down payment, loan amount, earnest money auto-filled</li>
+        <li><span class="check">✓</span> <strong>Complete TREC 20-19</strong> — All 281 fields, professional output</li>
+        <li><span class="check">✓</span> <strong>SMS + Web access</strong> — Text or use demo page</li>
+        <li><span class="check">✓</span> <strong>Agent profile</strong> — Your info auto-fills every time</li>
+        <li><span class="check">✓</span> <strong>No contracts</strong> — Cancel anytime</li>
+      </ul>
+
+      <a href="mailto:hello@textanoffer.com?subject=Early%20Adopter%20Signup" class="cta-btn">
+        Get Early Access →
+      </a>
+    </div>
+
+    <div class="value-props">
+      <div class="value-card">
+        <div class="value-title">Time ROI</div>
+        <div class="value-text">Save 45 minutes per offer. At 5 offers/month, you save 3.75 hours — worth $187-$562 of your time.</div>
+      </div>
+      <div class="value-card">
+        <div class="value-title">Zero Errors</div>
+        <div class="value-text">Math calculated automatically. No more "$21,750 or 3%?" double-checking. Every field consistent.</div>
+      </div>
+      <div class="value-card">
+        <div class="value-title">Pays for Itself</div>
+        <div class="value-text">Break even with just 2 offers per month. Everything after that is pure time savings.</div>
+      </div>
+    </div>
+
+    <div class="back-link">
+      <a href="/demo">← Back to demo</a>
+    </div>
+  </div>
+</body>
+</html>
+"""
 
 
 @app.route("/offers/<path:filename>")
