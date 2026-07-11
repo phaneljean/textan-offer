@@ -21,22 +21,22 @@ DIVIDER = HexColor("#C9C0B3")
 
 
 def _draw_marble_bg(c, width, height):
-    """Simulate subtle marble texture with gradient fills."""
+    """Clean warm background with very subtle texture."""
     c.setFillColor(MARBLE_BG)
     c.rect(0, 0, width, height, fill=1, stroke=0)
 
     c.saveState()
-    c.setFillColor(Color(0.82, 0.78, 0.73, alpha=0.12))
-    c.translate(width * 0.2, height * 0.6)
-    c.rotate(25)
-    c.rect(-2*inch, -0.5*inch, 6*inch, 0.8*inch, fill=1, stroke=0)
+    c.setFillColor(Color(0.84, 0.80, 0.75, alpha=0.06))
+    c.translate(width * 0.15, height * 0.55)
+    c.rotate(30)
+    c.rect(-1*inch, -0.2*inch, 5*inch, 0.3*inch, fill=1, stroke=0)
     c.restoreState()
 
     c.saveState()
-    c.setFillColor(Color(0.85, 0.80, 0.75, alpha=0.08))
-    c.translate(width * 0.7, height * 0.3)
-    c.rotate(-15)
-    c.rect(-3*inch, -0.3*inch, 5*inch, 0.5*inch, fill=1, stroke=0)
+    c.setFillColor(Color(0.86, 0.82, 0.77, alpha=0.04))
+    c.translate(width * 0.75, height * 0.25)
+    c.rotate(-20)
+    c.rect(-2*inch, -0.15*inch, 4*inch, 0.25*inch, fill=1, stroke=0)
     c.restoreState()
 
 
@@ -57,7 +57,7 @@ def generate_cover_page(parsed: dict, agent: dict) -> bytes:
 
     # Card dimensions — centered
     card_w = 4.2 * inch
-    card_h = 7.5 * inch
+    card_h = 8.8 * inch
     card_x = (width - card_w) / 2
     card_y = (height - card_h) / 2
 
@@ -68,34 +68,47 @@ def generate_cover_page(parsed: dict, agent: dict) -> bytes:
     top = card_y + card_h
 
     # Agent name (large, uppercase, centered)
-    y = top - 0.9 * inch
+    y = top - 0.8 * inch
     agent_name = agent.get('name', 'REAL ESTATE AGENT').upper()
     c.setFillColor(INK)
     c.setFont("Helvetica-Bold", 18)
     c.drawCentredString(cx, y, agent_name)
 
     # Subtitle
-    y -= 0.35 * inch
+    y -= 0.32 * inch
     c.setFillColor(TEXT_SECONDARY)
-    c.setFont("Helvetica", 10)
+    c.setFont("Helvetica", 9)
     c.drawCentredString(cx, y, "REAL ESTATE AGENT")
 
+    # License number
+    if agent.get('license'):
+        y -= 0.2 * inch
+        c.setFont("Helvetica", 8)
+        c.setFillColor(TEXT_MUTED)
+        c.drawCentredString(cx, y, f"License #{agent['license']}")
+
     # Divider line
-    y -= 0.4 * inch
+    y -= 0.35 * inch
     c.setStrokeColor(DIVIDER)
     c.setLineWidth(0.75)
     div_w = 1.2 * inch
     c.line(cx - div_w/2, y, cx + div_w/2, y)
 
+    # Document title
+    y -= 0.4 * inch
+    c.setFillColor(TEXT_SECONDARY)
+    c.setFont("Helvetica-Bold", 9)
+    c.drawCentredString(cx, y, "RESIDENTIAL PURCHASE OFFER")
+
     # Property address
-    y -= 0.55 * inch
+    y -= 0.4 * inch
     c.setFillColor(INK)
     c.setFont("Helvetica", 11)
     address = parsed.get('address', '')
     c.drawCentredString(cx, y, address)
 
     # City/County
-    y -= 0.3 * inch
+    y -= 0.28 * inch
     city = parsed.get('city', '')
     county = parsed.get('county', '')
     location_parts = []
@@ -107,7 +120,7 @@ def generate_cover_page(parsed: dict, agent: dict) -> bytes:
     c.drawCentredString(cx, y, ", ".join(location_parts))
 
     # Spacing before deal terms
-    y -= 0.6 * inch
+    y -= 0.5 * inch
     c.setFillColor(TEXT_SECONDARY)
     c.setFont("Helvetica", 10)
 
@@ -121,6 +134,14 @@ def generate_cover_page(parsed: dict, agent: dict) -> bytes:
     earnest = parsed.get('earnest_money', 0)
     option = parsed.get('option_fee', 0)
 
+    # Property details
+    bed = parsed.get('bed', '')
+    bath = parsed.get('bath', '')
+    sqft = parsed.get('sqft', 0)
+    prop_line = ""
+    if bed and bath and sqft:
+        prop_line = f"{bed} bed  •  {bath} bath  •  {sqft:,} sqft"
+
     lines = [
         f"${price:,}",
         f"{down_pct*100:.0f}% Down  •  ${down_amt:,}",
@@ -131,12 +152,16 @@ def generate_cover_page(parsed: dict, agent: dict) -> bytes:
         f"Option Fee: ${option}",
     ]
 
+    if prop_line:
+        lines.insert(0, prop_line)
+        lines.insert(1, "")
+
     for line in lines:
         if line == "":
-            y -= 0.2 * inch
+            y -= 0.15 * inch
             continue
         c.drawCentredString(cx, y, line)
-        y -= 0.32 * inch
+        y -= 0.28 * inch
 
     # Second divider
     y -= 0.25 * inch
