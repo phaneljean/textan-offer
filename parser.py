@@ -41,13 +41,33 @@ def _parse_county(text):
     m = COUNTY_RE.search(text)
     return m.group(1).capitalize() if m else None
 
+def _parse_city(text):
+    # Common TX cities - look for them in the text
+    # This is a heuristic; real version should use geocoding
+    cities = [
+        'austin', 'houston', 'san antonio', 'dallas', 'fort worth', 'el paso',
+        'arlington', 'corpus christi', 'plano', 'irving', 'laredo', 'garland',
+        'frisco', 'mckinney', 'round rock', 'cedar park', 'pflugerville', 'georgetown'
+    ]
+    text_lower = text.lower()
+    for city in cities:
+        if city in text_lower:
+            return city.title()
+    return None
+
 def _parse_address(text):
-    # crude heuristic: strip out the price/pct/day/county tokens, what's left is the address
+    # crude heuristic: strip out the price/pct/day/county/city tokens, what's left is the street address
     stripped = re.sub(r'\d+(?:\.\d+)?\s*(k|m|million|mil)\b', '', text, flags=re.IGNORECASE)
     stripped = re.sub(r'\d+(?:\.\d+)?\s*%', '', stripped)
     stripped = re.sub(r'\d+\s*day\w*', '', stripped, flags=re.IGNORECASE)
     # Remove county name if present
     stripped = COUNTY_RE.sub('', stripped)
+    # Remove city name if present (simple approach - remove known cities)
+    cities = ['austin', 'houston', 'san antonio', 'dallas', 'fort worth', 'el paso',
+              'arlington', 'corpus christi', 'plano', 'irving', 'laredo', 'garland',
+              'frisco', 'mckinney', 'round rock', 'cedar park', 'pflugerville', 'georgetown']
+    for city in cities:
+        stripped = re.sub(r'\b' + city + r'\b', '', stripped, flags=re.IGNORECASE)
     address = stripped.strip(' ,.-')
     return address if address else None
 
@@ -69,6 +89,7 @@ def parse_offer_sms(text: str) -> dict:
     pct = _parse_pct(text)
     days = _parse_days(text)
     county = _parse_county(text)  # optional
+    city = _parse_city(text)  # optional
     address = _parse_address(text)
 
     missing = [name for name, val in
@@ -131,9 +152,11 @@ def parse_offer_sms(text: str) -> dict:
         "address": address
     }
 
-    # Add county if specified (optional)
+    # Add county and city if specified (optional)
     if county:
         result["county"] = county
+    if city:
+        result["city"] = city
 
     return result
 

@@ -84,16 +84,17 @@ def validate_address(address: str) -> dict:
 
 # --- stub MLS lookup ---------------------------------------------------
 # Replace this with a real MLS API call (e.g. Bridge Interactive, Spark API)
-# Real version should geocode address and query MLS for property data + county
+# Real version should geocode address and query MLS for property data
 def lookup_mls(address: str) -> dict:
-    # Stub: Default to Travis County (Austin) for demo
-    # Real implementation should use geocoding API to determine actual county
+    # Stub: Default to Austin, Travis County for demo
+    # Real implementation should use geocoding API or MLS data
     return {
         "bed": 3,
         "bath": 2,
         "sqft": 1450,
         "apn": "714-123-45",
-        "county": "Travis",  # Travis County = Austin, TX
+        "city": "Austin",
+        "county": "Travis",
     }
 
 
@@ -113,12 +114,14 @@ def process_offer(incoming_msg: str, source_id: str):
     # Get MLS data
     mls_data = lookup_mls(parsed["address"])
 
-    # Use agent-specified county if provided, otherwise use MLS lookup
+    # Use agent-specified county/city if provided, otherwise use MLS lookup or defaults
     if "county" not in parsed:
-        parsed["county"] = mls_data.get("county", "Travis")  # Default to Travis
+        parsed["county"] = mls_data.get("county", "Travis")
+    if "city" not in parsed:
+        parsed["city"] = mls_data.get("city", "Austin")
 
     # Add other MLS data (bed/bath/sqft)
-    parsed.update({k: v for k, v in mls_data.items() if k != "county"})
+    parsed.update({k: v for k, v in mls_data.items() if k not in ["county", "city"]})
 
     # Get agent profile
     agent = get_agent_profile(source_id)
