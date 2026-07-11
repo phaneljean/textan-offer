@@ -637,7 +637,7 @@ def success():
       <h3>Next Steps:</h3>
       <ol>
         <li>Check your email for your receipt and account details</li>
-        <li>Text your first offer to <strong>+1 940 217 2911</strong></li>
+        <li>Text your first offer to <strong>1-833-897-0333</strong></li>
         <li>Or use the web demo at <strong>textanoffer.com/demo</strong></li>
         <li>Your agent profile will be set up within 24 hours</li>
       </ol>
