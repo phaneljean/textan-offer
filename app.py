@@ -256,39 +256,47 @@ DEMO_FORM = """
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Inter:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root{{
-    --ink:#171B24; --ink-soft:#242938; --paper:#F3EEDF; --paper-line:#DCD3B8;
-    --brass:#A9772F; --brass-soft:#C9A466; --green:#3A5744;
-    --text-on-paper:#211E17; --text-muted:#847C68;
-    --text-on-ink:#E7E4D8; --text-on-ink-muted:#8B8A82;
+    --ink:#1a1a1a; --ink-soft:#2a2a2a; --paper:#FAF8F5; --paper-line:#E8E2D9;
+    --brass:#8C6D3F; --brass-soft:#A8874F; --green:#3A5744;
+    --text-on-paper:#1a1a1a; --text-muted:#7A7468;
+    --text-on-ink:#F5F3F0; --text-on-ink-muted:#9E9A94;
+    --marble-1:#f5f0eb; --marble-2:#ebe5de; --marble-3:#d9d0c5;
   }}
   *{{box-sizing:border-box;}}
   body{{
-    background:var(--ink);
-    background-image:radial-gradient(circle at 15% 10%, rgba(169,119,47,0.06), transparent 45%),
-                      radial-gradient(circle at 85% 90%, rgba(169,119,47,0.04), transparent 40%);
+    background:var(--marble-1);
+    background-image:
+      linear-gradient(135deg, rgba(200,190,175,0.15) 0%, transparent 50%),
+      linear-gradient(225deg, rgba(180,170,155,0.1) 0%, transparent 40%),
+      radial-gradient(ellipse at 20% 50%, rgba(200,185,165,0.2), transparent 50%),
+      radial-gradient(ellipse at 80% 20%, rgba(190,180,165,0.15), transparent 45%),
+      radial-gradient(ellipse at 60% 80%, rgba(210,195,175,0.12), transparent 40%);
     min-height:100vh; margin:0; display:flex; align-items:center; justify-content:center;
     padding:48px 20px; font-family:'Inter',sans-serif;
   }}
-  .stage{{width:100%;max-width:460px;}}
+  .stage{{width:100%;max-width:440px;text-align:center;}}
   .corner-mark{{display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;
-    font-size:10.5px;letter-spacing:0.06em;color:var(--text-on-ink-muted);margin-bottom:14px;padding:0 4px;}}
-  .corner-mark span.brass{{color:var(--brass-soft);}}
-  h1{{font-family:'Source Serif 4',serif;font-weight:600;font-size:32px;color:var(--text-on-ink);
-    margin:0 0 6px;letter-spacing:-0.01em;min-height:80px;}}
-  .sub{{color:var(--text-on-ink-muted);font-size:14px;line-height:1.55;margin:0 0 32px;max-width:380px;}}
-  .card{{background:var(--paper);border-radius:2px;padding:28px 26px 26px;
-    box-shadow:0 24px 60px -20px rgba(0,0,0,0.5);border-top:2px solid var(--brass);}}
-  .field-label{{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:0.08em;
-    text-transform:uppercase;color:var(--text-muted);margin-bottom:8px;display:block;}}
-  input[type=text]{{width:100%;font-family:'IBM Plex Mono',monospace;font-size:14px;padding:13px 14px;
-    border:1px solid var(--paper-line);background:#FFFDF7;color:var(--text-on-paper);
-    border-radius:2px;outline:none;}}
+    font-size:10px;letter-spacing:0.08em;color:var(--text-muted);margin-bottom:14px;padding:0 4px;}}
+  .corner-mark span.brass{{color:var(--brass);}}
+  h1{{font-family:'Source Serif 4',serif;font-weight:600;font-size:28px;color:var(--text-on-paper);
+    margin:0 0 6px;letter-spacing:-0.02em;min-height:70px;text-transform:uppercase;}}
+  .sub{{color:var(--text-muted);font-size:13px;line-height:1.6;margin:0 auto 32px;max-width:360px;}}
+  .card{{background:var(--paper);border-radius:2px;padding:36px 32px 32px;
+    box-shadow:0 8px 40px -12px rgba(0,0,0,0.12);border-top:none;
+    border:1px solid var(--paper-line);}}
+  .divider{{width:60px;height:1px;background:var(--paper-line);margin:18px auto 22px;}}
+  .field-label{{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.1em;
+    text-transform:uppercase;color:var(--text-muted);margin-bottom:10px;display:block;text-align:left;}}
+  input[type=text]{{width:100%;font-family:'IBM Plex Mono',monospace;font-size:13px;padding:14px 16px;
+    border:1px solid var(--paper-line);background:#FFFFFF;color:var(--text-on-paper);
+    border-radius:2px;outline:none;text-align:center;}}
   input[type=text]:focus{{border-color:var(--brass);}}
-  button{{width:100%;margin-top:14px;background:var(--ink);color:var(--text-on-ink);border:none;
-    padding:14px;font-family:'Inter',sans-serif;font-size:14px;font-weight:500;border-radius:2px;
-    cursor:pointer;letter-spacing:0.01em;}}
+  button{{width:100%;margin-top:16px;background:var(--ink);color:var(--text-on-ink);border:none;
+    padding:14px;font-family:'Inter',sans-serif;font-size:13px;font-weight:500;border-radius:2px;
+    cursor:pointer;letter-spacing:0.04em;text-transform:uppercase;}}
   button:hover{{background:var(--ink-soft);}}
-  .hint{{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-muted);margin-top:10px;}}
+  .hint{{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-muted);margin-top:12px;
+    letter-spacing:0.02em;}}
   .result{{margin-top:22px;padding-top:20px;border-top:1px dashed var(--paper-line);}}
   .result-stamp{{display:inline-flex;align-items:center;gap:6px;font-family:'IBM Plex Mono',monospace;
     font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--green);
@@ -320,56 +328,49 @@ DEMO_FORM = """
     border:1px solid rgba(139,58,44,0.3);border-radius:2px;font-size:13px;color:#7A3527;}}
   .warning-note{{margin:2px 0 10px;padding:8px 12px;background:rgba(169,119,47,0.1);
     border:1px solid rgba(169,119,47,0.3);border-radius:2px;font-size:12px;color:#8A6423;}}
-  .foot{{text-align:center;margin-top:24px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;
-    color:var(--text-on-ink-muted);letter-spacing:0.03em;}}
-  .foot a{{color:var(--brass-soft);text-decoration:none;}}
+  .foot{{text-align:center;margin-top:24px;font-family:'IBM Plex Mono',monospace;font-size:10px;
+    color:var(--text-muted);letter-spacing:0.04em;}}
+  .foot a{{color:var(--brass);text-decoration:none;}}
   .foot a:hover{{text-decoration:underline;}}
 </style>
 </head>
 <body>
   <div class="stage">
-    <div class="corner-mark"><span>TEXTANOFFER</span><span class="brass">{date_stamp}</span></div>
-    <h1 id="headline"></h1>
-    <p class="sub">Type an offer the way you'd text it. This generates the actual TREC 20-19 contract -- same form, same fields, ready for review.</p>
-    <script>
-      const lines = ['Text a price.', 'Get a real offer.'];
-      const headline = document.getElementById('headline');
-      let lineIdx = 0, charIdx = 0, currentText = '';
+    <div class="card">
+      <h1 id="headline"></h1>
+      <p style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);margin:0 0 4px;">REAL ESTATE OFFERS</p>
+      <div class="divider"></div>
+      <p class="sub" style="margin:0 auto 24px;text-align:center;">Type an offer the way you'd text it.<br>Get a real TREC 20-19 contract back.</p>
+      <script>
+        const lines = ['TextAnOffer'];
+        const headline = document.getElementById('headline');
+        let lineIdx = 0, charIdx = 0, currentText = '';
 
-      function type() {{{{
-        if (lineIdx >= lines.length) return;
-
-        const line = lines[lineIdx];
-        if (charIdx < line.length) {{{{
-          currentText += line[charIdx];
-          headline.innerHTML = currentText + (lineIdx === 0 ? '' : '');
-          charIdx++;
-          setTimeout(type, 80);
-        }}}} else {{{{
-          if (lineIdx < lines.length - 1) {{{{
-            setTimeout(() => {{{{
-              currentText += '<br>';
-              lineIdx++;
-              charIdx = 0;
-              type();
-            }}}}, 400);
+        function type() {{{{
+          if (lineIdx >= lines.length) return;
+          const line = lines[lineIdx];
+          if (charIdx < line.length) {{{{
+            currentText += line[charIdx];
+            headline.textContent = currentText;
+            charIdx++;
+            setTimeout(type, 90);
+          }}}} else {{{{
+            if (lineIdx < lines.length - 1) {{{{
+              setTimeout(() => {{{{ lineIdx++; charIdx = 0; type(); }}}}, 400);
+            }}}}
           }}}}
         }}}}
-      }}}}
-      type();
-    </script>
-    <div class="card">
+        type();
+      </script>
       <form method="POST" action="/demo">
-        <label class="field-label">Offer details</label>
-        <input type="text" name="offer_text" placeholder="725k 3% 21day Travis 1740 Grand Ave" value="{prefill}">
-        <button type="submit">Generate offer</button>
-        <div class="hint">price &middot; down % &middot; closing days &middot; county (optional) &middot; address</div>
+        <input type="text" name="offer_text" placeholder="725k 3% 21day 1740 Grand Ave" value="{prefill}">
+        <button type="submit">Generate Offer</button>
+        <div class="hint">price &middot; down % &middot; close days &middot; address</div>
       </form>
       {result_html}
     </div>
     <div class="foot">
-      SMS delivery pending carrier registration -- this demo runs the same backend directly
-      <br><a href="/pricing">View Pricing →</a>
+      <a href="/pricing">View Pricing</a>
     </div>
   </div>
 </body>
@@ -381,7 +382,6 @@ DEMO_FORM = """
 def demo():
     result_html = ""
     prefill = ""
-    date_stamp = datetime.now().strftime("%m/%d/%Y")
 
     if request.method == "POST":
         offer_text = request.form.get("offer_text", "")
@@ -446,7 +446,7 @@ def demo():
             </div>
             """
 
-    return DEMO_FORM.format(prefill=prefill, result_html=result_html, date_stamp=date_stamp)
+    return DEMO_FORM.format(prefill=prefill, result_html=result_html)
 
 
 @app.route("/pricing")
