@@ -789,59 +789,51 @@ def terms():
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Inter:wght@400;500&display=swap" rel="stylesheet">
 <style>
-  :root{
-    --ink:#171B24; --paper:#F3EEDF; --brass:#A9772F; --brass-soft:#C9A466;
-    --text-on-paper:#211E17; --text-muted:#847C68; --paper-line:#DCD3B8;
-    --text-on-ink:#E7E4D8; --text-on-ink-muted:#8B8A82;
-  }
   *{box-sizing:border-box; margin:0; padding:0;}
   body{
-    background:var(--ink);
-    background-image:radial-gradient(circle at 15% 10%, rgba(169,119,47,0.06), transparent 45%),
-                      radial-gradient(circle at 85% 90%, rgba(169,119,47,0.04), transparent 40%);
+    background:#fff;
     min-height:100vh; padding:48px 20px; font-family:'Inter',sans-serif;
     display:flex; justify-content:center;
   }
-  .container{width:100%; max-width:720px;}
+  .container{width:100%; max-width:680px;}
   .back-link{
-    font-size:13px; color:var(--text-on-ink-muted); text-decoration:none;
+    font-size:12px; color:#666; text-decoration:none;
     display:inline-block; margin-bottom:20px;
   }
-  .back-link:hover{color:var(--brass-soft);}
+  .back-link:hover{color:#000;}
   .page-title{
-    font-family:'Source Serif 4',serif; font-weight:600; font-size:28px;
-    color:var(--text-on-ink); margin-bottom:6px; letter-spacing:-0.01em;
+    font-family:'Source Serif 4',serif; font-weight:600; font-size:24px;
+    color:#000; margin-bottom:4px;
   }
   .last-updated{
-    font-size:13px; color:var(--text-on-ink-muted); margin-bottom:28px;
+    font-size:12px; color:#999; margin-bottom:32px;
   }
   .card{
-    background:var(--paper); border-radius:2px; padding:36px 32px;
-    box-shadow:0 24px 60px -20px rgba(0,0,0,0.5); border-top:2px solid var(--brass);
+    padding:0;
   }
   .card h2{
-    font-family:'Source Serif 4',serif; font-weight:600; font-size:19px;
-    color:var(--text-on-paper); margin:32px 0 12px; padding-bottom:8px;
-    border-bottom:1px solid var(--paper-line);
+    font-family:'Source Serif 4',serif; font-weight:600; font-size:15px;
+    color:#000; margin:28px 0 10px; padding-bottom:6px;
+    border-bottom:1px solid #e5e5e5;
   }
   .card h2:first-child{margin-top:0;}
   .card p, .card li{
-    font-size:14px; line-height:1.7; color:var(--text-on-paper); margin-bottom:10px;
+    font-size:12px; line-height:1.7; color:#333; margin-bottom:8px;
   }
-  .card ul{padding-left:20px; margin:8px 0 10px;}
-  .card ul li{list-style:disc; margin-bottom:6px;}
-  .card strong{color:var(--text-on-paper); font-weight:500;}
+  .card ul{padding-left:18px; margin:6px 0 8px;}
+  .card ul li{list-style:disc; margin-bottom:4px;}
+  .card strong{color:#000; font-weight:500;}
   .card .emphasis{
-    background:rgba(169,119,47,0.08); border-left:3px solid var(--brass);
-    padding:12px 16px; margin:14px 0; border-radius:0 2px 2px 0;
-    font-size:13.5px; color:var(--text-on-paper); line-height:1.6;
+    background:#f7f7f7; border-left:3px solid #000;
+    padding:10px 14px; margin:12px 0; border-radius:0 2px 2px 0;
+    font-size:12px; color:#000; line-height:1.6;
   }
   .section-num{
-    color:var(--brass); font-weight:500; margin-right:6px;
+    color:#666; font-weight:500; margin-right:4px;
   }
   .foot{
-    text-align:center; margin-top:24px; font-size:12px;
-    color:var(--text-on-ink-muted); letter-spacing:0.02em;
+    text-align:center; margin-top:24px; font-size:11px;
+    color:#999; letter-spacing:0.02em;
   }
 </style>
 </head>
