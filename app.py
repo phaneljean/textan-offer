@@ -22,7 +22,7 @@ import stripe
 
 from parser import parse_offer_sms
 from pdf_filler import fill_offer_pdf, OUTPUT_DIR
-from agent_profiles import get_agent_profile
+from agent_profiles import get_agent_profile, save_agent_profile
 from subscriptions import can_generate_offer, increment_offer_count, activate_subscription, deactivate_subscription, FREE_OFFER_LIMIT
 from analytics import track_event, get_conversion_metrics, get_revenue_metrics, get_recent_sms
 
@@ -775,6 +775,115 @@ body{{font-family:system-ui;max-width:800px;margin:40px auto;padding:20px;}}
   Check Twilio dashboard for full logs: <a href="https://console.twilio.com/us1/monitor/logs/sms" target="_blank">console.twilio.com/monitor/logs/sms</a>
 </p>
 </body></html>
+"""
+
+
+@app.route("/profile", methods=["GET", "POST"])
+def profile():
+    phone = request.args.get("phone", "").strip()
+    saved = False
+    error = ""
+
+    if request.method == "POST":
+        phone = request.form.get("phone", "").strip()
+        if not phone:
+            error = "Phone number is required."
+        else:
+            save_agent_profile(phone, {
+                "name": request.form.get("name", "").strip(),
+                "license": request.form.get("license", "").strip(),
+                "phone": phone,
+                "email": request.form.get("email", "").strip(),
+                "brokerage": request.form.get("brokerage", "").strip(),
+                "title_company": request.form.get("title_company", "").strip(),
+                "default_earnest_pct": float(request.form.get("earnest_pct", "1")) / 100,
+                "default_option_fee": int(request.form.get("option_fee", "250")),
+            })
+            saved = True
+
+    existing = get_agent_profile(phone) if phone else {}
+
+    return f"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent Profile - TextAnOffer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Inter:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{{--ink:#171B24;--ink-soft:#242938;--paper:#F3EEDF;--paper-line:#DCD3B8;
+    --brass:#A9772F;--green:#3A5744;--text-on-paper:#211E17;--text-muted:#847C68;}}
+  *{{box-sizing:border-box;}}
+  body{{background:var(--ink);min-height:100vh;margin:0;display:flex;align-items:center;
+    justify-content:center;padding:48px 20px;font-family:'Inter',sans-serif;}}
+  .card{{background:var(--paper);border-radius:4px;padding:40px 36px;max-width:460px;width:100%;
+    box-shadow:0 24px 60px -20px rgba(0,0,0,0.5);border-top:3px solid var(--brass);}}
+  h1{{font-family:'Source Serif 4',serif;font-size:24px;color:var(--text-on-paper);margin:0 0 6px;}}
+  .sub{{color:var(--text-muted);font-size:13px;margin:0 0 28px;line-height:1.5;}}
+  label{{display:block;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.08em;
+    text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;margin-top:16px;}}
+  input{{width:100%;font-family:'Inter',sans-serif;font-size:14px;padding:11px 14px;
+    border:1px solid var(--paper-line);background:#FFFDF7;color:var(--text-on-paper);
+    border-radius:2px;outline:none;}}
+  input:focus{{border-color:var(--brass);}}
+  .row{{display:flex;gap:12px;}}
+  .row > div{{flex:1;}}
+  button{{width:100%;margin-top:24px;background:var(--ink);color:#E7E4D8;border:none;
+    padding:14px;font-family:'Inter',sans-serif;font-size:14px;font-weight:500;
+    border-radius:2px;cursor:pointer;}}
+  button:hover{{background:var(--ink-soft);}}
+  .success{{margin-top:16px;padding:12px;background:rgba(58,87,68,0.1);border:1px solid rgba(58,87,68,0.3);
+    border-radius:2px;font-size:13px;color:var(--green);text-align:center;}}
+  .error{{margin-top:16px;padding:12px;background:rgba(139,58,44,0.08);border:1px solid rgba(139,58,44,0.3);
+    border-radius:2px;font-size:13px;color:#7A3527;text-align:center;}}
+  .foot{{text-align:center;margin-top:20px;font-size:12px;}}
+  .foot a{{color:var(--brass);text-decoration:none;}}
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>Agent Profile</h1>
+    <p class="sub">Your info auto-fills the cover page on every offer you generate.</p>
+    <form method="POST" action="/profile">
+      <label>Phone number (used for SMS offers)</label>
+      <input type="text" name="phone" placeholder="+15125551234" value="{phone or existing.get('phone', '')}" required>
+
+      <label>Full name</label>
+      <input type="text" name="name" placeholder="Jane Smith" value="{existing.get('name', '')}">
+
+      <label>TREC license number</label>
+      <input type="text" name="license" placeholder="0123456" value="{existing.get('license', '')}">
+
+      <label>Email</label>
+      <input type="email" name="email" placeholder="jane@realty.com" value="{existing.get('email', '')}">
+
+      <label>Brokerage</label>
+      <input type="text" name="brokerage" placeholder="Keller Williams" value="{existing.get('brokerage', '')}">
+
+      <label>Title company</label>
+      <input type="text" name="title_company" placeholder="Texas Title Co." value="{existing.get('title_company', '')}">
+
+      <div class="row">
+        <div>
+          <label>Default earnest %</label>
+          <input type="number" name="earnest_pct" step="0.1" min="0.1" max="10" value="{existing.get('default_earnest_pct', 0.01) * 100:.1f}">
+        </div>
+        <div>
+          <label>Default option fee $</label>
+          <input type="number" name="option_fee" min="0" max="5000" value="{existing.get('default_option_fee', 250)}">
+        </div>
+      </div>
+
+      <button type="submit">Save Profile</button>
+    </form>
+    {'<div class="success">Profile saved! Your info will appear on all future offers.</div>' if saved else ''}
+    {'<div class="error">' + error + '</div>' if error else ''}
+    <div class="foot"><a href="/demo">&larr; Back to demo</a></div>
+  </div>
+</body>
+</html>
 """
 
 
