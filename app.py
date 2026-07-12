@@ -33,6 +33,11 @@ stripe.api_key = os.environ.get("STRIPE_SECRET_KEY", "")
 STRIPE_PRICE_ID = os.environ.get("STRIPE_PRICE_ID", "")  # Your $49/mo price ID from Stripe dashboard
 
 
+@app.route("/")
+def index():
+    return redirect("/demo")
+
+
 # --- address validation --------------------------------------------------
 # Fast, dependency-free sanity check on the parsed address before it goes
 # anywhere near a legal contract. NOT full USPS/geocoding validation -- it
