@@ -230,7 +230,7 @@ def sms_reply():
             f"Review: {pdf_url}\n"
             f"{status_line}\n\n"
             f"Share with your team:\n"
-            f"textanoffer-production.up.railway.app/demo\n"
+            f"txtanoffer.com/demo\n"
             f"(TREC 20-19 draft -- agent must review before signing)"
         )
         resp.message(reply)
@@ -405,7 +405,7 @@ def demo():
                 warning_html = f'<div class="warning-note">{" / ".join(warnings)}</div>'
             # Social share URLs
             share_text = "Just generated a TREC 20-19 contract in 3 seconds by texting an address 🤯 TextAnOffer turns '725k 3% 21day 1740 Grand Ave' into a filled PDF instantly."
-            share_url = "https://textanoffer-production.up.railway.app/demo"
+            share_url = "https://txtanoffer.com/demo"
             twitter_share = f"https://twitter.com/intent/tweet?text={share_text.replace(' ', '%20')}&url={share_url}"
             linkedin_share = f"https://www.linkedin.com/sharing/share-offsite/?url={share_url}"
 
