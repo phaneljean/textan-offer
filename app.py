@@ -369,7 +369,7 @@ DEMO_FORM = """
     </div>
     <div class="foot">
       SMS delivery pending carrier registration -- this demo runs the same backend directly
-      <br><a href="/pricing">View Pricing →</a>
+      <br><a href="/pricing">View Pricing</a> &middot; <a href="/terms">Terms</a>
     </div>
   </div>
 </body>
@@ -548,7 +548,8 @@ def pricing():
       </ul>
 
       <form action="/create-checkout-session" method="POST">
-        <button type="submit" class="cta-btn">Get Early Access →</button>
+        <button type="submit" class="cta-btn">Get Early Access &rarr;</button>
+        <p style="font-size:12px;color:var(--text-muted);text-align:center;margin-top:12px;">By subscribing you agree to our <a href="/terms" style="color:var(--brass);text-decoration:underline;">Terms of Service</a></p>
       </form>
     </div>
 
@@ -568,7 +569,7 @@ def pricing():
     </div>
 
     <div class="back-link">
-      <a href="/demo">← Back to demo</a>
+      <a href="/demo">&larr; Back to demo</a> &middot; <a href="/terms">Terms of Service</a>
     </div>
   </div>
 </body>
