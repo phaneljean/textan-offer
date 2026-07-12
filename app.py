@@ -23,7 +23,7 @@ import stripe
 from parser import parse_offer_sms
 from pdf_filler import fill_offer_pdf, OUTPUT_DIR
 from agent_profiles import get_agent_profile, save_agent_profile
-from subscriptions import can_generate_offer, increment_offer_count, activate_subscription, deactivate_subscription, FREE_OFFER_LIMIT
+from subscriptions import can_generate_offer, increment_offer_count, activate_subscription, deactivate_subscription, get_user, create_user, FREE_OFFER_LIMIT
 from analytics import track_event, get_conversion_metrics, get_revenue_metrics, get_recent_sms
 
 app = Flask(__name__)
@@ -596,6 +596,7 @@ def create_checkout_session():
                 'quantity': 1,
             }],
             mode='subscription',
+            phone_number_collection={'enabled': True},
             success_url=request.host_url + 'success?session_id={CHECKOUT_SESSION_ID}',
             cancel_url=request.host_url + 'pricing',
             allow_promotion_codes=True,
@@ -609,6 +610,14 @@ def create_checkout_session():
 def success():
     """Payment success page"""
     session_id = request.args.get('session_id')
+    # Try to get phone from the checkout session to pre-fill profile
+    phone_from_checkout = ""
+    if session_id and stripe.api_key:
+        try:
+            sess = stripe.checkout.Session.retrieve(session_id)
+            phone_from_checkout = sess.customer_details.get('phone', '') if sess.customer_details else ''
+        except Exception:
+            pass
     return f"""
 <!DOCTYPE html>
 <html lang="en">
@@ -648,7 +657,7 @@ def success():
       </ol>
     </div>
 
-    <a href="/profile" class="btn">Set Up Your Profile →</a>
+    <a href="/profile?phone={phone_from_checkout}" class="btn">Set Up Your Profile →</a>
   </div>
 </body>
 </html>
@@ -678,17 +687,22 @@ def stripe_webhook():
     if event['type'] == 'checkout.session.completed':
         session = event['data']['object']
         customer_email = session['customer_details']['email']
+        customer_phone = session['customer_details'].get('phone', '')
         customer_id = session['customer']
         subscription_id = session['subscription']
 
+        # Activate subscription on agent's phone number
+        if customer_phone:
+            user = get_user(customer_phone)
+            if not user:
+                create_user(customer_phone)
+            activate_subscription(customer_phone, customer_id, subscription_id)
+
         # Track conversion
-        track_event("subscription_created", metadata={
+        track_event("subscription_created", customer_phone, metadata={
             "customer_id": customer_id,
             "email": customer_email
         })
-
-        # NOTE: Phone number linking happens manually for now
-        # In production: add phone field to checkout or link via email
 
     elif event['type'] == 'customer.subscription.deleted':
         subscription = event['data']['object']
