@@ -636,14 +636,13 @@ def success():
     <div class="next-steps">
       <h3>Next Steps:</h3>
       <ol>
-        <li>Check your email for your receipt and account details</li>
+        <li><strong>Set up your profile</strong> — your name, license, and brokerage auto-fill every offer</li>
         <li>Text your first offer to <strong>1-833-897-0333</strong></li>
         <li>Or use the web demo at <strong>textanoffer.com/demo</strong></li>
-        <li>Your agent profile will be set up within 24 hours</li>
       </ol>
     </div>
 
-    <a href="/demo" class="btn">Generate Your First Offer →</a>
+    <a href="/profile" class="btn">Set Up Your Profile →</a>
   </div>
 </body>
 </html>
