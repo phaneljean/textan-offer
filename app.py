@@ -777,6 +777,205 @@ body{{font-family:system-ui;max-width:800px;margin:40px auto;padding:20px;}}
 """
 
 
+@app.route("/terms")
+def terms():
+    return """<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Terms of Service — TextAnOffer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#171B24; --paper:#F3EEDF; --brass:#A9772F; --brass-soft:#C9A466;
+    --text-on-paper:#211E17; --text-muted:#847C68; --paper-line:#DCD3B8;
+    --text-on-ink:#E7E4D8; --text-on-ink-muted:#8B8A82;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:var(--ink);
+    background-image:radial-gradient(circle at 15% 10%, rgba(169,119,47,0.06), transparent 45%),
+                      radial-gradient(circle at 85% 90%, rgba(169,119,47,0.04), transparent 40%);
+    min-height:100vh; padding:48px 20px; font-family:'Inter',sans-serif;
+    display:flex; justify-content:center;
+  }
+  .container{width:100%; max-width:720px;}
+  .back-link{
+    font-size:13px; color:var(--text-on-ink-muted); text-decoration:none;
+    display:inline-block; margin-bottom:20px;
+  }
+  .back-link:hover{color:var(--brass-soft);}
+  .page-title{
+    font-family:'Source Serif 4',serif; font-weight:600; font-size:28px;
+    color:var(--text-on-ink); margin-bottom:6px; letter-spacing:-0.01em;
+  }
+  .last-updated{
+    font-size:13px; color:var(--text-on-ink-muted); margin-bottom:28px;
+  }
+  .card{
+    background:var(--paper); border-radius:2px; padding:36px 32px;
+    box-shadow:0 24px 60px -20px rgba(0,0,0,0.5); border-top:2px solid var(--brass);
+  }
+  .card h2{
+    font-family:'Source Serif 4',serif; font-weight:600; font-size:19px;
+    color:var(--text-on-paper); margin:32px 0 12px; padding-bottom:8px;
+    border-bottom:1px solid var(--paper-line);
+  }
+  .card h2:first-child{margin-top:0;}
+  .card p, .card li{
+    font-size:14px; line-height:1.7; color:var(--text-on-paper); margin-bottom:10px;
+  }
+  .card ul{padding-left:20px; margin:8px 0 10px;}
+  .card ul li{list-style:disc; margin-bottom:6px;}
+  .card strong{color:var(--text-on-paper); font-weight:500;}
+  .card .emphasis{
+    background:rgba(169,119,47,0.08); border-left:3px solid var(--brass);
+    padding:12px 16px; margin:14px 0; border-radius:0 2px 2px 0;
+    font-size:13.5px; color:var(--text-on-paper); line-height:1.6;
+  }
+  .section-num{
+    color:var(--brass); font-weight:500; margin-right:6px;
+  }
+  .foot{
+    text-align:center; margin-top:24px; font-size:12px;
+    color:var(--text-on-ink-muted); letter-spacing:0.02em;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <a href="/demo" class="back-link">&larr; Back to TextAnOffer</a>
+  <h1 class="page-title">Terms of Service</h1>
+  <p class="last-updated">Last Updated: July 12, 2026</p>
+  <div class="card">
+    <p>These Terms of Service ("Terms") govern your use of TextAnOffer ("Service"), operated by Phanel ("we," "us," or "our"), a sole proprietorship based in Texas. By accessing or using the Service, you agree to be bound by these Terms. If you do not agree, do not use the Service.</p>
+
+    <h2><span class="section-num">1.</span> Service Description</h2>
+    <p>TextAnOffer is a document drafting tool that converts shorthand offer text into pre-filled TREC One to Four Family Residential Contract (Resale) forms (TREC No. 20-19). The Service accepts offer parameters via SMS (Twilio) or a web interface and generates a partially completed PDF contract for review by a licensed Texas real estate agent.</p>
+    <p>The Service fills in standard TREC form fields based on information you provide. It does not create custom legal documents, negotiate terms, or exercise professional judgment on your behalf.</p>
+
+    <h2><span class="section-num">2.</span> Not Legal Advice — No Attorney-Client Relationship</h2>
+    <div class="emphasis">
+      TextAnOffer is NOT a law firm, does NOT provide legal advice, and does NOT serve as a substitute for consultation with a licensed attorney. No attorney-client relationship is formed by your use of the Service.
+    </div>
+    <p>The Service performs mechanical form-filling only. It does not:</p>
+    <ul>
+      <li>Interpret or advise on the legal effect of any contract term</li>
+      <li>Evaluate whether a particular offer is appropriate, enforceable, or in your best interest</li>
+      <li>Replace the judgment of a qualified real estate attorney</li>
+      <li>Provide guidance on TREC rules, disclosure requirements, or regulatory compliance</li>
+    </ul>
+    <p>We strongly recommend that all generated documents be reviewed by a licensed Texas attorney before execution, particularly for complex transactions, commercial properties, or situations involving material contingencies.</p>
+
+    <h2><span class="section-num">3.</span> Draft Documents — Agent Responsibility</h2>
+    <div class="emphasis">
+      All documents generated by TextAnOffer are DRAFTS only. You, the licensed real estate agent, are solely responsible for reviewing, verifying, and approving every field, calculation, date, and term before presenting any document to clients or counterparties.
+    </div>
+    <p>You acknowledge and agree that:</p>
+    <ul>
+      <li>Generated PDFs are incomplete working drafts, not final contracts</li>
+      <li>Many fields are intentionally left blank for you to complete (buyer/seller names, earnest money, option fees, financing terms, etc.)</li>
+      <li>You must independently verify that all auto-filled information — including property address, sales price, and closing date — is accurate and correctly placed</li>
+      <li>You bear full professional responsibility for any document you sign, present, or transmit, regardless of whether it was generated by the Service</li>
+      <li>The Service may misparse input, calculate dates incorrectly, or fill fields in error — it is your duty to catch and correct any such issues</li>
+    </ul>
+
+    <h2><span class="section-num">4.</span> No Liability for Errors</h2>
+    <p>We make no warranty, express or implied, that the Service will produce accurate, complete, or error-free documents. Without limitation, we disclaim all liability for:</p>
+    <ul>
+      <li>Errors in parsing your input text (price, percentages, dates, addresses)</li>
+      <li>Incorrect placement of data in PDF form fields</li>
+      <li>Mathematical or date calculation errors</li>
+      <li>PDF rendering issues, corrupted files, or formatting problems</li>
+      <li>Use of an outdated form version if TREC revises the 20-19 form</li>
+      <li>Any downstream consequence of relying on a generated draft without independent review</li>
+    </ul>
+    <p>THE SERVICE IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTIES OF ANY KIND, WHETHER EXPRESS, IMPLIED, STATUTORY, OR OTHERWISE, INCLUDING WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT.</p>
+
+    <h2><span class="section-num">5.</span> TREC Disclaimer</h2>
+    <p>TextAnOffer is an independent, third-party tool. We are NOT affiliated with, endorsed by, or partnered with the Texas Real Estate Commission (TREC) in any capacity. "TREC" and the form numbers referenced herein are trademarks or designations of the Texas Real Estate Commission.</p>
+    <p>We use publicly available TREC promulgated forms as templates. If TREC revises or replaces a form, there may be a delay before we update the Service. You are responsible for confirming that the form version used is current and appropriate for your transaction.</p>
+
+    <h2><span class="section-num">6.</span> Subscription, Payment, and Cancellation</h2>
+    <p><strong>Pricing:</strong> The Service costs $49.00 per month, billed monthly via Stripe.</p>
+    <p><strong>Billing cycle:</strong> Your subscription renews automatically on the same date each month. You will be charged at the beginning of each billing period.</p>
+    <p><strong>Cancellation:</strong> You may cancel your subscription at any time through your account settings or by contacting us. Cancellation takes effect at the end of your current billing period — you retain access until that date.</p>
+    <p><strong>Refunds:</strong> Payments are non-refundable. We do not provide prorated refunds for partial months. If you cancel mid-cycle, you retain access through the remainder of the paid period but will not receive a refund for unused time.</p>
+    <p><strong>Price changes:</strong> We reserve the right to modify pricing with 30 days' written notice (via email or SMS). Continued use of the Service after a price change constitutes acceptance of the new price.</p>
+    <p><strong>Failed payments:</strong> If a payment fails, we may suspend access to the Service until the balance is resolved. We are not responsible for any disruption caused by payment failures.</p>
+
+    <h2><span class="section-num">7.</span> Limitation of Liability</h2>
+    <p>TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, IN NO EVENT SHALL TEXTANOFFER, ITS OWNER, OPERATORS, OR AFFILIATES BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING WITHOUT LIMITATION:</p>
+    <ul>
+      <li>Loss of profits, revenue, or business opportunities</li>
+      <li>Loss of a transaction, deal, or commission</li>
+      <li>Costs of procuring substitute services</li>
+      <li>Damages arising from errors in generated documents</li>
+      <li>Damages arising from service interruptions or downtime</li>
+    </ul>
+    <p>OUR TOTAL AGGREGATE LIABILITY FOR ANY CLAIMS ARISING FROM OR RELATED TO THE SERVICE SHALL NOT EXCEED THE AMOUNT YOU PAID TO US IN THE THREE (3) MONTHS IMMEDIATELY PRECEDING THE EVENT GIVING RISE TO THE CLAIM.</p>
+    <p>This limitation applies regardless of the legal theory (contract, tort, strict liability, or otherwise) and even if we have been advised of the possibility of such damages.</p>
+
+    <h2><span class="section-num">8.</span> Indemnification</h2>
+    <p>You agree to indemnify, defend, and hold harmless TextAnOffer, its owner, and any contractors from and against any and all claims, damages, losses, liabilities, costs, and expenses (including reasonable attorneys' fees) arising out of or related to:</p>
+    <ul>
+      <li>Your use of the Service or any documents generated by the Service</li>
+      <li>Any transaction in which a document generated by the Service is used</li>
+      <li>Your failure to review, verify, or correct generated documents before use</li>
+      <li>Your violation of these Terms</li>
+      <li>Your violation of any applicable law, regulation, or third-party right</li>
+      <li>Any claim brought by your clients, counterparties, or their representatives in connection with a generated document</li>
+    </ul>
+
+    <h2><span class="section-num">9.</span> Data Handling and Privacy</h2>
+    <p>In the course of providing the Service, we collect and store:</p>
+    <ul>
+      <li>Your phone number (for SMS-based interactions)</li>
+      <li>Agent profile information you provide</li>
+      <li>Offer text messages you send to the Service</li>
+      <li>Generated PDF documents (temporarily, for download)</li>
+      <li>Basic usage data (timestamps, request counts)</li>
+    </ul>
+    <p>We use this data solely to operate and improve the Service. We do not sell your personal information to third parties.</p>
+    <p><strong>Third-party services:</strong> The Service uses Twilio (SMS delivery), Stripe (payment processing), and cloud hosting providers. These services have their own privacy policies and may process your data in accordance with their terms.</p>
+    <p><strong>Data retention:</strong> Generated PDFs are stored temporarily and may be deleted after a reasonable period. We retain account and billing records as required by law.</p>
+    <p><strong>Security:</strong> We implement reasonable technical and organizational measures to protect your data. However, no system is perfectly secure, and we cannot guarantee absolute security of your information.</p>
+
+    <h2><span class="section-num">10.</span> Acceptable Use</h2>
+    <p>You agree not to:</p>
+    <ul>
+      <li>Use the Service for any unlawful purpose</li>
+      <li>Submit false, fraudulent, or misleading information</li>
+      <li>Attempt to reverse-engineer, decompile, or extract the source code of the Service</li>
+      <li>Resell, redistribute, or sublicense access to the Service without our written consent</li>
+      <li>Use automated tools to send excessive requests that degrade service quality</li>
+      <li>Represent generated drafts as attorney-reviewed or finalized legal documents</li>
+    </ul>
+
+    <h2><span class="section-num">11.</span> Governing Law and Dispute Resolution</h2>
+    <p><strong>Governing law:</strong> These Terms shall be governed by and construed in accordance with the laws of the State of Texas, without regard to its conflict-of-law provisions.</p>
+    <p><strong>Jurisdiction:</strong> Any legal action or proceeding arising out of or relating to these Terms or the Service shall be brought exclusively in the state or federal courts located in Texas, and you consent to the personal jurisdiction of such courts.</p>
+    <p><strong>Informal resolution:</strong> Before filing any formal legal proceeding, you agree to attempt to resolve any dispute informally by contacting us. We will attempt to resolve the dispute within 30 days of receiving your notice.</p>
+
+    <h2><span class="section-num">12.</span> Modifications to Terms</h2>
+    <p>We reserve the right to modify these Terms at any time. Changes will be effective upon posting to this page with an updated "Last Updated" date. Your continued use of the Service after changes are posted constitutes acceptance of the revised Terms.</p>
+    <p>For material changes (including pricing changes), we will provide at least 30 days' notice via email or SMS before the changes take effect.</p>
+
+    <h2><span class="section-num">13.</span> Termination</h2>
+    <p>We may suspend or terminate your access to the Service at any time, with or without cause, and with or without notice. Upon termination, your right to use the Service ceases immediately. Sections 2, 3, 4, 7, 8, 9, and 11 survive termination.</p>
+
+    <h2><span class="section-num">14.</span> Contact</h2>
+    <p>For questions about these Terms or the Service, contact us at:</p>
+    <p>TextAnOffer<br>Operated by Phanel<br>Texas, United States<br>Email: support@textanoffer.com</p>
+  </div>
+  <p class="foot">TextAnOffer is not affiliated with the Texas Real Estate Commission (TREC).</p>
+</div>
+</body>
+</html>"""
+
+
 @app.route("/profile", methods=["GET", "POST"])
 def profile():
     phone = request.args.get("phone", "").strip()
