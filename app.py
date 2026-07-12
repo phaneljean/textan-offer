@@ -582,7 +582,7 @@ def create_checkout_session():
     """Create Stripe checkout session for subscription"""
     if not stripe.api_key or not STRIPE_PRICE_ID:
         # Fallback if Stripe not configured: email signup
-        return redirect("mailto:hello@textanoffer.com?subject=Early%20Adopter%20Signup")
+        return redirect("mailto:hello@txtanoffer.com?subject=Early%20Adopter%20Signup")
 
     try:
         checkout_session = stripe.checkout.Session.create(
@@ -639,7 +639,7 @@ def success():
       <ol>
         <li><strong>Set up your profile</strong> — your name, license, and brokerage auto-fill every offer</li>
         <li>Text your first offer to <strong>1-833-897-0333</strong></li>
-        <li>Or use the web demo at <strong>textanoffer.com/demo</strong></li>
+        <li>Or use the web demo at <strong>txtanoffer.com/demo</strong></li>
       </ol>
     </div>
 
@@ -961,7 +961,7 @@ def terms():
 
     <h2><span class="section-num">14.</span> Contact</h2>
     <p>For questions about these Terms or the Service, contact us at:</p>
-    <p>TextAnOffer<br>Operated by Phanel<br>Texas, United States<br>Email: support@textanoffer.com</p>
+    <p>TextAnOffer<br>Operated by Phanel<br>Texas, United States<br>Email: support@txtanoffer.com</p>
   </div>
   <p class="foot">TextAnOffer is not affiliated with the Texas Real Estate Commission (TREC).</p>
 </div>
