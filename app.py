@@ -307,6 +307,8 @@ DEMO_FORM = """
   .result-row .k{{color:var(--text-muted);font-family:'IBM Plex Mono',monospace;font-size:11px;
     text-transform:uppercase;letter-spacing:0.04em;}}
   .result-row .v{{color:var(--text-on-paper);font-weight:500;}}
+  .result-ready{{font-size:13px;color:var(--green);font-style:italic;margin-top:14px;padding-top:12px;
+    border-top:1px dashed var(--paper-line);}}
   .download-btn{{margin-top:18px;display:block;text-align:center;background:var(--brass);color:#2A1D08;
     text-decoration:none;font-weight:500;font-size:14px;padding:13px;border-radius:2px;}}
   .download-btn:hover{{background:var(--brass-soft);}}
@@ -483,15 +485,12 @@ def demo():
 
             result_html = f"""
             <div class="result">
-              <div class="result-stamp">Ready to sign</div>
+              <div class="result-stamp">Offer Summary</div>
               <div class="result-addr">{parsed['address']}</div>
-              <div class="result-row"><span class="k">Sales price</span><span class="v">${parsed['price']:,}</span></div>
-              <div class="result-row"><span class="k">Down payment</span><span class="v">${parsed['down_payment_amount']:,} ({parsed['down_payment_pct']*100:.0f}%)</span></div>
-              <div class="result-row"><span class="k">Loan amount</span><span class="v">${parsed['loan_amount']:,}</span></div>
-              <div class="result-row"><span class="k">Earnest money</span><span class="v">${parsed['earnest_money']:,}</span></div>
-              <div class="result-row"><span class="k">Option fee</span><span class="v">${parsed['option_fee']}</span></div>
-              <div class="result-row"><span class="k">Closing date</span><span class="v">{close_date_str}</span></div>
-              <div class="result-row"><span class="k">Property</span><span class="v">{parsed['bed']}bed / {parsed['bath']}bath / {parsed['sqft']:,}sqft</span></div>
+              <div class="result-row"><span class="k">Purchase price</span><span class="v">${parsed['price']:,}</span></div>
+              <div class="result-row"><span class="k">Down payment</span><span class="v">{parsed['down_payment_pct']*100:.0f}%</span></div>
+              <div class="result-row"><span class="k">Closing</span><span class="v">{close_date_str}</span></div>
+              <div class="result-ready">Ready for review.</div>
               {warning_html}
               <a href="{pdf_url}" target="_blank" class="download-btn">&darr; Download PDF</a>
               <div class="integration-actions">
