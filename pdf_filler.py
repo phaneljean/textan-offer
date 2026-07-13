@@ -44,6 +44,18 @@ FIELD_MAP = {
     # Earnest Money & Option Fee (Paragraph 4)
     "earnest_money": "earnest money of",
     "option_fee": "Option Fee in the form of",
+
+    # Title company / Escrow (Paragraph 6)
+    "title_company": "insurance Title Policy issued by",
+    "escrow_agent": "Escrow Agent",
+
+    # Selling (buyer's) agent info — the TextAnOffer user
+    "agent_broker_firm": "Other Broker Firm",
+    "agent_name": "Selling Associates Name",
+    "agent_license": "License No",
+    "agent_phone": "Phone",
+    "agent_email": "Email",
+    "agent_office_address": "Other Brokers Address",
 }
 
 def fill_offer_pdf(parsed: dict, agent_phone: str) -> str:
@@ -93,9 +105,23 @@ def fill_offer_pdf(parsed: dict, agent_phone: str) -> str:
         values[FIELD_MAP["closing_year_prefix"]] = "20"
         # Note: Last 2 year digits (e.g., "26") may auto-fill or need separate field
 
-    # Property details (bed/bath/sqft) - need to find PDF fields for these
-    # Agent info (name, license, brokerage) - need to find PDF fields
-    # Buyer/seller names - still manual (varies per transaction)
+    # Agent/broker info from profile
+    agent = parsed.get("agent", {})
+    if agent.get("name"):
+        values[FIELD_MAP["agent_name"]] = agent["name"]
+    if agent.get("license"):
+        values[FIELD_MAP["agent_license"]] = agent["license"]
+    if agent.get("brokerage"):
+        values[FIELD_MAP["agent_broker_firm"]] = agent["brokerage"]
+    if agent.get("phone"):
+        values[FIELD_MAP["agent_phone"]] = agent["phone"]
+    if agent.get("email"):
+        values[FIELD_MAP["agent_email"]] = agent["email"]
+
+    # Title company → title policy issuer + escrow agent
+    if agent.get("title_company"):
+        values[FIELD_MAP["title_company"]] = agent["title_company"]
+        values[FIELD_MAP["escrow_agent"]] = agent["title_company"]
     
     for page in writer.pages:
         writer.update_page_form_field_values(page, values)
