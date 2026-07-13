@@ -357,6 +357,11 @@ DEMO_FORM = """
   .modal-status{{margin-top:10px;font-size:12px;color:var(--text-muted);font-family:'IBM Plex Mono',monospace;}}
   .modal-status.success{{color:var(--green);}}
   .modal-status.fail{{color:#7A3527;}}
+  .trust-checks{{display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:24px;padding:0 4px;}}
+  .trust-check{{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--text-on-ink);
+    letter-spacing:0.02em;}}
+  .trust-tagline{{font-family:'Source Serif 4',serif;font-size:13px;font-style:italic;
+    color:var(--brass-soft);margin-top:14px;padding:0 4px;}}
   .trust{{display:flex;gap:16px;margin-top:28px;padding:0 4px;}}
   .trust-item{{flex:1;text-align:center;}}
   .trust-val{{font-family:'Source Serif 4',serif;font-size:20px;font-weight:600;color:var(--brass);}}
@@ -416,6 +421,12 @@ DEMO_FORM = """
       </form>
       {result_html}
     </div>
+    <div class="trust-checks">
+      <div class="trust-check">&check; Official TREC 20-19</div>
+      <div class="trust-check">&check; Agent reviews before signing</div>
+      <div class="trust-check">&check; Texas compliant</div>
+    </div>
+    <div class="trust-tagline">Built specifically for Texas REALTORS&reg;</div>
     <div class="trust">
       <div class="trust-item"><div class="trust-val">&lt;10s</div><div class="trust-label">Generation</div></div>
       <div class="trust-item"><div class="trust-val">45 min</div><div class="trust-label">Saved per offer</div></div>
