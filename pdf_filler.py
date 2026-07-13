@@ -32,7 +32,8 @@ FIELD_MAP = {
 
     # Paragraph 9A: Closing date
     "closing_date": "A The closing of the sale will be on or before",
-    "closing_year_prefix": "20",  # The "20" prefix before the year digits
+    "closing_year_prefix": "20",  # The "20" prefix field
+    "closing_year_suffix": "20_2",  # The 2-digit year suffix field
 
     # Payment structure (Paragraph 3)
     # TREC 20-19 has: 3A (cash portion), 3B (sum of financing), 3C (total sales price)
@@ -96,14 +97,13 @@ def fill_offer_pdf(parsed: dict, agent_phone: str) -> str:
         values[FIELD_MAP["option_fee"]] = f"${parsed['option_fee']}"
 
     # Closing date (Paragraph 9A)
-    # Format: "July 31, 20__" where "20" is separate field and last 2 digits follow
+    # TREC form layout: "closing of the sale will be on or before [Month Day,] 20[__]"
+    # Three fields: main date text, "20" prefix, and 2-digit year suffix
     if parsed.get("close_days") is not None:
         close_dt = datetime.now() + timedelta(days=parsed["close_days"])
-        # Main field gets "Month Day," (with comma, no year)
         values[FIELD_MAP["closing_date"]] = close_dt.strftime("%B %d,")
-        # "20" field gets the century prefix
         values[FIELD_MAP["closing_year_prefix"]] = "20"
-        # Note: Last 2 year digits (e.g., "26") may auto-fill or need separate field
+        values[FIELD_MAP["closing_year_suffix"]] = close_dt.strftime("%y")
 
     # Agent/broker info from profile
     agent = parsed.get("agent", {})
