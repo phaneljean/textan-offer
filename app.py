@@ -314,6 +314,13 @@ DEMO_FORM = """
     text-transform:uppercase;color:var(--text-muted);padding:8px 12px;background:rgba(220,211,184,0.3);
     border-bottom:1px solid var(--paper-line);}}
   .pdf-frame{{width:100%;height:560px;border:none;background:#fff;}}
+  .pdf-mobile{{display:none;padding:20px;text-align:center;background:#FFFDF7;}}
+  .pdf-mobile a{{color:var(--brass);font-weight:500;font-size:14px;text-decoration:none;}}
+  .pdf-mobile a:hover{{text-decoration:underline;}}
+  @media(max-width:768px){{
+    .pdf-frame{{display:none;}}
+    .pdf-mobile{{display:block;}}
+  }}
   .download-btn{{margin-top:18px;display:block;text-align:center;background:var(--brass);color:#2A1D08;
     text-decoration:none;font-weight:500;font-size:14px;padding:13px;border-radius:2px;}}
   .download-btn:hover{{background:var(--brass-soft);}}
@@ -500,6 +507,7 @@ def demo():
               <div class="pdf-preview">
                 <div class="pdf-preview-label">Contract preview</div>
                 <iframe src="{pdf_url}#page=1&view=FitV" class="pdf-frame"></iframe>
+                <div class="pdf-mobile"><a href="{pdf_url}" target="_blank">Tap to view your completed TREC 20-19 &rarr;</a></div>
               </div>
               <a href="{pdf_url}" target="_blank" class="download-btn">&darr; Download PDF</a>
               <div class="integration-actions">
