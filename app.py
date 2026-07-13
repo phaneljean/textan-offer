@@ -25,6 +25,7 @@ from pdf_filler import fill_offer_pdf, OUTPUT_DIR
 from agent_profiles import get_agent_profile, save_agent_profile
 from subscriptions import can_generate_offer, increment_offer_count, activate_subscription, deactivate_subscription, get_user, create_user, FREE_OFFER_LIMIT
 from analytics import track_event, get_conversion_metrics, get_revenue_metrics, get_recent_sms
+from integrations import send_offer_email, fire_webhook, save_webhook, get_webhook, delete_webhook, send_to_docusign
 
 app = Flask(__name__)
 
@@ -206,6 +207,9 @@ def sms_reply():
         filename = os.path.basename(pdf_path)
         pdf_url = request.host_url.rstrip("/") + f"/offers/{filename}"
 
+        # Fire webhook if configured
+        fire_webhook(agent_phone, parsed, pdf_url)
+
         warning_line = f"\nNote: {' / '.join(warnings)}" if warnings else ""
 
         # Status line based on subscription
@@ -330,6 +334,29 @@ DEMO_FORM = """
     text-transform:uppercase;color:var(--text-on-ink);font-weight:500;}}
   .wf-desc{{font-size:11px;color:var(--text-on-ink-muted);margin-top:3px;line-height:1.4;}}
   .wf-arrow{{color:var(--brass);font-size:16px;margin:0 2px;flex-shrink:0;opacity:0.7;}}
+  .integration-actions{{display:flex;gap:8px;margin:18px 0 0;flex-wrap:wrap;}}
+  .int-btn{{flex:1;min-width:120px;padding:10px 12px;font-size:12px;font-weight:500;border:1px solid var(--paper-line);
+    background:#FFFDF7;color:var(--text-on-paper);border-radius:2px;cursor:pointer;
+    font-family:'IBM Plex Mono',monospace;letter-spacing:0.02em;transition:border-color 0.2s;}}
+  .int-btn:hover{{border-color:var(--brass);}}
+  .modal{{position:fixed;inset:0;background:rgba(23,27,36,0.85);display:flex;align-items:center;
+    justify-content:center;z-index:1000;padding:20px;}}
+  .modal-box{{background:var(--paper);padding:28px 24px;border-radius:4px;width:100%;max-width:360px;
+    position:relative;border-top:2px solid var(--brass);}}
+  .modal-title{{font-family:'Source Serif 4',serif;font-size:18px;font-weight:600;color:var(--text-on-paper);margin:0 0 16px;}}
+  .modal-desc{{font-size:13px;color:var(--text-muted);margin:0 0 12px;line-height:1.5;}}
+  .modal-input{{width:100%;font-family:'IBM Plex Mono',monospace;font-size:13px;padding:11px 12px;
+    border:1px solid var(--paper-line);background:#FFFDF7;color:var(--text-on-paper);
+    border-radius:2px;outline:none;margin-bottom:10px;}}
+  .modal-input:focus{{border-color:var(--brass);}}
+  .modal-submit{{width:100%;padding:12px;background:var(--ink);color:var(--text-on-ink);border:none;
+    font-family:'Inter',sans-serif;font-size:13px;font-weight:500;border-radius:2px;cursor:pointer;}}
+  .modal-submit:hover{{background:var(--ink-soft);}}
+  .modal-close{{position:absolute;top:12px;right:14px;background:none;border:none;font-size:20px;
+    color:var(--text-muted);cursor:pointer;}}
+  .modal-status{{margin-top:10px;font-size:12px;color:var(--text-muted);font-family:'IBM Plex Mono',monospace;}}
+  .modal-status.success{{color:var(--green);}}
+  .modal-status.fail{{color:#7A3527;}}
   .trust{{display:flex;gap:16px;margin-top:28px;padding:0 4px;}}
   .trust-item{{flex:1;text-align:center;}}
   .trust-val{{font-family:'Source Serif 4',serif;font-size:20px;font-weight:600;color:var(--brass);}}
@@ -430,6 +457,11 @@ def demo():
             warning_html = ""
             if warnings:
                 warning_html = f'<div class="warning-note">{" / ".join(warnings)}</div>'
+            # Serialize parsed data for integration JS (strip non-serializable agent dict)
+            import json as _json
+            _parsed_safe = {k: v for k, v in parsed.items() if k != "agent"}
+            parsed_json = _json.dumps(_parsed_safe)
+
             # Social share URLs
             share_text = "Just generated a TREC 20-19 contract in 3 seconds by texting an address 🤯 TextAnOffer turns '725k 3% 21day 1740 Grand Ave' into a filled PDF instantly."
             share_url = "https://txtanoffer.com/demo"
@@ -449,6 +481,92 @@ def demo():
               <div class="result-row"><span class="k">Property</span><span class="v">{parsed['bed']}bed / {parsed['bath']}bath / {parsed['sqft']:,}sqft</span></div>
               {warning_html}
               <a href="{pdf_url}" target="_blank" class="download-btn">Download filled TREC 20-19 &rarr;</a>
+              <div class="integration-actions">
+                <button class="int-btn int-email" onclick="document.getElementById('email-modal').style.display='flex'">&#9993; Email offer</button>
+                <button class="int-btn int-docusign" onclick="document.getElementById('docusign-modal').style.display='flex'">&#9998; Send to DocuSign</button>
+                <button class="int-btn int-webhook" onclick="document.getElementById('webhook-modal').style.display='flex'">&#9889; Webhook / Zapier</button>
+              </div>
+
+              <div id="email-modal" class="modal" style="display:none">
+                <div class="modal-box">
+                  <div class="modal-title">Email this offer</div>
+                  <input type="email" id="email-to" placeholder="recipient@example.com" class="modal-input">
+                  <button class="modal-submit" onclick="sendEmail('{filename}')">Send</button>
+                  <div id="email-status" class="modal-status"></div>
+                  <button class="modal-close" onclick="this.closest('.modal').style.display='none'">&times;</button>
+                </div>
+              </div>
+
+              <div id="docusign-modal" class="modal" style="display:none">
+                <div class="modal-box">
+                  <div class="modal-title">Send for signature</div>
+                  <input type="text" id="ds-name" placeholder="Signer full name" class="modal-input">
+                  <input type="email" id="ds-email" placeholder="Signer email" class="modal-input">
+                  <button class="modal-submit" onclick="sendDocuSign('{filename}')">Send via DocuSign</button>
+                  <div id="ds-status" class="modal-status"></div>
+                  <button class="modal-close" onclick="this.closest('.modal').style.display='none'">&times;</button>
+                </div>
+              </div>
+
+              <div id="webhook-modal" class="modal" style="display:none">
+                <div class="modal-box">
+                  <div class="modal-title">Webhook / Zapier</div>
+                  <p class="modal-desc">POST offer data to your CRM, Zapier, or any URL.</p>
+                  <input type="url" id="wh-url" placeholder="https://hooks.zapier.com/..." class="modal-input">
+                  <button class="modal-submit" onclick="configWebhook()">Save webhook</button>
+                  <div id="wh-status" class="modal-status"></div>
+                  <button class="modal-close" onclick="this.closest('.modal').style.display='none'">&times;</button>
+                </div>
+              </div>
+
+              <script>
+              function sendEmail(filename) {{{{
+                const to = document.getElementById('email-to').value;
+                const status = document.getElementById('email-status');
+                if (!to) {{{{ status.textContent = 'Enter an email address'; return; }}}}
+                status.textContent = 'Sending...';
+                fetch('/api/send-email', {{{{
+                  method: 'POST',
+                  headers: {{{{'Content-Type': 'application/json'}}}},
+                  body: JSON.stringify({{{{to_email: to, pdf_filename: filename, parsed: {parsed_json}}}}})
+                }}}}).then(r => r.json()).then(d => {{{{
+                  status.textContent = d.success ? 'Sent!' : ('Error: ' + d.error);
+                  status.className = 'modal-status ' + (d.success ? 'success' : 'fail');
+                }}}}).catch(e => {{{{ status.textContent = 'Network error'; }}}});
+              }}}}
+
+              function sendDocuSign(filename) {{{{
+                const name = document.getElementById('ds-name').value;
+                const email = document.getElementById('ds-email').value;
+                const status = document.getElementById('ds-status');
+                if (!name || !email) {{{{ status.textContent = 'Name and email required'; return; }}}}
+                status.textContent = 'Sending to DocuSign...';
+                fetch('/api/docusign', {{{{
+                  method: 'POST',
+                  headers: {{{{'Content-Type': 'application/json'}}}},
+                  body: JSON.stringify({{{{pdf_filename: filename, signer_email: email, signer_name: name, parsed: {parsed_json}}}}})
+                }}}}).then(r => r.json()).then(d => {{{{
+                  status.textContent = d.success ? 'Sent! Envelope: ' + d.envelope_id : ('Error: ' + d.error);
+                  status.className = 'modal-status ' + (d.success ? 'success' : 'fail');
+                }}}}).catch(e => {{{{ status.textContent = 'Network error'; }}}});
+              }}}}
+
+              function configWebhook() {{{{
+                const url = document.getElementById('wh-url').value;
+                const status = document.getElementById('wh-status');
+                if (!url) {{{{ status.textContent = 'Enter a webhook URL'; return; }}}}
+                status.textContent = 'Saving...';
+                fetch('/api/webhook', {{{{
+                  method: 'POST',
+                  headers: {{{{'Content-Type': 'application/json'}}}},
+                  body: JSON.stringify({{{{source_id: 'demo-web', url: url}}}})
+                }}}}).then(r => r.json()).then(d => {{{{
+                  status.textContent = d.success ? 'Webhook saved! Future offers will POST here.' : ('Error: ' + (d.error || ''));
+                  status.className = 'modal-status ' + (d.success ? 'success' : 'fail');
+                }}}}).catch(e => {{{{ status.textContent = 'Network error'; }}}});
+              }}}}
+              </script>
+
               <div class="disclaimer">Draft only -- agent must review before signing. TREC NO. 20-19.</div>
 
               <div class="share-section">
@@ -474,6 +592,85 @@ def demo():
             """
 
     return DEMO_FORM.format(prefill=prefill, result_html=result_html, date_stamp=date_stamp)
+
+
+# --- Integration endpoints -------------------------------------------------
+
+@app.route("/api/send-email", methods=["POST"])
+def api_send_email():
+    data = request.get_json()
+    if not data:
+        return jsonify({"success": False, "error": "JSON body required"}), 400
+
+    to_email = data.get("to_email", "")
+    pdf_filename = data.get("pdf_filename", "")
+    parsed = data.get("parsed", {})
+
+    if not to_email or not pdf_filename:
+        return jsonify({"success": False, "error": "to_email and pdf_filename required"}), 400
+
+    pdf_path = os.path.join(OUTPUT_DIR, pdf_filename)
+    if not os.path.exists(pdf_path):
+        return jsonify({"success": False, "error": "PDF not found"}), 404
+
+    result = send_offer_email(to_email, pdf_path, parsed)
+    track_event("email_sent" if result["success"] else "email_failed", to_email, result)
+    return jsonify(result), 200 if result["success"] else 500
+
+
+@app.route("/api/webhook", methods=["GET", "POST", "DELETE"])
+def api_webhook():
+    if request.method == "GET":
+        source_id = request.args.get("source_id", "")
+        if not source_id:
+            return jsonify({"error": "source_id required"}), 400
+        url = get_webhook(source_id)
+        return jsonify({"source_id": source_id, "url": url, "active": url is not None})
+
+    if request.method == "POST":
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "JSON body required"}), 400
+        source_id = data.get("source_id", "")
+        url = data.get("url", "")
+        if not source_id or not url:
+            return jsonify({"error": "source_id and url required"}), 400
+        save_webhook(source_id, url)
+        track_event("webhook_configured", source_id, {"url": url})
+        return jsonify({"success": True, "source_id": source_id, "url": url})
+
+    if request.method == "DELETE":
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "JSON body required"}), 400
+        source_id = data.get("source_id", "")
+        if not source_id:
+            return jsonify({"error": "source_id required"}), 400
+        delete_webhook(source_id)
+        return jsonify({"success": True, "deleted": source_id})
+
+
+@app.route("/api/docusign", methods=["POST"])
+def api_docusign():
+    data = request.get_json()
+    if not data:
+        return jsonify({"success": False, "error": "JSON body required"}), 400
+
+    pdf_filename = data.get("pdf_filename", "")
+    parsed = data.get("parsed", {})
+    signer_email = data.get("signer_email", "")
+    signer_name = data.get("signer_name", "")
+
+    if not pdf_filename or not signer_email or not signer_name:
+        return jsonify({"success": False, "error": "pdf_filename, signer_email, and signer_name required"}), 400
+
+    pdf_path = os.path.join(OUTPUT_DIR, pdf_filename)
+    if not os.path.exists(pdf_path):
+        return jsonify({"success": False, "error": "PDF not found"}), 404
+
+    result = send_to_docusign(pdf_path, parsed, signer_email, signer_name)
+    track_event("docusign_sent" if result["success"] else "docusign_failed", signer_email, result)
+    return jsonify(result), 200 if result["success"] else 500
 
 
 @app.route("/pricing")
