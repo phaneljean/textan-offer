@@ -491,7 +491,7 @@ def demo():
               <div class="result-row"><span class="k">Closing date</span><span class="v">{close_date_str}</span></div>
               <div class="result-row"><span class="k">Property</span><span class="v">{parsed['bed']}bed / {parsed['bath']}bath / {parsed['sqft']:,}sqft</span></div>
               {warning_html}
-              <a href="{pdf_url}" target="_blank" class="download-btn">Download filled TREC 20-19 &rarr;</a>
+              <a href="{pdf_url}" target="_blank" class="download-btn">&darr; Download PDF</a>
               <div class="integration-actions">
                 <button class="int-btn int-email" onclick="document.getElementById('email-modal').style.display='flex'">&#9993; Email offer</button>
                 <button class="int-btn int-docusign" onclick="document.getElementById('docusign-modal').style.display='flex'">&#9998; Send to DocuSign</button>
