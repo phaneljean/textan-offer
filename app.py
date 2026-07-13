@@ -86,9 +86,9 @@ def validate_address(address: str) -> dict:
         return result
 
     if not _STATE_RE.search(cleaned) and not _TX_ZIP_RE.search(cleaned):
-        result["warnings"].append("No TX or Texas ZIP code detected -- confirm this is the right state.")
+        result["warnings"].append("We couldn't verify that this property is in Texas. Please confirm before generating the final contract.")
     if len(cleaned.split()) < 3:
-        result["warnings"].append("Address looks short -- confirm city is included.")
+        result["warnings"].append("Address looks short. Please confirm city is included before signing.")
 
     result["valid"] = True
     return result
@@ -325,8 +325,10 @@ DEMO_FORM = """
   .share-copy.copied{{background:var(--green);border-color:var(--green);}}
   .error{{margin-top:22px;padding:14px 16px;background:rgba(139,58,44,0.08);
     border:1px solid rgba(139,58,44,0.3);border-radius:2px;font-size:13px;color:#7A3527;}}
-  .warning-note{{margin:2px 0 10px;padding:8px 12px;background:rgba(169,119,47,0.1);
-    border:1px solid rgba(169,119,47,0.3);border-radius:2px;font-size:12px;color:#8A6423;}}
+  .warning-note{{margin:14px 0 10px;padding:12px 14px;background:rgba(169,119,47,0.08);
+    border:1px solid rgba(169,119,47,0.25);border-radius:4px;font-size:12.5px;color:#6B5220;line-height:1.5;}}
+  .warning-note .wn-title{{font-family:'IBM Plex Mono',monospace;font-size:10.5px;font-weight:500;
+    letter-spacing:0.04em;text-transform:uppercase;margin-bottom:4px;color:var(--brass);}}
   .workflow{{display:flex;align-items:center;justify-content:center;gap:0;margin:0 0 30px;padding:0 4px;}}
   .wf-step{{text-align:center;flex:1;}}
   .wf-icon{{font-size:22px;margin-bottom:6px;}}
@@ -467,7 +469,7 @@ def demo():
                 close_date_str = f"{parsed['close_days']} days"
             warning_html = ""
             if warnings:
-                warning_html = f'<div class="warning-note">{" / ".join(warnings)}</div>'
+                warning_html = f'<div class="warning-note"><div class="wn-title">Review needed</div>{"<br>".join(warnings)}</div>'
             # Serialize parsed data for integration JS (strip non-serializable agent dict)
             import json as _json
             _parsed_safe = {k: v for k, v in parsed.items() if k != "agent"}
