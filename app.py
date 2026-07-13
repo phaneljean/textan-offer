@@ -411,7 +411,7 @@ DEMO_FORM = """
       <form method="POST" action="/demo">
         <label class="field-label">Offer details</label>
         <input type="text" name="offer_text" placeholder="725k 3% 21day Harris 1234 Westheimer Rd" value="{prefill}">
-        <button type="submit">Generate offer</button>
+        <button type="submit">Generate My Contract</button>
         <div class="hint">price &middot; down % &middot; closing days &middot; county (optional) &middot; address</div>
       </form>
       {result_html}
