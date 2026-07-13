@@ -323,6 +323,11 @@ DEMO_FORM = """
     border:1px solid rgba(139,58,44,0.3);border-radius:2px;font-size:13px;color:#7A3527;}}
   .warning-note{{margin:2px 0 10px;padding:8px 12px;background:rgba(169,119,47,0.1);
     border:1px solid rgba(169,119,47,0.3);border-radius:2px;font-size:12px;color:#8A6423;}}
+  .trust{{display:flex;gap:16px;margin-top:28px;padding:0 4px;}}
+  .trust-item{{flex:1;text-align:center;}}
+  .trust-val{{font-family:'Source Serif 4',serif;font-size:20px;font-weight:600;color:var(--brass);}}
+  .trust-label{{font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:0.06em;
+    text-transform:uppercase;color:var(--text-on-ink-muted);margin-top:4px;}}
   .foot{{text-align:center;margin-top:24px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;
     color:var(--text-on-ink-muted);letter-spacing:0.03em;}}
   .foot a{{color:var(--brass-soft);text-decoration:none;}}
@@ -369,6 +374,11 @@ DEMO_FORM = """
         <div class="hint">price &middot; down % &middot; closing days &middot; county (optional) &middot; address</div>
       </form>
       {result_html}
+    </div>
+    <div class="trust">
+      <div class="trust-item"><div class="trust-val">&lt;10s</div><div class="trust-label">Generation</div></div>
+      <div class="trust-item"><div class="trust-val">45 min</div><div class="trust-label">Saved per offer</div></div>
+      <div class="trust-item"><div class="trust-val">TREC</div><div class="trust-label">20-19 Compliant</div></div>
     </div>
     <div class="foot">
       SMS delivery pending carrier registration -- this demo runs the same backend directly
