@@ -323,6 +323,13 @@ DEMO_FORM = """
     border:1px solid rgba(139,58,44,0.3);border-radius:2px;font-size:13px;color:#7A3527;}}
   .warning-note{{margin:2px 0 10px;padding:8px 12px;background:rgba(169,119,47,0.1);
     border:1px solid rgba(169,119,47,0.3);border-radius:2px;font-size:12px;color:#8A6423;}}
+  .workflow{{display:flex;align-items:center;justify-content:center;gap:0;margin:0 0 30px;padding:0 4px;}}
+  .wf-step{{text-align:center;flex:1;}}
+  .wf-icon{{font-size:22px;margin-bottom:6px;}}
+  .wf-title{{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.06em;
+    text-transform:uppercase;color:var(--text-on-ink);font-weight:500;}}
+  .wf-desc{{font-size:11px;color:var(--text-on-ink-muted);margin-top:3px;line-height:1.4;}}
+  .wf-arrow{{color:var(--brass);font-size:16px;margin:0 2px;flex-shrink:0;opacity:0.7;}}
   .trust{{display:flex;gap:16px;margin-top:28px;padding:0 4px;}}
   .trust-item{{flex:1;text-align:center;}}
   .trust-val{{font-family:'Source Serif 4',serif;font-size:20px;font-weight:600;color:var(--brass);}}
@@ -339,6 +346,13 @@ DEMO_FORM = """
     <div class="corner-mark"><span>TEXTANOFFER</span><span class="brass">{date_stamp}</span></div>
     <h1 id="headline"></h1>
     <p class="sub">Type an offer the way you'd text it. This generates the actual TREC 20-19 contract -- same form, same fields, ready for review.</p>
+    <div class="workflow">
+      <div class="wf-step"><div class="wf-icon">&#9993;</div><div class="wf-title">You type</div><div class="wf-desc">725k 3% 21day<br>1234 Main St</div></div>
+      <div class="wf-arrow">&rarr;</div>
+      <div class="wf-step"><div class="wf-icon">&#9881;</div><div class="wf-title">We parse</div><div class="wf-desc">Price, terms &amp;<br>address extracted</div></div>
+      <div class="wf-arrow">&rarr;</div>
+      <div class="wf-step"><div class="wf-icon">&#9998;</div><div class="wf-title">Contract ready</div><div class="wf-desc">TREC 20-19 PDF<br>filled &amp; downloadable</div></div>
+    </div>
     <script>
       const lines = ['Get a purchase offer', 'in 10 seconds.'];
       const headline = document.getElementById('headline');
