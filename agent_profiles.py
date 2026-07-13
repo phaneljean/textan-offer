@@ -19,12 +19,12 @@ DEFAULTS = {
 }
 
 DEMO_PROFILE = {
-    "name": "Demo Agent",
-    "license": "TX-123456",
-    "phone": "(512) 555-0100",
-    "email": "agent@example.com",
-    "brokerage": "Example Realty",
-    "title_company": "Texas Title Co.",
+    "name": "",
+    "license": "",
+    "phone": "",
+    "email": "",
+    "brokerage": "",
+    "title_company": "",
     "default_earnest_pct": 0.01,
     "default_option_fee": 250,
 }
