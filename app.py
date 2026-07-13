@@ -98,15 +98,13 @@ def validate_address(address: str) -> dict:
 # Replace this with a real MLS API call (e.g. Bridge Interactive, Spark API)
 # Real version should geocode address and query MLS for property data
 def lookup_mls(address: str) -> dict:
-    # Stub: Default to Austin, Travis County for demo
-    # Real implementation should use geocoding API or MLS data
+    # Stub: returns placeholder property data only
+    # Real implementation should geocode the address and query MLS
     return {
         "bed": 3,
         "bath": 2,
         "sqft": 1450,
-        "apn": "714-123-45",
-        "city": "Austin",
-        "county": "Travis",
+        "apn": "",
     }
 
 
@@ -126,11 +124,11 @@ def process_offer(incoming_msg: str, source_id: str):
     # Get MLS data
     mls_data = lookup_mls(parsed["address"])
 
-    # Use agent-specified county/city if provided, otherwise use MLS lookup or defaults
+    # Use agent-specified county/city if provided, otherwise use MLS lookup
     if "county" not in parsed:
-        parsed["county"] = mls_data.get("county", "Travis")
+        parsed["county"] = mls_data.get("county", "")
     if "city" not in parsed:
-        parsed["city"] = mls_data.get("city", "Austin")
+        parsed["city"] = mls_data.get("city", "")
 
     # Add other MLS data (bed/bath/sqft)
     parsed.update({k: v for k, v in mls_data.items() if k not in ["county", "city"]})
@@ -366,7 +364,7 @@ DEMO_FORM = """
     <div class="card">
       <form method="POST" action="/demo">
         <label class="field-label">Offer details</label>
-        <input type="text" name="offer_text" placeholder="725k 3% 21day Travis 1740 Grand Ave" value="{prefill}">
+        <input type="text" name="offer_text" placeholder="725k 3% 21day Harris 1234 Westheimer Rd" value="{prefill}">
         <button type="submit">Generate offer</button>
         <div class="hint">price &middot; down % &middot; closing days &middot; county (optional) &middot; address</div>
       </form>
@@ -530,7 +528,7 @@ def pricing():
     <div class="header">
       <div class="logo">TEXTANOFFER</div>
       <h1>Simple pricing.<br>Massive time savings.</h1>
-      <p class="tagline">Join Texas agents saving 45 minutes per offer with instant TREC 20-19 generation.</p>
+      <p class="tagline">Texas agents are saving 45 minutes per offer with instant TREC 20-19 generation.</p>
     </div>
 
     <div class="pricing-card">
