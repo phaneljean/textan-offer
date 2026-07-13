@@ -719,7 +719,7 @@ def pricing():
                       radial-gradient(circle at 85% 90%, rgba(169,119,47,0.04), transparent 40%);
     min-height:100vh; margin:0; padding:48px 20px; font-family:'Inter',sans-serif;
   }
-  .container{max-width:900px;margin:0 auto;}
+  .container{max-width:1000px;margin:0 auto;}
   .header{text-align:center;margin-bottom:48px;}
   .logo{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.08em;
     color:var(--brass-soft);margin-bottom:16px;}
@@ -727,30 +727,36 @@ def pricing():
     margin:0 0 12px;letter-spacing:-0.01em;}
   .tagline{color:var(--text-on-ink-muted);font-size:18px;line-height:1.6;max-width:600px;margin:0 auto;}
 
-  .pricing-card{background:var(--paper);border-radius:4px;padding:40px;margin-bottom:24px;
-    border-top:3px solid var(--brass);box-shadow:0 24px 60px -20px rgba(0,0,0,0.5);}
-  .plan-badge{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:10px;
-    letter-spacing:0.08em;text-transform:uppercase;color:var(--brass);
-    background:rgba(169,119,47,0.15);border:1px solid rgba(169,119,47,0.4);
-    padding:4px 10px;border-radius:20px;margin-bottom:16px;}
-  .plan-name{font-family:'Source Serif 4',serif;font-size:28px;font-weight:600;
-    color:var(--text-on-paper);margin:0 0 8px;}
-  .price-row{display:flex;align-items:baseline;gap:8px;margin-bottom:16px;}
-  .price-original{font-size:24px;color:var(--text-muted);text-decoration:line-through;}
-  .price-current{font-size:48px;font-weight:600;color:var(--text-on-paper);}
-  .price-period{font-size:18px;color:var(--text-muted);}
-  .price-note{font-size:13px;color:var(--brass);margin-bottom:24px;font-weight:500;}
+  .pricing-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:20px;margin-bottom:48px;}
+  .pricing-card{background:var(--paper);border-radius:4px;padding:32px 28px;
+    border-top:3px solid var(--paper-line);box-shadow:0 24px 60px -20px rgba(0,0,0,0.5);
+    display:flex;flex-direction:column;}
+  .pricing-card.featured{border-top-color:var(--brass);position:relative;}
+  .featured-badge{position:absolute;top:-12px;left:50%;transform:translateX(-50%);
+    font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:0.08em;
+    text-transform:uppercase;color:var(--brass);background:var(--paper);
+    border:1px solid rgba(169,119,47,0.4);padding:3px 10px;border-radius:20px;white-space:nowrap;}
 
-  .features{list-style:none;padding:0;margin:0 0 32px;}
-  .features li{padding:12px 0;border-bottom:1px solid var(--paper-line);font-size:15px;
-    color:var(--text-on-paper);display:flex;align-items:start;gap:12px;}
-  .features li:last-child{border:none;}
-  .check{color:var(--green);font-weight:600;}
+  .plan-name{font-family:'Source Serif 4',serif;font-size:22px;font-weight:600;
+    color:var(--text-on-paper);margin:0 0 6px;}
+  .plan-desc{font-size:13px;color:var(--text-muted);margin:0 0 20px;line-height:1.4;}
+  .price-row{display:flex;align-items:baseline;gap:4px;margin-bottom:20px;}
+  .price-current{font-size:40px;font-weight:600;color:var(--text-on-paper);}
+  .price-period{font-size:14px;color:var(--text-muted);}
 
-  .cta-btn{display:block;width:100%;padding:16px;background:var(--ink);color:var(--text-on-ink);
-    border:none;font-family:'Inter',sans-serif;font-size:16px;font-weight:600;
+  .features{list-style:none;padding:0;margin:0 0 24px;flex:1;}
+  .features li{padding:8px 0;font-size:13.5px;color:var(--text-on-paper);
+    display:flex;align-items:start;gap:8px;}
+  .check{color:var(--green);font-weight:600;font-size:14px;}
+
+  .cta-btn{display:block;width:100%;padding:14px;background:var(--ink);color:var(--text-on-ink);
+    border:none;font-family:'Inter',sans-serif;font-size:14px;font-weight:600;
     border-radius:4px;cursor:pointer;text-decoration:none;text-align:center;}
   .cta-btn:hover{background:var(--ink-soft);}
+  .cta-btn.brass{background:var(--brass);color:#2A1D08;}
+  .cta-btn.brass:hover{background:var(--brass-soft);}
+  .cta-btn.outline{background:transparent;border:1px solid var(--paper-line);color:var(--text-on-paper);}
+  .cta-btn.outline:hover{border-color:var(--brass);}
 
   .value-props{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:24px;
     margin-top:48px;}
@@ -763,6 +769,8 @@ def pricing():
   .back-link{text-align:center;margin-top:32px;}
   .back-link a{color:var(--brass-soft);text-decoration:none;font-size:14px;}
   .back-link a:hover{text-decoration:underline;}
+  .terms-note{text-align:center;font-size:12px;color:var(--text-on-ink-muted);margin-top:20px;}
+  .terms-note a{color:var(--brass-soft);text-decoration:underline;}
 </style>
 </head>
 <body>
@@ -770,38 +778,93 @@ def pricing():
     <div class="header">
       <div class="logo">TEXTANOFFER</div>
       <h1>Simple pricing.<br>Massive time savings.</h1>
-      <p class="tagline">Texas agents are saving 45 minutes per offer with instant TREC 20-19 generation.</p>
+      <p class="tagline">Stop spending 45 minutes per offer. Pick a plan and start generating contracts in seconds.</p>
     </div>
 
-    <div class="pricing-card">
-      <span class="plan-badge">🚀 Early Adopter Pricing</span>
-      <h2 class="plan-name">Professional Plan</h2>
-      <div class="price-row">
-        <span class="price-original">$79</span>
-        <span class="price-current">$49</span>
-        <span class="price-period">/month</span>
+    <div class="pricing-grid">
+
+      <div class="pricing-card">
+        <h2 class="plan-name">Starter</h2>
+        <p class="plan-desc">For individual agents getting started.</p>
+        <div class="price-row">
+          <span class="price-current">$49</span>
+          <span class="price-period">/month</span>
+        </div>
+        <ul class="features">
+          <li><span class="check">&#10003;</span> Unlimited offers</li>
+          <li><span class="check">&#10003;</span> TREC 20-19 generation</li>
+          <li><span class="check">&#10003;</span> SMS + Web access</li>
+          <li><span class="check">&#10003;</span> Agent profile auto-fill</li>
+          <li><span class="check">&#10003;</span> Email delivery</li>
+        </ul>
+        <form action="/create-checkout-session" method="POST">
+          <input type="hidden" name="plan" value="starter">
+          <button type="submit" class="cta-btn">Get Started</button>
+        </form>
       </div>
-      <p class="price-note">Lock in this rate forever • Normally $79/mo</p>
 
-      <ul class="features">
-        <li><span class="check">✓</span> <strong>Unlimited offers</strong> — Generate as many as you need</li>
-        <li><span class="check">✓</span> <strong>Instant calculations</strong> — Down payment, loan amount, earnest money auto-filled</li>
-        <li><span class="check">✓</span> <strong>Complete TREC 20-19</strong> — All 281 fields, professional output</li>
-        <li><span class="check">✓</span> <strong>SMS + Web access</strong> — Text or use demo page</li>
-        <li><span class="check">✓</span> <strong>Agent profile</strong> — Your info auto-fills every time</li>
-        <li><span class="check">✓</span> <strong>No contracts</strong> — Cancel anytime</li>
-      </ul>
+      <div class="pricing-card featured">
+        <span class="featured-badge">Most Popular</span>
+        <h2 class="plan-name">Professional</h2>
+        <p class="plan-desc">For active agents who close multiple deals monthly.</p>
+        <div class="price-row">
+          <span class="price-current">$99</span>
+          <span class="price-period">/month</span>
+        </div>
+        <ul class="features">
+          <li><span class="check">&#10003;</span> Everything in Starter</li>
+          <li><span class="check">&#10003;</span> DocuSign integration</li>
+          <li><span class="check">&#10003;</span> Webhook / CRM sync</li>
+          <li><span class="check">&#10003;</span> Priority support</li>
+          <li><span class="check">&#10003;</span> Custom cover page</li>
+        </ul>
+        <form action="/create-checkout-session" method="POST">
+          <input type="hidden" name="plan" value="professional">
+          <button type="submit" class="cta-btn brass">Get Professional</button>
+        </form>
+      </div>
 
-      <form action="/create-checkout-session" method="POST">
-        <button type="submit" class="cta-btn">Get Early Access &rarr;</button>
-        <p style="font-size:12px;color:var(--text-muted);text-align:center;margin-top:12px;">By subscribing you agree to our <a href="/terms" style="color:var(--brass);text-decoration:underline;">Terms of Service</a></p>
-      </form>
+      <div class="pricing-card">
+        <h2 class="plan-name">Brokerage</h2>
+        <p class="plan-desc">For teams and offices with multiple agents.</p>
+        <div class="price-row">
+          <span class="price-current">$299</span>
+          <span class="price-period">/month</span>
+        </div>
+        <ul class="features">
+          <li><span class="check">&#10003;</span> Everything in Professional</li>
+          <li><span class="check">&#10003;</span> Up to 10 agent seats</li>
+          <li><span class="check">&#10003;</span> Brokerage branding</li>
+          <li><span class="check">&#10003;</span> Team analytics dashboard</li>
+          <li><span class="check">&#10003;</span> Dedicated onboarding</li>
+        </ul>
+        <a href="mailto:hello@txtanoffer.com?subject=Brokerage%20Plan" class="cta-btn outline">Contact Us</a>
+      </div>
+
+      <div class="pricing-card">
+        <h2 class="plan-name">Enterprise</h2>
+        <p class="plan-desc">For large brokerages and franchises.</p>
+        <div class="price-row">
+          <span class="price-current">Custom</span>
+        </div>
+        <ul class="features">
+          <li><span class="check">&#10003;</span> Everything in Brokerage</li>
+          <li><span class="check">&#10003;</span> Unlimited seats</li>
+          <li><span class="check">&#10003;</span> MLS integration</li>
+          <li><span class="check">&#10003;</span> White-label option</li>
+          <li><span class="check">&#10003;</span> SLA &amp; dedicated support</li>
+        </ul>
+        <a href="mailto:hello@txtanoffer.com?subject=Enterprise%20Plan" class="cta-btn outline">Contact Us</a>
+      </div>
+
     </div>
+
+    <p class="terms-note">All plans cancel anytime. No contracts. By subscribing you agree to our <a href="/terms">Terms of Service</a>.</p>
 
     <div class="value-props">
       <div class="value-card">
         <div class="value-title">Time ROI</div>
-        <div class="value-text">Save 45 minutes per offer. At 5 offers/month, you save 3.75 hours — worth $187-$562 of your time.</div>
+        <div class="value-text">Save 45 minutes per offer. At 5 offers/month, that's 3.75 hours back — worth $187-$562 of your time.</div>
       </div>
       <div class="value-card">
         <div class="value-title">Zero Errors</div>
@@ -809,12 +872,12 @@ def pricing():
       </div>
       <div class="value-card">
         <div class="value-title">Pays for Itself</div>
-        <div class="value-text">Break even with just 2 offers per month. Everything after that is pure time savings.</div>
+        <div class="value-text">Starter pays for itself with a single offer. Everything after is pure time savings.</div>
       </div>
     </div>
 
     <div class="back-link">
-      <a href="/demo">&larr; Back to demo</a> &middot; <a href="/terms">Terms of Service</a>
+      <a href="/demo">&larr; Back to demo</a>
     </div>
   </div>
 </body>
