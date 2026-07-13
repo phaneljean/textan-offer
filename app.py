@@ -372,7 +372,7 @@ DEMO_FORM = """
   <div class="stage">
     <div class="corner-mark"><span>TEXTANOFFER</span><span class="brass">{date_stamp}</span></div>
     <h1 id="headline"></h1>
-    <p class="sub">Type an offer the way you'd text it. This generates the actual TREC 20-19 contract -- same form, same fields, ready for review.</p>
+    <p class="sub">Agents spend up to 45 minutes preparing purchase offers. TextAnOffer reduces that to under 10 seconds.</p>
     <div class="workflow">
       <div class="wf-step"><div class="wf-icon">&#9993;</div><div class="wf-title">You type</div><div class="wf-desc">725k 3% 21day<br>1234 Main St</div></div>
       <div class="wf-arrow">&rarr;</div>
