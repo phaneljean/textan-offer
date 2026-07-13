@@ -335,7 +335,7 @@ DEMO_FORM = """
     <h1 id="headline"></h1>
     <p class="sub">Type an offer the way you'd text it. This generates the actual TREC 20-19 contract -- same form, same fields, ready for review.</p>
     <script>
-      const lines = ['Text a price.', 'Get a real offer.'];
+      const lines = ['Get a purchase offer', 'in 10 seconds.'];
       const headline = document.getElementById('headline');
       let lineIdx = 0, charIdx = 0, currentText = '';
 
