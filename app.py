@@ -1,5 +1,5 @@
 """
-app.py — Twilio SMS webhook for TextAnOffer, plus a /demo web form that
+app.py — Twilio SMS webhook for TxtAnOffer, plus a /demo web form that
 bypasses SMS entirely (for testing while A2P 10DLC registration is pending).
 
 Flow (SMS):
@@ -258,7 +258,7 @@ DEMO_FORM = """
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TextAnOffer</title>
+<title>TxtAnOffer</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Inter:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -384,9 +384,9 @@ DEMO_FORM = """
 </head>
 <body>
   <div class="stage">
-    <div class="corner-mark"><span>TEXTANOFFER</span><span class="brass">{date_stamp}</span></div>
+    <div class="corner-mark"><span>TXTANOFFER</span><span class="brass">{date_stamp}</span></div>
     <h1 id="headline"></h1>
-    <p class="sub">Agents spend up to 45 minutes preparing purchase offers. TextAnOffer reduces that to under 10 seconds.</p>
+    <p class="sub">Agents spend up to 45 minutes preparing purchase offers. TxtAnOffer reduces that to under 10 seconds.</p>
     <div class="workflow">
       <div class="wf-step"><div class="wf-icon">&#9993;</div><div class="wf-title">You type</div><div class="wf-desc">725k 3% 21day<br>1234 Main St</div></div>
       <div class="wf-arrow">&rarr;</div>
@@ -483,7 +483,7 @@ def demo():
             parsed_json = _json.dumps(_parsed_safe)
 
             # Social share URLs
-            share_text = "Just generated a TREC 20-19 contract in 3 seconds by texting an address 🤯 TextAnOffer turns '725k 3% 21day 1740 Grand Ave' into a filled PDF instantly."
+            share_text = "Just generated a TREC 20-19 contract in 3 seconds by texting an address 🤯 TxtAnOffer turns '725k 3% 21day 1740 Grand Ave' into a filled PDF instantly."
             share_url = "https://txtanoffer.com/demo"
             twitter_share = f"https://twitter.com/intent/tweet?text={share_text.replace(' ', '%20')}&url={share_url}"
             linkedin_share = f"https://www.linkedin.com/sharing/share-offsite/?url={share_url}"
@@ -702,7 +702,7 @@ def pricing():
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pricing - TextAnOffer</title>
+<title>Pricing - TxtAnOffer</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -776,7 +776,7 @@ def pricing():
 <body>
   <div class="container">
     <div class="header">
-      <div class="logo">TEXTANOFFER</div>
+      <div class="logo">TXTANOFFER</div>
       <h1>Simple pricing.<br>Massive time savings.</h1>
       <p class="tagline">Stop spending 45 minutes per offer. Pick a plan and start generating contracts in seconds.</p>
     </div>
@@ -927,7 +927,7 @@ def success():
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Welcome to TextAnOffer!</title>
+<title>Welcome to TxtAnOffer!</title>
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Inter:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root{{--ink:#171B24;--paper:#F3EEDF;--brass:#A9772F;--green:#3A5744;}}
@@ -1034,7 +1034,7 @@ def analytics_dashboard():
 
     return f"""
 <!DOCTYPE html>
-<html><head><title>TextAnOffer Analytics</title>
+<html><head><title>TxtAnOffer Analytics</title>
 <style>
 body{{font-family:system-ui;max-width:800px;margin:40px auto;padding:20px;}}
 .metric{{background:#f5f5f5;padding:20px;margin:10px 0;border-radius:8px;}}
@@ -1042,7 +1042,7 @@ body{{font-family:system-ui;max-width:800px;margin:40px auto;padding:20px;}}
 .metric .value{{font-size:32px;font-weight:bold;color:#A9772F;}}
 .metric .label{{color:#666;font-size:14px;}}
 </style></head><body>
-<h1>TextAnOffer Analytics</h1>
+<h1>TxtAnOffer Analytics</h1>
 <h2>Last 30 Days</h2>
 <div class="metric">
   <h3>Conversion Funnel</h3>
@@ -1107,7 +1107,7 @@ def terms():
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Terms of Service — TextAnOffer</title>
+<title>Terms of Service — TxtAnOffer</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Inter:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -1161,19 +1161,19 @@ def terms():
 </head>
 <body>
 <div class="container">
-  <a href="/demo" class="back-link">&larr; Back to TextAnOffer</a>
+  <a href="/demo" class="back-link">&larr; Back to TxtAnOffer</a>
   <h1 class="page-title">Terms of Service</h1>
   <p class="last-updated">Last Updated: July 12, 2026</p>
   <div class="card">
-    <p>These Terms of Service ("Terms") govern your use of TextAnOffer ("Service"), operated by Phanel ("we," "us," or "our"), a sole proprietorship based in Texas. By accessing or using the Service, you agree to be bound by these Terms. If you do not agree, do not use the Service.</p>
+    <p>These Terms of Service ("Terms") govern your use of TxtAnOffer ("Service"), operated by Phanel ("we," "us," or "our"), a sole proprietorship based in Texas. By accessing or using the Service, you agree to be bound by these Terms. If you do not agree, do not use the Service.</p>
 
     <h2><span class="section-num">1.</span> Service Description</h2>
-    <p>TextAnOffer is a document drafting tool that converts shorthand offer text into pre-filled TREC One to Four Family Residential Contract (Resale) forms (TREC No. 20-19). The Service accepts offer parameters via SMS (Twilio) or a web interface and generates a partially completed PDF contract for review by a licensed Texas real estate agent.</p>
+    <p>TxtAnOffer is a document drafting tool that converts shorthand offer text into pre-filled TREC One to Four Family Residential Contract (Resale) forms (TREC No. 20-19). The Service accepts offer parameters via SMS (Twilio) or a web interface and generates a partially completed PDF contract for review by a licensed Texas real estate agent.</p>
     <p>The Service fills in standard TREC form fields based on information you provide. It does not create custom legal documents, negotiate terms, or exercise professional judgment on your behalf.</p>
 
     <h2><span class="section-num">2.</span> Not Legal Advice — No Attorney-Client Relationship</h2>
     <div class="emphasis">
-      TextAnOffer is NOT a law firm, does NOT provide legal advice, and does NOT serve as a substitute for consultation with a licensed attorney. No attorney-client relationship is formed by your use of the Service.
+      TxtAnOffer is NOT a law firm, does NOT provide legal advice, and does NOT serve as a substitute for consultation with a licensed attorney. No attorney-client relationship is formed by your use of the Service.
     </div>
     <p>The Service performs mechanical form-filling only. It does not:</p>
     <ul>
@@ -1186,7 +1186,7 @@ def terms():
 
     <h2><span class="section-num">3.</span> Draft Documents — Agent Responsibility</h2>
     <div class="emphasis">
-      All documents generated by TextAnOffer are DRAFTS only. You, the licensed real estate agent, are solely responsible for reviewing, verifying, and approving every field, calculation, date, and term before presenting any document to clients or counterparties.
+      All documents generated by TxtAnOffer are DRAFTS only. You, the licensed real estate agent, are solely responsible for reviewing, verifying, and approving every field, calculation, date, and term before presenting any document to clients or counterparties.
     </div>
     <p>You acknowledge and agree that:</p>
     <ul>
@@ -1210,7 +1210,7 @@ def terms():
     <p>THE SERVICE IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTIES OF ANY KIND, WHETHER EXPRESS, IMPLIED, STATUTORY, OR OTHERWISE, INCLUDING WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT.</p>
 
     <h2><span class="section-num">5.</span> TREC Disclaimer</h2>
-    <p>TextAnOffer is an independent, third-party tool. We are NOT affiliated with, endorsed by, or partnered with the Texas Real Estate Commission (TREC) in any capacity. "TREC" and the form numbers referenced herein are trademarks or designations of the Texas Real Estate Commission.</p>
+    <p>TxtAnOffer is an independent, third-party tool. We are NOT affiliated with, endorsed by, or partnered with the Texas Real Estate Commission (TREC) in any capacity. "TREC" and the form numbers referenced herein are trademarks or designations of the Texas Real Estate Commission.</p>
     <p>We use publicly available TREC promulgated forms as templates. If TREC revises or replaces a form, there may be a delay before we update the Service. You are responsible for confirming that the form version used is current and appropriate for your transaction.</p>
 
     <h2><span class="section-num">6.</span> Subscription, Payment, and Cancellation</h2>
@@ -1222,7 +1222,7 @@ def terms():
     <p><strong>Failed payments:</strong> If a payment fails, we may suspend access to the Service until the balance is resolved. We are not responsible for any disruption caused by payment failures.</p>
 
     <h2><span class="section-num">7.</span> Limitation of Liability</h2>
-    <p>TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, IN NO EVENT SHALL TEXTANOFFER, ITS OWNER, OPERATORS, OR AFFILIATES BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING WITHOUT LIMITATION:</p>
+    <p>TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, IN NO EVENT SHALL TXTANOFFER, ITS OWNER, OPERATORS, OR AFFILIATES BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING WITHOUT LIMITATION:</p>
     <ul>
       <li>Loss of profits, revenue, or business opportunities</li>
       <li>Loss of a transaction, deal, or commission</li>
@@ -1234,7 +1234,7 @@ def terms():
     <p>This limitation applies regardless of the legal theory (contract, tort, strict liability, or otherwise) and even if we have been advised of the possibility of such damages.</p>
 
     <h2><span class="section-num">8.</span> Indemnification</h2>
-    <p>You agree to indemnify, defend, and hold harmless TextAnOffer, its owner, and any contractors from and against any and all claims, damages, losses, liabilities, costs, and expenses (including reasonable attorneys' fees) arising out of or related to:</p>
+    <p>You agree to indemnify, defend, and hold harmless TxtAnOffer, its owner, and any contractors from and against any and all claims, damages, losses, liabilities, costs, and expenses (including reasonable attorneys' fees) arising out of or related to:</p>
     <ul>
       <li>Your use of the Service or any documents generated by the Service</li>
       <li>Any transaction in which a document generated by the Service is used</li>
@@ -1283,9 +1283,9 @@ def terms():
 
     <h2><span class="section-num">14.</span> Contact</h2>
     <p>For questions about these Terms or the Service, contact us at:</p>
-    <p>TextAnOffer<br>Operated by Phanel<br>Texas, United States<br>Email: support@txtanoffer.com</p>
+    <p>TxtAnOffer<br>Operated by Phanel<br>Texas, United States<br>Email: support@txtanoffer.com</p>
   </div>
-  <p class="foot">TextAnOffer is not affiliated with the Texas Real Estate Commission (TREC).</p>
+  <p class="foot">TxtAnOffer is not affiliated with the Texas Real Estate Commission (TREC).</p>
 </div>
 </body>
 </html>"""
@@ -1322,7 +1322,7 @@ def profile():
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Agent Profile - TextAnOffer</title>
+<title>Agent Profile - TxtAnOffer</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Inter:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
