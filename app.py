@@ -309,6 +309,11 @@ DEMO_FORM = """
   .result-row .v{{color:var(--text-on-paper);font-weight:500;}}
   .result-ready{{font-size:13px;color:var(--green);font-style:italic;margin-top:14px;padding-top:12px;
     border-top:1px dashed var(--paper-line);}}
+  .pdf-preview{{margin-top:18px;border:1px solid var(--paper-line);border-radius:2px;overflow:hidden;}}
+  .pdf-preview-label{{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.06em;
+    text-transform:uppercase;color:var(--text-muted);padding:8px 12px;background:rgba(220,211,184,0.3);
+    border-bottom:1px solid var(--paper-line);}}
+  .pdf-frame{{width:100%;height:320px;border:none;background:#fff;}}
   .download-btn{{margin-top:18px;display:block;text-align:center;background:var(--brass);color:#2A1D08;
     text-decoration:none;font-weight:500;font-size:14px;padding:13px;border-radius:2px;}}
   .download-btn:hover{{background:var(--brass-soft);}}
@@ -492,6 +497,10 @@ def demo():
               <div class="result-row"><span class="k">Closing</span><span class="v">{close_date_str}</span></div>
               <div class="result-ready">Ready for review.</div>
               {warning_html}
+              <div class="pdf-preview">
+                <div class="pdf-preview-label">Contract preview</div>
+                <iframe src="{pdf_url}#page=1&view=FitH" class="pdf-frame"></iframe>
+              </div>
               <a href="{pdf_url}" target="_blank" class="download-btn">&darr; Download PDF</a>
               <div class="integration-actions">
                 <button class="int-btn int-email" onclick="document.getElementById('email-modal').style.display='flex'">&#9993; Email offer</button>
