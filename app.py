@@ -31,7 +31,9 @@ app = Flask(__name__)
 
 # Stripe configuration
 stripe.api_key = os.environ.get("STRIPE_SECRET_KEY", "")
-STRIPE_PRICE_ID = os.environ.get("STRIPE_PRICE_ID", "")  # Your $49/mo price ID from Stripe dashboard
+STRIPE_PRICE_ID = os.environ.get("STRIPE_PRICE_ID", "")
+STRIPE_PRICE_ID_PRO = os.environ.get("STRIPE_PRICE_ID_PRO", "")
+STRIPE_PRICE_ID_BROKERAGE = os.environ.get("STRIPE_PRICE_ID_BROKERAGE", "")
 
 
 @app.route("/")
@@ -846,7 +848,10 @@ def pricing():
           <li><span class="check">&#10003;</span> Team analytics dashboard</li>
           <li><span class="check">&#10003;</span> Dedicated onboarding</li>
         </ul>
-        <a href="mailto:hello@txtanoffer.com?subject=Brokerage%20Plan" class="cta-btn outline">Contact Us</a>
+        <form action="/create-checkout-session" method="POST">
+          <input type="hidden" name="plan" value="brokerage">
+          <button type="submit" class="cta-btn">Get Brokerage</button>
+        </form>
       </div>
 
       <div class="pricing-card">
@@ -896,14 +901,21 @@ def pricing():
 @app.route("/create-checkout-session", methods=["POST"])
 def create_checkout_session():
     """Create Stripe checkout session for subscription"""
-    if not stripe.api_key or not STRIPE_PRICE_ID:
-        # Fallback if Stripe not configured: email signup
+    plan = request.form.get("plan", "starter")
+    price_map = {
+        "starter": STRIPE_PRICE_ID,
+        "professional": STRIPE_PRICE_ID_PRO,
+        "brokerage": STRIPE_PRICE_ID_BROKERAGE,
+    }
+    price_id = price_map.get(plan, STRIPE_PRICE_ID)
+
+    if not stripe.api_key or not price_id:
         return redirect("mailto:hello@txtanoffer.com?subject=Early%20Adopter%20Signup")
 
     try:
         checkout_session = stripe.checkout.Session.create(
             line_items=[{
-                'price': STRIPE_PRICE_ID,
+                'price': price_id,
                 'quantity': 1,
             }],
             mode='subscription',
