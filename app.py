@@ -451,8 +451,8 @@ DEMO_FORM = """
       <div class="trust-item"><div class="trust-val">TREC</div><div class="trust-label">20-19 Compliant</div></div>
     </div>
     <div class="foot">
-      SMS available after setup &middot; try the web demo now
-      <br><a href="/pricing">View Pricing</a> &middot; <a href="/terms">Terms</a>
+      By texting or using this service, you consent to receive SMS responses. Reply STOP to opt out anytime. Msg &amp; data rates may apply.
+      <br><a href="/pricing">View Pricing</a> &middot; <a href="/terms">Terms</a> &middot; <a href="/privacy">Privacy</a>
     </div>
   </div>
 </body>
@@ -1303,6 +1303,140 @@ def terms():
 
     <h2><span class="section-num">14.</span> Contact</h2>
     <p>For questions about these Terms or the Service, contact us at:</p>
+    <p>TxtAnOffer<br>Operated by Phanel<br>Texas, United States<br>Email: support@txtanoffer.com</p>
+  </div>
+  <p class="foot">TxtAnOffer is not affiliated with the Texas Real Estate Commission (TREC).</p>
+</div>
+</body>
+</html>"""
+
+
+@app.route("/privacy")
+def privacy():
+    return """<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Privacy Policy — TxtAnOffer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:#fff;
+    min-height:100vh; padding:48px 20px; font-family:'Inter',sans-serif;
+    display:flex; justify-content:center;
+  }
+  .container{width:100%; max-width:680px;}
+  .back-link{
+    font-size:12px; color:#666; text-decoration:none;
+    display:inline-block; margin-bottom:20px;
+  }
+  .back-link:hover{color:#000;}
+  .page-title{
+    font-family:'Source Serif 4',serif; font-weight:600; font-size:24px;
+    color:#000; margin-bottom:4px;
+  }
+  .last-updated{
+    font-size:12px; color:#999; margin-bottom:32px;
+  }
+  .card h2{
+    font-family:'Source Serif 4',serif; font-weight:600; font-size:15px;
+    color:#000; margin:28px 0 10px; padding-bottom:6px;
+    border-bottom:1px solid #e5e5e5;
+  }
+  .card h2:first-child{margin-top:0;}
+  .card p, .card li{
+    font-size:12px; line-height:1.7; color:#333; margin-bottom:8px;
+  }
+  .card ul{padding-left:18px; margin:6px 0 8px;}
+  .card ul li{list-style:disc; margin-bottom:4px;}
+  .card strong{color:#000; font-weight:500;}
+  .foot{
+    text-align:center; margin-top:24px; font-size:11px;
+    color:#999; letter-spacing:0.02em;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <a href="/demo" class="back-link">&larr; Back to TxtAnOffer</a>
+  <h1 class="page-title">Privacy Policy</h1>
+  <p class="last-updated">Last Updated: July 14, 2026</p>
+  <div class="card">
+    <p>TxtAnOffer ("Service") is operated by Phanel, a sole proprietorship based in Texas. This Privacy Policy explains how we collect, use, and protect your information.</p>
+
+    <h2>1. Information We Collect</h2>
+    <p><strong>Information you provide:</strong></p>
+    <ul>
+      <li>Phone number (for SMS interactions and account identification)</li>
+      <li>Agent profile details (name, license number, brokerage, email)</li>
+      <li>Offer text messages and form submissions</li>
+      <li>Payment information (processed securely by Stripe; we do not store card numbers)</li>
+    </ul>
+    <p><strong>Information collected automatically:</strong></p>
+    <ul>
+      <li>Usage data (timestamps, request counts, feature usage)</li>
+      <li>Device and browser information when using the web interface</li>
+      <li>IP address</li>
+    </ul>
+
+    <h2>2. How We Use Your Information</h2>
+    <ul>
+      <li>To provide the Service: parsing offers, generating PDFs, delivering SMS responses</li>
+      <li>To manage your account and subscription</li>
+      <li>To improve and maintain the Service</li>
+      <li>To communicate with you about your account or the Service</li>
+      <li>To comply with legal obligations</li>
+    </ul>
+
+    <h2>3. SMS Messaging</h2>
+    <p><strong>Consent:</strong> By texting our service number or submitting your phone number, you consent to receive SMS messages from TxtAnOffer related to your offer requests and account.</p>
+    <p><strong>Message frequency:</strong> Message frequency varies based on your usage. You will receive one response per offer submitted, plus occasional account notifications.</p>
+    <p><strong>Opt-out:</strong> Reply STOP to any message to unsubscribe from SMS. You can continue using the web interface after opting out of SMS.</p>
+    <p><strong>Help:</strong> Reply HELP for support information.</p>
+    <p><strong>Rates:</strong> Message and data rates may apply depending on your carrier plan.</p>
+    <p><strong>Carriers:</strong> Compatible with all major US carriers. Carriers are not liable for delayed or undelivered messages.</p>
+
+    <h2>4. Data Sharing</h2>
+    <p>We do not sell, rent, or trade your personal information. We share data only with:</p>
+    <ul>
+      <li><strong>Twilio</strong> — SMS delivery (phone number, message content)</li>
+      <li><strong>Stripe</strong> — Payment processing (billing details)</li>
+      <li><strong>Cloud hosting provider</strong> — Infrastructure (all data in transit and at rest)</li>
+    </ul>
+    <p>We may disclose information if required by law, legal process, or to protect the rights and safety of our users or the public.</p>
+
+    <h2>5. Data Retention</h2>
+    <ul>
+      <li>Generated PDFs: stored temporarily for download, deleted after 30 days</li>
+      <li>Account data: retained while your account is active and for 90 days after cancellation</li>
+      <li>Billing records: retained as required by applicable tax and accounting laws</li>
+      <li>SMS logs: retained for 90 days for support and debugging purposes</li>
+    </ul>
+
+    <h2>6. Data Security</h2>
+    <p>We implement reasonable technical and organizational measures to protect your data, including encryption in transit (TLS), secure hosting, and access controls. However, no method of transmission over the internet is 100% secure, and we cannot guarantee absolute security.</p>
+
+    <h2>7. Your Rights</h2>
+    <p>You may:</p>
+    <ul>
+      <li>Request access to your personal data</li>
+      <li>Request correction or deletion of your data</li>
+      <li>Opt out of SMS communications (reply STOP)</li>
+      <li>Cancel your subscription at any time</li>
+    </ul>
+    <p>To exercise these rights, contact us at support@txtanoffer.com.</p>
+
+    <h2>8. Children's Privacy</h2>
+    <p>The Service is intended for licensed real estate professionals and is not directed at individuals under 18. We do not knowingly collect information from minors.</p>
+
+    <h2>9. Changes to This Policy</h2>
+    <p>We may update this Privacy Policy from time to time. Changes will be posted on this page with an updated "Last Updated" date. Continued use of the Service after changes constitutes acceptance.</p>
+
+    <h2>10. Contact</h2>
+    <p>For privacy-related questions or requests:</p>
     <p>TxtAnOffer<br>Operated by Phanel<br>Texas, United States<br>Email: support@txtanoffer.com</p>
   </div>
   <p class="foot">TxtAnOffer is not affiliated with the Texas Real Estate Commission (TREC).</p>
