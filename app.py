@@ -231,7 +231,7 @@ def sms_reply():
             f"🏦 Loan: ${parsed['loan_amount']:,}\n"
             f"✅ Earnest: ${parsed['earnest_money']:,}\n"
             f"🎯 Option: ${parsed['option_fee']}\n"
-            f"🏠 Property: {parsed['bed']}bed/{parsed['bath']}bath/{parsed['sqft']:,}sf\n\n"
+            f"\n"
             f"⚡️ Generated in <1s (vs 45min manual)\n"
             f"{warning_line}\n"
             f"Review: {pdf_url}\n"

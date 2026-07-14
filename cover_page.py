@@ -134,14 +134,6 @@ def generate_cover_page(parsed: dict, agent: dict) -> bytes:
     earnest = parsed.get('earnest_money', 0)
     option = parsed.get('option_fee', 0)
 
-    # Property details
-    bed = parsed.get('bed', '')
-    bath = parsed.get('bath', '')
-    sqft = parsed.get('sqft', 0)
-    prop_line = ""
-    if bed and bath and sqft:
-        prop_line = f"{bed} bed  •  {bath} bath  •  {sqft:,} sqft"
-
     lines = [
         f"${price:,}",
         f"{down_pct*100:.0f}% Down  •  ${down_amt:,}",
@@ -151,10 +143,6 @@ def generate_cover_page(parsed: dict, agent: dict) -> bytes:
         f"Earnest Money: ${earnest:,}",
         f"Option Fee: ${option}",
     ]
-
-    if prop_line:
-        lines.insert(0, prop_line)
-        lines.insert(1, "")
 
     for line in lines:
         if line == "":
