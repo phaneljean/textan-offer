@@ -449,7 +449,7 @@ DEMO_FORM = """
       <div class="trust-item"><div class="trust-val">TREC</div><div class="trust-label">20-19 Compliant</div></div>
     </div>
     <div class="foot">
-      SMS delivery pending carrier registration -- this demo runs the same backend directly
+      SMS available after setup &middot; try the web demo now
       <br><a href="/pricing">View Pricing</a> &middot; <a href="/terms">Terms</a>
     </div>
   </div>
