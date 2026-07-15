@@ -161,21 +161,43 @@ def fill_offer_pdf(parsed: dict, agent_phone: str) -> str:
 
     # Handle parent fields with /Kids (closing date)
     # These aren't direct page annotations so update_page_form_field_values misses them.
-    # We set /V on both parent and kid, and remove /AP on kid to force regeneration.
+    # We set /V on both parent and kid, and build an appearance stream so all viewers render it.
     acroform = writer._root_object.get("/AcroForm")
     if hasattr(acroform, 'get_object'):
         acroform = acroform.get_object()
     if acroform and "/Fields" in acroform:
+        from pypdf.generic import ArrayObject, DecodedStreamObject, DictionaryObject, NumberObject
         for field_ref in acroform["/Fields"]:
             field = field_ref.get_object()
             name = str(field.get("/T", ""))
             if name in values and "/Kids" in field:
-                field[NameObject("/V")] = TextStringObject(values[name])
+                val = values[name]
+                field[NameObject("/V")] = TextStringObject(val)
                 for kid_ref in field["/Kids"]:
                     kid = kid_ref.get_object()
-                    kid[NameObject("/V")] = TextStringObject(values[name])
-                    if "/AP" in kid:
-                        del kid["/AP"]
+                    kid[NameObject("/V")] = TextStringObject(val)
+                    rect = kid.get("/Rect")
+                    if rect:
+                        width = float(rect[2]) - float(rect[0])
+                        height = float(rect[3]) - float(rect[1])
+                        ap_stream = f"/Tx BMC\nBT\n/Helv 9 Tf\n0 g\n2 2 Td\n({val}) Tj\nET\nEMC"
+                        stream_obj = DecodedStreamObject()
+                        stream_obj.set_data(ap_stream.encode())
+                        stream_obj[NameObject("/Type")] = NameObject("/XObject")
+                        stream_obj[NameObject("/Subtype")] = NameObject("/Form")
+                        stream_obj[NameObject("/BBox")] = ArrayObject([NumberObject(0), NumberObject(0), NumberObject(int(width)), NumberObject(int(height))])
+                        font_dict = DictionaryObject()
+                        font_dict[NameObject("/Helv")] = DictionaryObject({
+                            NameObject("/Type"): NameObject("/Font"),
+                            NameObject("/Subtype"): NameObject("/Type1"),
+                            NameObject("/BaseFont"): NameObject("/Helvetica"),
+                        })
+                        resources = DictionaryObject()
+                        resources[NameObject("/Font")] = font_dict
+                        stream_obj[NameObject("/Resources")] = resources
+                        ap_dict = DictionaryObject()
+                        ap_dict[NameObject("/N")] = stream_obj
+                        kid[NameObject("/AP")] = ap_dict
 
     # Check checkboxes by setting /V and /AS to /On
     for page in writer.pages:
