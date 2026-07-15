@@ -326,6 +326,8 @@ DEMO_FORM = """
   @media(max-width:768px){{
     .pdf-frame{{display:none;}}
     .pdf-mobile{{display:block;}}
+    .site-logo{{position:static;margin-bottom:16px;text-align:center;}}
+    .site-logo img{{width:48px;height:48px;}}
   }}
   .download-btn{{margin-top:18px;display:block;text-align:center;background:var(--brass);color:#2A1D08;
     text-decoration:none;font-weight:500;font-size:14px;padding:13px;border-radius:2px;}}
