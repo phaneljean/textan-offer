@@ -112,11 +112,11 @@ def fill_offer_pdf(parsed: dict, agent_phone: str) -> str:
 
     # Check Third Party Financing when there's a loan
     if parsed.get("loan_amount") and parsed["loan_amount"] > 0:
-        values[FIELD_MAP["third_party_financing"]] = True
+        values[FIELD_MAP["third_party_financing"]] = "/Yes"
 
     # Default: Buyer accepts Property As Is + possession upon closing
-    values[FIELD_MAP["as_is"]] = True
-    values[FIELD_MAP["possession_upon_closing"]] = True
+    values[FIELD_MAP["as_is"]] = "/Yes"
+    values[FIELD_MAP["possession_upon_closing"]] = "/Yes"
 
     # Earnest Money & Option Fee (Paragraph 5A)
     if parsed.get("earnest_money") is not None:
