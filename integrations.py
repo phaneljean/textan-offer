@@ -170,7 +170,7 @@ def _get_docusign_token() -> str:
     payload = {
         "iss": DOCUSIGN_INTEGRATION_KEY,
         "sub": DOCUSIGN_USER_ID,
-        "aud": "account-d.docusign.net",
+        "aud": "account-d.docusign.com",
         "iat": now,
         "exp": now + 3600,
         "scope": "signature impersonation",
@@ -181,7 +181,7 @@ def _get_docusign_token() -> str:
 
     data = f"grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion={token}".encode()
     req = urllib.request.Request(
-        "https://account-d.docusign.net/oauth/token",
+        "https://account-d.docusign.com/oauth/token",
         data=data,
         headers={"Content-Type": "application/x-www-form-urlencoded"},
         method="POST",
