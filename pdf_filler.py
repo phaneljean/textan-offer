@@ -75,8 +75,11 @@ def fill_offer_pdf(parsed: dict, agent_phone: str) -> str:
     values = {}
 
     # Property description (Paragraph 2A)
+    # Strip state from address — the form field already says "Texas, known as"
     if parsed.get("address"):
-        values[FIELD_MAP["address"]] = parsed["address"]
+        import re
+        addr = re.sub(r',?\s*\b(TX|Texas)\b', '', parsed["address"], flags=re.IGNORECASE).strip(' ,')
+        values[FIELD_MAP["address"]] = addr
     if parsed.get("city"):
         values[FIELD_MAP["city"]] = parsed["city"]
     if parsed.get("county"):
