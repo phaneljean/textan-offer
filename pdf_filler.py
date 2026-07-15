@@ -194,29 +194,48 @@ def fill_offer_pdf(parsed: dict, agent_phone: str) -> str:
     final_writer.append(PdfReader(io.BytesIO(cover_pdf_bytes)))
     final_writer.append(PdfReader(trec_buf))
 
-    # Overlay closing date text directly on page (parent/kid fields don't render in all viewers)
-    # Page 6 in final PDF = TREC page 5 (0-indexed) + 1 cover page
+    # Closing date: remove the empty kid annotations that cover overlay text, then stamp text
+    # Page 6 in final PDF = cover(0) + TREC pages 0-4(1-5) → TREC page 5 = index 6
     if parsed.get("close_days") is not None:
         from reportlab.lib.pagesizes import letter
         from reportlab.pdfgen import canvas as rl_canvas
+        from pypdf.generic import ArrayObject
 
         close_dt = datetime.now() + timedelta(days=parsed["close_days"])
-        close_text = close_dt.strftime("%B %d")
+        close_text = close_dt.strftime("%B %d,")
         year_suffix = close_dt.strftime("%y")
 
+        target_page = final_writer.pages[6]
+
+        # Remove the closing date and year kid annotations so they don't obscure overlay
+        if "/Annots" in target_page:
+            annots = target_page["/Annots"]
+            keep = []
+            for annot_ref in annots:
+                annot = annot_ref.get_object()
+                rect = annot.get("/Rect")
+                if rect:
+                    y_bottom = float(rect[1])
+                    x_left = float(rect[0])
+                    # Both kids are at y~667.6: closing date at x~291, year at x~442
+                    if 665 < y_bottom < 680 and (289 < x_left < 295 or 440 < x_left < 445):
+                        continue  # skip these annotations
+                keep.append(annot_ref)
+            target_page[NameObject("/Annots")] = ArrayObject(keep)
+
+        # Draw text directly on page
         overlay_buf = io.BytesIO()
         c = rl_canvas.Canvas(overlay_buf, pagesize=letter)
-        c.setFont("Helvetica", 9)
-        # Closing date text: rect [291.388, 667.664, 422.126, 677.624]
-        c.drawString(293, 669, close_text)
-        # Year suffix "26": rect [442.166, 667.664, 469.166, 677.624] (after pre-printed "20")
-        c.drawString(443, 669, year_suffix)
+        c.setFont("Helvetica", 10)
+        # Closing date "August 14,": centered in rect [291, 668, 422, 678]
+        c.drawString(310, 669, close_text)
+        # Year suffix "26": in rect [442, 668, 469, 678]
+        c.drawString(448, 669, year_suffix)
         c.save()
         overlay_buf.seek(0)
 
         overlay_page = PdfReader(overlay_buf).pages[0]
-        # Page index 6 = cover(0) + TREC pages 1-5(1-5) + page 6 has closing date
-        final_writer.pages[6].merge_page(overlay_page)
+        target_page.merge_page(overlay_page)
 
     safe_addr = "".join(ch for ch in (parsed.get("address") or "offer") if ch.isalnum())[:30]
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
