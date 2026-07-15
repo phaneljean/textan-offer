@@ -1392,12 +1392,16 @@ def privacy():
     </ul>
 
     <h2>3. SMS Messaging</h2>
-    <p><strong>Consent:</strong> By texting our service number or submitting your phone number, you consent to receive SMS messages from TxtAnOffer related to your offer requests and account.</p>
-    <p><strong>Message frequency:</strong> Message frequency varies based on your usage. You will receive one response per offer submitted, plus occasional account notifications.</p>
-    <p><strong>Opt-out:</strong> Reply STOP to any message to unsubscribe from SMS. You can continue using the web interface after opting out of SMS.</p>
-    <p><strong>Help:</strong> Reply HELP for support information.</p>
+    <p><strong>Program Name:</strong> TxtAnOffer</p>
+    <p><strong>Toll-Free Number:</strong> +1 (833) 897-0333</p>
+    <p><strong>Opt-in Method:</strong> Users opt in by (1) entering their phone number and checking an unchecked checkbox on www.txtanoffer.com that says "By checking this box and texting +1 (833) 897-0333, I agree to receive automated transactional messages from TxtAnOffer about my offer drafts. Msg &amp; data rates may apply. Reply STOP to opt out." OR (2) by texting offer details directly to +1 (833) 897-0333 after seeing opt-in disclosure on our website.</p>
+    <p><strong>Consent:</strong> By texting our service number +1 (833) 897-0333 or submitting your phone number via our website, you consent to receive SMS messages from TxtAnOffer related to your offer requests and account.</p>
+    <p><strong>Message frequency:</strong> Message frequency varies based on your usage. You will receive one response per offer submitted, plus occasional account notifications (typically 1-5 messages per month).</p>
+    <p><strong>Opt-out:</strong> Reply STOP to any message to unsubscribe from SMS. Reply START to re-subscribe. You can continue using the web interface after opting out of SMS.</p>
+    <p><strong>Help:</strong> Reply HELP for support information, or contact support@txtanoffer.com or +1 (833) 897-0333.</p>
     <p><strong>Rates:</strong> Message and data rates may apply depending on your carrier plan.</p>
     <p><strong>Carriers:</strong> Compatible with all major US carriers. Carriers are not liable for delayed or undelivered messages.</p>
+    <p>This is a transactional, user-initiated service only. We do not send marketing or promotional messages.</p>
 
     <h2>4. Data Sharing</h2>
     <p>We do not sell, rent, or trade your personal information. We share data only with:</p>
