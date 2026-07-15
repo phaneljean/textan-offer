@@ -398,7 +398,6 @@ DEMO_FORM = """
 <body>
   <div class="stage">
     <div class="site-logo"><a href="/"><img src="/static/logo.webp" alt="TXTAnOffer"></a></div>
-    <div class="corner-mark"><span>TXTANOFFER</span><span class="brass">{date_stamp}</span></div>
     <h1 id="headline"></h1>
     <p class="sub">Agents spend up to 45 minutes preparing purchase offers. TxtAnOffer reduces that to under 10 seconds.</p>
     <div class="workflow">
