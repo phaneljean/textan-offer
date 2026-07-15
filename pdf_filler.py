@@ -35,8 +35,7 @@ FIELD_MAP = {
 
     # Paragraph 9A: Closing date
     "closing_date": "A The closing of the sale will be on or before",
-    "closing_year_prefix": "20",  # The "20" prefix field
-    "closing_year_suffix": "20_2",  # The 2-digit year suffix field
+    "closing_year_suffix": "20_2",  # The 2-digit year suffix field (form pre-prints "20")
 
     # Payment structure (Paragraph 3)
     # TREC 20-19 has: 3A (cash portion), 3B (sum of financing), 3C (total sales price)
@@ -129,11 +128,10 @@ def fill_offer_pdf(parsed: dict, agent_phone: str) -> str:
 
     # Closing date (Paragraph 9A)
     # TREC form layout: "closing of the sale will be on or before [Month Day,] 20[__]"
-    # Three fields: main date text, "20" prefix, and 2-digit year suffix
+    # The "20" is pre-printed on the form; we only fill the date text and 2-digit year
     if parsed.get("close_days") is not None:
         close_dt = datetime.now() + timedelta(days=parsed["close_days"])
         values[FIELD_MAP["closing_date"]] = close_dt.strftime("%B %d,")
-        values[FIELD_MAP["closing_year_prefix"]] = "20"
         values[FIELD_MAP["closing_year_suffix"]] = close_dt.strftime("%y")
 
     # Agent/broker info from profile
@@ -161,8 +159,9 @@ def fill_offer_pdf(parsed: dict, agent_phone: str) -> str:
     for page in writer.pages:
         writer.update_page_form_field_values(page, values)
 
-    # Handle parent fields with /Kids (closing date, "20" prefix)
-    # These aren't direct page annotations so update_page_form_field_values misses them
+    # Handle parent fields with /Kids (closing date)
+    # These aren't direct page annotations so update_page_form_field_values misses them.
+    # We set /V on both parent and kid, and remove /AP on kid to force regeneration.
     acroform = writer._root_object.get("/AcroForm")
     if hasattr(acroform, 'get_object'):
         acroform = acroform.get_object()
@@ -175,6 +174,8 @@ def fill_offer_pdf(parsed: dict, agent_phone: str) -> str:
                 for kid_ref in field["/Kids"]:
                     kid = kid_ref.get_object()
                     kid[NameObject("/V")] = TextStringObject(values[name])
+                    if "/AP" in kid:
+                        del kid["/AP"]
 
     # Check checkboxes by setting /V and /AS to /On
     for page in writer.pages:
