@@ -279,6 +279,8 @@ DEMO_FORM = """
     padding:48px 20px; font-family:'Inter',sans-serif;
   }}
   .stage{{width:100%;max-width:460px;}}
+  .site-logo{{display:flex;align-items:center;justify-content:center;margin-bottom:24px;}}
+  .site-logo img{{width:60px;height:60px;border-radius:50%;}}
   .corner-mark{{display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;
     font-size:10.5px;letter-spacing:0.06em;color:var(--text-on-ink-muted);margin-bottom:14px;padding:0 4px;}}
   .corner-mark span.brass{{color:var(--brass-soft);}}
@@ -393,6 +395,7 @@ DEMO_FORM = """
 </head>
 <body>
   <div class="stage">
+    <div class="site-logo"><a href="/"><img src="/static/logo.webp" alt="TXTAnOffer"></a></div>
     <div class="corner-mark"><span>TXTANOFFER</span><span class="brass">{date_stamp}</span></div>
     <h1 id="headline"></h1>
     <p class="sub">Agents spend up to 45 minutes preparing purchase offers. TxtAnOffer reduces that to under 10 seconds.</p>
@@ -731,8 +734,8 @@ def pricing():
   }
   .container{max-width:1000px;margin:0 auto;}
   .header{text-align:center;margin-bottom:48px;}
-  .logo{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.08em;
-    color:var(--brass-soft);margin-bottom:16px;}
+  .logo{margin-bottom:16px;text-align:center;}
+  .logo img{width:60px;height:60px;border-radius:50%;}
   h1{font-family:'Source Serif 4',serif;font-weight:600;font-size:42px;color:var(--text-on-ink);
     margin:0 0 12px;letter-spacing:-0.01em;}
   .tagline{color:var(--text-on-ink-muted);font-size:18px;line-height:1.6;max-width:600px;margin:0 auto;}
@@ -786,7 +789,7 @@ def pricing():
 <body>
   <div class="container">
     <div class="header">
-      <div class="logo">TXTANOFFER</div>
+      <div class="logo"><a href="/"><img src="/static/logo.webp" alt="TXTAnOffer"></a></div>
       <h1>Simple pricing.<br>Massive time savings.</h1>
       <p class="tagline">Stop spending 45 minutes per offer. Pick a plan and start generating contracts in seconds.</p>
     </div>
@@ -968,6 +971,7 @@ def success():
 </head>
 <body>
   <div class="card">
+    <div style="margin-bottom:16px;"><a href="/"><img src="/static/logo.webp" alt="TXTAnOffer" style="width:50px;height:50px;border-radius:50%;"></a></div>
     <h1>🎉 Welcome aboard!</h1>
     <p>Your subscription is active. You're locked in at <strong>$49/month forever</strong>.</p>
 
@@ -1181,7 +1185,7 @@ def terms():
 </head>
 <body>
 <div class="container">
-  <a href="/demo" class="back-link">&larr; Back to TxtAnOffer</a>
+  <a href="/" class="back-link"><img src="/static/logo.webp" alt="TXTAnOffer" style="width:40px;height:40px;border-radius:50%;vertical-align:middle;margin-right:8px;">&larr; Back to TxtAnOffer</a>
   <h1 class="page-title">Terms of Service</h1>
   <p class="last-updated">Last Updated: July 12, 2026</p>
   <div class="card">
@@ -1361,7 +1365,7 @@ def privacy():
 </head>
 <body>
 <div class="container">
-  <a href="/demo" class="back-link">&larr; Back to TxtAnOffer</a>
+  <a href="/" class="back-link"><img src="/static/logo.webp" alt="TXTAnOffer" style="width:40px;height:40px;border-radius:50%;vertical-align:middle;margin-right:8px;">&larr; Back to TxtAnOffer</a>
   <h1 class="page-title">Privacy Policy</h1>
   <p class="last-updated">Last Updated: July 14, 2026</p>
   <div class="card">
