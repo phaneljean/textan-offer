@@ -152,12 +152,51 @@ def fire_webhook(source_id: str, parsed: dict, pdf_url: str) -> dict:
 
 DOCUSIGN_BASE_URL = os.environ.get("DOCUSIGN_BASE_URL", "https://demo.docusign.net/restapi")
 DOCUSIGN_ACCOUNT_ID = os.environ.get("DOCUSIGN_ACCOUNT_ID", "")
-DOCUSIGN_ACCESS_TOKEN = os.environ.get("DOCUSIGN_ACCESS_TOKEN", "")
+DOCUSIGN_INTEGRATION_KEY = os.environ.get("DOCUSIGN_INTEGRATION_KEY", "")
+DOCUSIGN_USER_ID = os.environ.get("DOCUSIGN_USER_ID", "")
+DOCUSIGN_PRIVATE_KEY = os.environ.get("DOCUSIGN_PRIVATE_KEY", "")
+
+_docusign_token_cache = {"token": None, "expires_at": 0}
+
+
+def _get_docusign_token() -> str:
+    import time
+    import jwt
+
+    now = int(time.time())
+    if _docusign_token_cache["token"] and _docusign_token_cache["expires_at"] > now + 60:
+        return _docusign_token_cache["token"]
+
+    payload = {
+        "iss": DOCUSIGN_INTEGRATION_KEY,
+        "sub": DOCUSIGN_USER_ID,
+        "aud": "account-d.docusign.net",
+        "iat": now,
+        "exp": now + 3600,
+        "scope": "signature impersonation",
+    }
+
+    private_key = DOCUSIGN_PRIVATE_KEY.replace("\\n", "\n")
+    token = jwt.encode(payload, private_key, algorithm="RS256")
+
+    data = f"grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion={token}".encode()
+    req = urllib.request.Request(
+        "https://account-d.docusign.net/oauth/token",
+        data=data,
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=15) as resp:
+        result = json.loads(resp.read().decode())
+
+    _docusign_token_cache["token"] = result["access_token"]
+    _docusign_token_cache["expires_at"] = now + result.get("expires_in", 3600)
+    return result["access_token"]
 
 
 def send_to_docusign(pdf_path: str, parsed: dict, signer_email: str, signer_name: str) -> dict:
-    if not DOCUSIGN_ACCESS_TOKEN or not DOCUSIGN_ACCOUNT_ID:
-        return {"success": False, "error": "DocuSign not configured (DOCUSIGN_ACCESS_TOKEN/DOCUSIGN_ACCOUNT_ID missing)"}
+    if not DOCUSIGN_INTEGRATION_KEY or not DOCUSIGN_ACCOUNT_ID or not DOCUSIGN_PRIVATE_KEY:
+        return {"success": False, "error": "DocuSign not configured (missing DOCUSIGN_INTEGRATION_KEY, DOCUSIGN_ACCOUNT_ID, or DOCUSIGN_PRIVATE_KEY)"}
 
     import base64
 
@@ -183,6 +222,11 @@ def send_to_docusign(pdf_path: str, parsed: dict, signer_email: str, signer_name
         "status": "sent",
     }
 
+    try:
+        access_token = _get_docusign_token()
+    except Exception as e:
+        return {"success": False, "error": f"DocuSign auth failed: {str(e)}"}
+
     url = f"{DOCUSIGN_BASE_URL}/v2.1/accounts/{DOCUSIGN_ACCOUNT_ID}/envelopes"
     data = json.dumps(envelope).encode("utf-8")
     req = urllib.request.Request(
@@ -190,7 +234,7 @@ def send_to_docusign(pdf_path: str, parsed: dict, signer_email: str, signer_name
         data=data,
         headers={
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {DOCUSIGN_ACCESS_TOKEN}",
+            "Authorization": f"Bearer {access_token}",
         },
         method="POST",
     )
