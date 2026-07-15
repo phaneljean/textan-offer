@@ -126,13 +126,8 @@ def fill_offer_pdf(parsed: dict, agent_phone: str) -> str:
     if parsed.get("option_fee") is not None:
         values[FIELD_MAP["option_fee"]] = f"${parsed['option_fee']}"
 
-    # Closing date (Paragraph 9A)
-    # TREC form layout: "closing of the sale will be on or before [Month Day,] 20[__]"
-    # The "20" is pre-printed on the form; we only fill the date text and 2-digit year
-    if parsed.get("close_days") is not None:
-        close_dt = datetime.now() + timedelta(days=parsed["close_days"])
-        values[FIELD_MAP["closing_date"]] = close_dt.strftime("%B %d,")
-        values[FIELD_MAP["closing_year_suffix"]] = close_dt.strftime("%y")
+    # Closing date (Paragraph 9A) — handled via reportlab overlay after merge
+    # (form field is a parent/kid that doesn't render reliably)
 
     # Agent/broker info from profile
     agent = parsed.get("agent", {})
