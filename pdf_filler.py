@@ -191,19 +191,18 @@ def fill_offer_pdf(parsed: dict, agent_phone: str) -> str:
     if acroform is not None:
         acroform[NameObject("/NeedAppearances")] = BooleanObject(True)
 
+    # Write filled TREC form to buffer (preserves AcroForm with field values)
+    trec_buf = io.BytesIO()
+    writer.write(trec_buf)
+    trec_buf.seek(0)
+
     # Generate premium cover page
     cover_pdf_bytes = generate_cover_page(parsed, parsed.get('agent', {}))
 
-    # Merge cover page with TREC form
-    cover_reader = PdfReader(io.BytesIO(cover_pdf_bytes))
+    # Merge: cover page first, then filled TREC form (append preserves AcroForm)
     final_writer = PdfWriter()
-
-    # Add cover page first
-    final_writer.add_page(cover_reader.pages[0])
-
-    # Then add all TREC form pages
-    for page in writer.pages:
-        final_writer.add_page(page)
+    final_writer.append(PdfReader(io.BytesIO(cover_pdf_bytes)))
+    final_writer.append(PdfReader(trec_buf))
 
     safe_addr = "".join(ch for ch in (parsed.get("address") or "offer") if ch.isalnum())[:30]
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
