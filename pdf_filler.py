@@ -207,8 +207,10 @@ def fill_offer_pdf(parsed: dict, agent_phone: str) -> str:
         overlay_buf = io.BytesIO()
         c = rl_canvas.Canvas(overlay_buf, pagesize=letter)
         c.setFont("Helvetica", 9)
-        # Closing date text field: x=293, y=668 (from rect [291.388, 667.664, 422.126, 677.624])
+        # Closing date text: rect [291.388, 667.664, 422.126, 677.624]
         c.drawString(293, 669, close_text)
+        # Year suffix "26": rect [442.166, 667.664, 469.166, 677.624] (after pre-printed "20")
+        c.drawString(443, 669, year_suffix)
         c.save()
         overlay_buf.seek(0)
 
