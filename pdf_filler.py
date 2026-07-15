@@ -159,45 +159,12 @@ def fill_offer_pdf(parsed: dict, agent_phone: str) -> str:
     for page in writer.pages:
         writer.update_page_form_field_values(page, values)
 
-    # Handle parent fields with /Kids (closing date)
-    # These aren't direct page annotations so update_page_form_field_values misses them.
-    # We set /V on both parent and kid, and build an appearance stream so all viewers render it.
+    # Handle parent fields with /Kids (closing date) — these can't be filled via
+    # update_page_form_field_values because the kid widgets have no /T field.
+    # Instead, overlay text directly on the page using reportlab.
     acroform = writer._root_object.get("/AcroForm")
     if hasattr(acroform, 'get_object'):
         acroform = acroform.get_object()
-    if acroform and "/Fields" in acroform:
-        from pypdf.generic import ArrayObject, DecodedStreamObject, DictionaryObject, NumberObject
-        for field_ref in acroform["/Fields"]:
-            field = field_ref.get_object()
-            name = str(field.get("/T", ""))
-            if name in values and "/Kids" in field:
-                val = values[name]
-                field[NameObject("/V")] = TextStringObject(val)
-                for kid_ref in field["/Kids"]:
-                    kid = kid_ref.get_object()
-                    kid[NameObject("/V")] = TextStringObject(val)
-                    rect = kid.get("/Rect")
-                    if rect:
-                        width = float(rect[2]) - float(rect[0])
-                        height = float(rect[3]) - float(rect[1])
-                        ap_stream = f"/Tx BMC\nBT\n/Helv 9 Tf\n0 g\n2 2 Td\n({val}) Tj\nET\nEMC"
-                        stream_obj = DecodedStreamObject()
-                        stream_obj.set_data(ap_stream.encode())
-                        stream_obj[NameObject("/Type")] = NameObject("/XObject")
-                        stream_obj[NameObject("/Subtype")] = NameObject("/Form")
-                        stream_obj[NameObject("/BBox")] = ArrayObject([NumberObject(0), NumberObject(0), NumberObject(int(width)), NumberObject(int(height))])
-                        font_dict = DictionaryObject()
-                        font_dict[NameObject("/Helv")] = DictionaryObject({
-                            NameObject("/Type"): NameObject("/Font"),
-                            NameObject("/Subtype"): NameObject("/Type1"),
-                            NameObject("/BaseFont"): NameObject("/Helvetica"),
-                        })
-                        resources = DictionaryObject()
-                        resources[NameObject("/Font")] = font_dict
-                        stream_obj[NameObject("/Resources")] = resources
-                        ap_dict = DictionaryObject()
-                        ap_dict[NameObject("/N")] = stream_obj
-                        kid[NameObject("/AP")] = ap_dict
 
     # Check checkboxes by setting /V and /AS to /On
     for page in writer.pages:
@@ -226,6 +193,28 @@ def fill_offer_pdf(parsed: dict, agent_phone: str) -> str:
     final_writer = PdfWriter()
     final_writer.append(PdfReader(io.BytesIO(cover_pdf_bytes)))
     final_writer.append(PdfReader(trec_buf))
+
+    # Overlay closing date text directly on page (parent/kid fields don't render in all viewers)
+    # Page 6 in final PDF = TREC page 5 (0-indexed) + 1 cover page
+    if parsed.get("close_days") is not None:
+        from reportlab.lib.pagesizes import letter
+        from reportlab.pdfgen import canvas as rl_canvas
+
+        close_dt = datetime.now() + timedelta(days=parsed["close_days"])
+        close_text = close_dt.strftime("%B %d")
+        year_suffix = close_dt.strftime("%y")
+
+        overlay_buf = io.BytesIO()
+        c = rl_canvas.Canvas(overlay_buf, pagesize=letter)
+        c.setFont("Helvetica", 9)
+        # Closing date text field: x=293, y=668 (from rect [291.388, 667.664, 422.126, 677.624])
+        c.drawString(293, 669, close_text)
+        c.save()
+        overlay_buf.seek(0)
+
+        overlay_page = PdfReader(overlay_buf).pages[0]
+        # Page index 6 = cover(0) + TREC pages 1-5(1-5) + page 6 has closing date
+        final_writer.pages[6].merge_page(overlay_page)
 
     safe_addr = "".join(ch for ch in (parsed.get("address") or "offer") if ch.isalnum())[:30]
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
