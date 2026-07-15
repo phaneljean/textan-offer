@@ -280,7 +280,7 @@ DEMO_FORM = """
   }}
   .stage{{width:100%;max-width:460px;}}
   .site-logo{{position:fixed;top:20px;left:24px;z-index:100;}}
-  .site-logo img{{width:42px;height:42px;border-radius:50%;border:1.5px solid var(--brass-soft);
+  .site-logo img{{width:54px;height:54px;border-radius:50%;border:1.5px solid var(--brass-soft);
     opacity:0.9;transition:opacity 0.2s;}}
   .site-logo img:hover{{opacity:1;}}
   .corner-mark{{display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;
@@ -737,7 +737,7 @@ def pricing():
   .container{max-width:1000px;margin:0 auto;}
   .header{text-align:center;margin-bottom:48px;}
   .logo{position:fixed;top:20px;left:24px;z-index:100;}
-  .logo img{width:42px;height:42px;border-radius:50%;border:1.5px solid var(--brass-soft);
+  .logo img{width:54px;height:54px;border-radius:50%;border:1.5px solid var(--brass-soft);
     opacity:0.9;transition:opacity 0.2s;}
   .logo img:hover{opacity:1;}
   h1{font-family:'Source Serif 4',serif;font-weight:600;font-size:42px;color:var(--text-on-ink);
@@ -975,7 +975,7 @@ def success():
 </head>
 <body>
   <div class="card">
-    <div style="position:fixed;top:20px;left:24px;z-index:100;"><a href="/"><img src="/static/logo.webp" alt="TXTAnOffer" style="width:42px;height:42px;border-radius:50%;border:1.5px solid #C9A466;opacity:0.9;"></a></div>
+    <div style="position:fixed;top:20px;left:24px;z-index:100;"><a href="/"><img src="/static/logo.webp" alt="TXTAnOffer" style="width:54px;height:54px;border-radius:50%;border:1.5px solid #C9A466;opacity:0.9;"></a></div>
     <h1>🎉 Welcome aboard!</h1>
     <p>Your subscription is active. You're locked in at <strong>$49/month forever</strong>.</p>
 
@@ -1189,7 +1189,7 @@ def terms():
 </head>
 <body>
 <div class="container">
-  <div style="position:fixed;top:20px;left:24px;z-index:100;"><a href="/"><img src="/static/logo.webp" alt="TXTAnOffer" style="width:42px;height:42px;border-radius:50%;border:1.5px solid #C9A466;opacity:0.9;"></a></div>
+  <div style="position:fixed;top:20px;left:24px;z-index:100;"><a href="/"><img src="/static/logo.webp" alt="TXTAnOffer" style="width:54px;height:54px;border-radius:50%;border:1.5px solid #C9A466;opacity:0.9;"></a></div>
   <a href="/" class="back-link">&larr; Back to TxtAnOffer</a>
   <h1 class="page-title">Terms of Service</h1>
   <p class="last-updated">Last Updated: July 12, 2026</p>
@@ -1370,7 +1370,7 @@ def privacy():
 </head>
 <body>
 <div class="container">
-  <div style="position:fixed;top:20px;left:24px;z-index:100;"><a href="/"><img src="/static/logo.webp" alt="TXTAnOffer" style="width:42px;height:42px;border-radius:50%;border:1.5px solid #C9A466;opacity:0.9;"></a></div>
+  <div style="position:fixed;top:20px;left:24px;z-index:100;"><a href="/"><img src="/static/logo.webp" alt="TXTAnOffer" style="width:54px;height:54px;border-radius:50%;border:1.5px solid #C9A466;opacity:0.9;"></a></div>
   <a href="/" class="back-link">&larr; Back to TxtAnOffer</a>
   <h1 class="page-title">Privacy Policy</h1>
   <p class="last-updated">Last Updated: July 14, 2026</p>
