@@ -110,13 +110,16 @@ def fill_offer_pdf(parsed: dict, agent_phone: str) -> str:
     if parsed.get("price") is not None:
         values[FIELD_MAP["sales_price"]] = f"${parsed['price']:,}"
 
+    # Checkboxes handled separately (need /AS and /V set to /On)
+    checkboxes_to_check = []
+
     # Check Third Party Financing when there's a loan
     if parsed.get("loan_amount") and parsed["loan_amount"] > 0:
-        values[FIELD_MAP["third_party_financing"]] = "/Yes"
+        checkboxes_to_check.append(FIELD_MAP["third_party_financing"])
 
     # Default: Buyer accepts Property As Is + possession upon closing
-    values[FIELD_MAP["as_is"]] = "/Yes"
-    values[FIELD_MAP["possession_upon_closing"]] = "/Yes"
+    checkboxes_to_check.append(FIELD_MAP["as_is"])
+    checkboxes_to_check.append(FIELD_MAP["possession_upon_closing"])
 
     # Earnest Money & Option Fee (Paragraph 5A)
     if parsed.get("earnest_money") is not None:
@@ -153,13 +156,40 @@ def fill_offer_pdf(parsed: dict, agent_phone: str) -> str:
         values[FIELD_MAP["earnest_to_escrow"]] = agent["title_company"]
         values[FIELD_MAP["escrow_agent"]] = agent["title_company"]
     
+    from pypdf.generic import NameObject, TextStringObject, BooleanObject
+
     for page in writer.pages:
         writer.update_page_form_field_values(page, values)
 
+    # Handle parent fields with /Kids (closing date, "20" prefix)
+    # These aren't direct page annotations so update_page_form_field_values misses them
+    acroform = writer._root_object.get("/AcroForm")
+    if hasattr(acroform, 'get_object'):
+        acroform = acroform.get_object()
+    if acroform and "/Fields" in acroform:
+        for field_ref in acroform["/Fields"]:
+            field = field_ref.get_object()
+            name = str(field.get("/T", ""))
+            if name in values and "/Kids" in field:
+                field[NameObject("/V")] = TextStringObject(values[name])
+                for kid_ref in field["/Kids"]:
+                    kid = kid_ref.get_object()
+                    kid[NameObject("/V")] = TextStringObject(values[name])
+
+    # Check checkboxes by setting /V and /AS to /On
+    for page in writer.pages:
+        if "/Annots" not in page:
+            continue
+        for annot_ref in page["/Annots"]:
+            annot = annot_ref.get_object()
+            name = str(annot.get("/T", ""))
+            if name in checkboxes_to_check:
+                annot[NameObject("/V")] = NameObject("/On")
+                annot[NameObject("/AS")] = NameObject("/On")
+
     # Ensure filled values render even if the PDF viewer doesn't regenerate appearances.
-    if writer._root_object.get("/AcroForm") is not None:
-        writer._root_object["/AcroForm"][__import__("pypdf").generic.NameObject("/NeedAppearances")] = \
-            __import__("pypdf").generic.BooleanObject(True)
+    if acroform is not None:
+        acroform[NameObject("/NeedAppearances")] = BooleanObject(True)
 
     # Generate premium cover page
     cover_pdf_bytes = generate_cover_page(parsed, parsed.get('agent', {}))
