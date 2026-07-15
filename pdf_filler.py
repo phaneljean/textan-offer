@@ -30,6 +30,9 @@ FIELD_MAP = {
     "city": "Addition City of",
     "county": "County of",
 
+    # Page headers — "Contract Concerning (Address of Property)"
+    "addr_of_prop": "Addr of Prop",
+
     # Paragraph 9A: Closing date
     "closing_date": "A The closing of the sale will be on or before",
     "closing_year_prefix": "20",  # The "20" prefix field
@@ -42,13 +45,19 @@ FIELD_MAP = {
     "loan_amount": "undefined_4",   # 3B: Sum of all financing
     "sales_price": "undefined_5",   # 3C: Sales Price (total)
 
-    # Earnest Money & Option Fee (Paragraph 4)
+    # Earnest Money & Option Fee (Paragraph 5A)
     "earnest_money": "earnest money of",
     "option_fee": "Option Fee in the form of",
+    "earnest_to_escrow": "as earnest money to",  # 5A: deliver to (Escrow Agent)
 
     # Title company / Escrow (Paragraph 6)
     "title_company": "insurance Title Policy issued by",
     "escrow_agent": "Escrow Agent",
+
+    # Checkboxes
+    "third_party_financing": "Third Party Financing Addendum",
+    "as_is": "1 Buyer accepts the Property As Is",
+    "possession_upon_closing": "upon",
 
     # Selling (buyer's) agent info — the TextAnOffer user
     "agent_broker_firm": "Other Broker Firm",
@@ -56,6 +65,7 @@ FIELD_MAP = {
     "agent_license": "License No",
     "agent_phone": "Phone",
     "agent_email": "Email",
+    "agent_email_2": "Selling Associates Email Address",
     "agent_office_address": "Other Brokers Address",
 }
 
@@ -74,16 +84,23 @@ def fill_offer_pdf(parsed: dict, agent_phone: str) -> str:
     
     values = {}
 
+    import re
+
     # Property description (Paragraph 2A)
     # Strip state from address — the form field already says "Texas, known as"
+    addr = ""
     if parsed.get("address"):
-        import re
         addr = re.sub(r',?\s*\b(TX|Texas)\b', '', parsed["address"], flags=re.IGNORECASE).strip(' ,')
         values[FIELD_MAP["address"]] = addr
     if parsed.get("city"):
         values[FIELD_MAP["city"]] = parsed["city"]
     if parsed.get("county"):
         values[FIELD_MAP["county"]] = parsed["county"]
+
+    # Page header: "Contract Concerning (Address of Property)" on all pages
+    full_addr = f"{addr}, {parsed.get('city', '')}, TX" if parsed.get("city") else addr
+    if full_addr:
+        values[FIELD_MAP["addr_of_prop"]] = full_addr
 
     # Payment structure (Paragraph 3: A, B, C)
     if parsed.get("down_payment_amount") is not None:
@@ -93,7 +110,15 @@ def fill_offer_pdf(parsed: dict, agent_phone: str) -> str:
     if parsed.get("price") is not None:
         values[FIELD_MAP["sales_price"]] = f"${parsed['price']:,}"
 
-    # Earnest Money & Option Fee (Paragraph 4)
+    # Check Third Party Financing when there's a loan
+    if parsed.get("loan_amount") and parsed["loan_amount"] > 0:
+        values[FIELD_MAP["third_party_financing"]] = True
+
+    # Default: Buyer accepts Property As Is + possession upon closing
+    values[FIELD_MAP["as_is"]] = True
+    values[FIELD_MAP["possession_upon_closing"]] = True
+
+    # Earnest Money & Option Fee (Paragraph 5A)
     if parsed.get("earnest_money") is not None:
         values[FIELD_MAP["earnest_money"]] = f"${parsed['earnest_money']:,}"
     if parsed.get("option_fee") is not None:
@@ -120,10 +145,12 @@ def fill_offer_pdf(parsed: dict, agent_phone: str) -> str:
         values[FIELD_MAP["agent_phone"]] = agent["phone"]
     if agent.get("email"):
         values[FIELD_MAP["agent_email"]] = agent["email"]
+        values[FIELD_MAP["agent_email_2"]] = agent["email"]
 
-    # Title company → title policy issuer + escrow agent
+    # Title company → title policy issuer + escrow agent + earnest money delivery
     if agent.get("title_company"):
         values[FIELD_MAP["title_company"]] = agent["title_company"]
+        values[FIELD_MAP["earnest_to_escrow"]] = agent["title_company"]
         values[FIELD_MAP["escrow_agent"]] = agent["title_company"]
     
     for page in writer.pages:
