@@ -38,7 +38,7 @@ STRIPE_PRICE_ID_BROKERAGE = os.environ.get("STRIPE_PRICE_ID_BROKERAGE", "")
 
 @app.route("/")
 def index():
-    return redirect("/demo")
+    return redirect("/signup")
 
 
 # --- address validation --------------------------------------------------
@@ -1132,6 +1132,106 @@ body{{font-family:system-ui;max-width:800px;margin:40px auto;padding:20px;}}
 </p>
 </body></html>
 """
+
+
+@app.route("/signup", methods=["GET", "POST"])
+def signup():
+    success_msg = ""
+    if request.method == "POST":
+        phone = request.form.get("phone", "")
+        name = request.form.get("name", "")
+        email = request.form.get("email", "")
+        if phone:
+            try:
+                create_user(phone)
+                track_event("signup", phone, {"name": name, "email": email})
+            except Exception:
+                pass
+            success_msg = '<div class="success">You\'re signed up! Text your offer details to <strong>+1 (833) 897-0333</strong> to get started.</div>'
+
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sign Up — TxtAnOffer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Inter:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{{
+    --ink:#171B24; --ink-soft:#242938; --paper:#F3EEDF; --paper-line:#DCD3B8;
+    --brass:#A9772F; --brass-soft:#C9A466; --green:#3A5744;
+    --text-on-paper:#211E17; --text-muted:#847C68;
+    --text-on-ink:#E7E4D8; --text-on-ink-muted:#8B8A82;
+  }}
+  *{{box-sizing:border-box;}}
+  body{{
+    background:var(--ink);
+    background-image:radial-gradient(circle at 15% 10%, rgba(169,119,47,0.06), transparent 45%),
+                      radial-gradient(circle at 85% 90%, rgba(169,119,47,0.04), transparent 40%);
+    min-height:100vh; margin:0; display:flex; align-items:center; justify-content:center;
+    padding:48px 20px; font-family:'Inter',sans-serif;
+  }}
+  .stage{{width:100%;max-width:460px;}}
+  .corner-mark{{display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px;letter-spacing:0.06em;color:var(--text-on-ink-muted);margin-bottom:14px;padding:0 4px;}}
+  .corner-mark span.brass{{color:var(--brass-soft);}}
+  .corner-mark a{{color:var(--text-on-ink-muted);text-decoration:none;}}
+  .corner-mark a:hover{{color:var(--brass-soft);}}
+  h1{{font-family:'Source Serif 4',serif;font-weight:600;font-size:28px;color:var(--text-on-ink);
+    margin:0 0 6px;letter-spacing:-0.01em;}}
+  .sub{{color:var(--text-on-ink-muted);font-size:14px;line-height:1.55;margin:0 0 32px;max-width:380px;}}
+  .card{{background:var(--paper);border-radius:2px;padding:28px 26px 26px;
+    box-shadow:0 24px 60px -20px rgba(0,0,0,0.5);border-top:2px solid var(--brass);}}
+  .field-label{{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:0.08em;
+    text-transform:uppercase;color:var(--text-muted);margin-bottom:8px;display:block;}}
+  input[type=text],input[type=tel],input[type=email]{{width:100%;font-family:'IBM Plex Mono',monospace;
+    font-size:14px;padding:13px 14px;border:1px solid var(--paper-line);background:#FFFDF7;
+    color:var(--text-on-paper);border-radius:2px;outline:none;margin-bottom:16px;}}
+  input:focus{{border-color:var(--brass);}}
+  .consent-row{{display:flex;align-items:flex-start;gap:10px;margin:18px 0;padding:14px;
+    background:rgba(169,119,47,0.06);border:1px solid rgba(169,119,47,0.15);border-radius:2px;}}
+  .consent-row input[type=checkbox]{{margin-top:3px;width:18px;height:18px;flex-shrink:0;accent-color:var(--brass);}}
+  .consent-row label{{font-size:13px;line-height:1.6;color:var(--text-on-paper);}}
+  .consent-row a{{color:var(--brass);text-decoration:underline;}}
+  button{{width:100%;margin-top:14px;background:var(--ink);color:var(--text-on-ink);border:none;
+    padding:14px;font-family:'Inter',sans-serif;font-size:14px;font-weight:500;border-radius:2px;
+    cursor:pointer;letter-spacing:0.01em;}}
+  button:hover{{background:var(--ink-soft);}}
+  button:disabled{{opacity:0.4;cursor:not-allowed;}}
+  .success{{margin-top:20px;padding:16px;background:rgba(58,87,68,0.1);border:1px solid rgba(58,87,68,0.3);
+    border-radius:2px;font-size:14px;color:var(--green);text-align:center;}}
+  .foot{{text-align:center;margin-top:24px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;
+    color:var(--text-on-ink-muted);letter-spacing:0.03em;}}
+  .foot a{{color:var(--text-on-ink-muted);text-decoration:underline;}}
+  .foot a:hover{{color:var(--brass-soft);}}
+</style>
+</head>
+<body>
+  <div class="stage">
+    <div class="corner-mark"><a href="/">TEXTANOFFER</a><span class="brass">SIGN UP</span></div>
+    <h1>Get started with TxtAnOffer</h1>
+    <p class="sub">Enter your phone number to receive offer drafts via SMS at +1 (833) 897-0333.</p>
+    <div class="card">
+      <form method="POST" action="/signup" id="signup-form">
+        <label class="field-label">Phone number</label>
+        <input type="tel" name="phone" placeholder="+1 (555) 123-4567" required>
+        <label class="field-label">Name</label>
+        <input type="text" name="name" placeholder="Your name">
+        <label class="field-label">Email</label>
+        <input type="email" name="email" placeholder="you@brokerage.com">
+        <div class="consent-row">
+          <input type="checkbox" id="sms-consent" name="sms_consent" required>
+          <label for="sms-consent">I agree to receive transactional SMS messages from TxtAnOffer at (833) 897-0333 for offer drafts. Message frequency varies. Reply STOP to opt-out, HELP for help. Message &amp; data rates may apply. Consent is not a condition of purchase. <a href="/privacy">Privacy Policy</a></label>
+        </div>
+        <button type="submit">Sign up for SMS</button>
+      </form>
+      {success_msg}
+    </div>
+    <div class="foot"><a href="/privacy">Privacy Policy</a> &middot; <a href="/terms">Terms</a> &middot; <a href="/demo">Try the demo</a></div>
+  </div>
+</body>
+</html>"""
 
 
 @app.route("/terms")
