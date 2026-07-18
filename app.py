@@ -559,51 +559,51 @@ def demo():
               </div>
 
               <script>
-              function sendEmail(filename) {{{{
+              function sendEmail(filename) {{
                 const to = document.getElementById('email-to').value;
                 const status = document.getElementById('email-status');
-                if (!to) {{{{ status.textContent = 'Enter an email address'; return; }}}}
+                if (!to) {{ status.textContent = 'Enter an email address'; return; }}
                 status.textContent = 'Sending...';
-                fetch('/api/send-email', {{{{
+                fetch('/api/send-email', {{
                   method: 'POST',
-                  headers: {{{{'Content-Type': 'application/json'}}}},
-                  body: JSON.stringify({{{{to_email: to, pdf_filename: filename, parsed: {parsed_json}}}}})
-                }}}}).then(r => r.json()).then(d => {{{{
+                  headers: {{'Content-Type': 'application/json'}},
+                  body: JSON.stringify({{to_email: to, pdf_filename: filename, parsed: {parsed_json}}})
+                }}).then(r => r.json()).then(d => {{
                   status.textContent = d.success ? 'Sent!' : ('Error: ' + d.error);
                   status.className = 'modal-status ' + (d.success ? 'success' : 'fail');
-                }}}}).catch(e => {{{{ status.textContent = 'Network error'; }}}});
-              }}}}
+                }}).catch(e => {{ status.textContent = 'Network error'; }});
+              }}
 
-              function sendDocuSign(filename) {{{{
+              function sendDocuSign(filename) {{
                 const name = document.getElementById('ds-name').value;
                 const email = document.getElementById('ds-email').value;
                 const status = document.getElementById('ds-status');
-                if (!name || !email) {{{{ status.textContent = 'Name and email required'; return; }}}}
+                if (!name || !email) {{ status.textContent = 'Name and email required'; return; }}
                 status.textContent = 'Sending to DocuSign...';
-                fetch('/api/docusign', {{{{
+                fetch('/api/docusign', {{
                   method: 'POST',
-                  headers: {{{{'Content-Type': 'application/json'}}}},
-                  body: JSON.stringify({{{{pdf_filename: filename, signer_email: email, signer_name: name, parsed: {parsed_json}}}}})
-                }}}}).then(r => r.json()).then(d => {{{{
+                  headers: {{'Content-Type': 'application/json'}},
+                  body: JSON.stringify({{pdf_filename: filename, signer_email: email, signer_name: name, parsed: {parsed_json}}})
+                }}).then(r => r.json()).then(d => {{
                   status.textContent = d.success ? 'Sent! Envelope: ' + d.envelope_id : ('Error: ' + d.error);
                   status.className = 'modal-status ' + (d.success ? 'success' : 'fail');
-                }}}}).catch(e => {{{{ status.textContent = 'Network error'; }}}});
-              }}}}
+                }}).catch(e => {{ status.textContent = 'Network error'; }});
+              }}
 
-              function configWebhook() {{{{
+              function configWebhook() {{
                 const url = document.getElementById('wh-url').value;
                 const status = document.getElementById('wh-status');
-                if (!url) {{{{ status.textContent = 'Enter a webhook URL'; return; }}}}
+                if (!url) {{ status.textContent = 'Enter a webhook URL'; return; }}
                 status.textContent = 'Saving...';
-                fetch('/api/webhook', {{{{
+                fetch('/api/webhook', {{
                   method: 'POST',
-                  headers: {{{{'Content-Type': 'application/json'}}}},
-                  body: JSON.stringify({{{{source_id: 'demo-web', url: url}}}})
-                }}}}).then(r => r.json()).then(d => {{{{
+                  headers: {{'Content-Type': 'application/json'}},
+                  body: JSON.stringify({{source_id: 'demo-web', url: url}})
+                }}).then(r => r.json()).then(d => {{
                   status.textContent = d.success ? 'Webhook saved! Future offers will POST here.' : ('Error: ' + (d.error || ''));
                   status.className = 'modal-status ' + (d.success ? 'success' : 'fail');
-                }}}}).catch(e => {{{{ status.textContent = 'Network error'; }}}});
-              }}}}
+                }}).catch(e => {{ status.textContent = 'Network error'; }});
+              }}
               </script>
 
               <div class="disclaimer">Draft only -- agent must review before signing. TREC NO. 20-19.</div>
@@ -623,7 +623,7 @@ def demo():
                     navigator.clipboard.writeText('{share_url}');
                     this.textContent='✓ Copied!';
                     this.classList.add('copied');
-                    setTimeout(()=>{{{{this.textContent='🔗 Copy link';this.classList.remove('copied');}}}},2000)
+                    setTimeout(()=>{{this.textContent='🔗 Copy link';this.classList.remove('copied');}},2000)
                   ">🔗 Copy link</button>
                 </div>
               </div>
