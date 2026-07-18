@@ -35,7 +35,6 @@ STRIPE_PRICE_ID = os.environ.get("STRIPE_PRICE_ID", "")
 STRIPE_PRICE_ID_PRO = os.environ.get("STRIPE_PRICE_ID_PRO", "")
 STRIPE_PRICE_ID_BROKERAGE = os.environ.get("STRIPE_PRICE_ID_BROKERAGE", "")
 
-
  @app.route("/")
   def index():
       return redirect("/signup")
@@ -1131,17 +1130,12 @@ body{{font-family:system-ui;max-width:800px;margin:40px auto;padding:20px;}}
   Check Twilio dashboard for full logs: <a href="https://console.twilio.com/us1/monitor/logs/sms" target="_blank">console.twilio.com/monitor/logs/sms</a>
 </p>
 </body></html>
-"""
-
 @app.route("/signup", methods=["GET", "POST"])
-  def signup():
-      success_msg = ""
-      if request.method == "POST":
+def signup():
+      success_msg = ""if request.method == "POST"
           phone = request.form.get("phone", "")
           name = request.form.get("name", "")
-          email = request.form.get("email", "")
-          if phone:
-              try:
+          email = request.form.get("email", "")if phone:try:
                   create_user(phone)
                   track_event("signup", phone, {"name": name, "email": email})
               except Exception:
