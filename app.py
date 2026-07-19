@@ -101,12 +101,13 @@ def validate_address(address: str) -> dict:
 # Replace this with a real MLS API call (e.g. Bridge Interactive, Spark API)
 # Real version should geocode address and query MLS for property data
 def lookup_mls(address: str) -> dict:
-    # Stub: returns placeholder property data only
-    # Real implementation should geocode the address and query MLS
+    # Stub: derive varied placeholder data from address hash
+    # Replace with real MLS API (Bridge Interactive, Spark, etc.) for production
+    h = sum(ord(c) for c in address)
     return {
-        "bed": 3,
-        "bath": 2,
-        "sqft": 1450,
+        "bed": (h % 4) + 2,
+        "bath": (h % 3) + 1,
+        "sqft": 1000 + (h % 20) * 150,
         "apn": "",
     }
 

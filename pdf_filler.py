@@ -124,7 +124,7 @@ def fill_offer_pdf(parsed: dict, agent_phone: str) -> str:
     if parsed.get("earnest_money") is not None:
         values[FIELD_MAP["earnest_money"]] = f"${parsed['earnest_money']:,}"
     if parsed.get("option_fee") is not None:
-        values[FIELD_MAP["option_fee"]] = f"${parsed['option_fee']}"
+        values[FIELD_MAP["option_fee"]] = f"${parsed['option_fee']:,}"
 
     # Closing date (Paragraph 9A) — handled via reportlab overlay after merge
     # (form field is a parent/kid that doesn't render reliably)
