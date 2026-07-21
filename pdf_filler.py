@@ -34,6 +34,13 @@ FIELD_MAP = {
     "addr_of_prop": "Addr of Prop",
     "addr_of_prop_p9": "Address of Property",
     "addr_of_prop_p12": "Address of Property_26",
+    "addr_header_p2": "Page 2 of 10",
+    "addr_header_p3": "Page 3 of 10",
+    "addr_header_p4": "Contract Concerning",
+    "addr_header_p5": "Contract Concerning_2",
+    "addr_header_p6": "Contract Concerning_3",
+    "addr_header_p7": "Page 7 of 10",
+    "addr_header_p8": "Contract Concerning_4",
 
     # Paragraph 9A: Closing date
     "closing_date": "A The closing of the sale will be on or before",
@@ -101,9 +108,11 @@ def fill_offer_pdf(parsed: dict, agent_phone: str) -> str:
     # Page header: "Contract Concerning (Address of Property)" on all pages
     full_addr = f"{addr}, {parsed.get('city', '')}, TX" if parsed.get("city") else addr
     if full_addr:
-        values[FIELD_MAP["addr_of_prop"]] = full_addr
-        values[FIELD_MAP["addr_of_prop_p9"]] = full_addr
-        values[FIELD_MAP["addr_of_prop_p12"]] = full_addr
+        for key in ("addr_of_prop", "addr_of_prop_p9", "addr_of_prop_p12",
+                    "addr_header_p2", "addr_header_p3", "addr_header_p4",
+                    "addr_header_p5", "addr_header_p6", "addr_header_p7",
+                    "addr_header_p8"):
+            values[FIELD_MAP[key]] = full_addr
 
     # Payment structure (Paragraph 3: A, B, C)
     if parsed.get("down_payment_amount") is not None:
