@@ -70,11 +70,18 @@ FIELD_MAP = {
     # Selling (buyer's) agent info — the TextAnOffer user
     "agent_broker_firm": "Other Broker Firm",
     "agent_name": "Selling Associates Name",
+    "agent_name_2": "Selling Associates Name-1",
     "agent_license": "License No",
+    "agent_assoc_license": "License No_7",
     "agent_phone": "Phone",
+    "agent_assoc_phone": "Phone_5",
     "agent_email": "Email",
     "agent_email_2": "Selling Associates Email Address",
     "agent_office_address": "Other Brokers Address",
+    "agent_office_address_2": "Selling Associates Office Address",
+
+    # Earnest money delivery (Paragraph 5A continuation)
+    "earnest_to_escrow_2": "as earnest money to 2",
 }
 
 def fill_offer_pdf(parsed: dict, agent_phone: str) -> str:
@@ -146,20 +153,27 @@ def fill_offer_pdf(parsed: dict, agent_phone: str) -> str:
     agent = parsed.get("agent", {})
     if agent.get("name"):
         values[FIELD_MAP["agent_name"]] = agent["name"]
+        values[FIELD_MAP["agent_name_2"]] = agent["name"]
     if agent.get("license"):
         values[FIELD_MAP["agent_license"]] = agent["license"]
+        values[FIELD_MAP["agent_assoc_license"]] = agent["license"]
     if agent.get("brokerage"):
         values[FIELD_MAP["agent_broker_firm"]] = agent["brokerage"]
     if agent.get("phone"):
         values[FIELD_MAP["agent_phone"]] = agent["phone"]
+        values[FIELD_MAP["agent_assoc_phone"]] = agent["phone"]
     if agent.get("email"):
         values[FIELD_MAP["agent_email"]] = agent["email"]
         values[FIELD_MAP["agent_email_2"]] = agent["email"]
+    if agent.get("office_address"):
+        values[FIELD_MAP["agent_office_address"]] = agent["office_address"]
+        values[FIELD_MAP["agent_office_address_2"]] = agent["office_address"]
 
     # Title company → title policy issuer + escrow agent + earnest money delivery
     if agent.get("title_company"):
         values[FIELD_MAP["title_company"]] = agent["title_company"]
         values[FIELD_MAP["earnest_to_escrow"]] = agent["title_company"]
+        values[FIELD_MAP["earnest_to_escrow_2"]] = agent["title_company"]
         values[FIELD_MAP["escrow_agent"]] = agent["title_company"]
     
     from pypdf.generic import NameObject, TextStringObject, BooleanObject
