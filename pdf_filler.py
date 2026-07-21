@@ -32,6 +32,8 @@ FIELD_MAP = {
 
     # Page headers — "Contract Concerning (Address of Property)"
     "addr_of_prop": "Addr of Prop",
+    "addr_of_prop_p9": "Address of Property",
+    "addr_of_prop_p12": "Address of Property_26",
 
     # Paragraph 9A: Closing date
     "closing_date": "A The closing of the sale will be on or before",
@@ -100,6 +102,8 @@ def fill_offer_pdf(parsed: dict, agent_phone: str) -> str:
     full_addr = f"{addr}, {parsed.get('city', '')}, TX" if parsed.get("city") else addr
     if full_addr:
         values[FIELD_MAP["addr_of_prop"]] = full_addr
+        values[FIELD_MAP["addr_of_prop_p9"]] = full_addr
+        values[FIELD_MAP["addr_of_prop_p12"]] = full_addr
 
     # Payment structure (Paragraph 3: A, B, C)
     if parsed.get("down_payment_amount") is not None:
@@ -231,6 +235,42 @@ def fill_offer_pdf(parsed: dict, agent_phone: str) -> str:
 
         overlay_page = PdfReader(overlay_buf).pages[0]
         target_page.merge_page(overlay_page)
+
+    # Page 11 header (Address of Property_2 kid) — overlay like closing date
+    # TREC page 10 = final PDF page 11 (index 11) after cover page prepend
+    if full_addr:
+        from reportlab.lib.pagesizes import letter
+        from reportlab.pdfgen import canvas as rl_canvas
+        from pypdf.generic import ArrayObject
+
+        addr_page = final_writer.pages[11]
+
+        # Remove the kid annotation so it doesn't obscure overlay
+        if "/Annots" in addr_page:
+            annots = addr_page["/Annots"]
+            keep = []
+            for annot_ref in annots:
+                annot = annot_ref.get_object()
+                rect = annot.get("/Rect")
+                if rect:
+                    y_bottom = float(rect[1])
+                    x_left = float(rect[0])
+                    # Kid at Rect [126.913, 748.88, 452.753, 764.48]
+                    if 746 < y_bottom < 752 and 124 < x_left < 130:
+                        continue
+                keep.append(annot_ref)
+            addr_page[NameObject("/Annots")] = ArrayObject(keep)
+
+        overlay_buf = io.BytesIO()
+        c = rl_canvas.Canvas(overlay_buf, pagesize=letter)
+        c.setFont("Helvetica", 10)
+        # Draw in the rect area [126.913, 748.88, 452.753, 764.48]
+        c.drawString(130, 751, full_addr)
+        c.save()
+        overlay_buf.seek(0)
+
+        overlay_page = PdfReader(overlay_buf).pages[0]
+        addr_page.merge_page(overlay_page)
 
     safe_addr = "".join(ch for ch in (parsed.get("address") or "offer") if ch.isalnum())[:30]
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
