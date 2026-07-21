@@ -295,26 +295,6 @@ def fill_offer_pdf(parsed: dict, agent_phone: str) -> str:
         overlay_page = PdfReader(overlay_buf).pages[0]
         addr_page.merge_page(overlay_page)
 
-    # DRAFT watermark on every TREC page (skip cover page at index 0)
-    from reportlab.lib.pagesizes import letter
-    from reportlab.pdfgen import canvas as rl_canvas
-    from reportlab.lib.colors import Color
-
-    for page_idx in range(1, len(final_writer.pages)):
-        wm_buf = io.BytesIO()
-        c = rl_canvas.Canvas(wm_buf, pagesize=letter)
-        c.saveState()
-        c.translate(letter[0] / 2, letter[1] / 2)
-        c.rotate(45)
-        c.setFillColor(Color(0, 0, 0, alpha=0.06))
-        c.setFont("Helvetica-Bold", 90)
-        c.drawCentredString(0, 0, "DRAFT")
-        c.restoreState()
-        c.save()
-        wm_buf.seek(0)
-        wm_page = PdfReader(wm_buf).pages[0]
-        final_writer.pages[page_idx].merge_page(wm_page)
-
     safe_addr = "".join(ch for ch in (parsed.get("address") or "offer") if ch.isalnum())[:30]
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     out_path = os.path.join(OUTPUT_DIR, f"TREC20-19_{safe_addr}_{timestamp}.pdf")
