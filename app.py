@@ -339,6 +339,7 @@ def index():
       display: flex;
       flex-direction: column;
       gap: 0.75rem;
+      overflow: hidden;
     }
     .msg-time { text-align: center; font-size: 0.65rem; color: #475569; margin-bottom: 0.25rem; }
     .msg-bubble {
@@ -377,6 +378,8 @@ def index():
       align-items: center;
       gap: 0.6rem;
       margin-top: 0.25rem;
+      overflow: hidden;
+      min-width: 0;
     }
     .pdf-icon {
       width: 36px; height: 36px;
@@ -387,8 +390,8 @@ def index():
       font-size: 0.65rem; font-weight: 800;
       flex-shrink: 0;
     }
-    .pdf-name { font-size: 0.78rem; color: #e2e8f0; font-weight: 500; }
-    .pdf-meta { font-size: 0.68rem; color: #475569; }
+    .pdf-name { font-size: 0.78rem; color: #e2e8f0; font-weight: 500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .pdf-meta { font-size: 0.68rem; color: #475569; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 
     /* Steps */
     .steps {
@@ -575,7 +578,7 @@ def index():
           </div>
           <div class="pdf-preview">
             <div class="pdf-icon">PDF</div>
-            <div>
+            <div style="min-width:0;overflow:hidden;">
               <div class="pdf-name">TREC_1740_Grand_Ave.pdf</div>
               <div class="pdf-meta">142 KB &middot; TREC 20-19 + 40-11</div>
             </div>
@@ -995,7 +998,7 @@ DEMO_FORM = """
   .nav-cta:hover {{transform:scale(1.05);box-shadow:0 0 24px rgba(16,185,129,0.4);}}
 
   /* Page layout */
-  .page {{max-width:580px;margin:0 auto;padding:4rem 1.5rem;}}
+  .page {{max-width:580px;margin:0 auto;padding:4rem 1.5rem;overflow-x:hidden;width:100%;}}
   .page-badge {{
     display:inline-flex;align-items:center;gap:0.4rem;
     background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.2);
@@ -1025,7 +1028,7 @@ DEMO_FORM = """
   /* Card */
   .card {{
     background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
-    padding:2rem;
+    padding:2rem;overflow:hidden;max-width:100%;
   }}
   .field-label {{
     font-size:0.7rem;font-weight:700;color:var(--text-dim);
@@ -1061,7 +1064,7 @@ DEMO_FORM = """
   .result-row .v {{color:var(--text);font-weight:500;}}
   .result-ready {{font-size:0.85rem;color:var(--accent-light);margin-top:1rem;}}
 
-  .pdf-preview {{margin-top:1.25rem;border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;}}
+  .pdf-preview {{margin-top:1.25rem;border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;max-width:100%;}}
   .pdf-preview-label {{
     font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;
     color:var(--text-dim);padding:0.6rem 1rem;background:rgba(255,255,255,0.03);
@@ -1162,10 +1165,16 @@ DEMO_FORM = """
   .foot a:hover {{text-decoration:underline;}}
 
   @media(max-width:600px){{
+    .page {{padding:2rem 1rem;}}
     .page h1 {{font-size:1.75rem;}}
     .workflow {{flex-direction:column;gap:1rem;}}
     .wf-arrow {{transform:rotate(90deg);}}
     .nav-links {{display:none;}}
+    .card {{padding:1.25rem;}}
+    .integration-actions {{flex-direction:column;}}
+    .int-btn {{min-width:unset;}}
+    .result-row {{font-size:0.8rem;}}
+    .download-btn {{font-size:0.85rem;padding:0.75rem;}}
   }}
 </style>
 </head>
