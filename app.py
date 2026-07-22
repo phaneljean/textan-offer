@@ -2031,7 +2031,20 @@ def signup():
                     )
             except Exception:
                 pass
-            success_msg = '<div class="success">You\'re signed up! Check your texts for a welcome message.</div>'
+            success_msg = (
+                '<div class="success">'
+                '<strong>You\'re in!</strong> Check your texts for a welcome message.<br><br>'
+                '<span style="font-size:0.8rem;color:var(--text-muted);">You have 3 free offers to try it out.</span>'
+                '</div>'
+                '<div style="display:flex;gap:0.5rem;margin-top:1rem;flex-wrap:wrap;">'
+                f'<a href="/profile?phone={phone}" style="flex:1;text-align:center;padding:0.75rem 1rem;'
+                'background:linear-gradient(135deg,var(--accent),#059669);color:#fff;border-radius:var(--radius-sm);'
+                'font-weight:600;font-size:0.85rem;text-decoration:none;">Set Up Your Profile &rarr;</a>'
+                '<a href="/pricing" style="flex:1;text-align:center;padding:0.75rem 1rem;'
+                'background:var(--bg-card);color:var(--text-muted);border:1px solid var(--border);'
+                'border-radius:var(--radius-sm);font-weight:600;font-size:0.85rem;text-decoration:none;">View Plans</a>'
+                '</div>'
+            )
 
     return f"""<!DOCTYPE html>
 <html lang="en">
