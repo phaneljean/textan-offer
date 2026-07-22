@@ -2237,63 +2237,114 @@ def terms():
 <title>Terms of Service — TxtAnOffer</title>
 <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-  *{box-sizing:border-box; margin:0; padding:0;}
-  body{
-    background:#fff;
-    min-height:100vh; padding:48px 20px; font-family:'Inter',sans-serif;
-    display:flex; justify-content:center;
+  :root {
+    --bg: #0f172a;
+    --bg-elevated: #1e293b;
+    --bg-card: rgba(255,255,255,0.03);
+    --border: rgba(255,255,255,0.06);
+    --border-hover: rgba(16,185,129,0.3);
+    --text: #f8fafc;
+    --text-muted: #94a3b8;
+    --text-dim: #64748b;
+    --accent: #10b981;
+    --accent-light: #34d399;
+    --radius: 1.25rem;
+    --radius-sm: 0.75rem;
+    --transition: all 0.2s ease;
   }
-  .container{width:100%; max-width:680px;}
-  .back-link{
-    font-size:12px; color:#666; text-decoration:none;
-    display:inline-block; margin-bottom:20px;
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
   }
-  .back-link:hover{color:#000;}
-  .page-title{
-    font-family:'Source Serif 4',serif; font-weight:600; font-size:24px;
-    color:#000; margin-bottom:4px;
+  a { color:inherit; text-decoration:none; }
+
+  .nav {
+    display:flex;align-items:center;justify-content:space-between;
+    padding:1rem 2rem;position:sticky;top:0;
+    background:rgba(15,23,42,0.9);backdrop-filter:blur(16px);
+    -webkit-backdrop-filter:blur(16px);
+    border-bottom:1px solid var(--border);z-index:100;
   }
-  .last-updated{
-    font-size:12px; color:#999; margin-bottom:32px;
+  .nav-left {display:flex;align-items:center;gap:0.6rem;font-weight:700;font-size:1.1rem;letter-spacing:-0.02em;}
+  .nav-logo {width:34px;height:34px;border-radius:50%;overflow:hidden;}
+  .nav-logo img {width:100%;height:100%;object-fit:cover;}
+  .nav-links {display:flex;gap:2rem;font-size:0.875rem;font-weight:500;color:var(--text-muted);}
+  .nav-links a {transition:var(--transition);}
+  .nav-links a:hover {color:var(--text);}
+  .nav-cta {
+    background:var(--accent);color:#fff;padding:0.55rem 1.35rem;border-radius:9999px;
+    font-size:0.875rem;font-weight:600;text-decoration:none;display:inline-block;
+    transition:var(--transition);
   }
-  .card{
-    padding:0;
+  .nav-cta:hover {transform:scale(1.05);box-shadow:0 0 24px rgba(16,185,129,0.4);}
+
+  .container {max-width:720px;margin:0 auto;padding:3rem 2rem 4rem;}
+  .page-header {margin-bottom:2.5rem;}
+  .page-header h1 {font-size:2rem;font-weight:800;letter-spacing:-0.03em;margin-bottom:0.25rem;}
+  .page-header .updated {font-size:0.8rem;color:var(--text-dim);}
+
+  .legal-card {
+    background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
+    padding:2.5rem 2rem;
   }
-  .card h2{
-    font-family:'Source Serif 4',serif; font-weight:600; font-size:15px;
-    color:#000; margin:28px 0 10px; padding-bottom:6px;
-    border-bottom:1px solid #e5e5e5;
+  .legal-card h2 {
+    font-size:0.95rem;font-weight:700;color:var(--text);
+    margin:2rem 0 0.75rem;padding-bottom:0.5rem;
+    border-bottom:1px solid var(--border);
   }
-  .card h2:first-child{margin-top:0;}
-  .card p, .card li{
-    font-size:12px; line-height:1.7; color:#333; margin-bottom:8px;
+  .legal-card h2:first-child {margin-top:0;}
+  .legal-card p, .legal-card li {
+    font-size:0.85rem;line-height:1.8;color:var(--text-muted);margin-bottom:0.5rem;
   }
-  .card ul{padding-left:18px; margin:6px 0 8px;}
-  .card ul li{list-style:disc; margin-bottom:4px;}
-  .card strong{color:#000; font-weight:500;}
-  .card .emphasis{
-    background:#f7f7f7; border-left:3px solid #000;
-    padding:10px 14px; margin:12px 0; border-radius:0 2px 2px 0;
-    font-size:12px; color:#000; line-height:1.6;
+  .legal-card ul {padding-left:1.25rem;margin:0.5rem 0 0.75rem;}
+  .legal-card ul li {list-style:disc;margin-bottom:0.35rem;}
+  .legal-card strong {color:var(--text);font-weight:600;}
+  .legal-card .emphasis {
+    background:rgba(16,185,129,0.05);border-left:3px solid var(--accent);
+    padding:1rem 1.25rem;margin:1rem 0;border-radius:0 var(--radius-sm) var(--radius-sm) 0;
+    font-size:0.85rem;color:var(--text);line-height:1.7;
   }
-  .section-num{
-    color:#666; font-weight:500; margin-right:4px;
-  }
-  .foot{
-    text-align:center; margin-top:24px; font-size:11px;
-    color:#999; letter-spacing:0.02em;
+  .section-num {color:var(--accent-light);font-weight:700;margin-right:0.25rem;}
+  .foot {text-align:center;margin-top:2rem;font-size:0.8rem;color:var(--text-dim);}
+  .foot a {color:var(--accent-light);}
+  .foot a:hover {text-decoration:underline;}
+
+  @media(max-width:600px) {
+    .container {padding:2rem 1rem 3rem;}
+    .legal-card {padding:1.5rem 1.25rem;}
+    .nav-links {display:none;}
   }
 </style>
 </head>
 <body>
+<nav class="nav">
+  <a href="/" class="nav-left">
+    <div class="nav-logo"><img src="/static/logo.webp" alt="TxtAnOffer"></div>
+    <span>TxtAnOffer</span>
+  </a>
+  <div class="nav-links">
+    <a href="/">Home</a>
+    <a href="/demo">Demo</a>
+    <a href="/pricing">Pricing</a>
+  </div>
+  <a href="/signup" class="nav-cta">Start Free Trial</a>
+</nav>
+
 <div class="container">
-  <div style="position:fixed;top:20px;left:24px;z-index:100;"><a href="/"><img src="/static/logo.webp" alt="TXTAnOffer" style="width:54px;height:54px;border-radius:50%;border:1.5px solid #C9A466;opacity:0.9;"></a></div>
-  <a href="/" class="back-link">&larr; Back to TxtAnOffer</a>
-  <h1 class="page-title">Terms of Service</h1>
-  <p class="last-updated">Last Updated: July 12, 2026</p>
-  <div class="card">
+  <div class="page-header">
+    <h1>Terms of Service</h1>
+    <span class="updated">Last Updated: July 12, 2026</span>
+  </div>
+
+  <div class="legal-card">
     <p>These Terms of Service ("Terms") govern your use of TxtAnOffer ("Service"), operated by Phanel ("we," "us," or "our"), a sole proprietorship based in Texas. By accessing or using the Service, you agree to be bound by these Terms. If you do not agree, do not use the Service.</p>
 
     <h2><span class="section-num">1.</span> Service Description</h2>
@@ -2414,7 +2465,7 @@ def terms():
     <p>For questions about these Terms or the Service, contact us at:</p>
     <p>TxtAnOffer<br>Operated by Phanel<br>Texas, United States<br>Email: support@txtanoffer.com</p>
   </div>
-  <p class="foot">TxtAnOffer is not affiliated with the Texas Real Estate Commission (TREC).</p>
+  <p class="foot">TxtAnOffer is not affiliated with the Texas Real Estate Commission (TREC).<br><a href="/">&larr; Back to home</a> &middot; <a href="/privacy">Privacy Policy</a></p>
 </div>
 </body>
 </html>"""
@@ -2430,52 +2481,108 @@ def privacy():
 <title>Privacy Policy — TxtAnOffer</title>
 <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-  *{box-sizing:border-box; margin:0; padding:0;}
-  body{
-    background:#fff;
-    min-height:100vh; padding:48px 20px; font-family:'Inter',sans-serif;
-    display:flex; justify-content:center;
+  :root {
+    --bg: #0f172a;
+    --bg-elevated: #1e293b;
+    --bg-card: rgba(255,255,255,0.03);
+    --border: rgba(255,255,255,0.06);
+    --border-hover: rgba(16,185,129,0.3);
+    --text: #f8fafc;
+    --text-muted: #94a3b8;
+    --text-dim: #64748b;
+    --accent: #10b981;
+    --accent-light: #34d399;
+    --radius: 1.25rem;
+    --radius-sm: 0.75rem;
+    --transition: all 0.2s ease;
   }
-  .container{width:100%; max-width:680px;}
-  .back-link{
-    font-size:12px; color:#666; text-decoration:none;
-    display:inline-block; margin-bottom:20px;
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
   }
-  .back-link:hover{color:#000;}
-  .page-title{
-    font-family:'Source Serif 4',serif; font-weight:600; font-size:24px;
-    color:#000; margin-bottom:4px;
+  a { color:inherit; text-decoration:none; }
+
+  .nav {
+    display:flex;align-items:center;justify-content:space-between;
+    padding:1rem 2rem;position:sticky;top:0;
+    background:rgba(15,23,42,0.9);backdrop-filter:blur(16px);
+    -webkit-backdrop-filter:blur(16px);
+    border-bottom:1px solid var(--border);z-index:100;
   }
-  .last-updated{
-    font-size:12px; color:#999; margin-bottom:32px;
+  .nav-left {display:flex;align-items:center;gap:0.6rem;font-weight:700;font-size:1.1rem;letter-spacing:-0.02em;}
+  .nav-logo {width:34px;height:34px;border-radius:50%;overflow:hidden;}
+  .nav-logo img {width:100%;height:100%;object-fit:cover;}
+  .nav-links {display:flex;gap:2rem;font-size:0.875rem;font-weight:500;color:var(--text-muted);}
+  .nav-links a {transition:var(--transition);}
+  .nav-links a:hover {color:var(--text);}
+  .nav-cta {
+    background:var(--accent);color:#fff;padding:0.55rem 1.35rem;border-radius:9999px;
+    font-size:0.875rem;font-weight:600;text-decoration:none;display:inline-block;
+    transition:var(--transition);
   }
-  .card h2{
-    font-family:'Source Serif 4',serif; font-weight:600; font-size:15px;
-    color:#000; margin:28px 0 10px; padding-bottom:6px;
-    border-bottom:1px solid #e5e5e5;
+  .nav-cta:hover {transform:scale(1.05);box-shadow:0 0 24px rgba(16,185,129,0.4);}
+
+  .container {max-width:720px;margin:0 auto;padding:3rem 2rem 4rem;}
+  .page-header {margin-bottom:2.5rem;}
+  .page-header h1 {font-size:2rem;font-weight:800;letter-spacing:-0.03em;margin-bottom:0.25rem;}
+  .page-header .updated {font-size:0.8rem;color:var(--text-dim);}
+
+  .legal-card {
+    background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
+    padding:2.5rem 2rem;
   }
-  .card h2:first-child{margin-top:0;}
-  .card p, .card li{
-    font-size:12px; line-height:1.7; color:#333; margin-bottom:8px;
+  .legal-card h2 {
+    font-size:0.95rem;font-weight:700;color:var(--text);
+    margin:2rem 0 0.75rem;padding-bottom:0.5rem;
+    border-bottom:1px solid var(--border);
   }
-  .card ul{padding-left:18px; margin:6px 0 8px;}
-  .card ul li{list-style:disc; margin-bottom:4px;}
-  .card strong{color:#000; font-weight:500;}
-  .foot{
-    text-align:center; margin-top:24px; font-size:11px;
-    color:#999; letter-spacing:0.02em;
+  .legal-card h2:first-child {margin-top:0;}
+  .legal-card p, .legal-card li {
+    font-size:0.85rem;line-height:1.8;color:var(--text-muted);margin-bottom:0.5rem;
+  }
+  .legal-card ul {padding-left:1.25rem;margin:0.5rem 0 0.75rem;}
+  .legal-card ul li {list-style:disc;margin-bottom:0.35rem;}
+  .legal-card strong {color:var(--text);font-weight:600;}
+  .foot {text-align:center;margin-top:2rem;font-size:0.8rem;color:var(--text-dim);}
+  .foot a {color:var(--accent-light);}
+  .foot a:hover {text-decoration:underline;}
+
+  @media(max-width:600px) {
+    .container {padding:2rem 1rem 3rem;}
+    .legal-card {padding:1.5rem 1.25rem;}
+    .nav-links {display:none;}
   }
 </style>
 </head>
 <body>
+<nav class="nav">
+  <a href="/" class="nav-left">
+    <div class="nav-logo"><img src="/static/logo.webp" alt="TxtAnOffer"></div>
+    <span>TxtAnOffer</span>
+  </a>
+  <div class="nav-links">
+    <a href="/">Home</a>
+    <a href="/demo">Demo</a>
+    <a href="/pricing">Pricing</a>
+  </div>
+  <a href="/signup" class="nav-cta">Start Free Trial</a>
+</nav>
+
 <div class="container">
-  <div style="position:fixed;top:20px;left:24px;z-index:100;"><a href="/"><img src="/static/logo.webp" alt="TXTAnOffer" style="width:54px;height:54px;border-radius:50%;border:1.5px solid #C9A466;opacity:0.9;"></a></div>
-  <a href="/" class="back-link">&larr; Back to TxtAnOffer</a>
-  <h1 class="page-title">Privacy Policy</h1>
-  <p class="last-updated">Last Updated: July 14, 2026</p>
-  <div class="card">
+  <div class="page-header">
+    <h1>Privacy Policy</h1>
+    <span class="updated">Last Updated: July 14, 2026</span>
+  </div>
+
+  <div class="legal-card">
     <p>TxtAnOffer ("Service") is operated by Phanel, a sole proprietorship based in Texas. This Privacy Policy explains how we collect, use, and protect your information.</p>
 
     <h2>1. Information We Collect</h2>
@@ -2554,7 +2661,7 @@ def privacy():
     <p>For privacy-related questions or requests:</p>
     <p>TxtAnOffer<br>Operated by Phanel<br>Texas, United States<br>Email: support@txtanoffer.com</p>
   </div>
-  <p class="foot">TxtAnOffer is not affiliated with the Texas Real Estate Commission (TREC).</p>
+  <p class="foot">TxtAnOffer is not affiliated with the Texas Real Estate Commission (TREC).<br><a href="/">&larr; Back to home</a> &middot; <a href="/terms">Terms of Service</a></p>
 </div>
 </body>
 </html>"""
@@ -2591,70 +2698,158 @@ def profile():
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Agent Profile - TxtAnOffer</title>
+<title>Agent Profile — TxtAnOffer</title>
 <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Inter:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-  :root{{--ink:#171B24;--ink-soft:#242938;--paper:#F3EEDF;--paper-line:#DCD3B8;
-    --brass:#A9772F;--green:#3A5744;--text-on-paper:#211E17;--text-muted:#847C68;}}
-  *{{box-sizing:border-box;}}
-  body{{background:var(--ink);min-height:100vh;margin:0;display:flex;align-items:center;
-    justify-content:center;padding:48px 20px;font-family:'Inter',sans-serif;}}
-  .card{{background:var(--paper);border-radius:4px;padding:40px 36px;max-width:460px;width:100%;
-    box-shadow:0 24px 60px -20px rgba(0,0,0,0.5);border-top:3px solid var(--brass);}}
-  h1{{font-family:'Source Serif 4',serif;font-size:24px;color:var(--text-on-paper);margin:0 0 6px;}}
-  .sub{{color:var(--text-muted);font-size:13px;margin:0 0 28px;line-height:1.5;}}
-  label{{display:block;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.08em;
-    text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;margin-top:16px;}}
-  input{{width:100%;font-family:'Inter',sans-serif;font-size:14px;padding:11px 14px;
-    border:1px solid var(--paper-line);background:#FFFDF7;color:var(--text-on-paper);
-    border-radius:2px;outline:none;}}
-  input:focus{{border-color:var(--brass);}}
-  .row{{display:flex;gap:12px;}}
-  .row > div{{flex:1;}}
-  button{{width:100%;margin-top:24px;background:var(--ink);color:#E7E4D8;border:none;
-    padding:14px;font-family:'Inter',sans-serif;font-size:14px;font-weight:500;
-    border-radius:2px;cursor:pointer;}}
-  button:hover{{background:var(--ink-soft);}}
-  .success{{margin-top:16px;padding:12px;background:rgba(58,87,68,0.1);border:1px solid rgba(58,87,68,0.3);
-    border-radius:2px;font-size:13px;color:var(--green);text-align:center;}}
-  .error{{margin-top:16px;padding:12px;background:rgba(139,58,44,0.08);border:1px solid rgba(139,58,44,0.3);
-    border-radius:2px;font-size:13px;color:#7A3527;text-align:center;}}
-  .foot{{text-align:center;margin-top:20px;font-size:12px;}}
-  .foot a{{color:var(--brass);text-decoration:none;}}
+  :root{{
+    --bg: #0f172a;
+    --bg-elevated: #1e293b;
+    --bg-card: rgba(255,255,255,0.03);
+    --border: rgba(255,255,255,0.06);
+    --border-hover: rgba(16,185,129,0.3);
+    --text: #f8fafc;
+    --text-muted: #94a3b8;
+    --text-dim: #64748b;
+    --accent: #10b981;
+    --accent-light: #34d399;
+    --radius: 1.25rem;
+    --radius-sm: 0.75rem;
+    --transition: all 0.2s ease;
+  }}
+  * {{ margin:0; padding:0; box-sizing:border-box; }}
+  body {{
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+  }}
+  a {{ color:inherit; text-decoration:none; }}
+
+  .nav {{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:1rem 2rem;position:sticky;top:0;
+    background:rgba(15,23,42,0.9);backdrop-filter:blur(16px);
+    -webkit-backdrop-filter:blur(16px);
+    border-bottom:1px solid var(--border);z-index:100;
+  }}
+  .nav-left {{display:flex;align-items:center;gap:0.6rem;font-weight:700;font-size:1.1rem;letter-spacing:-0.02em;}}
+  .nav-logo {{width:34px;height:34px;border-radius:50%;overflow:hidden;}}
+  .nav-logo img {{width:100%;height:100%;object-fit:cover;}}
+  .nav-links {{display:flex;gap:2rem;font-size:0.875rem;font-weight:500;color:var(--text-muted);}}
+  .nav-links a {{transition:var(--transition);}}
+  .nav-links a:hover {{color:var(--text);}}
+  .nav-cta {{
+    background:var(--accent);color:#fff;padding:0.55rem 1.35rem;border-radius:9999px;
+    font-size:0.875rem;font-weight:600;text-decoration:none;display:inline-block;
+    transition:var(--transition);
+  }}
+  .nav-cta:hover {{transform:scale(1.05);box-shadow:0 0 24px rgba(16,185,129,0.4);}}
+
+  .container {{max-width:520px;margin:0 auto;padding:3rem 1.5rem 4rem;}}
+  .page-header {{margin-bottom:2rem;}}
+  .page-header h1 {{font-size:1.75rem;font-weight:800;letter-spacing:-0.03em;margin-bottom:0.25rem;}}
+  .page-header p {{color:var(--text-muted);font-size:0.9rem;}}
+
+  .form-card {{
+    background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
+    padding:2rem;
+  }}
+  .field-label {{
+    font-size:0.7rem;font-weight:700;color:var(--text-dim);
+    text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.5rem;display:block;
+    margin-top:1.25rem;
+  }}
+  .field-label:first-child {{margin-top:0;}}
+  .form-card input {{
+    width:100%;background:rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.1);
+    border-radius:var(--radius-sm);padding:0.75rem 1rem;color:var(--text);
+    font-size:0.9rem;font-family:inherit;outline:none;transition:var(--transition);
+  }}
+  .form-card input:focus {{border-color:var(--accent);box-shadow:0 0 0 3px rgba(16,185,129,0.15);}}
+  .form-card input::placeholder {{color:#475569;}}
+  .row {{display:flex;gap:0.75rem;}}
+  .row > div {{flex:1;}}
+  .form-card button {{
+    width:100%;margin-top:1.5rem;
+    background:linear-gradient(135deg,var(--accent),#059669);color:#fff;border:none;
+    border-radius:var(--radius-sm);padding:0.85rem;font-weight:600;font-size:0.95rem;
+    font-family:inherit;cursor:pointer;transition:var(--transition);
+  }}
+  .form-card button:hover {{transform:translateY(-2px);box-shadow:0 8px 24px rgba(16,185,129,0.35);}}
+  .success {{
+    margin-top:1rem;padding:0.85rem 1rem;
+    background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);
+    border-radius:var(--radius-sm);font-size:0.85rem;color:var(--accent-light);text-align:center;
+  }}
+  .error {{
+    margin-top:1rem;padding:0.85rem 1rem;
+    background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.2);
+    border-radius:var(--radius-sm);font-size:0.85rem;color:#f87171;text-align:center;
+  }}
+  .foot {{text-align:center;margin-top:1.5rem;font-size:0.8rem;color:var(--text-dim);}}
+  .foot a {{color:var(--accent-light);}}
+  .foot a:hover {{text-decoration:underline;}}
+
+  @media(max-width:600px){{
+    .container {{padding:2rem 1rem 3rem;}}
+    .form-card {{padding:1.5rem 1.25rem;}}
+    .nav-links {{display:none;}}
+    .row {{flex-direction:column;gap:0;}}
+  }}
 </style>
 </head>
 <body>
-  <div class="card">
+<nav class="nav">
+  <a href="/" class="nav-left">
+    <div class="nav-logo"><img src="/static/logo.webp" alt="TxtAnOffer"></div>
+    <span>TxtAnOffer</span>
+  </a>
+  <div class="nav-links">
+    <a href="/">Home</a>
+    <a href="/demo">Demo</a>
+    <a href="/pricing">Pricing</a>
+  </div>
+  <a href="/signup" class="nav-cta">Start Free Trial</a>
+</nav>
+
+<div class="container">
+  <div class="page-header">
     <h1>Agent Profile</h1>
-    <p class="sub">Your info auto-fills the cover page on every offer you generate.</p>
+    <p>Your info auto-fills the cover page on every offer you generate.</p>
+  </div>
+
+  <div class="form-card">
     <form method="POST" action="/profile">
-      <label>Phone number (used for SMS offers)</label>
+      <label class="field-label">Phone number (used for SMS offers)</label>
       <input type="text" name="phone" placeholder="+15125551234" value="{phone or existing.get('phone', '')}" required>
 
-      <label>Full name</label>
+      <label class="field-label">Full name</label>
       <input type="text" name="name" placeholder="Jane Smith" value="{existing.get('name', '')}">
 
-      <label>TREC license number</label>
+      <label class="field-label">TREC license number</label>
       <input type="text" name="license" placeholder="0123456" value="{existing.get('license', '')}">
 
-      <label>Email</label>
+      <label class="field-label">Email</label>
       <input type="email" name="email" placeholder="jane@realty.com" value="{existing.get('email', '')}">
 
-      <label>Brokerage</label>
+      <label class="field-label">Brokerage</label>
       <input type="text" name="brokerage" placeholder="Keller Williams" value="{existing.get('brokerage', '')}">
 
-      <label>Title company</label>
+      <label class="field-label">Title company</label>
       <input type="text" name="title_company" placeholder="Texas Title Co." value="{existing.get('title_company', '')}">
 
       <div class="row">
         <div>
-          <label>Default earnest %</label>
+          <label class="field-label">Default earnest %</label>
           <input type="number" name="earnest_pct" step="0.1" min="0.1" max="10" value="{existing.get('default_earnest_pct', 0.01) * 100:.1f}">
         </div>
         <div>
-          <label>Default option fee $</label>
+          <label class="field-label">Default option fee $</label>
           <input type="number" name="option_fee" min="0" max="5000" value="{existing.get('default_option_fee', 250)}">
         </div>
       </div>
@@ -2663,8 +2858,9 @@ def profile():
     </form>
     {'<div class="success">Profile saved! Your info will appear on all future offers.</div>' if saved else ''}
     {'<div class="error">' + error + '</div>' if error else ''}
-    <div class="foot"><a href="/demo">&larr; Back to demo</a></div>
   </div>
+  <div class="foot"><a href="/demo">&larr; Back to demo</a> &middot; <a href="/dashboard?phone={phone}&expires=&sig=">Dashboard</a></div>
+</div>
 </body>
 </html>
 """
@@ -2709,18 +2905,23 @@ def dashboard():
 
     if not verify_dashboard_signature(phone, expires, sig):
         return """
-<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>Dashboard - TxtAnOffer</title>
-<style>body{font-family:'Inter',sans-serif;background:#171B24;color:#E7E4D8;display:flex;
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+body{font-family:'Inter',sans-serif;background:#0f172a;color:#f8fafc;display:flex;
 align-items:center;justify-content:center;min-height:100vh;margin:0;padding:20px;}
-.box{background:#242938;border-radius:8px;padding:40px;max-width:400px;text-align:center;
-border:1px solid rgba(169,119,47,0.15);}
-h2{margin:0 0 12px;font-size:22px;}p{color:#8B8A82;font-size:14px;line-height:1.6;}
-a{color:#C9A466;}</style></head><body><div class="box">
+.box{background:rgba(255,255,255,0.03);border-radius:1.25rem;padding:2.5rem;max-width:400px;text-align:center;
+border:1px solid rgba(255,255,255,0.06);}
+h2{margin:0 0 0.75rem;font-size:1.35rem;font-weight:700;}
+p{color:#94a3b8;font-size:0.9rem;line-height:1.6;}
+a{color:#34d399;text-decoration:none;}
+a:hover{text-decoration:underline;}
+</style></head><body><div class="box">
 <h2>Access Expired</h2>
 <p>Your dashboard link has expired or is invalid.<br>
 Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
-<p><a href="/">Back to home</a></p></div></body></html>""", 403
+<p style="margin-top:1rem;"><a href="/">Back to home</a></p></div></body></html>""", 403
 
     user = get_user(phone)
     if not user:
@@ -2747,13 +2948,12 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
         </tr>"""
 
     if not offer_rows:
-        offer_rows = '<tr><td colspan="6" style="text-align:center;color:#8B8A82;padding:24px;">No offers yet. Text your first offer to get started.</td></tr>'
+        offer_rows = '<tr><td colspan="6" style="text-align:center;color:var(--text-dim);padding:1.5rem;">No offers yet. Text your first offer to get started.</td></tr>'
 
     sub_status = "Active" if user["is_subscribed"] else f"Free ({user['offer_count']}/{FREE_OFFER_LIMIT} used)"
-    sub_badge_color = "#3A5744" if user["is_subscribed"] else "#A9772F"
+    sub_badge_color = "rgba(16,185,129,0.15)" if user["is_subscribed"] else "rgba(251,191,36,0.15)"
+    sub_badge_text = "var(--accent-light)" if user["is_subscribed"] else "#fbbf24"
 
-    # Reusable dashboard link (same params, still valid)
-    dash_url = f"/dashboard?phone={phone}&expires={expires}&sig={sig}"
     profile_url = f"/profile?phone={phone}"
 
     return f"""
@@ -2762,47 +2962,118 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dashboard - TxtAnOffer</title>
+<title>Dashboard — TxtAnOffer</title>
+<link rel="icon" href="/static/favicon.ico" type="image/x-icon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-  :root{{--ink:#171B24;--ink-soft:#242938;--paper:#F3EEDF;--brass:#A9772F;--brass-soft:#C9A466;
-    --green:#3A5744;--text-on-ink:#E7E4D8;--text-on-ink-muted:#8B8A82;}}
-  *{{box-sizing:border-box;}}
-  body{{background:var(--ink);font-family:'Inter',sans-serif;color:var(--text-on-ink);margin:0;padding:0;min-height:100vh;}}
-  .dash-nav{{display:flex;align-items:center;justify-content:space-between;padding:20px 32px;max-width:1100px;margin:0 auto;}}
-  .dash-nav a{{color:var(--text-on-ink-muted);text-decoration:none;font-size:14px;}}
-  .dash-nav a:hover{{color:var(--text-on-ink);}}
-  .dash-nav .logo{{font-family:'Source Serif 4',serif;font-weight:600;font-size:20px;color:var(--text-on-ink);text-decoration:none;}}
-  .container{{max-width:1000px;margin:0 auto;padding:0 24px 60px;}}
-  .greeting{{font-family:'Source Serif 4',serif;font-size:28px;font-weight:600;margin:32px 0 8px;}}
-  .sub-badge{{display:inline-block;background:{sub_badge_color};color:#fff;padding:4px 12px;border-radius:12px;font-size:12px;font-weight:600;}}
-  .stats{{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin:32px 0;}}
-  .stat{{background:var(--ink-soft);border-radius:8px;padding:20px;border:1px solid rgba(169,119,47,0.1);}}
-  .stat-val{{font-family:'Source Serif 4',serif;font-size:28px;font-weight:600;color:var(--brass);}}
-  .stat-label{{font-size:12px;color:var(--text-on-ink-muted);margin-top:4px;}}
-  h2{{font-family:'Source Serif 4',serif;font-size:22px;margin:40px 0 16px;}}
-  .table-wrap{{overflow-x:auto;}}
-  table{{width:100%;border-collapse:collapse;font-size:14px;}}
-  th{{text-align:left;padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.1);
-    color:var(--text-on-ink-muted);font-weight:500;font-size:12px;text-transform:uppercase;letter-spacing:0.05em;}}
-  td{{padding:12px;border-bottom:1px solid rgba(255,255,255,0.05);}}
-  td a{{color:var(--brass-soft);text-decoration:none;}}
-  td a:hover{{text-decoration:underline;}}
-  .actions{{display:flex;gap:12px;margin-top:24px;flex-wrap:wrap;}}
-  .actions a{{background:var(--ink-soft);color:var(--text-on-ink);padding:10px 20px;border-radius:4px;
-    text-decoration:none;font-size:14px;font-weight:500;border:1px solid rgba(169,119,47,0.15);transition:border-color 0.2s;}}
-  .actions a:hover{{border-color:var(--brass);}}
-  @media(max-width:600px){{.stats{{grid-template-columns:1fr 1fr;}}.greeting{{font-size:22px;}}}}
+  :root{{
+    --bg: #0f172a;
+    --bg-elevated: #1e293b;
+    --bg-card: rgba(255,255,255,0.03);
+    --border: rgba(255,255,255,0.06);
+    --border-hover: rgba(16,185,129,0.3);
+    --text: #f8fafc;
+    --text-muted: #94a3b8;
+    --text-dim: #64748b;
+    --accent: #10b981;
+    --accent-light: #34d399;
+    --radius: 1.25rem;
+    --radius-sm: 0.75rem;
+    --transition: all 0.2s ease;
+  }}
+  * {{ margin:0; padding:0; box-sizing:border-box; }}
+  body {{
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+  }}
+  a {{ color:inherit; text-decoration:none; }}
+
+  .nav {{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:1rem 2rem;position:sticky;top:0;
+    background:rgba(15,23,42,0.9);backdrop-filter:blur(16px);
+    -webkit-backdrop-filter:blur(16px);
+    border-bottom:1px solid var(--border);z-index:100;
+  }}
+  .nav-left {{display:flex;align-items:center;gap:0.6rem;font-weight:700;font-size:1.1rem;letter-spacing:-0.02em;}}
+  .nav-logo {{width:34px;height:34px;border-radius:50%;overflow:hidden;}}
+  .nav-logo img {{width:100%;height:100%;object-fit:cover;}}
+  .nav-links {{display:flex;gap:2rem;font-size:0.875rem;font-weight:500;color:var(--text-muted);}}
+  .nav-links a {{transition:var(--transition);}}
+  .nav-links a:hover {{color:var(--text);}}
+
+  .container {{max-width:1000px;margin:0 auto;padding:2.5rem 2rem 4rem;}}
+  .greeting {{font-size:1.75rem;font-weight:800;letter-spacing:-0.03em;margin-bottom:0.5rem;}}
+  .sub-badge {{
+    display:inline-block;background:{sub_badge_color};color:{sub_badge_text};
+    padding:0.3rem 0.85rem;border-radius:9999px;font-size:0.75rem;font-weight:700;
+    letter-spacing:0.02em;
+  }}
+
+  .stats {{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1rem;margin:2rem 0;}}
+  .stat {{
+    background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
+    padding:1.5rem;transition:var(--transition);
+  }}
+  .stat:hover {{border-color:var(--border-hover);}}
+  .stat-val {{font-size:1.75rem;font-weight:800;color:var(--accent-light);}}
+  .stat-label {{font-size:0.7rem;font-weight:600;color:var(--text-dim);margin-top:0.25rem;
+    text-transform:uppercase;letter-spacing:0.06em;}}
+
+  h2 {{font-size:1.1rem;font-weight:700;margin:2.5rem 0 1rem;}}
+  .table-wrap {{
+    background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
+    overflow:hidden;
+  }}
+  table {{width:100%;border-collapse:collapse;font-size:0.85rem;}}
+  th {{
+    text-align:left;padding:0.85rem 1rem;
+    background:rgba(255,255,255,0.02);
+    border-bottom:1px solid var(--border);
+    color:var(--text-dim);font-weight:600;font-size:0.7rem;
+    text-transform:uppercase;letter-spacing:0.06em;
+  }}
+  td {{padding:0.85rem 1rem;border-bottom:1px solid var(--border);color:var(--text-muted);}}
+  tr:last-child td {{border-bottom:none;}}
+  td a {{color:var(--accent-light);font-weight:600;}}
+  td a:hover {{text-decoration:underline;}}
+
+  .actions {{display:flex;gap:0.75rem;margin-top:2rem;flex-wrap:wrap;}}
+  .actions a {{
+    background:var(--bg-card);color:var(--text-muted);padding:0.7rem 1.25rem;
+    border-radius:var(--radius-sm);font-size:0.85rem;font-weight:600;
+    border:1px solid var(--border);transition:var(--transition);
+  }}
+  .actions a:hover {{border-color:var(--accent);color:var(--accent-light);}}
+
+  @media(max-width:600px){{
+    .container {{padding:1.5rem 1rem 3rem;}}
+    .stats {{grid-template-columns:1fr 1fr;}}
+    .greeting {{font-size:1.35rem;}}
+    .nav-links {{display:none;}}
+    .table-wrap {{font-size:0.8rem;}}
+    th, td {{padding:0.6rem 0.5rem;}}
+  }}
 </style>
 </head>
 <body>
-<nav class="dash-nav">
-  <a href="/" class="logo">TxtAnOffer</a>
-  <div>
+<nav class="nav">
+  <a href="/" class="nav-left">
+    <div class="nav-logo"><img src="/static/logo.webp" alt="TxtAnOffer"></div>
+    <span>TxtAnOffer</span>
+  </a>
+  <div class="nav-links">
     <a href="{profile_url}">Edit Profile</a>
+    <a href="/pricing">Pricing</a>
   </div>
 </nav>
+
 <div class="container">
   <div class="greeting">Welcome back{', ' + agent.get('name').split()[0] if agent.get('name') else ''}</div>
   <span class="sub-badge">{sub_status}</span>
