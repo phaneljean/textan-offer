@@ -117,6 +117,36 @@ def index():
     float:right;}
   .demo-clear{clear:both;}
 
+  .live-demo{max-width:560px;margin:0 auto;background:var(--ink-soft);border-radius:8px;
+    padding:36px 32px;border:1px solid rgba(169,119,47,0.15);}
+  .live-demo h3{font-family:'Source Serif 4',serif;font-size:22px;color:var(--text-on-ink);margin:0 0 8px;}
+  .live-demo .demo-hint{color:var(--text-on-ink-muted);font-size:13px;margin-bottom:20px;line-height:1.5;}
+  .live-demo form{display:flex;gap:10px;}
+  .live-demo input{flex:1;padding:14px 16px;border-radius:4px;border:1px solid rgba(255,255,255,0.1);
+    background:var(--ink);color:var(--text-on-ink);font-size:15px;font-family:'IBM Plex Mono',monospace;}
+  .live-demo input::placeholder{color:var(--text-on-ink-muted);}
+  .live-demo button{background:var(--brass);color:#fff;border:none;padding:14px 24px;border-radius:4px;
+    font-weight:600;font-size:14px;cursor:pointer;transition:background 0.2s;white-space:nowrap;}
+  .live-demo button:hover{background:var(--brass-soft);}
+  .live-demo .demo-result{margin-top:20px;padding:20px;background:var(--ink);border-radius:6px;
+    border:1px solid rgba(169,119,47,0.12);display:none;}
+  .live-demo .demo-result.show{display:block;}
+  .live-demo .demo-result .res-label{font-family:'IBM Plex Mono',monospace;font-size:10px;
+    letter-spacing:0.1em;text-transform:uppercase;color:var(--brass-soft);margin-bottom:10px;}
+  .live-demo .demo-result .res-row{display:flex;justify-content:space-between;padding:6px 0;
+    border-bottom:1px solid rgba(255,255,255,0.05);font-size:14px;}
+  .live-demo .demo-result .res-row .k{color:var(--text-on-ink-muted);}
+  .live-demo .demo-result .res-row .v{color:var(--text-on-ink);font-weight:500;}
+  .live-demo .demo-result .res-link{display:inline-block;margin-top:14px;background:var(--green);
+    color:#fff;padding:10px 20px;border-radius:4px;text-decoration:none;font-size:14px;font-weight:500;}
+  .live-demo .demo-error{margin-top:14px;color:#e57373;font-size:14px;}
+  .live-demo .demo-loading{margin-top:14px;color:var(--brass-soft);font-size:14px;}
+
+  .trust-row{display:flex;justify-content:center;gap:32px;flex-wrap:wrap;margin-top:48px;}
+  .trust-item{text-align:center;}
+  .trust-val{font-family:'Source Serif 4',serif;font-size:28px;font-weight:600;color:var(--brass);}
+  .trust-label{font-size:12px;color:var(--text-on-ink-muted);margin-top:4px;}
+
   .section{padding:80px 24px;max-width:1000px;margin:0 auto;}
   .section-title{font-family:'Source Serif 4',serif;font-weight:600;font-size:32px;
     color:var(--text-on-ink);text-align:center;margin:0 0 12px;}
@@ -169,7 +199,7 @@ def index():
   <a href="/signup" class="hero-cta">Start Free Trial</a>
 
   <div class="demo-box">
-    <div class="demo-label">How it works</div>
+    <div class="demo-label">Example</div>
     <div class="demo-msg">725k 3% 21day 1740 Grand Ave, Austin TX 78701</div>
     <div class="demo-clear"></div>
     <div class="demo-reply">Your TREC contract is ready! Price: $725,000 | Close: Aug 12, 2026<br><br>Download: txtanoffer.com/offers/1740-grand-ave.pdf</div>
@@ -200,6 +230,34 @@ def index():
 </section>
 
 <section class="section">
+  <h2 class="section-title">Try It Now</h2>
+  <p class="section-sub">Generate a real TREC contract — no signup required.</p>
+  <div class="live-demo">
+    <h3>Enter your offer details</h3>
+    <p class="demo-hint">Format: price &middot; down % &middot; closing days &middot; address<br>Example: 725k 3% 21day 1740 Grand Ave, Austin TX 78701</p>
+    <form id="live-demo-form">
+      <input type="text" id="demo-input" placeholder="325k 5% 30day 420 Elm St, Dallas TX 75201" autocomplete="off">
+      <button type="submit">Generate</button>
+    </form>
+    <div class="demo-loading" id="demo-loading">Generating your contract...</div>
+    <div class="demo-error" id="demo-error"></div>
+    <div class="demo-result" id="demo-result">
+      <div class="res-label">Contract Generated</div>
+      <div class="res-row"><span class="k">Address</span><span class="v" id="res-addr"></span></div>
+      <div class="res-row"><span class="k">Price</span><span class="v" id="res-price"></span></div>
+      <div class="res-row"><span class="k">Down payment</span><span class="v" id="res-down"></span></div>
+      <div class="res-row"><span class="k">Closing</span><span class="v" id="res-close"></span></div>
+      <a href="#" id="res-pdf" class="res-link" target="_blank">Download PDF &rarr;</a>
+    </div>
+  </div>
+  <div class="trust-row">
+    <div class="trust-item"><div class="trust-val">&lt;10s</div><div class="trust-label">Generation time</div></div>
+    <div class="trust-item"><div class="trust-val">45 min</div><div class="trust-label">Saved per offer</div></div>
+    <div class="trust-item"><div class="trust-val">Free</div><div class="trust-label">No card required</div></div>
+  </div>
+</section>
+
+<section class="section">
   <h2 class="section-title">SMS Messaging Details</h2>
   <p class="section-sub">Transparent communication about how we use text messaging.</p>
   <div class="sms-info">
@@ -221,11 +279,41 @@ def index():
     <a href="/terms">Terms of Service</a>
     <a href="/privacy">Privacy Policy</a>
     <a href="/pricing">Pricing</a>
-    <a href="/demo">Try the Demo</a>
+    <a href="/signup">Get Started</a>
   </div>
   <p>&copy; 2026 TxtAnOffer. Built for Texas real estate agents.</p>
 </footer>
 
+<script>
+(function(){
+  var form=document.getElementById('live-demo-form'),
+      input=document.getElementById('demo-input'),
+      loading=document.getElementById('demo-loading'),
+      errEl=document.getElementById('demo-error'),
+      result=document.getElementById('demo-result');
+  form.addEventListener('submit',function(e){
+    e.preventDefault();
+    var text=input.value.trim();
+    if(!text)return;
+    loading.style.display='block';
+    errEl.style.display='none';
+    result.classList.remove('show');
+    fetch('/api/demo',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({offer_text:text})})
+    .then(function(r){return r.json()})
+    .then(function(d){
+      loading.style.display='none';
+      if(d.error){errEl.textContent=d.error;errEl.style.display='block';return;}
+      document.getElementById('res-addr').textContent=d.address;
+      document.getElementById('res-price').textContent='$'+Number(d.price).toLocaleString();
+      document.getElementById('res-down').textContent=d.down_pct+'%';
+      document.getElementById('res-close').textContent=d.close_date;
+      document.getElementById('res-pdf').href=d.pdf_url;
+      result.classList.add('show');
+    })
+    .catch(function(){loading.style.display='none';errEl.textContent='Something went wrong. Try again.';errEl.style.display='block';});
+  });
+})();
+</script>
 </body>
 </html>
 """
@@ -825,6 +913,28 @@ def demo():
             """
 
     return DEMO_FORM.format(prefill=prefill, result_html=result_html, date_stamp=date_stamp)
+
+
+@app.route("/api/demo", methods=["POST"])
+def api_demo():
+    data = request.get_json()
+    if not data or not data.get("offer_text"):
+        return jsonify({"error": "Please enter offer details."}), 400
+    offer_text = data["offer_text"].strip()
+    parsed, pdf_path, error, warnings = process_offer(offer_text, "landing-demo")
+    if error:
+        return jsonify({"error": error}), 400
+    filename = os.path.basename(pdf_path)
+    pdf_url = sign_pdf_url(filename, request.host_url.rstrip("/"))
+    from datetime import timedelta
+    close_date = (datetime.now() + timedelta(days=parsed["close_days"])).strftime("%B %d, %Y")
+    return jsonify({
+        "address": parsed["address"],
+        "price": parsed["price"],
+        "down_pct": round(parsed["down_payment_pct"] * 100),
+        "close_date": close_date,
+        "pdf_url": pdf_url,
+    })
 
 
 # --- Integration endpoints -------------------------------------------------
