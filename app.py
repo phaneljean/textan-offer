@@ -1808,40 +1808,51 @@ def success():
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Welcome to TxtAnOffer!</title>
 <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
-<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-  :root{{--ink:#171B24;--paper:#F3EEDF;--brass:#A9772F;--green:#3A5744;}}
-  body{{background:var(--ink);min-height:100vh;margin:0;display:flex;align-items:center;
-    justify-content:center;padding:20px;font-family:'Inter',sans-serif;}}
-  .card{{background:var(--paper);padding:48px;border-radius:4px;max-width:500px;text-align:center;
-    border-top:3px solid var(--green);}}
-  h1{{font-family:'Source Serif 4',serif;font-size:32px;margin:0 0 16px;color:#211E17;}}
-  p{{color:#847C68;font-size:16px;line-height:1.6;margin-bottom:24px;}}
-  .next-steps{{text-align:left;background:#FFFDF7;padding:20px;border-radius:4px;margin-bottom:24px;}}
-  .next-steps h3{{font-size:14px;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 12px;}}
-  .next-steps ol{{margin:0;padding-left:20px;}}
-  .next-steps li{{margin:8px 0;font-size:14px;}}
-  .btn{{display:inline-block;padding:14px 32px;background:var(--ink);color:#E7E4D8;
-    text-decoration:none;border-radius:4px;font-weight:500;}}
-  .btn:hover{{background:#242938;}}
+  :root{{--bg:#0f172a;--bg-card:rgba(255,255,255,0.03);--border:rgba(255,255,255,0.06);
+    --text:#f8fafc;--text-muted:#94a3b8;--text-dim:#64748b;
+    --accent:#10b981;--accent-light:#34d399;--radius:1.25rem;--radius-sm:0.75rem;}}
+  *{{margin:0;padding:0;box-sizing:border-box;}}
+  body{{background:var(--bg);min-height:100vh;margin:0;display:flex;align-items:center;
+    justify-content:center;padding:2rem;font-family:'Inter',-apple-system,sans-serif;color:var(--text);}}
+  .card{{background:var(--bg-card);border:1px solid var(--border);padding:3rem;border-radius:var(--radius);
+    max-width:520px;width:100%;text-align:center;}}
+  h1{{font-size:2rem;font-weight:800;margin:0 0 0.75rem;letter-spacing:-0.02em;}}
+  .sub{{color:var(--text-muted);font-size:1rem;line-height:1.6;margin-bottom:1.5rem;}}
+  .next-steps{{text-align:left;background:rgba(255,255,255,0.02);border:1px solid var(--border);
+    padding:1.5rem;border-radius:var(--radius-sm);margin-bottom:1.5rem;}}
+  .next-steps h3{{font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;
+    color:var(--accent-light);margin:0 0 0.75rem;}}
+  .next-steps ol{{margin:0;padding-left:1.25rem;}}
+  .next-steps li{{margin:0.5rem 0;font-size:0.9rem;color:var(--text-muted);line-height:1.5;}}
+  .next-steps li strong{{color:var(--text);}}
+  .btn{{display:inline-block;padding:0.85rem 2rem;
+    background:linear-gradient(135deg,var(--accent),#059669);color:#fff;
+    text-decoration:none;border-radius:var(--radius-sm);font-weight:600;font-size:0.95rem;
+    transition:all 0.2s ease;}}
+  .btn:hover{{transform:translateY(-2px);box-shadow:0 8px 24px rgba(16,185,129,0.35);}}
+  .logo{{margin-bottom:1.5rem;}}
+  .logo img{{width:48px;height:48px;border-radius:50%;}}
 </style>
 </head>
 <body>
   <div class="card">
-    <div style="position:fixed;top:20px;left:24px;z-index:100;"><a href="/"><img src="/static/logo.webp" alt="TXTAnOffer" style="width:54px;height:54px;border-radius:50%;border:1.5px solid #C9A466;opacity:0.9;"></a></div>
-    <h1>🎉 Welcome aboard!</h1>
-    <p>Your subscription is active. You're locked in at <strong>$49/month forever</strong>.</p>
+    <div class="logo"><a href="/"><img src="/static/logo.webp" alt="TxtAnOffer"></a></div>
+    <h1>Welcome aboard!</h1>
+    <p class="sub">Your subscription is active. You're locked in at <strong>$49/month forever</strong>.</p>
 
     <div class="next-steps">
-      <h3>Next Steps:</h3>
+      <h3>Next Steps</h3>
       <ol>
-        <li><strong>Set up your profile</strong> — your name, license, and brokerage auto-fill every offer</li>
+        <li><strong>Set up your profile</strong> &mdash; your name, license, and brokerage auto-fill every offer</li>
         <li>Text your first offer to <strong>1-833-897-0333</strong></li>
         <li>Or use the web demo at <strong>txtanoffer.com/demo</strong></li>
       </ol>
     </div>
 
-    <a href="/profile?phone={phone_from_checkout}" class="btn">Set Up Your Profile →</a>
+    <a href="/profile?phone={phone_from_checkout}" class="btn">Set Up Your Profile &rarr;</a>
   </div>
 </body>
 </html>
@@ -2019,61 +2030,63 @@ def signup():
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sign Up — TxtAnOffer</title>
+<link rel="icon" href="/static/favicon.ico" type="image/x-icon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Inter:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-  :root{{
-    --ink:#171B24; --ink-soft:#242938; --paper:#F3EEDF; --paper-line:#DCD3B8;
-    --brass:#A9772F; --brass-soft:#C9A466; --green:#3A5744;
-    --text-on-paper:#211E17; --text-muted:#847C68;
-    --text-on-ink:#E7E4D8; --text-on-ink-muted:#8B8A82;
+  :root{{--bg:#0f172a;--bg-card:rgba(255,255,255,0.03);--border:rgba(255,255,255,0.06);
+    --text:#f8fafc;--text-muted:#94a3b8;--text-dim:#64748b;
+    --accent:#10b981;--accent-light:#34d399;--radius:1.25rem;--radius-sm:0.75rem;
+    --transition:all 0.2s ease;}}
+  *{{margin:0;padding:0;box-sizing:border-box;}}
+  body{{background:var(--bg);min-height:100vh;margin:0;display:flex;align-items:center;
+    justify-content:center;padding:2rem;font-family:'Inter',-apple-system,sans-serif;color:var(--text);}}
+  a{{color:inherit;text-decoration:none;}}
+  .wrap{{width:100%;max-width:460px;}}
+  .nav-back{{display:flex;align-items:center;gap:0.5rem;margin-bottom:1.5rem;}}
+  .nav-back img{{width:28px;height:28px;border-radius:50%;}}
+  .nav-back span{{font-size:0.85rem;color:var(--text-muted);}}
+  .nav-back:hover span{{color:var(--text);}}
+  h1{{font-size:1.75rem;font-weight:800;letter-spacing:-0.02em;margin-bottom:0.5rem;}}
+  .sub{{color:var(--text-muted);font-size:0.95rem;line-height:1.6;margin-bottom:1.5rem;}}
+  .card{{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:1.75rem;}}
+  .field-label{{font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;
+    color:var(--text-dim);margin-bottom:0.4rem;display:block;}}
+  input[type=text],input[type=tel],input[type=email]{{
+    width:100%;background:rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.1);
+    border-radius:var(--radius-sm);padding:0.75rem 1rem;color:var(--text);
+    font-size:0.95rem;font-family:inherit;outline:none;margin-bottom:1rem;transition:var(--transition);
   }}
-  *{{box-sizing:border-box;}}
-  body{{
-    background:var(--ink);
-    background-image:radial-gradient(circle at 15% 10%, rgba(169,119,47,0.06), transparent 45%),
-                      radial-gradient(circle at 85% 90%, rgba(169,119,47,0.04), transparent 40%);
-    min-height:100vh; margin:0; display:flex; align-items:center; justify-content:center;
-    padding:48px 20px; font-family:'Inter',sans-serif;
+  input:focus{{border-color:var(--accent);box-shadow:0 0 0 3px rgba(16,185,129,0.15);}}
+  input::placeholder{{color:#475569;}}
+  .consent-row{{
+    display:flex;align-items:flex-start;gap:0.75rem;margin:1rem 0;padding:1rem;
+    background:rgba(16,185,129,0.05);border:1px solid rgba(16,185,129,0.15);border-radius:var(--radius-sm);
   }}
-  .stage{{width:100%;max-width:460px;}}
-  .corner-mark{{display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;
-    font-size:10.5px;letter-spacing:0.06em;color:var(--text-on-ink-muted);margin-bottom:14px;padding:0 4px;}}
-  .corner-mark span.brass{{color:var(--brass-soft);}}
-  .corner-mark a{{color:var(--text-on-ink-muted);text-decoration:none;}}
-  .corner-mark a:hover{{color:var(--brass-soft);}}
-  h1{{font-family:'Source Serif 4',serif;font-weight:600;font-size:28px;color:var(--text-on-ink);
-    margin:0 0 6px;letter-spacing:-0.01em;}}
-  .sub{{color:var(--text-on-ink-muted);font-size:14px;line-height:1.55;margin:0 0 32px;max-width:380px;}}
-  .card{{background:var(--paper);border-radius:2px;padding:28px 26px 26px;
-    box-shadow:0 24px 60px -20px rgba(0,0,0,0.5);border-top:2px solid var(--brass);}}
-  .field-label{{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:0.08em;
-    text-transform:uppercase;color:var(--text-muted);margin-bottom:8px;display:block;}}
-  input[type=text],input[type=tel],input[type=email]{{width:100%;font-family:'IBM Plex Mono',monospace;
-    font-size:14px;padding:13px 14px;border:1px solid var(--paper-line);background:#FFFDF7;
-    color:var(--text-on-paper);border-radius:2px;outline:none;margin-bottom:16px;}}
-  input:focus{{border-color:var(--brass);}}
-  .consent-row{{display:flex;align-items:flex-start;gap:10px;margin:18px 0;padding:14px;
-    background:rgba(169,119,47,0.06);border:1px solid rgba(169,119,47,0.15);border-radius:2px;}}
-  .consent-row input[type=checkbox]{{margin-top:3px;width:18px;height:18px;flex-shrink:0;accent-color:var(--brass);}}
-  .consent-row label{{font-size:13px;line-height:1.6;color:var(--text-on-paper);}}
-  .consent-row a{{color:var(--brass);text-decoration:underline;}}
-  button{{width:100%;margin-top:14px;background:var(--ink);color:var(--text-on-ink);border:none;
-    padding:14px;font-family:'Inter',sans-serif;font-size:14px;font-weight:500;border-radius:2px;
-    cursor:pointer;letter-spacing:0.01em;}}
-  button:hover{{background:var(--ink-soft);}}
-  button:disabled{{opacity:0.4;cursor:not-allowed;}}
-  .success{{margin-top:20px;padding:16px;background:rgba(58,87,68,0.1);border:1px solid rgba(58,87,68,0.3);
-    border-radius:2px;font-size:14px;color:var(--green);text-align:center;}}
-  .foot{{text-align:center;margin-top:24px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;
-    color:var(--text-on-ink-muted);letter-spacing:0.03em;}}
-  .foot a{{color:var(--text-on-ink-muted);text-decoration:underline;}}
-  .foot a:hover{{color:var(--brass-soft);}}
+  .consent-row input[type=checkbox]{{margin-top:0.2rem;width:18px;height:18px;flex-shrink:0;accent-color:var(--accent);}}
+  .consent-row label{{font-size:0.8rem;line-height:1.6;color:var(--text-muted);}}
+  .consent-row a{{color:var(--accent-light);text-decoration:underline;}}
+  button{{
+    width:100%;margin-top:0.75rem;
+    background:linear-gradient(135deg,var(--accent),#059669);color:#fff;border:none;
+    padding:0.85rem;font-family:inherit;font-size:0.95rem;font-weight:600;
+    border-radius:var(--radius-sm);cursor:pointer;transition:var(--transition);
+  }}
+  button:hover{{transform:translateY(-2px);box-shadow:0 8px 24px rgba(16,185,129,0.35);}}
+  button:disabled{{opacity:0.4;cursor:not-allowed;transform:none;box-shadow:none;}}
+  .success{{
+    margin-top:1rem;padding:1rem;background:rgba(16,185,129,0.08);
+    border:1px solid rgba(16,185,129,0.2);border-radius:var(--radius-sm);
+    font-size:0.9rem;color:var(--accent-light);text-align:center;
+  }}
+  .foot{{text-align:center;margin-top:1.5rem;font-size:0.8rem;color:var(--text-dim);}}
+  .foot a{{color:var(--accent-light);text-decoration:none;}}
+  .foot a:hover{{text-decoration:underline;}}
 </style>
 </head>
 <body>
-  <div class="stage">
-    <div class="corner-mark"><a href="/">TEXTANOFFER</a><span class="brass">SIGN UP</span></div>
+  <div class="wrap">
+    <a href="/" class="nav-back"><img src="/static/logo.webp" alt=""><span>&larr; TxtAnOffer</span></a>
     <h1>Get started with TxtAnOffer</h1>
     <p class="sub">Enter your phone number to receive offer drafts via SMS at +1 (833) 897-0333.</p>
     <div class="card">
@@ -2147,49 +2160,63 @@ def login():
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Log In - TxtAnOffer</title>
+<title>Log In — TxtAnOffer</title>
+<link rel="icon" href="/static/favicon.ico" type="image/x-icon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Inter:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-  :root{{--ink:#171B24;--ink-soft:#242938;--paper:#F3EEDF;--paper-line:#DCD3B8;
-    --brass:#A9772F;--brass-soft:#C9A466;--green:#3A5744;
-    --text-on-paper:#211E17;--text-muted:#847C68;--text-on-ink:#E7E4D8;--text-on-ink-muted:#8B8A82;}}
-  *{{box-sizing:border-box;}}
-  body{{background:var(--ink);min-height:100vh;margin:0;display:flex;align-items:center;
-    justify-content:center;padding:48px 20px;font-family:'Inter',sans-serif;}}
+  :root{{--bg:#0f172a;--bg-card:rgba(255,255,255,0.03);--border:rgba(255,255,255,0.06);
+    --text:#f8fafc;--text-muted:#94a3b8;--text-dim:#64748b;
+    --accent:#10b981;--accent-light:#34d399;--radius:1.25rem;--radius-sm:0.75rem;
+    --transition:all 0.2s ease;}}
+  *{{margin:0;padding:0;box-sizing:border-box;}}
+  body{{background:var(--bg);min-height:100vh;margin:0;display:flex;align-items:center;
+    justify-content:center;padding:2rem;font-family:'Inter',-apple-system,sans-serif;color:var(--text);}}
+  a{{color:inherit;text-decoration:none;}}
   .wrap{{width:100%;max-width:400px;}}
-  .back{{display:block;color:var(--text-on-ink-muted);font-size:13px;text-decoration:none;margin-bottom:20px;}}
-  .back:hover{{color:var(--text-on-ink);}}
-  h1{{font-family:'Source Serif 4',serif;font-weight:600;font-size:26px;color:var(--text-on-ink);margin:0 0 8px;}}
-  .sub{{color:var(--text-on-ink-muted);font-size:14px;margin:0 0 28px;line-height:1.5;}}
-  .card{{background:var(--paper);border-radius:2px;padding:28px 26px;border-top:2px solid var(--brass);}}
-  label{{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:0.08em;
-    text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:8px;}}
-  input{{width:100%;font-family:'IBM Plex Mono',monospace;font-size:15px;padding:13px 14px;
-    border:1px solid var(--paper-line);background:#FFFDF7;color:var(--text-on-paper);
-    border-radius:2px;outline:none;}}
-  input:focus{{border-color:var(--brass);}}
-  button{{width:100%;margin-top:18px;background:var(--ink);color:var(--text-on-ink);border:none;
-    padding:14px;font-size:14px;font-weight:500;border-radius:2px;cursor:pointer;}}
-  button:hover{{background:var(--ink-soft);}}
-  .msg{{margin-top:16px;padding:14px;border-radius:2px;font-size:14px;text-align:center;}}
-  .msg.success{{background:rgba(58,87,68,0.1);border:1px solid rgba(58,87,68,0.3);color:var(--green);}}
-  .msg.error{{background:rgba(200,50,50,0.08);border:1px solid rgba(200,50,50,0.2);color:#e57373;}}
-  .msg a{{color:var(--brass);}}
-  .alt{{text-align:center;margin-top:20px;font-size:13px;color:var(--text-on-ink-muted);}}
-  .alt a{{color:var(--brass-soft);text-decoration:none;}}
+  .nav-back{{display:flex;align-items:center;gap:0.5rem;margin-bottom:1.5rem;}}
+  .nav-back img{{width:28px;height:28px;border-radius:50%;}}
+  .nav-back span{{font-size:0.85rem;color:var(--text-muted);}}
+  .nav-back:hover span{{color:var(--text);}}
+  h1{{font-size:1.75rem;font-weight:800;letter-spacing:-0.02em;margin-bottom:0.5rem;}}
+  .sub{{color:var(--text-muted);font-size:0.95rem;margin-bottom:1.5rem;line-height:1.5;}}
+  .card{{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:1.75rem;}}
+  label{{font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;
+    color:var(--text-dim);display:block;margin-bottom:0.4rem;}}
+  input{{
+    width:100%;background:rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.1);
+    border-radius:var(--radius-sm);padding:0.75rem 1rem;color:var(--text);
+    font-size:0.95rem;font-family:inherit;outline:none;transition:var(--transition);
+  }}
+  input:focus{{border-color:var(--accent);box-shadow:0 0 0 3px rgba(16,185,129,0.15);}}
+  input::placeholder{{color:#475569;}}
+  .sms-note{{font-size:0.8rem;color:var(--text-dim);margin:0.75rem 0 0;line-height:1.5;}}
+  button{{
+    width:100%;margin-top:1rem;
+    background:linear-gradient(135deg,var(--accent),#059669);color:#fff;border:none;
+    padding:0.85rem;font-family:inherit;font-size:0.95rem;font-weight:600;
+    border-radius:var(--radius-sm);cursor:pointer;transition:var(--transition);
+  }}
+  button:hover{{transform:translateY(-2px);box-shadow:0 8px 24px rgba(16,185,129,0.35);}}
+  .msg{{margin-top:1rem;padding:0.85rem;border-radius:var(--radius-sm);font-size:0.9rem;text-align:center;}}
+  .msg.success{{background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);color:var(--accent-light);}}
+  .msg.error{{background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.2);color:#f87171;}}
+  .msg a{{color:var(--accent-light);}}
+  .alt{{text-align:center;margin-top:1.25rem;font-size:0.85rem;color:var(--text-dim);}}
+  .alt a{{color:var(--accent-light);text-decoration:none;}}
+  .alt a:hover{{text-decoration:underline;}}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <a href="/" class="back">&larr; Home</a>
+  <a href="/" class="nav-back"><img src="/static/logo.webp" alt=""><span>&larr; TxtAnOffer</span></a>
   <h1>Log In</h1>
   <p class="sub">Enter your phone number and we'll text you a link to your dashboard.</p>
   <div class="card">
     <form method="POST">
       <label>Phone number</label>
       <input type="tel" name="phone" placeholder="(512) 555-1234" required>
-      <p style="font-size:12px;color:var(--text-muted);margin:12px 0 0;line-height:1.5;">By clicking below, you agree to receive one SMS message from TxtAnOffer at +1 (833) 897-0333 containing your login link. Msg &amp; data rates may apply. Reply STOP to opt out.</p>
+      <p class="sms-note">By clicking below, you agree to receive one SMS message from TxtAnOffer at +1 (833) 897-0333 containing your login link. Msg &amp; data rates may apply. Reply STOP to opt out.</p>
       <button type="submit">Send Login Link via SMS</button>
     </form>
     {msg_html}
