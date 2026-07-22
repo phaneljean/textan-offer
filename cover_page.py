@@ -1,5 +1,5 @@
 """
-cover_page.py — Generate premium cover page for TREC contracts
+cover_page.py - Generate premium cover page for TREC contracts
 Styled after classic real estate stationery: marble background, centered card.
 """
 from reportlab.lib.pagesizes import letter
@@ -55,7 +55,7 @@ def generate_cover_page(parsed: dict, agent: dict) -> bytes:
 
     _draw_marble_bg(c, width, height)
 
-    # Card dimensions — centered
+    # Card dimensions - centered
     card_w = 4.2 * inch
     card_h = 8.8 * inch
     card_x = (width - card_w) / 2
@@ -124,7 +124,7 @@ def generate_cover_page(parsed: dict, agent: dict) -> bytes:
     c.setFillColor(TEXT_SECONDARY)
     c.setFont("Helvetica", 10)
 
-    # Deal terms — centered list
+    # Deal terms - centered list
     price = parsed.get('price', 0)
     close_days = parsed.get('close_days', 0)
     close_date = (datetime.now() + timedelta(days=close_days)).strftime("%B %d, %Y")
@@ -136,7 +136,7 @@ def generate_cover_page(parsed: dict, agent: dict) -> bytes:
 
     lines = [
         f"${price:,}",
-        f"{down_pct*100:.0f}% Down  •  ${down_amt:,}",
+        f"{down_pct*100:.0f}% Down  |  ${down_amt:,}",
         f"Loan: ${loan_amt:,}",
         f"Close: {close_date}",
         "",
@@ -171,10 +171,10 @@ def generate_cover_page(parsed: dict, agent: dict) -> bytes:
         c.drawCentredString(cx, y, agent['brokerage'])
         y -= 0.26 * inch
 
-    # Footer — draft notice (anchored to bottom of card)
+    # Footer - draft notice (anchored to bottom of card)
     c.setFont("Helvetica", 7.5)
     c.setFillColor(TEXT_MUTED)
-    c.drawCentredString(cx, card_y + 0.5*inch, "TREC No. 20-19  •  Draft — agent must review before signing")
+    c.drawCentredString(cx, card_y + 0.5*inch, "TREC No. 20-19  |  Draft - agent must review before signing")
 
     timestamp = datetime.now().strftime("%m/%d/%Y %I:%M %p")
     c.drawCentredString(cx, card_y + 0.28*inch, f"Generated {timestamp}")
