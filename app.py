@@ -14,10 +14,13 @@ Flow (demo, no SMS/Twilio needed):
   parse/fill logic runs -> result + PDF link shown directly on the page.
 """
 
-from flask import Flask, request, send_from_directory, Response, redirect, jsonify
+from flask import Flask, request, send_from_directory, Response, redirect, jsonify, abort
 from twilio.twiml.messaging_response import MessagingResponse
 from datetime import datetime
 import os
+import hmac
+import hashlib
+import time
 import stripe
 
 from parser import parse_offer_sms
@@ -34,6 +37,26 @@ stripe.api_key = os.environ.get("STRIPE_SECRET_KEY", "")
 STRIPE_PRICE_ID = os.environ.get("STRIPE_PRICE_ID", "")
 STRIPE_PRICE_ID_PRO = os.environ.get("STRIPE_PRICE_ID_PRO", "")
 STRIPE_PRICE_ID_BROKERAGE = os.environ.get("STRIPE_PRICE_ID_BROKERAGE", "")
+
+PDF_LINK_SECRET = os.environ.get("PDF_LINK_SECRET", "change-me-in-production")
+PDF_LINK_TTL = int(os.environ.get("PDF_LINK_TTL", 86400))  # 24 hours
+
+
+def sign_pdf_url(filename, base_url=""):
+    expires = int(time.time()) + PDF_LINK_TTL
+    sig = hmac.new(PDF_LINK_SECRET.encode(), f"{filename}:{expires}".encode(), hashlib.sha256).hexdigest()[:16]
+    return f"{base_url}/offers/{filename}?expires={expires}&sig={sig}"
+
+
+def verify_pdf_signature(filename, expires_str, sig):
+    try:
+        expires = int(expires_str)
+    except (ValueError, TypeError):
+        return False
+    if time.time() > expires:
+        return False
+    expected = hmac.new(PDF_LINK_SECRET.encode(), f"{filename}:{expires}".encode(), hashlib.sha256).hexdigest()[:16]
+    return hmac.compare_digest(sig or "", expected)
 
 
 @app.route("/")
@@ -378,7 +401,7 @@ def sms_reply():
             track_event("trial_completed", agent_phone)
 
         filename = os.path.basename(pdf_path)
-        pdf_url = request.host_url.rstrip("/") + f"/offers/{filename}"
+        pdf_url = sign_pdf_url(filename, request.host_url.rstrip("/"))
 
         # Fire webhook if configured
         fire_webhook(agent_phone, parsed, pdf_url)
@@ -654,7 +677,7 @@ def demo():
             result_html = f'<div class="error">{error}</div>'
         else:
             filename = os.path.basename(pdf_path)
-            pdf_url = f"/offers/{filename}"
+            pdf_url = sign_pdf_url(filename)
             close_date_str = ""
             try:
                 close_dt = datetime.now()
@@ -1850,6 +1873,10 @@ def profile():
 
 @app.route("/offers/<path:filename>")
 def serve_offer(filename):
+    expires = request.args.get("expires")
+    sig = request.args.get("sig")
+    if not verify_pdf_signature(filename, expires, sig):
+        abort(403)
     return send_from_directory(OUTPUT_DIR, filename, as_attachment=False)
 
 
