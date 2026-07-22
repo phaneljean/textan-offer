@@ -190,6 +190,7 @@ def index():
   <div class="nav-links">
     <a href="/pricing">Pricing</a>
     <a href="/demo">Demo</a>
+    <a href="/login">Log In</a>
     <a href="/signup" class="nav-cta">Get Started</a>
   </div>
 </nav>
@@ -1578,6 +1579,107 @@ def signup():
     </div>
     <div class="foot"><a href="/privacy">Privacy Policy</a> &middot; <a href="/terms">Terms</a> &middot; <a href="/demo">Try the demo</a></div>
   </div>
+</body>
+</html>"""
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    message = ""
+    if request.method == "POST":
+        phone = request.form.get("phone", "").strip()
+        # Normalize phone
+        import re
+        phone_clean = re.sub(r"[^\d+]", "", phone)
+        if not phone_clean.startswith("+"):
+            phone_clean = "+1" + phone_clean.lstrip("1")
+
+        user = get_user(phone_clean)
+        if user:
+            # Send dashboard link via Twilio
+            try:
+                from twilio.rest import Client
+                twilio_sid = os.environ.get("TWILIO_ACCOUNT_SID", "")
+                twilio_token = os.environ.get("TWILIO_AUTH_TOKEN", "")
+                twilio_from = os.environ.get("TWILIO_PHONE_NUMBER", "+18338970333")
+                if twilio_sid and twilio_token:
+                    client = Client(twilio_sid, twilio_token)
+                    dash_link = sign_dashboard_url(phone_clean, request.host_url.rstrip("/"))
+                    client.messages.create(
+                        body=f"Your TxtAnOffer dashboard link (valid 7 days):\n{dash_link}",
+                        from_=twilio_from,
+                        to=phone_clean,
+                    )
+                    message = "sent"
+                else:
+                    message = "error"
+            except Exception as e:
+                print(f"[LOGIN] SMS send failed: {e}")
+                message = "error"
+        else:
+            message = "not_found"
+
+    msg_html = ""
+    if message == "sent":
+        msg_html = '<div class="msg success">Check your texts! We sent a login link to your phone.</div>'
+    elif message == "not_found":
+        msg_html = '<div class="msg error">No account found for that number. <a href="/signup">Sign up first</a>.</div>'
+    elif message == "error":
+        msg_html = '<div class="msg error">Could not send SMS. Text DASHBOARD to (833) 897-0333 instead.</div>'
+
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Log In - TxtAnOffer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Inter:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{{--ink:#171B24;--ink-soft:#242938;--paper:#F3EEDF;--paper-line:#DCD3B8;
+    --brass:#A9772F;--brass-soft:#C9A466;--green:#3A5744;
+    --text-on-paper:#211E17;--text-muted:#847C68;--text-on-ink:#E7E4D8;--text-on-ink-muted:#8B8A82;}}
+  *{{box-sizing:border-box;}}
+  body{{background:var(--ink);min-height:100vh;margin:0;display:flex;align-items:center;
+    justify-content:center;padding:48px 20px;font-family:'Inter',sans-serif;}}
+  .wrap{{width:100%;max-width:400px;}}
+  .back{{display:block;color:var(--text-on-ink-muted);font-size:13px;text-decoration:none;margin-bottom:20px;}}
+  .back:hover{{color:var(--text-on-ink);}}
+  h1{{font-family:'Source Serif 4',serif;font-weight:600;font-size:26px;color:var(--text-on-ink);margin:0 0 8px;}}
+  .sub{{color:var(--text-on-ink-muted);font-size:14px;margin:0 0 28px;line-height:1.5;}}
+  .card{{background:var(--paper);border-radius:2px;padding:28px 26px;border-top:2px solid var(--brass);}}
+  label{{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:0.08em;
+    text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:8px;}}
+  input{{width:100%;font-family:'IBM Plex Mono',monospace;font-size:15px;padding:13px 14px;
+    border:1px solid var(--paper-line);background:#FFFDF7;color:var(--text-on-paper);
+    border-radius:2px;outline:none;}}
+  input:focus{{border-color:var(--brass);}}
+  button{{width:100%;margin-top:18px;background:var(--ink);color:var(--text-on-ink);border:none;
+    padding:14px;font-size:14px;font-weight:500;border-radius:2px;cursor:pointer;}}
+  button:hover{{background:var(--ink-soft);}}
+  .msg{{margin-top:16px;padding:14px;border-radius:2px;font-size:14px;text-align:center;}}
+  .msg.success{{background:rgba(58,87,68,0.1);border:1px solid rgba(58,87,68,0.3);color:var(--green);}}
+  .msg.error{{background:rgba(200,50,50,0.08);border:1px solid rgba(200,50,50,0.2);color:#e57373;}}
+  .msg a{{color:var(--brass);}}
+  .alt{{text-align:center;margin-top:20px;font-size:13px;color:var(--text-on-ink-muted);}}
+  .alt a{{color:var(--brass-soft);text-decoration:none;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a href="/" class="back">&larr; Home</a>
+  <h1>Log In</h1>
+  <p class="sub">Enter your phone number and we'll text you a link to your dashboard.</p>
+  <div class="card">
+    <form method="POST">
+      <label>Phone number</label>
+      <input type="tel" name="phone" placeholder="(512) 555-1234" required>
+      <button type="submit">Send Login Link</button>
+    </form>
+    {msg_html}
+  </div>
+  <p class="alt">Don't have an account? <a href="/signup">Sign up</a></p>
+</div>
 </body>
 </html>"""
 
