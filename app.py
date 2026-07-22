@@ -38,7 +38,174 @@ STRIPE_PRICE_ID_BROKERAGE = os.environ.get("STRIPE_PRICE_ID_BROKERAGE", "")
 
 @app.route("/")
 def index():
-    return redirect("/signup")
+    return """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TxtAnOffer - Generate TREC Contracts by Text Message</title>
+<meta name="description" content="Texas real estate agents: text your offer details and receive a filled TREC 1-4 contract PDF in seconds. No apps to download, no forms to fill.">
+<link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#171B24; --ink-soft:#242938; --paper:#F3EEDF; --paper-line:#DCD3B8;
+    --brass:#A9772F; --brass-soft:#C9A466; --green:#3A5744;
+    --text-on-paper:#211E17; --text-muted:#847C68;
+    --text-on-ink:#E7E4D8; --text-on-ink-muted:#8B8A82;
+  }
+  *{box-sizing:border-box;}
+  body{
+    background:var(--ink);
+    background-image:radial-gradient(circle at 15% 10%, rgba(169,119,47,0.06), transparent 45%),
+                      radial-gradient(circle at 85% 90%, rgba(169,119,47,0.04), transparent 40%);
+    min-height:100vh; margin:0; padding:0; font-family:'Inter',sans-serif;
+    color:var(--text-on-ink);
+  }
+
+  .nav{display:flex;align-items:center;justify-content:space-between;padding:20px 32px;max-width:1100px;margin:0 auto;}
+  .nav-logo{display:flex;align-items:center;gap:12px;text-decoration:none;}
+  .nav-logo img{width:44px;height:44px;border-radius:50%;border:1.5px solid var(--brass-soft);}
+  .nav-logo span{font-family:'Source Serif 4',serif;font-weight:600;font-size:20px;color:var(--text-on-ink);}
+  .nav-links{display:flex;gap:24px;align-items:center;}
+  .nav-links a{color:var(--text-on-ink-muted);text-decoration:none;font-size:14px;font-weight:500;transition:color 0.2s;}
+  .nav-links a:hover{color:var(--text-on-ink);}
+  .nav-cta{background:var(--brass);color:#fff;padding:10px 20px;border-radius:4px;font-weight:600;font-size:14px;text-decoration:none;transition:background 0.2s;}
+  .nav-cta:hover{background:var(--brass-soft);}
+
+  .hero{text-align:center;padding:80px 24px 60px;max-width:800px;margin:0 auto;}
+  h1{font-family:'Source Serif 4',serif;font-weight:600;font-size:48px;color:var(--text-on-ink);
+    margin:0 0 20px;letter-spacing:-0.02em;line-height:1.15;}
+  .hero p{color:var(--text-on-ink-muted);font-size:19px;line-height:1.6;max-width:600px;margin:0 auto 36px;}
+  .hero-cta{display:inline-block;background:var(--brass);color:#fff;padding:16px 36px;border-radius:4px;
+    font-weight:600;font-size:16px;text-decoration:none;transition:background 0.2s;}
+  .hero-cta:hover{background:var(--brass-soft);}
+
+  .demo-box{max-width:480px;margin:48px auto 0;background:var(--ink-soft);border-radius:8px;
+    padding:28px 24px;border:1px solid rgba(169,119,47,0.15);text-align:left;}
+  .demo-label{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.1em;
+    text-transform:uppercase;color:var(--brass-soft);margin-bottom:14px;}
+  .demo-msg{background:var(--green);color:#fff;padding:12px 16px;border-radius:12px 12px 12px 2px;
+    font-size:14px;line-height:1.5;margin-bottom:10px;display:inline-block;max-width:85%;}
+  .demo-reply{background:var(--paper);color:var(--text-on-paper);padding:12px 16px;border-radius:12px 12px 2px 12px;
+    font-size:14px;line-height:1.5;margin-left:auto;display:block;max-width:85%;text-align:left;margin-top:8px;
+    float:right;}
+  .demo-clear{clear:both;}
+
+  .section{padding:80px 24px;max-width:1000px;margin:0 auto;}
+  .section-title{font-family:'Source Serif 4',serif;font-weight:600;font-size:32px;
+    color:var(--text-on-ink);text-align:center;margin:0 0 12px;}
+  .section-sub{text-align:center;color:var(--text-on-ink-muted);font-size:16px;margin:0 0 48px;line-height:1.5;}
+
+  .steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:24px;}
+  .step{background:var(--paper);border-radius:4px;padding:32px 28px;border-top:3px solid var(--paper-line);}
+  .step-num{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.08em;
+    color:var(--brass);margin-bottom:12px;}
+  .step h3{font-family:'Source Serif 4',serif;font-size:20px;font-weight:600;color:var(--text-on-paper);margin:0 0 10px;}
+  .step p{font-size:14px;color:var(--text-muted);line-height:1.6;margin:0;}
+
+  .sms-info{background:var(--ink-soft);border-radius:8px;padding:40px;max-width:700px;margin:0 auto;
+    border:1px solid rgba(169,119,47,0.12);}
+  .sms-info h3{font-family:'Source Serif 4',serif;font-size:22px;color:var(--text-on-ink);margin:0 0 16px;}
+  .sms-info p,.sms-info li{font-size:14px;color:var(--text-on-ink-muted);line-height:1.7;}
+  .sms-info ul{padding-left:20px;margin:12px 0;}
+
+  .footer{text-align:center;padding:48px 24px;border-top:1px solid rgba(255,255,255,0.05);}
+  .footer-links{display:flex;justify-content:center;gap:24px;margin-bottom:16px;flex-wrap:wrap;}
+  .footer-links a{color:var(--text-on-ink-muted);text-decoration:none;font-size:13px;}
+  .footer-links a:hover{color:var(--text-on-ink);}
+  .footer p{color:var(--text-on-ink-muted);font-size:12px;margin:0;}
+
+  @media(max-width:600px){
+    h1{font-size:32px;}
+    .hero p{font-size:16px;}
+    .nav-links a:not(.nav-cta){display:none;}
+    .section{padding:48px 20px;}
+  }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <a href="/" class="nav-logo">
+    <img src="/static/logo.webp" alt="TxtAnOffer">
+    <span>TxtAnOffer</span>
+  </a>
+  <div class="nav-links">
+    <a href="/pricing">Pricing</a>
+    <a href="/demo">Demo</a>
+    <a href="/signup" class="nav-cta">Get Started</a>
+  </div>
+</nav>
+
+<section class="hero">
+  <h1>Generate TREC Contracts<br>by Text Message</h1>
+  <p>Texas real estate agents: text your offer details &mdash; price, down payment, closing date, and address &mdash; and receive a filled TREC 1-4 contract PDF in seconds.</p>
+  <a href="/signup" class="hero-cta">Start Free Trial</a>
+
+  <div class="demo-box">
+    <div class="demo-label">How it works</div>
+    <div class="demo-msg">725k 3% 21day 1740 Grand Ave, Austin TX 78701</div>
+    <div class="demo-clear"></div>
+    <div class="demo-reply">Your TREC contract is ready! Price: $725,000 | Close: Aug 12, 2026<br><br>Download: txtanoffer.com/offers/1740-grand-ave.pdf</div>
+    <div class="demo-clear"></div>
+  </div>
+</section>
+
+<section class="section">
+  <h2 class="section-title">Three Steps, No App Required</h2>
+  <p class="section-sub">Works with any phone that can send a text message.</p>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">STEP 01</div>
+      <h3>Sign Up</h3>
+      <p>Register your phone number and agent details. You'll receive a confirmation text to opt in to our SMS service.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">STEP 02</div>
+      <h3>Text Your Offer</h3>
+      <p>Send a message with price, down payment percentage, closing days, and property address to our number.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">STEP 03</div>
+      <h3>Get Your PDF</h3>
+      <p>Receive a link to your filled TREC contract PDF within seconds, ready for review and DocuSign.</p>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <h2 class="section-title">SMS Messaging Details</h2>
+  <p class="section-sub">Transparent communication about how we use text messaging.</p>
+  <div class="sms-info">
+    <h3>How SMS Is Used</h3>
+    <p>TxtAnOffer uses SMS (text messaging) to receive offer details from registered real estate agents and deliver generated TREC contract PDF links back to them.</p>
+    <ul>
+      <li><strong>Opt-in:</strong> Users sign up at txtanoffer.com/signup by providing their phone number and explicitly consenting to receive SMS messages.</li>
+      <li><strong>Message frequency:</strong> Messages are sent only in direct response to user-initiated texts. We do not send marketing or promotional messages.</li>
+      <li><strong>Message content:</strong> Replies contain contract confirmation details and a download link to the generated PDF.</li>
+      <li><strong>Opt-out:</strong> Reply STOP at any time to unsubscribe from all messages. Reply HELP for support.</li>
+      <li><strong>Standard message and data rates may apply.</strong></li>
+    </ul>
+    <p style="margin-top:16px;">Questions? Contact us at <strong>support@txtanoffer.com</strong></p>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="footer-links">
+    <a href="/terms">Terms of Service</a>
+    <a href="/privacy">Privacy Policy</a>
+    <a href="/pricing">Pricing</a>
+    <a href="/demo">Try the Demo</a>
+  </div>
+  <p>&copy; 2026 TxtAnOffer. Built for Texas real estate agents.</p>
+</footer>
+
+</body>
+</html>
+"""
 
 
 # --- address validation --------------------------------------------------
