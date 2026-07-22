@@ -451,10 +451,45 @@ def sms_reply():
 
     resp = MessagingResponse()
 
-    # Handle DASHBOARD keyword
-    if incoming_msg.strip().upper() == "DASHBOARD":
+    # Handle keywords
+    keyword = incoming_msg.strip().upper()
+
+    if keyword in ("HELP", "MENU"):
+        user = get_user(agent_phone)
+        offer_count = user["offer_count"] if user else 0
+        resp.message(
+            "TxtAnOffer Commands:\n\n"
+            "HELP - This menu\n"
+            "DASHBOARD - Get link to your offer history\n"
+            "STATUS - Check your plan & usage\n"
+            "PROFILE - Get link to edit your agent info\n"
+            "STOP - Unsubscribe from messages\n\n"
+            "To generate an offer, text:\n"
+            "price down% days address\n\n"
+            "Example:\n"
+            "725k 3% 21day 1740 Grand Ave, Austin TX 78701"
+        )
+        return Response(str(resp), mimetype="application/xml")
+
+    if keyword == "DASHBOARD":
         dash_link = sign_dashboard_url(agent_phone, request.host_url.rstrip("/"))
-        resp.message(f"Here's your dashboard link (valid 7 days):\n{dash_link}")
+        resp.message(f"Your dashboard (valid 7 days):\n{dash_link}")
+        return Response(str(resp), mimetype="application/xml")
+
+    if keyword == "STATUS":
+        user = get_user(agent_phone)
+        if not user:
+            resp.message("No account found. Sign up at txtanoffer.com/signup")
+        elif user["is_subscribed"]:
+            resp.message(f"Plan: Unlimited\nOffers generated: {user['offer_count']}\n\nText HELP for commands.")
+        else:
+            remaining = max(0, FREE_OFFER_LIMIT - user["offer_count"])
+            resp.message(f"Plan: Free trial\nOffers used: {user['offer_count']}/{FREE_OFFER_LIMIT}\nRemaining: {remaining}\n\nUpgrade: txtanoffer.com/pricing")
+        return Response(str(resp), mimetype="application/xml")
+
+    if keyword == "PROFILE":
+        profile_link = request.host_url.rstrip("/") + f"/profile?phone={agent_phone}"
+        resp.message(f"Edit your agent profile:\n{profile_link}\n\nYour name, license, brokerage, and defaults auto-fill into every contract.")
         return Response(str(resp), mimetype="application/xml")
 
     try:
