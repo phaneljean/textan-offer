@@ -29,6 +29,7 @@ from agent_profiles import get_agent_profile, save_agent_profile
 from subscriptions import can_generate_offer, increment_offer_count, activate_subscription, deactivate_subscription, get_user, create_user, FREE_OFFER_LIMIT
 from analytics import track_event, get_conversion_metrics, get_revenue_metrics, get_recent_sms
 from integrations import send_offer_email, fire_webhook, save_webhook, get_webhook, delete_webhook, send_to_docusign
+from offers_db import record_offer, get_offers_for_phone
 
 app = Flask(__name__)
 
@@ -450,6 +451,12 @@ def sms_reply():
 
     resp = MessagingResponse()
 
+    # Handle DASHBOARD keyword
+    if incoming_msg.strip().upper() == "DASHBOARD":
+        dash_link = sign_dashboard_url(agent_phone, request.host_url.rstrip("/"))
+        resp.message(f"Here's your dashboard link (valid 7 days):\n{dash_link}")
+        return Response(str(resp), mimetype="application/xml")
+
     try:
         # Check subscription status
         can_generate, reason, user = can_generate_offer(agent_phone)
@@ -490,6 +497,8 @@ def sms_reply():
 
         filename = os.path.basename(pdf_path)
         pdf_url = sign_pdf_url(filename, request.host_url.rstrip("/"))
+
+        record_offer(agent_phone, parsed, filename)
 
         # Fire webhook if configured
         fire_webhook(agent_phone, parsed, pdf_url)
@@ -1988,6 +1997,157 @@ def serve_offer(filename):
     if not verify_pdf_signature(filename, expires, sig):
         abort(403)
     return send_from_directory(OUTPUT_DIR, filename, as_attachment=False)
+
+
+# --- Dashboard auth (magic link) ------------------------------------------
+
+DASHBOARD_LINK_TTL = int(os.environ.get("DASHBOARD_LINK_TTL", 604800))  # 7 days
+
+
+def sign_dashboard_url(phone, base_url=""):
+    expires = int(time.time()) + DASHBOARD_LINK_TTL
+    sig = hmac.new(PDF_LINK_SECRET.encode(), f"dash:{phone}:{expires}".encode(), hashlib.sha256).hexdigest()[:20]
+    return f"{base_url}/dashboard?phone={phone}&expires={expires}&sig={sig}"
+
+
+def verify_dashboard_signature(phone, expires_str, sig):
+    try:
+        expires = int(expires_str)
+    except (ValueError, TypeError):
+        return False
+    if time.time() > expires:
+        return False
+    expected = hmac.new(PDF_LINK_SECRET.encode(), f"dash:{phone}:{expires}".encode(), hashlib.sha256).hexdigest()[:20]
+    return hmac.compare_digest(sig or "", expected)
+
+
+@app.route("/dashboard")
+def dashboard():
+    phone = request.args.get("phone", "")
+    expires = request.args.get("expires", "")
+    sig = request.args.get("sig", "")
+
+    if not verify_dashboard_signature(phone, expires, sig):
+        return """
+<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Dashboard - TxtAnOffer</title>
+<style>body{font-family:'Inter',sans-serif;background:#171B24;color:#E7E4D8;display:flex;
+align-items:center;justify-content:center;min-height:100vh;margin:0;padding:20px;}
+.box{background:#242938;border-radius:8px;padding:40px;max-width:400px;text-align:center;
+border:1px solid rgba(169,119,47,0.15);}
+h2{margin:0 0 12px;font-size:22px;}p{color:#8B8A82;font-size:14px;line-height:1.6;}
+a{color:#C9A466;}</style></head><body><div class="box">
+<h2>Access Expired</h2>
+<p>Your dashboard link has expired or is invalid.<br>
+Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
+<p><a href="/">Back to home</a></p></div></body></html>""", 403
+
+    user = get_user(phone)
+    if not user:
+        return redirect("/signup")
+
+    from agent_profiles import get_agent_profile
+    agent = get_agent_profile(phone)
+    offers = get_offers_for_phone(phone)
+    from datetime import timedelta
+
+    # Build offer rows
+    offer_rows = ""
+    for o in offers:
+        pdf_link = sign_pdf_url(o["filename"], request.host_url.rstrip("/"))
+        created = o["created_at"][:10]
+        offer_rows += f"""
+        <tr>
+          <td>{o['address']}</td>
+          <td>${o['price']:,}</td>
+          <td>{o['down_pct']*100:.0f}%</td>
+          <td>{o['close_days']}d</td>
+          <td>{created}</td>
+          <td><a href="{pdf_link}" target="_blank">PDF</a></td>
+        </tr>"""
+
+    if not offer_rows:
+        offer_rows = '<tr><td colspan="6" style="text-align:center;color:#8B8A82;padding:24px;">No offers yet. Text your first offer to get started.</td></tr>'
+
+    sub_status = "Active" if user["is_subscribed"] else f"Free ({user['offer_count']}/{FREE_OFFER_LIMIT} used)"
+    sub_badge_color = "#3A5744" if user["is_subscribed"] else "#A9772F"
+
+    # Reusable dashboard link (same params, still valid)
+    dash_url = f"/dashboard?phone={phone}&expires={expires}&sig={sig}"
+    profile_url = f"/profile?phone={phone}"
+
+    return f"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard - TxtAnOffer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{{--ink:#171B24;--ink-soft:#242938;--paper:#F3EEDF;--brass:#A9772F;--brass-soft:#C9A466;
+    --green:#3A5744;--text-on-ink:#E7E4D8;--text-on-ink-muted:#8B8A82;}}
+  *{{box-sizing:border-box;}}
+  body{{background:var(--ink);font-family:'Inter',sans-serif;color:var(--text-on-ink);margin:0;padding:0;min-height:100vh;}}
+  .dash-nav{{display:flex;align-items:center;justify-content:space-between;padding:20px 32px;max-width:1100px;margin:0 auto;}}
+  .dash-nav a{{color:var(--text-on-ink-muted);text-decoration:none;font-size:14px;}}
+  .dash-nav a:hover{{color:var(--text-on-ink);}}
+  .dash-nav .logo{{font-family:'Source Serif 4',serif;font-weight:600;font-size:20px;color:var(--text-on-ink);text-decoration:none;}}
+  .container{{max-width:1000px;margin:0 auto;padding:0 24px 60px;}}
+  .greeting{{font-family:'Source Serif 4',serif;font-size:28px;font-weight:600;margin:32px 0 8px;}}
+  .sub-badge{{display:inline-block;background:{sub_badge_color};color:#fff;padding:4px 12px;border-radius:12px;font-size:12px;font-weight:600;}}
+  .stats{{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin:32px 0;}}
+  .stat{{background:var(--ink-soft);border-radius:8px;padding:20px;border:1px solid rgba(169,119,47,0.1);}}
+  .stat-val{{font-family:'Source Serif 4',serif;font-size:28px;font-weight:600;color:var(--brass);}}
+  .stat-label{{font-size:12px;color:var(--text-on-ink-muted);margin-top:4px;}}
+  h2{{font-family:'Source Serif 4',serif;font-size:22px;margin:40px 0 16px;}}
+  .table-wrap{{overflow-x:auto;}}
+  table{{width:100%;border-collapse:collapse;font-size:14px;}}
+  th{{text-align:left;padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.1);
+    color:var(--text-on-ink-muted);font-weight:500;font-size:12px;text-transform:uppercase;letter-spacing:0.05em;}}
+  td{{padding:12px;border-bottom:1px solid rgba(255,255,255,0.05);}}
+  td a{{color:var(--brass-soft);text-decoration:none;}}
+  td a:hover{{text-decoration:underline;}}
+  .actions{{display:flex;gap:12px;margin-top:24px;flex-wrap:wrap;}}
+  .actions a{{background:var(--ink-soft);color:var(--text-on-ink);padding:10px 20px;border-radius:4px;
+    text-decoration:none;font-size:14px;font-weight:500;border:1px solid rgba(169,119,47,0.15);transition:border-color 0.2s;}}
+  .actions a:hover{{border-color:var(--brass);}}
+  @media(max-width:600px){{.stats{{grid-template-columns:1fr 1fr;}}.greeting{{font-size:22px;}}}}
+</style>
+</head>
+<body>
+<nav class="dash-nav">
+  <a href="/" class="logo">TxtAnOffer</a>
+  <div>
+    <a href="{profile_url}">Edit Profile</a>
+  </div>
+</nav>
+<div class="container">
+  <div class="greeting">Welcome back{', ' + agent.get('name').split()[0] if agent.get('name') else ''}</div>
+  <span class="sub-badge">{sub_status}</span>
+
+  <div class="stats">
+    <div class="stat"><div class="stat-val">{user['offer_count']}</div><div class="stat-label">Total offers</div></div>
+    <div class="stat"><div class="stat-val">{len(offers)}</div><div class="stat-label">In history</div></div>
+    <div class="stat"><div class="stat-val">{user['offer_count'] * 45}m</div><div class="stat-label">Time saved</div></div>
+  </div>
+
+  <h2>Offer History</h2>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Address</th><th>Price</th><th>Down</th><th>Close</th><th>Date</th><th>PDF</th></tr>
+    {offer_rows}
+  </table>
+  </div>
+
+  <div class="actions">
+    <a href="{profile_url}">Agent Profile</a>
+    <a href="/pricing">{'Manage Subscription' if user['is_subscribed'] else 'Upgrade Plan'}</a>
+  </div>
+</div>
+</body>
+</html>"""
 
 
 if __name__ == "__main__":
