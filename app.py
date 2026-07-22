@@ -939,150 +939,255 @@ DEMO_FORM = """
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TxtAnOffer</title>
+<title>Demo — TxtAnOffer</title>
 <meta name="description" content="Generate TREC purchase offers in 10 seconds via text or web. Texas real estate agents save 45 minutes per offer.">
 <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Inter:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-  :root{{
-    --ink:#171B24; --ink-soft:#242938; --paper:#F3EEDF; --paper-line:#DCD3B8;
-    --brass:#A9772F; --brass-soft:#C9A466; --green:#3A5744;
-    --text-on-paper:#211E17; --text-muted:#847C68;
-    --text-on-ink:#E7E4D8; --text-on-ink-muted:#8B8A82;
+  :root {{
+    --bg: #0f172a;
+    --bg-elevated: #1e293b;
+    --bg-card: rgba(255,255,255,0.03);
+    --border: rgba(255,255,255,0.06);
+    --border-hover: rgba(16,185,129,0.3);
+    --text: #f8fafc;
+    --text-muted: #94a3b8;
+    --text-dim: #64748b;
+    --accent: #10b981;
+    --accent-light: #34d399;
+    --radius: 1.25rem;
+    --radius-sm: 0.75rem;
+    --transition: all 0.2s ease;
   }}
-  *{{box-sizing:border-box;}}
-  body{{
-    background:var(--ink);
-    background-image:radial-gradient(circle at 15% 10%, rgba(169,119,47,0.06), transparent 45%),
-                      radial-gradient(circle at 85% 90%, rgba(169,119,47,0.04), transparent 40%);
-    min-height:100vh; margin:0; display:flex; align-items:center; justify-content:center;
-    padding:48px 20px; font-family:'Inter',sans-serif;
+  * {{ margin:0; padding:0; box-sizing:border-box; }}
+  html {{ scroll-behavior:smooth; }}
+  body {{
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
   }}
-  .stage{{width:100%;max-width:460px;}}
-  .site-logo{{position:fixed;top:20px;left:24px;z-index:100;}}
-  .site-logo img{{width:54px;height:54px;border-radius:50%;border:1.5px solid var(--brass-soft);
-    opacity:0.9;transition:opacity 0.2s;}}
-  .site-logo img:hover{{opacity:1;}}
-  .corner-mark{{display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;
-    font-size:10.5px;letter-spacing:0.06em;color:var(--text-on-ink-muted);margin-bottom:14px;padding:0 4px;}}
-  .corner-mark span.brass{{color:var(--brass-soft);}}
-  h1{{font-family:'Source Serif 4',serif;font-weight:600;font-size:32px;color:var(--text-on-ink);
-    margin:0 0 6px;letter-spacing:-0.01em;min-height:80px;}}
-  .sub{{color:var(--text-on-ink-muted);font-size:14px;line-height:1.55;margin:0 0 32px;max-width:380px;}}
-  .card{{background:var(--paper);border-radius:2px;padding:28px 26px 26px;
-    box-shadow:0 24px 60px -20px rgba(0,0,0,0.5);border-top:2px solid var(--brass);}}
-  .field-label{{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:0.08em;
-    text-transform:uppercase;color:var(--text-muted);margin-bottom:8px;display:block;}}
-  input[type=text]{{width:100%;font-family:'IBM Plex Mono',monospace;font-size:14px;padding:13px 14px;
-    border:1px solid var(--paper-line);background:#FFFDF7;color:var(--text-on-paper);
-    border-radius:2px;outline:none;}}
-  input[type=text]:focus{{border-color:var(--brass);}}
-  button{{width:100%;margin-top:14px;background:var(--ink);color:var(--text-on-ink);border:none;
-    padding:14px;font-family:'Inter',sans-serif;font-size:14px;font-weight:500;border-radius:2px;
-    cursor:pointer;letter-spacing:0.01em;}}
-  button:hover{{background:var(--ink-soft);}}
-  .hint{{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-muted);margin-top:10px;}}
-  .result{{margin-top:22px;padding-top:20px;border-top:1px dashed var(--paper-line);}}
-  .result-stamp{{display:inline-flex;align-items:center;gap:6px;font-family:'IBM Plex Mono',monospace;
-    font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--green);
-    background:rgba(58,87,68,0.1);border:1px solid rgba(58,87,68,0.35);padding:4px 10px;
-    border-radius:20px;margin-bottom:14px;}}
-  .result-addr{{font-family:'Source Serif 4',serif;font-size:19px;color:var(--text-on-paper);margin:0 0 12px;}}
-  .result-row{{display:flex;justify-content:space-between;font-size:13.5px;padding:7px 0;
-    border-bottom:1px solid rgba(220,211,184,0.6);}}
-  .result-row .k{{color:var(--text-muted);font-family:'IBM Plex Mono',monospace;font-size:11px;
-    text-transform:uppercase;letter-spacing:0.04em;}}
-  .result-row .v{{color:var(--text-on-paper);font-weight:500;}}
-  .result-ready{{font-size:13px;color:var(--green);font-style:italic;margin-top:14px;padding-top:12px;
-    border-top:1px dashed var(--paper-line);}}
-  .pdf-preview{{margin-top:18px;border:1px solid var(--paper-line);border-radius:2px;overflow:hidden;}}
-  .pdf-preview-label{{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.06em;
-    text-transform:uppercase;color:var(--text-muted);padding:8px 12px;background:rgba(220,211,184,0.3);
-    border-bottom:1px solid var(--paper-line);}}
-  .pdf-frame{{width:100%;height:560px;border:none;background:#fff;}}
-  .pdf-mobile{{display:none;padding:20px;text-align:center;background:#FFFDF7;}}
-  .pdf-mobile a{{color:var(--brass);font-weight:500;font-size:14px;text-decoration:none;}}
-  .pdf-mobile a:hover{{text-decoration:underline;}}
+  a {{ color:inherit; text-decoration:none; }}
+
+  /* Nav */
+  .nav {{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:1rem 2rem;position:sticky;top:0;
+    background:rgba(15,23,42,0.9);backdrop-filter:blur(16px);
+    -webkit-backdrop-filter:blur(16px);
+    border-bottom:1px solid var(--border);z-index:100;
+  }}
+  .nav-left {{display:flex;align-items:center;gap:0.6rem;font-weight:700;font-size:1.1rem;letter-spacing:-0.02em;}}
+  .nav-logo {{width:34px;height:34px;border-radius:50%;overflow:hidden;}}
+  .nav-logo img {{width:100%;height:100%;object-fit:cover;}}
+  .nav-links {{display:flex;gap:2rem;font-size:0.875rem;font-weight:500;color:var(--text-muted);}}
+  .nav-links a {{transition:var(--transition);}}
+  .nav-links a:hover {{color:var(--text);}}
+  .nav-cta {{
+    background:var(--accent);color:#fff;padding:0.55rem 1.35rem;border-radius:9999px;
+    font-size:0.875rem;font-weight:600;text-decoration:none;display:inline-block;
+    transition:var(--transition);
+  }}
+  .nav-cta:hover {{transform:scale(1.05);box-shadow:0 0 24px rgba(16,185,129,0.4);}}
+
+  /* Page layout */
+  .page {{max-width:580px;margin:0 auto;padding:4rem 1.5rem;}}
+  .page-badge {{
+    display:inline-flex;align-items:center;gap:0.4rem;
+    background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.2);
+    color:var(--accent-light);font-size:0.7rem;font-weight:700;
+    padding:0.35rem 0.85rem;border-radius:9999px;
+    text-transform:uppercase;letter-spacing:0.06em;margin-bottom:1rem;
+  }}
+  .page h1 {{font-size:2.25rem;font-weight:800;letter-spacing:-0.03em;margin-bottom:0.5rem;}}
+  .page h1 .gradient {{
+    background:linear-gradient(135deg,var(--accent-light),var(--accent));
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  }}
+  .page-sub {{color:var(--text-muted);font-size:1rem;line-height:1.6;margin-bottom:2rem;}}
+
+  /* Workflow */
+  .workflow {{
+    display:flex;align-items:center;justify-content:center;gap:0.5rem;
+    margin-bottom:2rem;padding:1.25rem;
+    background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
+  }}
+  .wf-step {{text-align:center;flex:1;}}
+  .wf-icon {{font-size:1.5rem;margin-bottom:0.4rem;}}
+  .wf-title {{font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text);}}
+  .wf-desc {{font-size:0.7rem;color:var(--text-dim);margin-top:0.2rem;line-height:1.4;}}
+  .wf-arrow {{color:var(--accent);font-size:1.25rem;opacity:0.7;}}
+
+  /* Card */
+  .card {{
+    background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
+    padding:2rem;
+  }}
+  .field-label {{
+    font-size:0.7rem;font-weight:700;color:var(--text-dim);
+    text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.5rem;display:block;
+  }}
+  .card input[type=text] {{
+    width:100%;background:rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.1);
+    border-radius:var(--radius-sm);padding:0.8rem 1rem;color:var(--text);
+    font-size:0.95rem;font-family:inherit;outline:none;transition:var(--transition);
+  }}
+  .card input[type=text]:focus {{border-color:var(--accent);box-shadow:0 0 0 3px rgba(16,185,129,0.15);}}
+  .card input[type=text]::placeholder {{color:#475569;}}
+  .card button {{
+    width:100%;margin-top:0.75rem;
+    background:linear-gradient(135deg,var(--accent),#059669);color:#fff;border:none;
+    border-radius:var(--radius-sm);padding:0.85rem;font-weight:600;font-size:0.95rem;
+    font-family:inherit;cursor:pointer;transition:var(--transition);
+  }}
+  .card button:hover {{transform:translateY(-2px);box-shadow:0 8px 24px rgba(16,185,129,0.35);}}
+  .hint {{font-size:0.75rem;color:#475569;margin-top:0.5rem;}}
+
+  /* Result */
+  .result {{margin-top:1.5rem;padding-top:1.5rem;border-top:1px solid var(--border);}}
+  .result-stamp {{
+    display:inline-flex;align-items:center;gap:0.4rem;
+    font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;
+    color:var(--accent-light);background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.2);
+    padding:0.3rem 0.7rem;border-radius:9999px;margin-bottom:1rem;
+  }}
+  .result-addr {{font-size:1.25rem;font-weight:700;color:var(--text);margin-bottom:1rem;}}
+  .result-row {{display:flex;justify-content:space-between;padding:0.5rem 0;font-size:0.9rem;border-bottom:1px solid var(--border);}}
+  .result-row .k {{color:var(--text-dim);font-size:0.8rem;text-transform:uppercase;letter-spacing:0.04em;font-weight:600;}}
+  .result-row .v {{color:var(--text);font-weight:500;}}
+  .result-ready {{font-size:0.85rem;color:var(--accent-light);margin-top:1rem;}}
+
+  .pdf-preview {{margin-top:1.25rem;border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;}}
+  .pdf-preview-label {{
+    font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;
+    color:var(--text-dim);padding:0.6rem 1rem;background:rgba(255,255,255,0.03);
+    border-bottom:1px solid var(--border);
+  }}
+  .pdf-frame {{width:100%;height:560px;border:none;background:#fff;}}
+  .pdf-mobile {{display:none;padding:1.5rem;text-align:center;background:rgba(255,255,255,0.02);}}
+  .pdf-mobile a {{color:var(--accent-light);font-weight:600;font-size:0.9rem;text-decoration:none;}}
+  .pdf-mobile a:hover {{text-decoration:underline;}}
   @media(max-width:768px){{
-    .pdf-frame{{display:none;}}
-    .pdf-mobile{{display:block;}}
-    .site-logo{{position:static;margin-bottom:16px;text-align:center;}}
-    .site-logo img{{width:48px;height:48px;}}
+    .pdf-frame {{display:none;}}
+    .pdf-mobile {{display:block;}}
   }}
-  .download-btn{{margin-top:18px;display:block;text-align:center;background:var(--brass);color:#2A1D08;
-    text-decoration:none;font-weight:500;font-size:14px;padding:13px;border-radius:2px;}}
-  .download-btn:hover{{background:var(--brass-soft);}}
-  .disclaimer{{margin-top:14px;font-size:11.5px;color:var(--text-muted);line-height:1.5;font-style:italic;}}
-  .share-section{{margin-top:20px;padding-top:18px;border-top:1px dashed var(--paper-line);}}
-  .share-label{{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:0.08em;
-    text-transform:uppercase;color:var(--text-muted);margin-bottom:10px;display:block;text-align:center;}}
-  .share-buttons{{display:flex;gap:8px;justify-content:center;}}
-  .share-btn{{flex:1;max-width:140px;padding:10px 14px;text-align:center;text-decoration:none;
-    border-radius:2px;font-size:13px;font-weight:500;transition:opacity 0.2s;display:flex;
-    align-items:center;justify-content:center;gap:6px;}}
-  .share-btn:hover{{opacity:0.85;}}
-  .share-twitter{{background:#1DA1F2;color:white;}}
-  .share-linkedin{{background:#0A66C2;color:white;}}
-  .share-copy{{background:var(--ink-soft);color:var(--text-on-ink);cursor:pointer;border:1px solid rgba(255,255,255,0.1);}}
-  .share-copy.copied{{background:var(--green);border-color:var(--green);}}
-  .error{{margin-top:22px;padding:14px 16px;background:rgba(139,58,44,0.08);
-    border:1px solid rgba(139,58,44,0.3);border-radius:2px;font-size:13px;color:#7A3527;}}
-  .warning-note{{margin:14px 0 10px;padding:12px 14px;background:rgba(169,119,47,0.08);
-    border:1px solid rgba(169,119,47,0.25);border-radius:4px;font-size:12.5px;color:#6B5220;line-height:1.5;}}
-  .warning-note .wn-title{{font-family:'IBM Plex Mono',monospace;font-size:10.5px;font-weight:500;
-    letter-spacing:0.04em;text-transform:uppercase;margin-bottom:4px;color:var(--brass);}}
-  .workflow{{display:flex;align-items:center;justify-content:center;gap:0;margin:0 0 30px;padding:0 4px;}}
-  .wf-step{{text-align:center;flex:1;}}
-  .wf-icon{{font-size:22px;margin-bottom:6px;}}
-  .wf-title{{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.06em;
-    text-transform:uppercase;color:var(--text-on-ink);font-weight:500;}}
-  .wf-desc{{font-size:11px;color:var(--text-on-ink-muted);margin-top:3px;line-height:1.4;}}
-  .wf-arrow{{color:var(--brass);font-size:16px;margin:0 2px;flex-shrink:0;opacity:0.7;}}
-  .integration-actions{{display:flex;gap:8px;margin:18px 0 0;flex-wrap:wrap;}}
-  .int-btn{{flex:1;min-width:120px;padding:10px 12px;font-size:12px;font-weight:500;border:1px solid var(--paper-line);
-    background:#FFFDF7;color:var(--text-on-paper);border-radius:2px;cursor:pointer;
-    font-family:'IBM Plex Mono',monospace;letter-spacing:0.02em;transition:border-color 0.2s;}}
-  .int-btn:hover{{border-color:var(--brass);}}
-  .modal{{position:fixed;inset:0;background:rgba(23,27,36,0.85);display:flex;align-items:center;
+
+  .download-btn {{
+    margin-top:1rem;display:block;text-align:center;
+    background:linear-gradient(135deg,var(--accent),#059669);color:#fff;
+    font-weight:600;font-size:0.9rem;padding:0.85rem;border-radius:var(--radius-sm);
+    text-decoration:none;transition:var(--transition);
+  }}
+  .download-btn:hover {{transform:translateY(-2px);box-shadow:0 8px 24px rgba(16,185,129,0.35);}}
+  .disclaimer {{margin-top:1rem;font-size:0.75rem;color:var(--text-dim);line-height:1.5;font-style:italic;}}
+
+  /* Integration buttons */
+  .integration-actions {{display:flex;gap:0.5rem;margin:1.25rem 0 0;flex-wrap:wrap;}}
+  .int-btn {{
+    flex:1;min-width:110px;padding:0.6rem 0.75rem;font-size:0.75rem;font-weight:600;
+    border:1px solid var(--border);background:var(--bg-card);color:var(--text-muted);
+    border-radius:var(--radius-sm);cursor:pointer;font-family:inherit;
+    letter-spacing:0.02em;transition:var(--transition);
+  }}
+  .int-btn:hover {{border-color:var(--accent);color:var(--accent-light);}}
+
+  /* Modals */
+  .modal {{position:fixed;inset:0;background:rgba(15,23,42,0.9);display:flex;align-items:center;
     justify-content:center;z-index:1000;padding:20px;}}
-  .modal-box{{background:var(--paper);padding:28px 24px;border-radius:4px;width:100%;max-width:360px;
-    position:relative;border-top:2px solid var(--brass);}}
-  .modal-title{{font-family:'Source Serif 4',serif;font-size:18px;font-weight:600;color:var(--text-on-paper);margin:0 0 16px;}}
-  .modal-desc{{font-size:13px;color:var(--text-muted);margin:0 0 12px;line-height:1.5;}}
-  .modal-input{{width:100%;font-family:'IBM Plex Mono',monospace;font-size:13px;padding:11px 12px;
-    border:1px solid var(--paper-line);background:#FFFDF7;color:var(--text-on-paper);
-    border-radius:2px;outline:none;margin-bottom:10px;}}
-  .modal-input:focus{{border-color:var(--brass);}}
-  .modal-submit{{width:100%;padding:12px;background:var(--ink);color:var(--text-on-ink);border:none;
-    font-family:'Inter',sans-serif;font-size:13px;font-weight:500;border-radius:2px;cursor:pointer;}}
-  .modal-submit:hover{{background:var(--ink-soft);}}
-  .modal-close{{position:absolute;top:12px;right:14px;background:none;border:none;font-size:20px;
-    color:var(--text-muted);cursor:pointer;}}
-  .modal-status{{margin-top:10px;font-size:12px;color:var(--text-muted);font-family:'IBM Plex Mono',monospace;}}
-  .modal-status.success{{color:var(--green);}}
-  .modal-status.fail{{color:#7A3527;}}
-  .trust-checks{{display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:24px;padding:0 4px;}}
-  .trust-check{{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--text-on-ink);
-    letter-spacing:0.02em;}}
-  .trust-tagline{{font-family:'Source Serif 4',serif;font-size:13px;font-style:italic;
-    color:var(--brass-soft);margin-top:14px;padding:0 4px;}}
-  .trust{{display:flex;gap:16px;margin-top:28px;padding:0 4px;}}
-  .trust-item{{flex:1;text-align:center;}}
-  .trust-val{{font-family:'Source Serif 4',serif;font-size:20px;font-weight:600;color:var(--brass);}}
-  .trust-label{{font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:0.06em;
-    text-transform:uppercase;color:var(--text-on-ink-muted);margin-top:4px;}}
-  .foot{{text-align:center;margin-top:24px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;
-    color:var(--text-on-ink-muted);letter-spacing:0.03em;}}
-  .foot a{{color:var(--brass-soft);text-decoration:none;}}
-  .foot a:hover{{text-decoration:underline;}}
+  .modal-box {{
+    background:var(--bg-elevated);padding:2rem;border-radius:var(--radius);width:100%;max-width:380px;
+    position:relative;border:1px solid var(--border);
+  }}
+  .modal-title {{font-size:1.1rem;font-weight:700;color:var(--text);margin:0 0 1rem;}}
+  .modal-desc {{font-size:0.85rem;color:var(--text-muted);margin:0 0 0.75rem;line-height:1.5;}}
+  .modal-input {{
+    width:100%;font-family:inherit;font-size:0.9rem;padding:0.7rem 0.85rem;
+    border:1px solid rgba(255,255,255,0.1);background:rgba(0,0,0,0.3);color:var(--text);
+    border-radius:var(--radius-sm);outline:none;margin-bottom:0.6rem;
+  }}
+  .modal-input:focus {{border-color:var(--accent);}}
+  .modal-submit {{
+    width:100%;padding:0.75rem;background:var(--accent);color:#fff;border:none;
+    font-family:inherit;font-size:0.9rem;font-weight:600;border-radius:var(--radius-sm);cursor:pointer;
+  }}
+  .modal-submit:hover {{background:#059669;}}
+  .modal-close {{position:absolute;top:0.75rem;right:1rem;background:none;border:none;font-size:1.5rem;
+    color:var(--text-dim);cursor:pointer;}}
+  .modal-status {{margin-top:0.6rem;font-size:0.8rem;color:var(--text-dim);}}
+  .modal-status.success {{color:var(--accent-light);}}
+  .modal-status.fail {{color:#f87171;}}
+
+  /* Share */
+  .share-section {{margin-top:1.25rem;padding-top:1.25rem;border-top:1px solid var(--border);}}
+  .share-label {{font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;
+    color:var(--text-dim);margin-bottom:0.6rem;display:block;text-align:center;}}
+  .share-buttons {{display:flex;gap:0.5rem;justify-content:center;}}
+  .share-btn {{
+    flex:1;max-width:130px;padding:0.6rem 0.75rem;text-align:center;text-decoration:none;
+    border-radius:var(--radius-sm);font-size:0.8rem;font-weight:600;transition:opacity 0.2s;
+    display:flex;align-items:center;justify-content:center;gap:0.4rem;
+  }}
+  .share-btn:hover {{opacity:0.85;}}
+  .share-twitter {{background:#1DA1F2;color:white;}}
+  .share-linkedin {{background:#0A66C2;color:white;}}
+  .share-copy {{background:var(--bg-card);color:var(--text-muted);cursor:pointer;border:1px solid var(--border);}}
+  .share-copy.copied {{background:var(--accent);border-color:var(--accent);color:#fff;}}
+
+  /* Warning / Error */
+  .error {{
+    margin-top:1.25rem;padding:1rem;background:rgba(248,113,113,0.08);
+    border:1px solid rgba(248,113,113,0.2);border-radius:var(--radius-sm);
+    font-size:0.85rem;color:#f87171;
+  }}
+  .warning-note {{
+    margin:1rem 0 0.75rem;padding:0.85rem 1rem;background:rgba(251,191,36,0.08);
+    border:1px solid rgba(251,191,36,0.2);border-radius:var(--radius-sm);
+    font-size:0.8rem;color:#fbbf24;line-height:1.5;
+  }}
+  .warning-note .wn-title {{font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:0.25rem;}}
+
+  /* Trust */
+  .trust {{display:flex;gap:1.5rem;margin-top:2rem;justify-content:center;}}
+  .trust-item {{text-align:center;}}
+  .trust-val {{font-size:1.25rem;font-weight:800;color:var(--accent-light);}}
+  .trust-label {{font-size:0.7rem;color:var(--text-dim);margin-top:0.2rem;font-weight:500;text-transform:uppercase;letter-spacing:0.04em;}}
+
+  /* Footer */
+  .foot {{text-align:center;margin-top:2rem;font-size:0.8rem;color:var(--text-dim);line-height:1.6;}}
+  .foot a {{color:var(--accent-light);text-decoration:none;}}
+  .foot a:hover {{text-decoration:underline;}}
+
+  @media(max-width:600px){{
+    .page h1 {{font-size:1.75rem;}}
+    .workflow {{flex-direction:column;gap:1rem;}}
+    .wf-arrow {{transform:rotate(90deg);}}
+    .nav-links {{display:none;}}
+  }}
 </style>
 </head>
 <body>
-  <div class="stage">
-    <div class="site-logo"><a href="/"><img src="/static/logo.webp" alt="TXTAnOffer"></a></div>
-    <h1 id="headline"></h1>
-    <p class="sub">Agents spend up to 45 minutes preparing purchase offers. TxtAnOffer reduces that to under 10 seconds.</p>
+  <nav class="nav">
+    <div class="nav-left">
+      <div class="nav-logo"><img src="/static/logo.webp" alt="TxtAnOffer"></div>
+      <span>TxtAnOffer</span>
+    </div>
+    <div class="nav-links">
+      <a href="/">Home</a>
+      <a href="/pricing">Pricing</a>
+      <a href="/login">Log In</a>
+    </div>
+    <a href="/signup" class="nav-cta">Start Free Trial</a>
+  </nav>
+
+  <div class="page">
+    <div class="page-badge">Live Demo</div>
+    <h1>Get a purchase offer<br><span class="gradient">in 10 seconds.</span></h1>
+    <p class="page-sub">Agents spend up to 45 minutes preparing purchase offers. TxtAnOffer reduces that to under 10 seconds.</p>
+
     <div class="workflow">
       <div class="wf-step"><div class="wf-icon">&#9993;</div><div class="wf-title">You type</div><div class="wf-desc">725k 3% 21day<br>1234 Main St</div></div>
       <div class="wf-arrow">&rarr;</div>
@@ -1090,33 +1195,7 @@ DEMO_FORM = """
       <div class="wf-arrow">&rarr;</div>
       <div class="wf-step"><div class="wf-icon">&#9998;</div><div class="wf-title">Contract ready</div><div class="wf-desc">TREC 20-19 PDF<br>filled &amp; downloadable</div></div>
     </div>
-    <script>
-      const lines = ['Get a purchase offer', 'in 10 seconds.'];
-      const headline = document.getElementById('headline');
-      let lineIdx = 0, charIdx = 0, currentText = '';
 
-      function type() {{{{
-        if (lineIdx >= lines.length) return;
-
-        const line = lines[lineIdx];
-        if (charIdx < line.length) {{{{
-          currentText += line[charIdx];
-          headline.innerHTML = currentText + (lineIdx === 0 ? '' : '');
-          charIdx++;
-          setTimeout(type, 80);
-        }}}} else {{{{
-          if (lineIdx < lines.length - 1) {{{{
-            setTimeout(() => {{{{
-              currentText += '<br>';
-              lineIdx++;
-              charIdx = 0;
-              type();
-            }}}}, 400);
-          }}}}
-        }}}}
-      }}}}
-      type();
-    </script>
     <div class="card">
       <form method="POST" action="/demo">
         <label class="field-label">Offer details</label>
@@ -1126,17 +1205,13 @@ DEMO_FORM = """
       </form>
       {result_html}
     </div>
-    <div class="trust-checks">
-      <div class="trust-check">&check; Official TREC 20-19</div>
-      <div class="trust-check">&check; Agent reviews before signing</div>
-      <div class="trust-check">&check; Texas compliant</div>
-    </div>
-    <div class="trust-tagline">Built specifically for Texas REALTORS&reg;</div>
+
     <div class="trust">
       <div class="trust-item"><div class="trust-val">&lt;10s</div><div class="trust-label">Generation</div></div>
       <div class="trust-item"><div class="trust-val">45 min</div><div class="trust-label">Saved per offer</div></div>
       <div class="trust-item"><div class="trust-val">TREC</div><div class="trust-label">20-19 Compliant</div></div>
     </div>
+
     <div class="foot">
       By texting or using this service, you consent to receive SMS responses. Reply STOP to opt out anytime. Msg &amp; data rates may apply.
       <br><a href="/pricing">View Pricing</a> &middot; <a href="/terms">Terms</a> &middot; <a href="/privacy">Privacy</a>
@@ -1421,191 +1496,262 @@ def pricing():
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pricing - TxtAnOffer</title>
+<title>Pricing — TxtAnOffer</title>
 <meta name="description" content="TxtAnOffer pricing plans for Texas real estate agents. Generate TREC contracts instantly from $49/month.">
 <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-  :root{
-    --ink:#171B24; --ink-soft:#242938; --paper:#F3EEDF; --paper-line:#DCD3B8;
-    --brass:#A9772F; --brass-soft:#C9A466; --green:#3A5744;
-    --text-on-paper:#211E17; --text-muted:#847C68;
-    --text-on-ink:#E7E4D8; --text-on-ink-muted:#8B8A82;
+  :root {
+    --bg: #0f172a;
+    --bg-elevated: #1e293b;
+    --bg-card: rgba(255,255,255,0.03);
+    --border: rgba(255,255,255,0.06);
+    --border-hover: rgba(16,185,129,0.3);
+    --text: #f8fafc;
+    --text-muted: #94a3b8;
+    --text-dim: #64748b;
+    --accent: #10b981;
+    --accent-light: #34d399;
+    --radius: 1.25rem;
+    --radius-sm: 0.75rem;
+    --transition: all 0.2s ease;
   }
-  *{box-sizing:border-box;}
-  body{
-    background:var(--ink);
-    background-image:radial-gradient(circle at 15% 10%, rgba(169,119,47,0.06), transparent 45%),
-                      radial-gradient(circle at 85% 90%, rgba(169,119,47,0.04), transparent 40%);
-    min-height:100vh; margin:0; padding:48px 20px; font-family:'Inter',sans-serif;
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
   }
-  .container{max-width:1000px;margin:0 auto;}
-  .header{text-align:center;margin-bottom:48px;}
-  .logo{position:fixed;top:20px;left:24px;z-index:100;}
-  .logo img{width:54px;height:54px;border-radius:50%;border:1.5px solid var(--brass-soft);
-    opacity:0.9;transition:opacity 0.2s;}
-  .logo img:hover{opacity:1;}
-  h1{font-family:'Source Serif 4',serif;font-weight:600;font-size:42px;color:var(--text-on-ink);
-    margin:0 0 12px;letter-spacing:-0.01em;}
-  .tagline{color:var(--text-on-ink-muted);font-size:18px;line-height:1.6;max-width:600px;margin:0 auto;}
+  a { color:inherit; text-decoration:none; }
 
-  .pricing-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:20px;margin-bottom:48px;}
-  .pricing-card{background:var(--paper);border-radius:4px;padding:32px 28px;
-    border-top:3px solid var(--paper-line);box-shadow:0 24px 60px -20px rgba(0,0,0,0.5);
-    display:flex;flex-direction:column;}
-  .pricing-card.featured{border-top-color:var(--brass);position:relative;}
-  .featured-badge{position:absolute;top:-12px;left:50%;transform:translateX(-50%);
-    font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:0.08em;
-    text-transform:uppercase;color:var(--brass);background:var(--paper);
-    border:1px solid rgba(169,119,47,0.4);padding:3px 10px;border-radius:20px;white-space:nowrap;}
+  /* Nav */
+  .nav {
+    display:flex;align-items:center;justify-content:space-between;
+    padding:1rem 2rem;position:sticky;top:0;
+    background:rgba(15,23,42,0.9);backdrop-filter:blur(16px);
+    -webkit-backdrop-filter:blur(16px);
+    border-bottom:1px solid var(--border);z-index:100;
+  }
+  .nav-left {display:flex;align-items:center;gap:0.6rem;font-weight:700;font-size:1.1rem;letter-spacing:-0.02em;}
+  .nav-logo {width:34px;height:34px;border-radius:50%;overflow:hidden;}
+  .nav-logo img {width:100%;height:100%;object-fit:cover;}
+  .nav-links {display:flex;gap:2rem;font-size:0.875rem;font-weight:500;color:var(--text-muted);}
+  .nav-links a {transition:var(--transition);}
+  .nav-links a:hover {color:var(--text);}
+  .nav-cta {
+    background:var(--accent);color:#fff;padding:0.55rem 1.35rem;border-radius:9999px;
+    font-size:0.875rem;font-weight:600;text-decoration:none;display:inline-block;
+    transition:var(--transition);
+  }
+  .nav-cta:hover {transform:scale(1.05);box-shadow:0 0 24px rgba(16,185,129,0.4);}
 
-  .plan-name{font-family:'Source Serif 4',serif;font-size:22px;font-weight:600;
-    color:var(--text-on-paper);margin:0 0 6px;}
-  .plan-desc{font-size:13px;color:var(--text-muted);margin:0 0 20px;line-height:1.4;}
-  .price-row{display:flex;align-items:baseline;gap:4px;margin-bottom:20px;}
-  .price-current{font-size:40px;font-weight:600;color:var(--text-on-paper);}
-  .price-period{font-size:14px;color:var(--text-muted);}
+  /* Header */
+  .page-header {text-align:center;padding:4rem 2rem 3rem;max-width:700px;margin:0 auto;}
+  .page-header h1 {font-size:2.75rem;font-weight:800;letter-spacing:-0.03em;margin-bottom:0.75rem;}
+  .page-header h1 .gradient {
+    background:linear-gradient(135deg,var(--accent-light),var(--accent));
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  }
+  .page-header p {color:var(--text-muted);font-size:1.1rem;line-height:1.6;}
 
-  .features{list-style:none;padding:0;margin:0 0 24px;flex:1;}
-  .features li{padding:8px 0;font-size:13.5px;color:var(--text-on-paper);
-    display:flex;align-items:start;gap:8px;}
-  .check{color:var(--green);font-weight:600;font-size:14px;}
+  /* Pricing Grid */
+  .pricing-grid {
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1.25rem;
+    max-width:1100px;margin:0 auto;padding:0 2rem 3rem;
+  }
+  .pricing-card {
+    background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
+    padding:2rem 1.75rem;display:flex;flex-direction:column;transition:var(--transition);
+  }
+  .pricing-card:hover {transform:translateY(-4px);border-color:var(--border-hover);}
+  .pricing-card.featured {border-color:var(--accent);position:relative;}
+  .featured-badge {
+    position:absolute;top:-0.75rem;left:50%;transform:translateX(-50%);
+    font-size:0.65rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;
+    color:var(--accent-light);background:var(--bg);
+    border:1px solid var(--accent);padding:0.25rem 0.75rem;border-radius:9999px;white-space:nowrap;
+  }
 
-  .cta-btn{display:block;width:100%;padding:14px;background:var(--ink);color:var(--text-on-ink);
-    border:none;font-family:'Inter',sans-serif;font-size:14px;font-weight:600;
-    border-radius:4px;cursor:pointer;text-decoration:none;text-align:center;}
-  .cta-btn:hover{background:var(--ink-soft);}
-  .cta-btn.brass{background:var(--brass);color:#2A1D08;}
-  .cta-btn.brass:hover{background:var(--brass-soft);}
-  .cta-btn.outline{background:transparent;border:1px solid var(--paper-line);color:var(--text-on-paper);}
-  .cta-btn.outline:hover{border-color:var(--brass);}
+  .plan-name {font-size:1.25rem;font-weight:700;color:var(--text);margin-bottom:0.25rem;}
+  .plan-desc {font-size:0.85rem;color:var(--text-dim);margin-bottom:1.25rem;line-height:1.4;}
+  .price-row {display:flex;align-items:baseline;gap:0.25rem;margin-bottom:1.25rem;}
+  .price-current {font-size:2.5rem;font-weight:800;color:var(--text);}
+  .price-period {font-size:0.9rem;color:var(--text-dim);}
 
-  .value-props{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:24px;
-    margin-top:48px;}
-  .value-card{background:rgba(243,238,223,0.08);padding:24px;border-radius:4px;
-    border:1px solid rgba(243,238,223,0.12);}
-  .value-title{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.08em;
-    text-transform:uppercase;color:var(--brass-soft);margin-bottom:8px;}
-  .value-text{color:var(--text-on-ink-muted);font-size:14px;line-height:1.6;}
+  .features {list-style:none;margin:0 0 1.5rem;flex:1;}
+  .features li {
+    padding:0.5rem 0;font-size:0.85rem;color:var(--text-muted);
+    display:flex;align-items:start;gap:0.5rem;
+  }
+  .check {color:var(--accent-light);font-weight:700;font-size:0.9rem;}
 
-  .back-link{text-align:center;margin-top:32px;}
-  .back-link a{color:var(--brass-soft);text-decoration:none;font-size:14px;}
-  .back-link a:hover{text-decoration:underline;}
-  .terms-note{text-align:center;font-size:12px;color:var(--text-on-ink-muted);margin-top:20px;}
-  .terms-note a{color:var(--brass-soft);text-decoration:underline;}
+  .cta-btn {
+    display:block;width:100%;padding:0.85rem;
+    background:linear-gradient(135deg,var(--accent),#059669);color:#fff;
+    border:none;font-family:inherit;font-size:0.9rem;font-weight:600;
+    border-radius:var(--radius-sm);cursor:pointer;text-align:center;
+    transition:var(--transition);text-decoration:none;
+  }
+  .cta-btn:hover {transform:translateY(-2px);box-shadow:0 8px 24px rgba(16,185,129,0.35);}
+  .cta-btn.outline {
+    background:transparent;border:1px solid var(--border);color:var(--text-muted);
+  }
+  .cta-btn.outline:hover {border-color:var(--accent);color:var(--accent-light);transform:translateY(-2px);}
+
+  /* Value Props */
+  .value-section {max-width:1100px;margin:0 auto;padding:3rem 2rem;border-top:1px solid var(--border);}
+  .value-grid {display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:1.25rem;}
+  .value-card {
+    background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
+    padding:1.75rem;
+  }
+  .value-title {
+    font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;
+    color:var(--accent-light);margin-bottom:0.5rem;
+  }
+  .value-text {color:var(--text-muted);font-size:0.9rem;line-height:1.6;}
+
+  /* Footer */
+  .footer-note {text-align:center;padding:2rem;font-size:0.8rem;color:var(--text-dim);}
+  .footer-note a {color:var(--accent-light);}
+  .footer-note a:hover {text-decoration:underline;}
+
+  @media(max-width:600px) {
+    .page-header h1 {font-size:2rem;}
+    .pricing-grid {padding:0 1rem 2rem;}
+    .nav-links {display:none;}
+  }
 </style>
 </head>
 <body>
-  <div class="container">
-    <div class="header">
-      <div class="logo"><a href="/"><img src="/static/logo.webp" alt="TXTAnOffer"></a></div>
-      <h1>Simple pricing.<br>Massive time savings.</h1>
-      <p class="tagline">Stop spending 45 minutes per offer. Pick a plan and start generating contracts in seconds.</p>
+
+<nav class="nav">
+  <a href="/" class="nav-left">
+    <div class="nav-logo"><img src="/static/logo.webp" alt="TxtAnOffer"></div>
+    <span>TxtAnOffer</span>
+  </a>
+  <div class="nav-links">
+    <a href="/">Home</a>
+    <a href="/demo">Demo</a>
+    <a href="/login">Log In</a>
+  </div>
+  <a href="/signup" class="nav-cta">Start Free Trial</a>
+</nav>
+
+<div class="page-header">
+  <h1>Simple pricing.<br><span class="gradient">Massive time savings.</span></h1>
+  <p>Stop spending 45 minutes per offer. Pick a plan and start generating contracts in seconds.</p>
+</div>
+
+<div class="pricing-grid">
+
+  <div class="pricing-card">
+    <h2 class="plan-name">Starter</h2>
+    <p class="plan-desc">For individual agents getting started.</p>
+    <div class="price-row">
+      <span class="price-current">$49</span>
+      <span class="price-period">/month</span>
     </div>
+    <ul class="features">
+      <li><span class="check">&#10003;</span> Unlimited offers</li>
+      <li><span class="check">&#10003;</span> TREC 20-19 generation</li>
+      <li><span class="check">&#10003;</span> SMS + Web access</li>
+      <li><span class="check">&#10003;</span> Agent profile auto-fill</li>
+      <li><span class="check">&#10003;</span> Email delivery</li>
+    </ul>
+    <form action="/create-checkout-session" method="POST">
+      <input type="hidden" name="plan" value="starter">
+      <button type="submit" class="cta-btn">Get Started</button>
+    </form>
+  </div>
 
-    <div class="pricing-grid">
-
-      <div class="pricing-card">
-        <h2 class="plan-name">Starter</h2>
-        <p class="plan-desc">For individual agents getting started.</p>
-        <div class="price-row">
-          <span class="price-current">$49</span>
-          <span class="price-period">/month</span>
-        </div>
-        <ul class="features">
-          <li><span class="check">&#10003;</span> Unlimited offers</li>
-          <li><span class="check">&#10003;</span> TREC 20-19 generation</li>
-          <li><span class="check">&#10003;</span> SMS + Web access</li>
-          <li><span class="check">&#10003;</span> Agent profile auto-fill</li>
-          <li><span class="check">&#10003;</span> Email delivery</li>
-        </ul>
-        <form action="/create-checkout-session" method="POST">
-          <input type="hidden" name="plan" value="starter">
-          <button type="submit" class="cta-btn">Get Started</button>
-        </form>
-      </div>
-
-      <div class="pricing-card featured">
-        <span class="featured-badge">Most Popular</span>
-        <h2 class="plan-name">Professional</h2>
-        <p class="plan-desc">For active agents who close multiple deals monthly.</p>
-        <div class="price-row">
-          <span class="price-current">$99</span>
-          <span class="price-period">/month</span>
-        </div>
-        <ul class="features">
-          <li><span class="check">&#10003;</span> Everything in Starter</li>
-          <li><span class="check">&#10003;</span> DocuSign integration</li>
-          <li><span class="check">&#10003;</span> Webhook / CRM sync</li>
-          <li><span class="check">&#10003;</span> Priority support</li>
-          <li><span class="check">&#10003;</span> Custom cover page</li>
-        </ul>
-        <form action="/create-checkout-session" method="POST">
-          <input type="hidden" name="plan" value="professional">
-          <button type="submit" class="cta-btn brass">Get Professional</button>
-        </form>
-      </div>
-
-      <div class="pricing-card">
-        <h2 class="plan-name">Brokerage</h2>
-        <p class="plan-desc">For teams and offices with multiple agents.</p>
-        <div class="price-row">
-          <span class="price-current">$299</span>
-          <span class="price-period">/month</span>
-        </div>
-        <ul class="features">
-          <li><span class="check">&#10003;</span> Everything in Professional</li>
-          <li><span class="check">&#10003;</span> Up to 10 agent seats</li>
-          <li><span class="check">&#10003;</span> Brokerage branding</li>
-          <li><span class="check">&#10003;</span> Team analytics dashboard</li>
-          <li><span class="check">&#10003;</span> Dedicated onboarding</li>
-        </ul>
-        <form action="/create-checkout-session" method="POST">
-          <input type="hidden" name="plan" value="brokerage">
-          <button type="submit" class="cta-btn">Get Brokerage</button>
-        </form>
-      </div>
-
-      <div class="pricing-card">
-        <h2 class="plan-name">Enterprise</h2>
-        <p class="plan-desc">For large brokerages and franchises.</p>
-        <div class="price-row">
-          <span class="price-current">Custom</span>
-        </div>
-        <ul class="features">
-          <li><span class="check">&#10003;</span> Everything in Brokerage</li>
-          <li><span class="check">&#10003;</span> Unlimited seats</li>
-          <li><span class="check">&#10003;</span> MLS integration</li>
-          <li><span class="check">&#10003;</span> White-label option</li>
-          <li><span class="check">&#10003;</span> SLA &amp; dedicated support</li>
-        </ul>
-        <a href="mailto:hello@txtanoffer.com?subject=Enterprise%20Plan" class="cta-btn outline">Contact Us</a>
-      </div>
-
+  <div class="pricing-card featured">
+    <span class="featured-badge">Most Popular</span>
+    <h2 class="plan-name">Professional</h2>
+    <p class="plan-desc">For active agents who close multiple deals monthly.</p>
+    <div class="price-row">
+      <span class="price-current">$99</span>
+      <span class="price-period">/month</span>
     </div>
+    <ul class="features">
+      <li><span class="check">&#10003;</span> Everything in Starter</li>
+      <li><span class="check">&#10003;</span> DocuSign integration</li>
+      <li><span class="check">&#10003;</span> Webhook / CRM sync</li>
+      <li><span class="check">&#10003;</span> Priority support</li>
+      <li><span class="check">&#10003;</span> Custom cover page</li>
+    </ul>
+    <form action="/create-checkout-session" method="POST">
+      <input type="hidden" name="plan" value="professional">
+      <button type="submit" class="cta-btn">Get Professional</button>
+    </form>
+  </div>
 
-    <p class="terms-note">All plans cancel anytime. No contracts. By subscribing you agree to our <a href="/terms">Terms of Service</a>.</p>
-
-    <div class="value-props">
-      <div class="value-card">
-        <div class="value-title">Time ROI</div>
-        <div class="value-text">Save 45 minutes per offer. At 5 offers/month, that's 3.75 hours back — worth $187-$562 of your time.</div>
-      </div>
-      <div class="value-card">
-        <div class="value-title">Zero Errors</div>
-        <div class="value-text">Math calculated automatically. No more "$21,750 or 3%?" double-checking. Every field consistent.</div>
-      </div>
-      <div class="value-card">
-        <div class="value-title">Pays for Itself</div>
-        <div class="value-text">Starter pays for itself with a single offer. Everything after is pure time savings.</div>
-      </div>
+  <div class="pricing-card">
+    <h2 class="plan-name">Brokerage</h2>
+    <p class="plan-desc">For teams and offices with multiple agents.</p>
+    <div class="price-row">
+      <span class="price-current">$299</span>
+      <span class="price-period">/month</span>
     </div>
+    <ul class="features">
+      <li><span class="check">&#10003;</span> Everything in Professional</li>
+      <li><span class="check">&#10003;</span> Up to 10 agent seats</li>
+      <li><span class="check">&#10003;</span> Brokerage branding</li>
+      <li><span class="check">&#10003;</span> Team analytics dashboard</li>
+      <li><span class="check">&#10003;</span> Dedicated onboarding</li>
+    </ul>
+    <form action="/create-checkout-session" method="POST">
+      <input type="hidden" name="plan" value="brokerage">
+      <button type="submit" class="cta-btn">Get Brokerage</button>
+    </form>
+  </div>
 
-    <div class="back-link">
-      <a href="/demo">&larr; Back to demo</a>
+  <div class="pricing-card">
+    <h2 class="plan-name">Enterprise</h2>
+    <p class="plan-desc">For large brokerages and franchises.</p>
+    <div class="price-row">
+      <span class="price-current">Custom</span>
+    </div>
+    <ul class="features">
+      <li><span class="check">&#10003;</span> Everything in Brokerage</li>
+      <li><span class="check">&#10003;</span> Unlimited seats</li>
+      <li><span class="check">&#10003;</span> MLS integration</li>
+      <li><span class="check">&#10003;</span> White-label option</li>
+      <li><span class="check">&#10003;</span> SLA &amp; dedicated support</li>
+    </ul>
+    <a href="mailto:hello@txtanoffer.com?subject=Enterprise%20Plan" class="cta-btn outline">Contact Us</a>
+  </div>
+
+</div>
+
+<div class="value-section">
+  <div class="value-grid">
+    <div class="value-card">
+      <div class="value-title">Time ROI</div>
+      <div class="value-text">Save 45 minutes per offer. At 5 offers/month, that's 3.75 hours back &mdash; worth $187-$562 of your time.</div>
+    </div>
+    <div class="value-card">
+      <div class="value-title">Zero Errors</div>
+      <div class="value-text">Math calculated automatically. No more "$21,750 or 3%?" double-checking. Every field consistent.</div>
+    </div>
+    <div class="value-card">
+      <div class="value-title">Pays for Itself</div>
+      <div class="value-text">Starter pays for itself with a single offer. Everything after is pure time savings.</div>
     </div>
   </div>
+</div>
+
+<div class="footer-note">
+  All plans cancel anytime. No contracts. By subscribing you agree to our <a href="/terms">Terms of Service</a>.
+  <br><br>
+  <a href="/demo">&larr; Try the demo</a> &middot; <a href="/">Home</a>
+</div>
+
 </body>
 </html>
 """
