@@ -1494,9 +1494,26 @@ def signup():
             try:
                 create_user(phone)
                 track_event("signup", phone, {"name": name, "email": email})
+                # Send welcome SMS
+                from twilio.rest import Client
+                twilio_sid = os.environ.get("TWILIO_ACCOUNT_SID", "")
+                twilio_token = os.environ.get("TWILIO_AUTH_TOKEN", "")
+                twilio_from = os.environ.get("TWILIO_PHONE_NUMBER", "+18338970333")
+                if twilio_sid and twilio_token:
+                    client = Client(twilio_sid, twilio_token)
+                    client.messages.create(
+                        body=(
+                            "Welcome to TxtAnOffer! "
+                            "Text an offer like: 725k 3% 21day 123 Main St, Austin TX\n\n"
+                            "Reply HELP for all commands. "
+                            "Msg & data rates may apply. Reply STOP to opt out."
+                        ),
+                        from_=twilio_from,
+                        to=phone,
+                    )
             except Exception:
                 pass
-            success_msg = '<div class="success">You\'re signed up! Text your offer details to <strong>+1 (833) 897-0333</strong> to get started.</div>'
+            success_msg = '<div class="success">You\'re signed up! Check your texts for a welcome message.</div>'
 
     return f"""<!DOCTYPE html>
 <html lang="en">
