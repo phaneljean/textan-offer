@@ -325,8 +325,11 @@ def process_offer(incoming_msg: str, source_id: str):
     return parsed, pdf_path, None, warnings
 
 
-@app.route("/sms", methods=["POST"])
+@app.route("/sms", methods=["GET", "POST"])
 def sms_reply():
+    if request.method == "GET":
+        return redirect("/")
+
     incoming_msg = request.values.get("Body", "")
     agent_phone = request.values.get("From", "")
 
