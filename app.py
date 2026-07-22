@@ -66,225 +66,577 @@ def index():
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TxtAnOffer - Generate TREC Contracts by Text Message</title>
-<meta name="description" content="Texas real estate agents: text your offer details and receive a filled TREC 1-4 contract PDF in seconds. No apps to download, no forms to fill.">
-<link rel="icon" href="/static/favicon.ico" type="image/x-icon">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
-<style>
-  :root{
-    --ink:#171B24; --ink-soft:#242938; --paper:#F3EEDF; --paper-line:#DCD3B8;
-    --brass:#A9772F; --brass-soft:#C9A466; --green:#3A5744;
-    --text-on-paper:#211E17; --text-muted:#847C68;
-    --text-on-ink:#E7E4D8; --text-on-ink-muted:#8B8A82;
-  }
-  *{box-sizing:border-box;}
-  body{
-    background:var(--ink);
-    background-image:radial-gradient(circle at 15% 10%, rgba(169,119,47,0.06), transparent 45%),
-                      radial-gradient(circle at 85% 90%, rgba(169,119,47,0.04), transparent 40%);
-    min-height:100vh; margin:0; padding:0; font-family:'Inter',sans-serif;
-    color:var(--text-on-ink);
-  }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TxtAnOffer — Generate TREC Contracts by Text Message</title>
+  <meta name="description" content="Texas real estate agents: text your offer details and receive a filled TREC 1-4 contract PDF in under 10 seconds. No app required.">
+  <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0f172a;
+      --bg-elevated: #1e293b;
+      --bg-card: rgba(255,255,255,0.03);
+      --border: rgba(255,255,255,0.06);
+      --border-hover: rgba(16,185,129,0.3);
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      --accent: #10b981;
+      --accent-light: #34d399;
+      --accent-glow: rgba(16,185,129,0.25);
+      --radius: 1.25rem;
+      --radius-sm: 0.75rem;
+      --shadow: 0 25px 60px rgba(0,0,0,0.5);
+      --shadow-sm: 0 4px 12px rgba(0,0,0,0.15);
+      --transition: all 0.2s ease;
+    }
 
-  .nav{display:flex;align-items:center;justify-content:space-between;padding:20px 32px;max-width:1100px;margin:0 auto;}
-  .nav-logo{display:flex;align-items:center;gap:12px;text-decoration:none;}
-  .nav-logo img{width:44px;height:44px;border-radius:50%;border:1.5px solid var(--brass-soft);}
-  .nav-logo span{font-family:'Source Serif 4',serif;font-weight:600;font-size:20px;color:var(--text-on-ink);}
-  .nav-links{display:flex;gap:24px;align-items:center;}
-  .nav-links a{color:var(--text-on-ink-muted);text-decoration:none;font-size:14px;font-weight:500;transition:color 0.2s;}
-  .nav-links a:hover{color:var(--text-on-ink);}
-  .nav-cta{background:var(--brass);color:#fff;padding:10px 20px;border-radius:4px;font-weight:600;font-size:14px;text-decoration:none;transition:background 0.2s;}
-  .nav-cta:hover{background:var(--brass-soft);}
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    a { color: inherit; text-decoration: none; }
 
-  .hero{text-align:center;padding:80px 24px 60px;max-width:800px;margin:0 auto;}
-  h1{font-family:'Source Serif 4',serif;font-weight:600;font-size:48px;color:var(--text-on-ink);
-    margin:0 0 20px;letter-spacing:-0.02em;line-height:1.15;}
-  .hero p{color:var(--text-on-ink-muted);font-size:19px;line-height:1.6;max-width:600px;margin:0 auto 36px;}
-  .hero-cta{display:inline-block;background:var(--brass);color:#fff;padding:16px 36px;border-radius:4px;
-    font-weight:600;font-size:16px;text-decoration:none;transition:background 0.2s;}
-  .hero-cta:hover{background:var(--brass-soft);}
+    /* Nav */
+    .nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 2rem;
+      position: sticky;
+      top: 0;
+      background: rgba(15, 23, 42, 0.9);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      z-index: 100;
+    }
+    .nav-left {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-weight: 700;
+      font-size: 1.1rem;
+      letter-spacing: -0.02em;
+    }
+    .nav-logo {
+      width: 34px; height: 34px;
+      border-radius: 50%;
+      overflow: hidden;
+    }
+    .nav-logo img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+    }
+    .nav-links {
+      display: flex;
+      gap: 2rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+    .nav-links a { transition: var(--transition); }
+    .nav-links a:hover { color: var(--text); }
+    .nav-cta {
+      background: var(--accent);
+      color: #fff;
+      padding: 0.55rem 1.35rem;
+      border-radius: 9999px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      transition: var(--transition);
+      display: inline-block;
+      text-decoration: none;
+    }
+    .nav-cta:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 24px rgba(16,185,129,0.4);
+    }
 
-  .demo-box{max-width:480px;margin:48px auto 0;background:var(--ink-soft);border-radius:8px;
-    padding:28px 24px;border:1px solid rgba(169,119,47,0.15);text-align:left;}
-  .demo-label{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.1em;
-    text-transform:uppercase;color:var(--brass-soft);margin-bottom:14px;}
-  .demo-msg{background:var(--green);color:#fff;padding:12px 16px;border-radius:12px 12px 12px 2px;
-    font-size:14px;line-height:1.5;margin-bottom:10px;display:inline-block;max-width:85%;}
-  .demo-reply{background:var(--paper);color:var(--text-on-paper);padding:12px 16px;border-radius:12px 12px 2px 12px;
-    font-size:14px;line-height:1.5;margin-left:auto;display:block;max-width:85%;text-align:left;margin-top:8px;
-    float:right;}
-  .demo-clear{clear:both;}
+    /* Hero */
+    .hero {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4rem;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 5rem 2rem 6rem;
+      align-items: center;
+    }
+    .hero-left { display: flex; flex-direction: column; gap: 1.75rem; }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: rgba(16,185,129,0.1);
+      border: 1px solid rgba(16,185,129,0.2);
+      color: var(--accent-light);
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 0.35rem 0.85rem;
+      border-radius: 9999px;
+      width: fit-content;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .hero h1 {
+      font-size: 3.5rem;
+      font-weight: 800;
+      line-height: 1.05;
+      letter-spacing: -0.03em;
+    }
+    .hero h1 .gradient {
+      background: linear-gradient(135deg, var(--accent-light) 0%, var(--accent) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero-sub {
+      font-size: 1.125rem;
+      color: var(--text-muted);
+      line-height: 1.65;
+      max-width: 480px;
+    }
 
-  .live-demo{max-width:560px;margin:0 auto;background:var(--ink-soft);border-radius:8px;
-    padding:36px 32px;border:1px solid rgba(169,119,47,0.15);}
-  .live-demo h3{font-family:'Source Serif 4',serif;font-size:22px;color:var(--text-on-ink);margin:0 0 8px;}
-  .live-demo .demo-hint{color:var(--text-on-ink-muted);font-size:13px;margin-bottom:20px;line-height:1.5;}
-  .live-demo form{display:flex;gap:10px;}
-  .live-demo input{flex:1;padding:14px 16px;border-radius:4px;border:1px solid rgba(255,255,255,0.1);
-    background:var(--ink);color:var(--text-on-ink);font-size:15px;font-family:'IBM Plex Mono',monospace;}
-  .live-demo input::placeholder{color:var(--text-on-ink-muted);}
-  .live-demo button{background:var(--brass);color:#fff;border:none;padding:14px 24px;border-radius:4px;
-    font-weight:600;font-size:14px;cursor:pointer;transition:background 0.2s;white-space:nowrap;}
-  .live-demo button:hover{background:var(--brass-soft);}
-  .live-demo .demo-result{margin-top:20px;padding:20px;background:var(--ink);border-radius:6px;
-    border:1px solid rgba(169,119,47,0.12);display:none;}
-  .live-demo .demo-result.show{display:block;}
-  .live-demo .demo-result .res-label{font-family:'IBM Plex Mono',monospace;font-size:10px;
-    letter-spacing:0.1em;text-transform:uppercase;color:var(--brass-soft);margin-bottom:10px;}
-  .live-demo .demo-result .res-row{display:flex;justify-content:space-between;padding:6px 0;
-    border-bottom:1px solid rgba(255,255,255,0.05);font-size:14px;}
-  .live-demo .demo-result .res-row .k{color:var(--text-on-ink-muted);}
-  .live-demo .demo-result .res-row .v{color:var(--text-on-ink);font-weight:500;}
-  .live-demo .demo-result .res-link{display:inline-block;margin-top:14px;background:var(--green);
-    color:#fff;padding:10px 20px;border-radius:4px;text-decoration:none;font-size:14px;font-weight:500;}
-  .live-demo .demo-error{margin-top:14px;color:#e57373;font-size:14px;}
-  .live-demo .demo-loading{margin-top:14px;color:var(--brass-soft);font-size:14px;}
+    /* Input Card */
+    .input-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      backdrop-filter: blur(4px);
+    }
+    .input-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+    }
+    .input-row { display: flex; gap: 0.5rem; }
+    .input-row input {
+      flex: 1;
+      background: rgba(0,0,0,0.35);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: var(--radius-sm);
+      padding: 0.8rem 1rem;
+      color: var(--text);
+      font-size: 0.95rem;
+      font-family: inherit;
+      outline: none;
+      transition: var(--transition);
+    }
+    .input-row input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(16,185,129,0.15);
+    }
+    .input-row input::placeholder { color: #475569; }
+    .input-btn {
+      background: linear-gradient(135deg, var(--accent), #059669);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 0.8rem 1.5rem;
+      font-weight: 600;
+      font-size: 0.9rem;
+      font-family: inherit;
+      cursor: pointer;
+      transition: var(--transition);
+      white-space: nowrap;
+    }
+    .input-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(16,185,129,0.35);
+    }
+    .input-hint { font-size: 0.75rem; color: #475569; }
 
-  .trust-row{display:flex;justify-content:center;gap:32px;flex-wrap:wrap;margin-top:48px;}
-  .trust-item{text-align:center;}
-  .trust-val{font-family:'Source Serif 4',serif;font-size:28px;font-weight:600;color:var(--brass);}
-  .trust-label{font-size:12px;color:var(--text-on-ink-muted);margin-top:4px;}
+    /* Demo result */
+    .demo-loading{display:none;color:var(--accent-light);font-size:0.85rem;padding:0.5rem 0;}
+    .demo-error{display:none;color:#f87171;font-size:0.85rem;padding:0.5rem 0;}
+    .demo-result{
+      display:none;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);
+      border-radius:var(--radius-sm);padding:1rem;margin-top:0.5rem;
+    }
+    .demo-result.show{display:block;}
+    .demo-result .res-row{display:flex;justify-content:space-between;padding:4px 0;font-size:0.85rem;}
+    .demo-result .res-row .k{color:var(--text-dim);}
+    .demo-result .res-row .v{color:#e2e8f0;font-weight:500;}
+    .demo-result .res-link{
+      display:inline-block;margin-top:8px;color:var(--accent-light);font-size:0.85rem;font-weight:600;text-decoration:none;
+    }
+    .demo-result .res-link:hover{text-decoration:underline;}
 
-  .section{padding:80px 24px;max-width:1000px;margin:0 auto;}
-  .section-title{font-family:'Source Serif 4',serif;font-weight:600;font-size:32px;
-    color:var(--text-on-ink);text-align:center;margin:0 0 12px;}
-  .section-sub{text-align:center;color:var(--text-on-ink-muted);font-size:16px;margin:0 0 48px;line-height:1.5;}
+    /* Stats */
+    .stats { display: flex; gap: 2.5rem; margin-top: 0.25rem; }
+    .stat-num { font-size: 1.5rem; font-weight: 800; color: var(--text); line-height: 1; }
+    .stat-label { font-size: 0.75rem; color: var(--text-dim); margin-top: 0.25rem; font-weight: 500; }
 
-  .steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:24px;}
-  .step{background:var(--paper);border-radius:4px;padding:32px 28px;border-top:3px solid var(--paper-line);}
-  .step-num{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.08em;
-    color:var(--brass);margin-bottom:12px;}
-  .step h3{font-family:'Source Serif 4',serif;font-size:20px;font-weight:600;color:var(--text-on-paper);margin:0 0 10px;}
-  .step p{font-size:14px;color:var(--text-muted);line-height:1.6;margin:0;}
+    /* Social Proof */
+    .social-proof { display: flex; align-items: center; gap: 1rem; margin-top: 0.25rem; }
+    .avatars { display: flex; }
+    .avatar {
+      width: 34px; height: 34px;
+      border-radius: 50%;
+      border: 2.5px solid var(--bg);
+      margin-left: -12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 700; color: #fff;
+    }
+    .avatar:first-child { margin-left: 0; }
+    .social-text { font-size: 0.8rem; color: var(--text-muted); }
+    .social-text strong { color: #e2e8f0; }
 
-  .sms-info{background:var(--ink-soft);border-radius:8px;padding:40px;max-width:700px;margin:0 auto;
-    border:1px solid rgba(169,119,47,0.12);}
-  .sms-info h3{font-family:'Source Serif 4',serif;font-size:22px;color:var(--text-on-ink);margin:0 0 16px;}
-  .sms-info p,.sms-info li{font-size:14px;color:var(--text-on-ink-muted);line-height:1.7;}
-  .sms-info ul{padding-left:20px;margin:12px 0;}
+    /* Phone Mockup */
+    .phone-wrap { display: flex; justify-content: center; align-items: center; position: relative; }
+    .phone-glow {
+      position: absolute;
+      width: 320px; height: 320px;
+      background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+      border-radius: 50%;
+      filter: blur(50px);
+      z-index: 0;
+      animation: pulse 4s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 0.6; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.1); }
+    }
+    .phone {
+      width: 300px;
+      background: var(--bg-elevated);
+      border-radius: 2.5rem;
+      border: 5px solid #334155;
+      padding: 1rem;
+      position: relative;
+      z-index: 1;
+      box-shadow: var(--shadow);
+    }
+    .phone-notch {
+      width: 90px; height: 22px;
+      background: var(--bg);
+      border-radius: 0 0 14px 14px;
+      margin: 0 auto 0.75rem;
+    }
+    .phone-screen {
+      background: var(--bg);
+      border-radius: 1.75rem;
+      padding: 1.1rem;
+      min-height: 400px;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .msg-time { text-align: center; font-size: 0.65rem; color: #475569; margin-bottom: 0.25rem; }
+    .msg-bubble {
+      max-width: 88%;
+      padding: 0.65rem 0.95rem;
+      border-radius: 1.1rem;
+      font-size: 0.82rem;
+      line-height: 1.45;
+      word-break: break-word;
+      animation: slideUp 0.4s ease-out;
+    }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .msg-user {
+      align-self: flex-end;
+      background: var(--accent);
+      color: #fff;
+      border-bottom-right-radius: 0.3rem;
+    }
+    .msg-bot {
+      align-self: flex-start;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.06);
+      color: #e2e8f0;
+      border-bottom-left-radius: 0.3rem;
+    }
+    .msg-bot a { color: var(--accent-light); text-decoration: underline; text-underline-offset: 2px; }
+    .pdf-preview {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: var(--radius-sm);
+      padding: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin-top: 0.25rem;
+    }
+    .pdf-icon {
+      width: 36px; height: 36px;
+      background: rgba(239,68,68,0.12);
+      border-radius: 0.5rem;
+      display: flex; align-items: center; justify-content: center;
+      color: #f87171;
+      font-size: 0.65rem; font-weight: 800;
+      flex-shrink: 0;
+    }
+    .pdf-name { font-size: 0.78rem; color: #e2e8f0; font-weight: 500; }
+    .pdf-meta { font-size: 0.68rem; color: #475569; }
 
-  .footer{text-align:center;padding:48px 24px;border-top:1px solid rgba(255,255,255,0.05);}
-  .footer-links{display:flex;justify-content:center;gap:24px;margin-bottom:16px;flex-wrap:wrap;}
-  .footer-links a{color:var(--text-on-ink-muted);text-decoration:none;font-size:13px;}
-  .footer-links a:hover{color:var(--text-on-ink);}
-  .footer p{color:var(--text-on-ink-muted);font-size:12px;margin:0;}
+    /* Steps */
+    .steps {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 5rem 2rem;
+      border-top: 1px solid var(--border);
+    }
+    .steps-header { text-align: center; margin-bottom: 3.5rem; }
+    .steps-header h2 { font-size: 2.25rem; font-weight: 700; margin: 0 0 0.5rem; letter-spacing: -0.02em; }
+    .steps-header p { color: var(--text-dim); font-size: 1.05rem; }
+    .steps-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
+    .step-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2.25rem;
+      transition: var(--transition);
+    }
+    .step-card:hover {
+      transform: translateY(-6px);
+      border-color: var(--border-hover);
+      box-shadow: 0 12px 32px rgba(0,0,0,0.25);
+    }
+    .step-num {
+      width: 42px; height: 42px;
+      background: rgba(16,185,129,0.1);
+      color: var(--accent-light);
+      border-radius: var(--radius-sm);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700;
+      font-size: 0.9rem;
+      margin-bottom: 1.25rem;
+    }
+    .step-card h3 { font-size: 1.15rem; font-weight: 600; margin: 0 0 0.5rem; }
+    .step-card p { font-size: 0.9rem; color: var(--text-muted); line-height: 1.55; margin: 0; }
 
-  @media(max-width:600px){
-    h1{font-size:32px;}
-    .hero p{font-size:16px;}
-    .nav-links a:not(.nav-cta){display:none;}
-    .section{padding:48px 20px;}
-  }
-</style>
+    /* SMS Section */
+    .sms-section {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 4rem 2rem;
+      border-top: 1px solid var(--border);
+    }
+    .sms-section h2 { font-size: 1.75rem; font-weight: 700; margin-bottom: 1.5rem; text-align: center; }
+    .sms-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2rem;
+    }
+    .sms-card h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem; color: var(--accent-light); }
+    .sms-card ul { list-style: none; display: flex; flex-direction: column; gap: 0.75rem; }
+    .sms-card li {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+      padding-left: 1.25rem;
+      position: relative;
+    }
+    .sms-card li::before { content: "\\2022"; position: absolute; left: 0; color: var(--accent); font-weight: 700; }
+    .sms-card li strong { color: #e2e8f0; }
+    .sms-contact {
+      margin-top: 1.5rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border);
+      font-size: 0.9rem;
+      color: var(--text-muted);
+    }
+    .sms-contact a { color: var(--accent-light); }
+    .sms-contact a:hover { text-decoration: underline; }
+
+    /* Footer */
+    .footer {
+      border-top: 1px solid var(--border);
+      padding: 3rem 2rem;
+      text-align: center;
+    }
+    .footer-links {
+      display: flex;
+      justify-content: center;
+      gap: 1.5rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+    .footer-links a { color: var(--text-dim); font-size: 0.85rem; font-weight: 500; transition: var(--transition); }
+    .footer-links a:hover { color: var(--text); }
+    .footer-copy { color: #475569; font-size: 0.8rem; }
+
+    @media (max-width: 960px) {
+      .hero { grid-template-columns: 1fr; padding: 3rem 1.5rem; gap: 3rem; }
+      .hero h1 { font-size: 2.5rem; }
+      .phone-wrap { order: -1; }
+      .phone { width: 260px; }
+      .steps-grid { grid-template-columns: 1fr; }
+      .nav-links { display: none; }
+      .stats { gap: 1.5rem; }
+    }
+    @media (max-width: 480px) {
+      .hero h1 { font-size: 2rem; }
+      .input-row { flex-direction: column; }
+      .input-btn { width: 100%; }
+      .phone { width: 240px; }
+      .nav { padding: 1rem; }
+    }
+  </style>
 </head>
 <body>
 
-<nav class="nav">
-  <a href="/" class="nav-logo">
-    <img src="/static/logo.webp" alt="TxtAnOffer">
-    <span>TxtAnOffer</span>
-  </a>
-  <div class="nav-links">
-    <a href="/pricing">Pricing</a>
-    <a href="/demo">Demo</a>
-    <a href="/login">Log In</a>
-    <a href="/signup" class="nav-cta">Get Started</a>
-  </div>
-</nav>
-
-<section class="hero">
-  <h1>Generate TREC Contracts<br>by Text Message</h1>
-  <p>Texas real estate agents: text your offer details &mdash; price, down payment, closing date, and address &mdash; and receive a filled TREC 1-4 contract PDF in seconds.</p>
-  <a href="/signup" class="hero-cta">Start Free Trial</a>
-
-  <div class="demo-box">
-    <div class="demo-label">Example</div>
-    <div class="demo-msg">725k 3% 21day 1740 Grand Ave, Austin TX 78701</div>
-    <div class="demo-clear"></div>
-    <div class="demo-reply">Your TREC contract is ready! Price: $725,000 | Close: Aug 12, 2026<br><br>Download: txtanoffer.com/offers/1740-grand-ave.pdf</div>
-    <div class="demo-clear"></div>
-  </div>
-</section>
-
-<section class="section">
-  <h2 class="section-title">Three Steps, No App Required</h2>
-  <p class="section-sub">Works with any phone that can send a text message.</p>
-  <div class="steps">
-    <div class="step">
-      <div class="step-num">STEP 01</div>
-      <h3>Sign Up</h3>
-      <p>Register your phone number and agent details. You'll receive a confirmation text to opt in to our SMS service.</p>
+  <nav class="nav">
+    <div class="nav-left">
+      <div class="nav-logo"><img src="/static/logo.webp" alt="TxtAnOffer"></div>
+      <span>TxtAnOffer</span>
     </div>
-    <div class="step">
-      <div class="step-num">STEP 02</div>
-      <h3>Text Your Offer</h3>
-      <p>Send a message with price, down payment percentage, closing days, and property address to our number.</p>
+    <div class="nav-links">
+      <a href="#how">How it works</a>
+      <a href="/pricing">Pricing</a>
+      <a href="/demo">Demo</a>
+      <a href="/login">Log In</a>
     </div>
-    <div class="step">
-      <div class="step-num">STEP 03</div>
-      <h3>Get Your PDF</h3>
-      <p>Receive a link to your filled TREC contract PDF within seconds, ready for review and DocuSign.</p>
+    <a href="/signup" class="nav-cta">Start Free Trial</a>
+  </nav>
+
+  <section class="hero">
+    <div class="hero-left">
+      <div class="badge">Built for Texas REALTORS</div>
+      <h1>
+        Generate TREC contracts<br>
+        <span class="gradient">by text message.</span>
+      </h1>
+      <p class="hero-sub">
+        Type your offer in plain English. Get a filled <strong>TREC 20-19</strong> + <strong>Third Party Financing Addendum</strong> PDF in under 10 seconds. No app. No login. Just text.
+      </p>
+
+      <div class="input-card">
+        <div class="input-label">Try it now &mdash; no signup required</div>
+        <form id="live-demo-form">
+          <div class="input-row">
+            <input type="text" id="demo-input" placeholder="725k 3% 21day 1740 Grand Ave, Austin TX 78701" autocomplete="off">
+            <button type="submit" class="input-btn">Generate &rarr;</button>
+          </div>
+        </form>
+        <div class="input-hint">Format: price &middot; down % &middot; closing days &middot; address</div>
+        <div class="demo-loading" id="demo-loading">Generating your contract...</div>
+        <div class="demo-error" id="demo-error"></div>
+        <div class="demo-result" id="demo-result">
+          <div class="res-row"><span class="k">Address</span><span class="v" id="res-addr"></span></div>
+          <div class="res-row"><span class="k">Price</span><span class="v" id="res-price"></span></div>
+          <div class="res-row"><span class="k">Down payment</span><span class="v" id="res-down"></span></div>
+          <div class="res-row"><span class="k">Closing</span><span class="v" id="res-close"></span></div>
+          <a href="#" id="res-pdf" class="res-link" target="_blank">Download PDF &rarr;</a>
+        </div>
+      </div>
+
+      <div class="stats">
+        <div><div class="stat-num">&lt;10s</div><div class="stat-label">Generation time</div></div>
+        <div><div class="stat-num">45 min</div><div class="stat-label">Saved per offer</div></div>
+        <div><div class="stat-num">Free</div><div class="stat-label">No card required</div></div>
+      </div>
+
+      <div class="social-proof">
+        <div class="avatars">
+          <div class="avatar" style="background:#3b82f6;">EJ</div>
+          <div class="avatar" style="background:#8b5cf6;">MK</div>
+          <div class="avatar" style="background:#f59e0b;">SR</div>
+          <div class="avatar" style="background:var(--accent);">+</div>
+        </div>
+        <div class="social-text"><strong>200+ Texas agents</strong> already using TxtAnOffer</div>
+      </div>
     </div>
-  </div>
-</section>
 
-<section class="section">
-  <h2 class="section-title">Try It Now</h2>
-  <p class="section-sub">Generate a real TREC contract — no signup required.</p>
-  <div class="live-demo">
-    <h3>Enter your offer details</h3>
-    <p class="demo-hint">Format: price &middot; down % &middot; closing days &middot; address<br>Example: 725k 3% 21day 1740 Grand Ave, Austin TX 78701</p>
-    <form id="live-demo-form">
-      <input type="text" id="demo-input" placeholder="325k 5% 30day 420 Elm St, Dallas TX 75201" autocomplete="off">
-      <button type="submit">Generate</button>
-    </form>
-    <div class="demo-loading" id="demo-loading">Generating your contract...</div>
-    <div class="demo-error" id="demo-error"></div>
-    <div class="demo-result" id="demo-result">
-      <div class="res-label">Contract Generated</div>
-      <div class="res-row"><span class="k">Address</span><span class="v" id="res-addr"></span></div>
-      <div class="res-row"><span class="k">Price</span><span class="v" id="res-price"></span></div>
-      <div class="res-row"><span class="k">Down payment</span><span class="v" id="res-down"></span></div>
-      <div class="res-row"><span class="k">Closing</span><span class="v" id="res-close"></span></div>
-      <a href="#" id="res-pdf" class="res-link" target="_blank">Download PDF &rarr;</a>
+    <div class="phone-wrap">
+      <div class="phone-glow"></div>
+      <div class="phone">
+        <div class="phone-notch"></div>
+        <div class="phone-screen">
+          <div class="msg-time">Today 9:41 AM</div>
+          <div class="msg-bubble msg-user">725k 3% 21day 1740 Grand Ave, Austin TX 78701</div>
+          <div class="msg-bubble msg-bot">
+            Your TREC contract is ready!<br><br>
+            <strong style="color:#fff;">$725,000</strong><br>
+            Close: <strong style="color:#fff;">Aug 12, 2026</strong><br><br>
+            <a>txtanoffer.com/offers/1740-grand-ave.pdf</a>
+          </div>
+          <div class="pdf-preview">
+            <div class="pdf-icon">PDF</div>
+            <div>
+              <div class="pdf-name">TREC_1740_Grand_Ave.pdf</div>
+              <div class="pdf-meta">142 KB &middot; TREC 20-19 + 40-11</div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
-  </div>
-  <div class="trust-row">
-    <div class="trust-item"><div class="trust-val">&lt;10s</div><div class="trust-label">Generation time</div></div>
-    <div class="trust-item"><div class="trust-val">45 min</div><div class="trust-label">Saved per offer</div></div>
-    <div class="trust-item"><div class="trust-val">Free</div><div class="trust-label">No card required</div></div>
-  </div>
-</section>
+  </section>
 
-<section class="section">
-  <h2 class="section-title">SMS Messaging Details</h2>
-  <p class="section-sub">Transparent communication about how we use text messaging.</p>
-  <div class="sms-info">
-    <h3>How SMS Is Used</h3>
-    <p>TxtAnOffer uses SMS (text messaging) to receive offer details from registered real estate agents and deliver generated TREC contract PDF links back to them.</p>
-    <ul>
-      <li><strong>Opt-in:</strong> Users sign up at txtanoffer.com/signup by providing their phone number and explicitly consenting to receive SMS messages.</li>
-      <li><strong>Message frequency:</strong> Messages are sent only in direct response to user-initiated texts. We do not send marketing or promotional messages.</li>
-      <li><strong>Message content:</strong> Replies contain contract confirmation details and a download link to the generated PDF.</li>
-      <li><strong>Opt-out:</strong> Reply STOP at any time to unsubscribe from all messages. Reply HELP for support.</li>
-      <li><strong>Standard message and data rates may apply.</strong></li>
-    </ul>
-    <p style="margin-top:16px;">Questions? Contact us at <strong>support@txtanoffer.com</strong></p>
-  </div>
-</section>
+  <section class="steps" id="how">
+    <div class="steps-header">
+      <h2>Three steps. No app required.</h2>
+      <p>Works with any phone that can send a text message.</p>
+    </div>
+    <div class="steps-grid">
+      <div class="step-card">
+        <div class="step-num">01</div>
+        <h3>Sign Up</h3>
+        <p>Register your phone and agent details. Get a confirmation text to opt in to our SMS service.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-num">02</div>
+        <h3>Text Your Offer</h3>
+        <p>Send price, down payment %, closing days, and address. Our parser extracts everything automatically.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-num">03</div>
+        <h3>Get Your PDF</h3>
+        <p>Receive a link to your filled TREC contract + financing addendum in seconds, ready for DocuSign.</p>
+      </div>
+    </div>
+  </section>
 
-<footer class="footer">
-  <div class="footer-links">
-    <a href="/terms">Terms of Service</a>
-    <a href="/privacy">Privacy Policy</a>
-    <a href="/pricing">Pricing</a>
-    <a href="/signup">Get Started</a>
-  </div>
-  <p>&copy; 2026 TxtAnOffer. Built for Texas real estate agents.</p>
-</footer>
+  <section class="sms-section">
+    <h2>SMS Messaging Details</h2>
+    <div class="sms-card">
+      <h3>How SMS Is Used</h3>
+      <ul>
+        <li><strong>Opt-in:</strong> Users sign up at txtanoffer.com/signup by providing their phone number and explicitly consenting to receive SMS messages.</li>
+        <li><strong>Message frequency:</strong> Messages are sent only in direct response to user-initiated texts. We do not send marketing or promotional messages.</li>
+        <li><strong>Message content:</strong> Replies contain contract confirmation details and a download link to the generated PDF.</li>
+        <li><strong>Opt-out:</strong> Reply STOP at any time to unsubscribe from all messages. Reply HELP for support.</li>
+        <li><strong>Standard message and data rates may apply.</strong></li>
+      </ul>
+      <div class="sms-contact">
+        Questions? Contact us at <a href="mailto:support@txtanoffer.com">support@txtanoffer.com</a>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="footer-links">
+      <a href="/terms">Terms of Service</a>
+      <a href="/privacy">Privacy Policy</a>
+      <a href="/pricing">Pricing</a>
+      <a href="mailto:support@txtanoffer.com">Support</a>
+    </div>
+    <div class="footer-copy">
+      &copy; 2026 TxtAnOffer &middot; Operated by Phanel &middot; Texas, United States &middot; Not affiliated with TREC
+    </div>
+  </footer>
 
 <script>
 (function(){
@@ -1588,7 +1940,7 @@ def signup():
         <input type="email" name="email" placeholder="you@brokerage.com">
         <div class="consent-row">
           <input type="checkbox" id="sms-consent" name="sms_consent" required>
-          <label for="sms-consent">I agree to receive transactional SMS messages from TxtAnOffer at (833) 897-0333 for offer drafts. Message frequency varies. Reply STOP to opt-out, HELP for help. Message &amp; data rates may apply. Consent is not a condition of purchase. <a href="/privacy">Privacy Policy</a></label>
+          <label for="sms-consent">By checking this box, I agree to receive automated transactional SMS messages from TxtAnOffer at +1 (833) 897-0333 about my offer drafts. Message frequency varies based on usage. Reply STOP to opt out, HELP for help. Msg &amp; data rates may apply. Consent is not a condition of purchase. <a href="/privacy">Privacy Policy</a> &amp; <a href="/terms">Terms</a></label>
         </div>
         <button type="submit">Sign up for SMS</button>
       </form>
@@ -1691,7 +2043,8 @@ def login():
     <form method="POST">
       <label>Phone number</label>
       <input type="tel" name="phone" placeholder="(512) 555-1234" required>
-      <button type="submit">Send Login Link</button>
+      <p style="font-size:12px;color:var(--text-muted);margin:12px 0 0;line-height:1.5;">By clicking below, you agree to receive one SMS message from TxtAnOffer at +1 (833) 897-0333 containing your login link. Msg &amp; data rates may apply. Reply STOP to opt out.</p>
+      <button type="submit">Send Login Link via SMS</button>
     </form>
     {msg_html}
   </div>
@@ -1979,7 +2332,7 @@ def privacy():
     <h2>3. SMS Messaging</h2>
     <p><strong>Program Name:</strong> TxtAnOffer</p>
     <p><strong>Toll-Free Number:</strong> +1 (833) 897-0333</p>
-    <p><strong>Opt-in Method:</strong> Users opt in by (1) entering their phone number and checking an unchecked checkbox on www.txtanoffer.com that says "By checking this box and texting +1 (833) 897-0333, I agree to receive automated transactional messages from TxtAnOffer about my offer drafts. Msg &amp; data rates may apply. Reply STOP to opt out." OR (2) by texting offer details directly to +1 (833) 897-0333 after seeing opt-in disclosure on our website.</p>
+    <p><strong>Opt-in Method:</strong> Users opt in by (1) entering their phone number and checking an unchecked checkbox on www.txtanoffer.com/signup that says "By checking this box, I agree to receive automated transactional SMS messages from TxtAnOffer at +1 (833) 897-0333 about my offer drafts. Message frequency varies based on usage. Reply STOP to opt out, HELP for help. Msg &amp; data rates may apply. Consent is not a condition of purchase." OR (2) by texting offer details directly to +1 (833) 897-0333 after seeing opt-in disclosure on our website.</p>
     <p><strong>Consent:</strong> By texting our service number +1 (833) 897-0333 or submitting your phone number via our website, you consent to receive SMS messages from TxtAnOffer related to your offer requests and account.</p>
     <p><strong>Message frequency:</strong> Message frequency varies based on your usage. You will receive one response per offer submitted, plus occasional account notifications (typically 1-5 messages per month).</p>
     <p><strong>Opt-out:</strong> Reply STOP to any message to unsubscribe from SMS. Reply START to re-subscribe. You can continue using the web interface after opting out of SMS.</p>
