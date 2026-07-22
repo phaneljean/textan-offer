@@ -18,6 +18,7 @@ import io
 from datetime import datetime, timedelta
 from pypdf import PdfReader, PdfWriter
 from cover_page import generate_cover_page
+from financing_addendum import fill_financing_addendum
 
 TEMPLATE_PATH = os.environ.get("TREC_TEMPLATE_PATH", "20-19_2.pdf")
 OUTPUT_DIR = os.environ.get("OFFER_OUTPUT_DIR", "generated_offers")
@@ -113,7 +114,13 @@ def fill_offer_pdf(parsed: dict, agent_phone: str) -> str:
         values[FIELD_MAP["county"]] = parsed["county"]
 
     # Page header: "Contract Concerning (Address of Property)" on all pages
-    full_addr = f"{addr}, {parsed.get('city', '')}, TX" if parsed.get("city") else addr
+    city = parsed.get("city", "")
+    if city and city.lower() not in addr.lower():
+        full_addr = f"{addr}, {city}, TX"
+    elif city:
+        full_addr = f"{addr}, TX"
+    else:
+        full_addr = addr
     if full_addr:
         for key in ("addr_of_prop", "addr_of_prop_p9", "addr_of_prop_p12",
                     "addr_header_p2", "addr_header_p3", "addr_header_p4",
@@ -211,10 +218,17 @@ def fill_offer_pdf(parsed: dict, agent_phone: str) -> str:
     # Generate premium cover page
     cover_pdf_bytes = generate_cover_page(parsed, parsed.get('agent', {}))
 
-    # Merge: cover page first, then filled TREC form (append preserves AcroForm)
+    # Generate financing addendum if there's a loan
+    financing_pdf_bytes = None
+    if parsed.get("loan_amount") and parsed["loan_amount"] > 0:
+        financing_pdf_bytes = fill_financing_addendum(parsed)
+
+    # Merge: cover page first, then filled TREC form, then financing addendum
     final_writer = PdfWriter()
     final_writer.append(PdfReader(io.BytesIO(cover_pdf_bytes)))
     final_writer.append(PdfReader(trec_buf))
+    if financing_pdf_bytes:
+        final_writer.append(PdfReader(io.BytesIO(financing_pdf_bytes)))
 
     # Closing date: remove the empty kid annotations that cover overlay text, then stamp text
     # Page 6 in final PDF = cover(0) + TREC pages 0-4(1-5) → TREC page 5 = index 6
