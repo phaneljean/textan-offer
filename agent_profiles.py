@@ -19,12 +19,12 @@ DEFAULTS = {
 }
 
 DEMO_PROFILE = {
-    "name": "Sarah Mitchell",
+    "name": "Your Name Here",
     "license": "0654321",
     "phone": "(512) 555-0147",
-    "email": "sarah@luxerealty.com",
-    "brokerage": "Luxe Realty Group",
-    "title_company": "Lone Star Title Co.",
+    "email": "you@yourbrokerage.com",
+    "brokerage": "Your Brokerage",
+    "title_company": "Your Title Co.",
     "default_earnest_pct": 0.01,
     "default_option_fee": 250,
 }
