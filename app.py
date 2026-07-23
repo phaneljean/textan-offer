@@ -616,7 +616,7 @@ def index():
         <span class="gradient">by text message.</span>
       </h1>
       <p class="hero-sub">
-        Type your offer in plain English. Get a filled <strong>TREC 20-19</strong> + <strong>Third Party Financing Addendum</strong> PDF in under 10 seconds. No app. No login. Just text.
+        Text your offer from the parking lot. Get a filled <strong>TREC 20-19</strong> + <strong>Third Party Financing Addendum</strong> PDF in 10 seconds. No app download. No form filling. Just text and go.
       </p>
 
       <div class="input-card">
@@ -960,14 +960,15 @@ def sms_reply():
         resp.message(
             "TxtAnOffer Commands:\n\n"
             "HELP - This menu\n"
-            "DASHBOARD - Get link to your offer history\n"
-            "STATUS - Check your plan & usage\n"
-            "PROFILE - Get link to edit your agent info\n"
-            "STOP - Unsubscribe from messages\n\n"
+            "DASHBOARD - Your offer history\n"
+            "STATUS - Plan & usage\n"
+            "PROFILE - Edit agent info\n"
+            "STOP - Unsubscribe\n\n"
             "To generate an offer, text:\n"
             "price down% days address\n\n"
-            "Example:\n"
-            "725k 3% 21day 1740 Grand Ave, Austin TX 78701"
+            "Examples:\n"
+            "725k 3% 21day 1740 Grand Ave\n"
+            "650000 3 percent 30 days 123 Main St"
         )
         return Response(str(resp), mimetype="application/xml")
 
@@ -979,7 +980,9 @@ def sms_reply():
     if keyword == "STATUS":
         user = get_user(agent_phone)
         if not user:
-            resp.message("No account found. Sign up at txtanoffer.com/signup")
+            create_user(agent_phone)
+            resp.message(f"Welcome! You have {FREE_OFFER_LIMIT} free offers.\n\nJust text your offer:\n725k 3% 21day 1740 Grand Ave\n\nReply HELP for all commands.")
+            return Response(str(resp), mimetype="application/xml")
         elif user["is_subscribed"]:
             resp.message(f"Plan: Unlimited\nOffers generated: {user['offer_count']}\n\nText HELP for commands.")
         else:
@@ -988,7 +991,7 @@ def sms_reply():
         return Response(str(resp), mimetype="application/xml")
 
     if keyword == "PROFILE":
-        profile_link = request.host_url.rstrip("/") + f"/profile?phone={agent_phone}"
+        profile_link = sign_dashboard_url(agent_phone, request.host_url.rstrip("/")).replace("/dashboard?", "/profile?")
         resp.message(f"Edit your agent profile:\n{profile_link}\n\nYour name, license, brokerage, and defaults auto-fill into every contract.")
         return Response(str(resp), mimetype="application/xml")
 
@@ -2213,13 +2216,14 @@ def signup():
                     )
             except Exception:
                 pass
+            profile_url = sign_dashboard_url(phone, request.host_url.rstrip("/")).replace("/dashboard?", "/profile?")
             success_msg = (
                 '<div class="success">'
                 '<strong>You\'re in!</strong> Check your texts for a welcome message.<br><br>'
                 '<span style="font-size:0.8rem;color:var(--text-muted);">You have 3 free offers to try it out.</span>'
                 '</div>'
                 '<div style="display:flex;gap:0.5rem;margin-top:1rem;flex-wrap:wrap;">'
-                f'<a href="/profile?phone={phone}" style="flex:1;text-align:center;padding:0.75rem 1rem;'
+                f'<a href="{profile_url}" style="flex:1;text-align:center;padding:0.75rem 1rem;'
                 'background:linear-gradient(135deg,var(--accent),#059669);color:#fff;border-radius:var(--radius-sm);'
                 'font-weight:600;font-size:0.85rem;text-decoration:none;">Set Up Your Profile &rarr;</a>'
                 '<a href="/pricing" style="flex:1;text-align:center;padding:0.75rem 1rem;'
