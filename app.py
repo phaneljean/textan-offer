@@ -1405,7 +1405,10 @@ def demo():
             result_html = f'<div class="error">{error}</div>'
         else:
             filename = os.path.basename(pdf_path)
+            record_offer("demo-web", parsed, filename)
             pdf_url = sign_pdf_url(filename)
+            _pdf_expires = int(time.time()) + PDF_LINK_TTL
+            _pdf_sig = hmac.new(PDF_LINK_SECRET.encode(), f"{filename}:{_pdf_expires}".encode(), hashlib.sha256).hexdigest()[:16]
             close_date_str = ""
             try:
                 close_dt = datetime.now()
@@ -1438,10 +1441,10 @@ def demo():
               {warning_html}
               <div class="pdf-preview">
                 <div class="pdf-preview-label">Contract preview</div>
-                <iframe src="{pdf_url}#page=1&view=FitV" class="pdf-frame"></iframe>
+                <iframe src="/offers/{filename}?expires={_pdf_expires}&sig={_pdf_sig}#page=1&view=FitV" class="pdf-frame"></iframe>
                 <div class="pdf-mobile"><a href="{pdf_url}" target="_blank">Tap to view your completed TREC 20-19 &rarr;</a></div>
               </div>
-              <a href="{pdf_url}" target="_blank" class="download-btn">&darr; Download PDF</a>
+              <a href="/offers/{filename}?expires={_pdf_expires}&sig={_pdf_sig}" target="_blank" class="download-btn" download>&darr; Download PDF</a>
               <div class="integration-actions">
                 <button class="int-btn int-email" onclick="document.getElementById('email-modal').style.display='flex'">&#9993; Email offer</button>
                 <button class="int-btn int-docusign" onclick="document.getElementById('docusign-modal').style.display='flex'">&#9998; Send to DocuSign</button>
@@ -1489,7 +1492,7 @@ def demo():
                 fetch('/api/send-email', {{
                   method: 'POST',
                   headers: {{'Content-Type': 'application/json'}},
-                  body: JSON.stringify({{to_email: to, pdf_filename: filename, parsed: {parsed_json}}})
+                  body: JSON.stringify({{to_email: to, pdf_filename: filename, parsed: {parsed_json}, expires: '{_pdf_expires}', sig: '{_pdf_sig}'}})
                 }}).then(r => r.json()).then(d => {{
                   status.textContent = d.success ? 'Sent!' : ('Error: ' + d.error);
                   status.className = 'modal-status ' + (d.success ? 'success' : 'fail');
@@ -1565,6 +1568,7 @@ def api_demo():
     if error:
         return jsonify({"error": error}), 400
     filename = os.path.basename(pdf_path)
+    record_offer("landing-demo", parsed, filename)
     pdf_url = sign_pdf_url(filename, request.host_url.rstrip("/"))
     from datetime import timedelta
     close_date = (datetime.now() + timedelta(days=parsed["close_days"])).strftime("%B %d, %Y")
@@ -3328,10 +3332,12 @@ def review_offer(filename):
         abort(403)
 
     offer = get_offer_by_filename(filename)
-    address = offer["address"] if offer else filename.replace("TREC_", "").replace("_", " ").replace(".pdf", "")
-    price = offer["price"] if offer else 0
-    down_pct = offer["down_pct"] if offer else 0
-    close_days = offer["close_days"] if offer else 0
+    if not offer:
+        return redirect(f"/offers/{filename}?expires={expires}&sig={sig}")
+    address = offer["address"]
+    price = offer["price"]
+    down_pct = offer["down_pct"]
+    close_days = offer["close_days"]
     down_amt = int(price * down_pct) if price else 0
     loan_amt = price - down_amt if price else 0
 
