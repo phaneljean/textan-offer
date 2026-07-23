@@ -1825,6 +1825,18 @@ def pricing():
   </div>
 </div>
 
+<div style="max-width:640px;margin:0 auto;padding:2rem;text-align:center;">
+  <div style="background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.15);border-radius:1rem;padding:2rem 1.75rem;">
+    <div style="font-size:1.5rem;margin-bottom:0.5rem;">&#128737;</div>
+    <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:0.5rem;">Zero-Risk Guarantee</h3>
+    <p style="color:var(--text-muted);font-size:0.9rem;line-height:1.7;margin:0;">
+      Start with <strong style="color:var(--text);">3 free offers</strong> — no credit card required.
+      When you subscribe, cancel anytime from your dashboard — no contracts, no fees, no questions asked.
+      Cancellation takes effect at the end of your billing cycle so you keep access through the period you paid for.
+    </p>
+  </div>
+</div>
+
 <div class="footer-note">
   All plans cancel anytime. No contracts. By subscribing you agree to our <a href="/terms">Terms of Service</a>.
   <br><br>
