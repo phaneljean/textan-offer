@@ -1270,6 +1270,7 @@ DEMO_FORM = """
       <div class="trust-item"><div class="trust-val">&lt;10s</div><div class="trust-label">Generation</div></div>
       <div class="trust-item"><div class="trust-val">45 min</div><div class="trust-label">Saved per offer</div></div>
       <div class="trust-item"><div class="trust-val">TREC</div><div class="trust-label">20-19 Compliant</div></div>
+      <div class="trust-item"><div class="trust-val">AES-256</div><div class="trust-label">Encrypted at rest</div></div>
     </div>
 
     <div class="foot">
