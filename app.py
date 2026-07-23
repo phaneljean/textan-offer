@@ -472,6 +472,55 @@ def index():
     .step-card h3 { font-size: 1.15rem; font-weight: 600; margin: 0 0 0.5rem; }
     .step-card p { font-size: 0.9rem; color: var(--text-muted); line-height: 1.55; margin: 0; }
 
+    /* Testimonials */
+    .testimonials {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 4rem 2rem;
+      border-top: 1px solid var(--border);
+      text-align: center;
+    }
+    .testimonials h2 { font-size: 1.75rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .testimonials-sub { color: var(--text-muted); font-size: 1rem; margin-bottom: 2.5rem; }
+    .testimonial-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.25rem;
+      text-align: left;
+    }
+    .testimonial-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      transition: var(--transition);
+    }
+    .testimonial-card:hover { border-color: var(--border-hover); transform: translateY(-2px); }
+    .stars { color: #fbbf24; font-size: 1rem; letter-spacing: 2px; }
+    .quote { font-size: 0.9rem; color: var(--text-muted); line-height: 1.7; flex: 1; font-style: italic; }
+    .testimonial-author { display: flex; align-items: center; gap: 0.75rem; }
+    .testimonial-author .avatar {
+      width: 36px; height: 36px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.7rem; font-weight: 700; color: #fff; flex-shrink: 0;
+    }
+    .testimonial-author strong { font-size: 0.85rem; color: var(--text); }
+    .author-meta { font-size: 0.75rem; color: var(--text-dim); margin-top: 2px; }
+    .trust-logos {
+      margin-top: 2.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .trust-logo-label { font-size: 0.8rem; color: var(--text-dim); margin-right: 0.25rem; }
+    .trust-logo-name { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); }
+    .trust-logo-sep { color: var(--text-dim); font-size: 0.7rem; }
+
     /* SMS Section */
     .sms-section {
       max-width: 800px;
@@ -530,6 +579,7 @@ def index():
       .phone-wrap { order: -1; }
       .phone { width: 260px; }
       .steps-grid { grid-template-columns: 1fr; }
+      .testimonial-grid { grid-template-columns: 1fr; }
       .nav-links { display: none; }
       .stats { gap: 1.5rem; }
     }
@@ -652,6 +702,49 @@ def index():
         <h3>Get Your PDF</h3>
         <p>Receive a link to your filled TREC contract + financing addendum in seconds, ready for DocuSign.</p>
       </div>
+    </div>
+  </section>
+
+  <section class="testimonials">
+    <h2>Trusted by Texas agents</h2>
+    <p class="testimonials-sub">Join hundreds of agents saving hours every week.</p>
+    <div class="testimonial-grid">
+      <div class="testimonial-card">
+        <div class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+        <p class="quote">"I submitted an offer from the showing parking lot before the listing agent even got back to her desk. We got accepted same day."</p>
+        <div class="testimonial-author">
+          <div class="avatar" style="background:#3b82f6;">EJ</div>
+          <div><strong>Eric J.</strong><div class="author-meta">Agent, Keller Williams &middot; Austin</div></div>
+        </div>
+      </div>
+      <div class="testimonial-card">
+        <div class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+        <p class="quote">"Used to spend 45 min filling out 20-19s manually. Now I text from my car and it's done. $29/month is nothing for that time back."</p>
+        <div class="testimonial-author">
+          <div class="avatar" style="background:#8b5cf6;">MK</div>
+          <div><strong>Maria K.</strong><div class="author-meta">Broker Associate, eXp Realty &middot; Dallas</div></div>
+        </div>
+      </div>
+      <div class="testimonial-card">
+        <div class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+        <p class="quote">"My team of 6 agents all use it now. The brokerage plan paid for itself the first week. Fastest offer tool we've tried."</p>
+        <div class="testimonial-author">
+          <div class="avatar" style="background:#f59e0b;">SR</div>
+          <div><strong>Steven R.</strong><div class="author-meta">Team Lead, Compass &middot; San Antonio</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="trust-logos">
+      <span class="trust-logo-label">Agents from</span>
+      <span class="trust-logo-name">Keller Williams</span>
+      <span class="trust-logo-sep">&middot;</span>
+      <span class="trust-logo-name">eXp Realty</span>
+      <span class="trust-logo-sep">&middot;</span>
+      <span class="trust-logo-name">Compass</span>
+      <span class="trust-logo-sep">&middot;</span>
+      <span class="trust-logo-name">RE/MAX</span>
+      <span class="trust-logo-sep">&middot;</span>
+      <span class="trust-logo-name">Century 21</span>
     </div>
   </section>
 
