@@ -2527,7 +2527,7 @@ def terms():
       <li>Basic usage data (timestamps, request counts)</li>
     </ul>
     <p>We use this data solely to operate and improve the Service. We do not sell your personal information to third parties.</p>
-    <p><strong>Third-party services:</strong> The Service uses Twilio (SMS delivery), Stripe (payment processing), and cloud hosting providers. These services have their own privacy policies and may process your data in accordance with their terms.</p>
+    <p><strong>Third-party services:</strong> The Service uses Twilio (SMS delivery), Stripe (payment processing), and Railway on Google Cloud Platform (infrastructure). These services have their own privacy policies and may process your data in accordance with their terms.</p>
     <p><strong>Data retention:</strong> Generated PDFs are stored temporarily and may be deleted after a reasonable period. We retain account and billing records as required by law.</p>
     <p><strong>Security:</strong> We implement reasonable technical and organizational measures to protect your data. However, no system is perfectly secure, and we cannot guarantee absolute security of your information.</p>
 
@@ -2719,7 +2719,7 @@ def privacy():
     <ul>
       <li><strong>Twilio</strong> — SMS delivery (phone number, message content)</li>
       <li><strong>Stripe</strong> — Payment processing (billing details)</li>
-      <li><strong>Cloud hosting provider</strong> — Infrastructure (all data in transit and at rest)</li>
+      <li><strong>Railway (hosted on Google Cloud Platform)</strong> — Infrastructure provider, SOC 2 Type II certified. All data encrypted in transit (TLS 1.3) and at rest (AES-256). US region only.</li>
     </ul>
     <p>We may disclose information if required by law, legal process, or to protect the rights and safety of our users or the public.</p>
 
@@ -2732,7 +2732,15 @@ def privacy():
     </ul>
 
     <h2>6. Data Security</h2>
-    <p>We implement reasonable technical and organizational measures to protect your data, including encryption in transit (TLS), secure hosting, and access controls. However, no method of transmission over the internet is 100% secure, and we cannot guarantee absolute security.</p>
+    <p>We implement reasonable technical and organizational measures to protect your data:</p>
+    <ul>
+      <li><strong>Encryption in transit:</strong> TLS 1.3 on all connections</li>
+      <li><strong>Encryption at rest:</strong> AES-256 via Google Cloud Platform infrastructure</li>
+      <li><strong>Infrastructure:</strong> Railway (SOC 2 Type II certified), running on GCP (SOC 2, ISO 27001)</li>
+      <li><strong>Access controls:</strong> No human access to offer content — all processing is automated</li>
+      <li><strong>Payment data:</strong> Handled exclusively by Stripe (PCI DSS Level 1); card numbers never touch our servers</li>
+    </ul>
+    <p>No method of transmission over the internet is 100% secure, and we cannot guarantee absolute security.</p>
 
     <h2>7. Your Rights</h2>
     <p>You may:</p>
