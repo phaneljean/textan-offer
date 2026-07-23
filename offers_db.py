@@ -49,6 +49,19 @@ def record_offer(phone: str, parsed: dict, filename: str):
     conn.close()
 
 
+def get_offer_by_filename(filename: str) -> dict:
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT id, phone, address, price, down_pct, close_days, filename, created_at
+        FROM offers WHERE filename = ?
+    """, (filename,))
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
 def get_offers_for_phone(phone: str, limit: int = 50) -> list:
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row

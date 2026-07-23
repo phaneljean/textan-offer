@@ -30,7 +30,7 @@ from agent_profiles import get_agent_profile, save_agent_profile
 from subscriptions import can_generate_offer, increment_offer_count, activate_subscription, deactivate_subscription, get_user, create_user, FREE_OFFER_LIMIT
 from analytics import track_event, get_conversion_metrics, get_revenue_metrics, get_recent_sms
 from integrations import send_offer_email, fire_webhook, save_webhook, get_webhook, delete_webhook, send_to_docusign
-from offers_db import record_offer, get_offers_for_phone
+from offers_db import record_offer, get_offers_for_phone, get_offer_by_filename
 
 app = Flask(__name__)
 
@@ -89,7 +89,7 @@ def _is_safe_webhook_url(url):
 def sign_pdf_url(filename, base_url=""):
     expires = int(time.time()) + PDF_LINK_TTL
     sig = hmac.new(PDF_LINK_SECRET.encode(), f"{filename}:{expires}".encode(), hashlib.sha256).hexdigest()[:16]
-    return f"{base_url}/offers/{filename}?expires={expires}&sig={sig}"
+    return f"{base_url}/review/{filename}?expires={expires}&sig={sig}"
 
 
 def verify_pdf_signature(filename, expires_str, sig):
@@ -667,7 +667,7 @@ def index():
             Your TREC contract is ready!<br><br>
             <strong style="color:#fff;">$725,000</strong><br>
             Close: <strong style="color:#fff;">Aug 12, 2026</strong><br><br>
-            <a>txtanoffer.com/offers/1740-grand-ave.pdf</a>
+            <a>txtanoffer.com/review/1740-grand-ave.pdf</a>
           </div>
           <div class="pdf-preview">
             <div class="pdf-icon">PDF</div>
@@ -1788,10 +1788,6 @@ input.addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.
 
 @app.route("/api/send-email", methods=["POST"])
 def api_send_email():
-    auth_error = require_api_auth()
-    if auth_error:
-        return auth_error
-
     data = request.get_json()
     if not data:
         return jsonify({"success": False, "error": "JSON body required"}), 400
@@ -1799,9 +1795,25 @@ def api_send_email():
     to_email = data.get("to_email", "")
     pdf_filename = data.get("pdf_filename", "")
     parsed = data.get("parsed", {})
+    expires = data.get("expires", "")
+    sig = data.get("sig", "")
 
     if not to_email or not pdf_filename:
         return jsonify({"success": False, "error": "to_email and pdf_filename required"}), 400
+
+    # Auth: either bearer token OR valid PDF signature (from review page)
+    has_bearer = False
+    auth = request.headers.get("Authorization", "")
+    if API_BEARER_TOKEN and auth.startswith("Bearer ") and hmac.compare_digest(auth[7:], API_BEARER_TOKEN):
+        has_bearer = True
+
+    has_sig = verify_pdf_signature(pdf_filename, expires, sig)
+
+    if not has_bearer and not has_sig:
+        return jsonify({"success": False, "error": "Unauthorized"}), 401
+
+    if ".." in pdf_filename or pdf_filename.startswith("/"):
+        abort(400)
 
     pdf_path = os.path.join(OUTPUT_DIR, pdf_filename)
     if not os.path.exists(pdf_path):
@@ -3304,6 +3316,160 @@ def profile():
 </body>
 </html>
 """
+
+
+@app.route("/review/<path:filename>")
+def review_offer(filename):
+    if ".." in filename or filename.startswith("/"):
+        abort(400)
+    expires = request.args.get("expires")
+    sig = request.args.get("sig")
+    if not verify_pdf_signature(filename, expires, sig):
+        abort(403)
+
+    offer = get_offer_by_filename(filename)
+    address = offer["address"] if offer else filename.replace("TREC_", "").replace("_", " ").replace(".pdf", "")
+    price = offer["price"] if offer else 0
+    down_pct = offer["down_pct"] if offer else 0
+    close_days = offer["close_days"] if offer else 0
+    down_amt = int(price * down_pct) if price else 0
+    loan_amt = price - down_amt if price else 0
+
+    pdf_url = f"/offers/{filename}?expires={expires}&sig={sig}"
+
+    from datetime import timedelta
+    close_date = (datetime.now() + timedelta(days=close_days)).strftime("%B %d, %Y") if close_days else ""
+
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Offer Review — {address}</title>
+<link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{{--bg:#0f172a;--bg-card:rgba(255,255,255,0.03);--border:rgba(255,255,255,0.06);
+--text:#f8fafc;--text-muted:#94a3b8;--text-dim:#64748b;--accent:#10b981;--accent-light:#34d399;
+--radius:1.25rem;--radius-sm:0.75rem;}}
+*{{margin:0;padding:0;box-sizing:border-box;}}
+body{{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;
+-webkit-font-smoothing:antialiased;}}
+.top-bar{{background:rgba(16,185,129,0.1);border-bottom:1px solid rgba(16,185,129,0.2);
+padding:0.6rem 1.5rem;text-align:center;font-size:0.8rem;color:var(--accent-light);font-weight:600;}}
+.container{{max-width:600px;margin:0 auto;padding:1.5rem 1rem;}}
+.address-card{{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
+padding:1.5rem;text-align:center;margin-bottom:1rem;}}
+.address-card h1{{font-size:1.25rem;font-weight:700;margin-bottom:0.25rem;}}
+.address-card .meta{{color:var(--text-dim);font-size:0.8rem;}}
+.stats{{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.5rem;margin-bottom:1rem;}}
+.stat{{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);
+padding:0.85rem 0.5rem;text-align:center;}}
+.stat-label{{font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;
+color:var(--text-dim);margin-bottom:0.2rem;}}
+.stat-value{{font-size:1rem;font-weight:700;}}
+.stat-value.accent{{color:var(--accent-light);}}
+.actions{{display:flex;flex-direction:column;gap:0.6rem;margin-bottom:1.25rem;}}
+.btn{{display:flex;align-items:center;justify-content:center;gap:0.5rem;padding:0.9rem 1rem;
+border-radius:var(--radius-sm);font-family:inherit;font-size:0.9rem;font-weight:600;
+text-decoration:none;border:none;cursor:pointer;transition:all 0.2s;}}
+.btn-primary{{background:linear-gradient(135deg,var(--accent),#059669);color:#fff;}}
+.btn-primary:hover{{transform:translateY(-1px);box-shadow:0 6px 20px rgba(16,185,129,0.3);}}
+.btn-secondary{{background:var(--bg-card);color:var(--text);border:1px solid var(--border);}}
+.btn-secondary:hover{{border-color:var(--accent);}}
+.btn-outline{{background:transparent;color:var(--text-muted);border:1px solid var(--border);}}
+.btn-outline:hover{{border-color:var(--accent);color:var(--accent-light);}}
+.pdf-frame{{width:100%;height:70vh;border:1px solid var(--border);border-radius:var(--radius-sm);
+background:#1e293b;}}
+.email-form{{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
+padding:1.25rem;margin-bottom:1rem;display:none;}}
+.email-form.show{{display:block;}}
+.email-form label{{font-size:0.8rem;font-weight:600;color:var(--text-dim);display:block;margin-bottom:0.4rem;}}
+.email-form input{{width:100%;padding:0.7rem;background:rgba(255,255,255,0.04);border:1px solid var(--border);
+border-radius:var(--radius-sm);color:var(--text);font-family:inherit;font-size:0.9rem;outline:none;
+margin-bottom:0.75rem;}}
+.email-form input:focus{{border-color:var(--accent);}}
+.email-status{{font-size:0.85rem;padding:0.5rem;border-radius:var(--radius-sm);margin-top:0.5rem;display:none;}}
+.email-status.success{{display:block;background:rgba(16,185,129,0.1);color:var(--accent-light);}}
+.email-status.error{{display:block;background:rgba(239,68,68,0.1);color:#fca5a5;}}
+.disclaimer{{font-size:0.75rem;color:var(--text-dim);text-align:center;padding:1rem;
+border-top:1px solid var(--border);margin-top:1rem;}}
+@media(max-width:400px){{
+.stats{{grid-template-columns:1fr 1fr;}}
+.stat:last-child{{grid-column:span 2;}}
+}}
+</style>
+</head>
+<body>
+<div class="top-bar">TREC 20-19 Draft — Review before signing</div>
+<div class="container">
+<div class="address-card">
+<h1>{address}</h1>
+<div class="meta">TREC One to Four Family Residential Contract</div>
+</div>
+
+<div class="stats">
+<div class="stat"><div class="stat-label">Price</div><div class="stat-value accent">${price:,}</div></div>
+<div class="stat"><div class="stat-label">Down</div><div class="stat-value">{down_pct*100:.0f}% (${down_amt:,})</div></div>
+<div class="stat"><div class="stat-label">Close</div><div class="stat-value">{close_date}</div></div>
+</div>
+
+<div class="actions">
+<button class="btn btn-primary" id="email-toggle">Email to Listing Agent</button>
+<a href="{pdf_url}" class="btn btn-secondary" target="_blank">Open PDF</a>
+<a href="{pdf_url}" class="btn btn-outline" download="{filename}">Download PDF</a>
+</div>
+
+<div class="email-form" id="email-form">
+<label>Listing agent's email</label>
+<input type="email" id="email-to" placeholder="agent@example.com">
+<button class="btn btn-primary" id="send-email-btn" style="width:100%;">Send Offer PDF</button>
+<div class="email-status" id="email-status"></div>
+</div>
+
+<iframe src="{pdf_url}" class="pdf-frame" title="Offer PDF"></iframe>
+
+<div class="disclaimer">
+This is a draft generated by TxtAnOffer. Agent must review all fields before signing or presenting.
+Not affiliated with TREC. &middot; <a href="/" style="color:var(--accent-light);">txtanoffer.com</a>
+</div>
+</div>
+
+<script>
+(function(){{
+var toggle=document.getElementById('email-toggle'),
+    form=document.getElementById('email-form'),
+    sendBtn=document.getElementById('send-email-btn'),
+    statusEl=document.getElementById('email-status'),
+    emailInput=document.getElementById('email-to');
+
+toggle.addEventListener('click',function(){{
+  form.classList.toggle('show');
+  if(form.classList.contains('show'))emailInput.focus();
+}});
+
+sendBtn.addEventListener('click',function(){{
+  var email=emailInput.value.trim();
+  if(!email)return;
+  statusEl.className='email-status';statusEl.style.display='none';
+  sendBtn.textContent='Sending...';sendBtn.disabled=true;
+  fetch('/api/send-email',{{method:'POST',headers:{{'Content-Type':'application/json'}},
+    body:JSON.stringify({{to_email:email,pdf_filename:'{filename}',parsed:{{address:'{address}',price:{price}}},expires:'{expires}',sig:'{sig}'}})
+  }}).then(function(r){{return r.json();}}).then(function(d){{
+    if(d.success){{statusEl.textContent='Sent! The listing agent will receive the PDF.';statusEl.className='email-status success';}}
+    else{{statusEl.textContent=d.error||'Failed to send.';statusEl.className='email-status error';}}
+    sendBtn.textContent='Send Offer PDF';sendBtn.disabled=false;
+  }}).catch(function(){{
+    statusEl.textContent='Network error. Try again.';statusEl.className='email-status error';
+    sendBtn.textContent='Send Offer PDF';sendBtn.disabled=false;
+  }});
+}});
+
+emailInput.addEventListener('keydown',function(e){{if(e.key==='Enter')sendBtn.click();}});
+}})();
+</script>
+</body>
+</html>"""
 
 
 @app.route("/offers/<path:filename>")
