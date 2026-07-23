@@ -16,6 +16,7 @@ Flow (demo, no SMS/Twilio needed):
 
 from flask import Flask, request, send_from_directory, Response, redirect, jsonify, abort
 from twilio.twiml.messaging_response import MessagingResponse
+from twilio.request_validator import RequestValidator
 from datetime import datetime
 import os
 import hmac
@@ -41,6 +42,48 @@ STRIPE_PRICE_ID_BROKERAGE = os.environ.get("STRIPE_PRICE_ID_BROKERAGE", "")
 
 PDF_LINK_SECRET = os.environ.get("PDF_LINK_SECRET", "change-me-in-production")
 PDF_LINK_TTL = int(os.environ.get("PDF_LINK_TTL", 86400))  # 24 hours
+
+# API auth for integration endpoints
+API_BEARER_TOKEN = os.environ.get("API_BEARER_TOKEN", "")
+
+# Analytics dashboard password
+ANALYTICS_PASSWORD = os.environ.get("ANALYTICS_PASSWORD", "")
+
+# Twilio request validation
+TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN", "")
+
+
+def require_api_auth():
+    """Check Bearer token on integration endpoints. Returns error response or None."""
+    if not API_BEARER_TOKEN:
+        return jsonify({"error": "API not configured (missing API_BEARER_TOKEN)"}), 503
+    auth = request.headers.get("Authorization", "")
+    if not auth.startswith("Bearer ") or not hmac.compare_digest(auth[7:], API_BEARER_TOKEN):
+        return jsonify({"error": "Unauthorized"}), 401
+    return None
+
+
+def _is_safe_webhook_url(url):
+    """Block private/reserved IPs and non-HTTPS URLs to prevent SSRF."""
+    from urllib.parse import urlparse
+    import ipaddress
+    import socket
+
+    parsed = urlparse(url)
+    if parsed.scheme != "https":
+        return False
+    hostname = parsed.hostname
+    if not hostname:
+        return False
+    try:
+        resolved = socket.getaddrinfo(hostname, None)
+        for _, _, _, _, addr in resolved:
+            ip = ipaddress.ip_address(addr[0])
+            if ip.is_private or ip.is_loopback or ip.is_reserved or ip.is_link_local:
+                return False
+    except (socket.gaierror, ValueError):
+        return False
+    return True
 
 
 def sign_pdf_url(filename, base_url=""):
@@ -798,6 +841,14 @@ def sms_reply():
     if request.method == "GET":
         return redirect("/")
 
+    if TWILIO_AUTH_TOKEN:
+        validator = RequestValidator(TWILIO_AUTH_TOKEN)
+        url = request.url
+        post_vars = request.form.to_dict()
+        signature = request.headers.get("X-Twilio-Signature", "")
+        if not validator.validate(url, post_vars, signature):
+            abort(403)
+
     incoming_msg = request.values.get("Body", "")
     agent_phone = request.values.get("From", "")
 
@@ -1422,6 +1473,10 @@ def api_demo():
 
 @app.route("/api/send-email", methods=["POST"])
 def api_send_email():
+    auth_error = require_api_auth()
+    if auth_error:
+        return auth_error
+
     data = request.get_json()
     if not data:
         return jsonify({"success": False, "error": "JSON body required"}), 400
@@ -1444,6 +1499,10 @@ def api_send_email():
 
 @app.route("/api/webhook", methods=["GET", "POST", "DELETE"])
 def api_webhook():
+    auth_error = require_api_auth()
+    if auth_error:
+        return auth_error
+
     if request.method == "GET":
         source_id = request.args.get("source_id", "")
         if not source_id:
@@ -1459,6 +1518,8 @@ def api_webhook():
         url = data.get("url", "")
         if not source_id or not url:
             return jsonify({"error": "source_id and url required"}), 400
+        if not _is_safe_webhook_url(url):
+            return jsonify({"error": "Invalid webhook URL (must be public HTTPS)"}), 400
         save_webhook(source_id, url)
         track_event("webhook_configured", source_id, {"url": url})
         return jsonify({"success": True, "source_id": source_id, "url": url})
@@ -1476,6 +1537,10 @@ def api_webhook():
 
 @app.route("/api/docusign", methods=["POST"])
 def api_docusign():
+    auth_error = require_api_auth()
+    if auth_error:
+        return auth_error
+
     data = request.get_json()
     if not data:
         return jsonify({"success": False, "error": "JSON body required"}), 400
@@ -1876,7 +1941,7 @@ def stripe_webhook():
     webhook_secret = os.environ.get('STRIPE_WEBHOOK_SECRET', '')
 
     if not webhook_secret:
-        return jsonify(success=True)
+        return jsonify(error="Webhook secret not configured"), 503
 
     try:
         event = stripe.Webhook.construct_event(
@@ -1920,7 +1985,12 @@ def stripe_webhook():
 
 @app.route("/analytics")
 def analytics_dashboard():
-    """Simple analytics dashboard (password protect in production!)"""
+    if not ANALYTICS_PASSWORD:
+        abort(503)
+    token = request.args.get("token", "")
+    if not hmac.compare_digest(token, ANALYTICS_PASSWORD):
+        abort(403)
+
     metrics = get_conversion_metrics(days=30)
     revenue = get_revenue_metrics()
     recent_sms = get_recent_sms(limit=20)
@@ -2693,6 +2763,12 @@ def privacy():
 @app.route("/profile", methods=["GET", "POST"])
 def profile():
     phone = request.args.get("phone", "").strip()
+    expires = request.args.get("expires", "")
+    sig = request.args.get("sig", "")
+
+    if not verify_dashboard_signature(phone, expires, sig):
+        abort(403)
+
     saved = False
     error = ""
 
@@ -2891,6 +2967,8 @@ def profile():
 
 @app.route("/offers/<path:filename>")
 def serve_offer(filename):
+    if ".." in filename or filename.startswith("/"):
+        abort(400)
     expires = request.args.get("expires")
     sig = request.args.get("sig")
     if not verify_pdf_signature(filename, expires, sig):
