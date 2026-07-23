@@ -39,7 +39,7 @@ def _parse_days(text):
 def _parse_county(text):
     # Look for county name in the text
     m = COUNTY_RE.search(text)
-    return m.group(1).capitalize() if m else None
+    return m.group(1).title() if m else None
 
 def _parse_city(text):
     # Common TX cities - look for them in the text
@@ -55,20 +55,28 @@ def _parse_city(text):
             return city.title()
     return None
 
+STREET_SUFFIXES = r'(?:st|street|ave|avenue|blvd|boulevard|dr|drive|ln|lane|ct|court|rd|road|way|pkwy|parkway|pl|place|cir|circle|trl|trail|loop|pass|run|cv|cove|hwy|highway)'
+
 def _parse_address(text):
-    # crude heuristic: strip out the price/pct/day/county/city tokens, what's left is the street address
+    # Strip out the price/pct/day tokens, what's left is the street address
     stripped = re.sub(r'\d+(?:\.\d+)?\s*(k|m|million|mil)\b', '', text, flags=re.IGNORECASE)
     stripped = re.sub(r'\d+(?:\.\d+)?\s*%', '', stripped)
     stripped = re.sub(r'\d+\s*day\w*', '', stripped, flags=re.IGNORECASE)
-    # Remove county name if present
-    stripped = COUNTY_RE.sub('', stripped)
-    # Remove city name if present (simple approach - remove known cities)
-    cities = ['austin', 'houston', 'san antonio', 'dallas', 'fort worth', 'el paso',
-              'arlington', 'corpus christi', 'plano', 'irving', 'laredo', 'garland',
-              'frisco', 'mckinney', 'round rock', 'cedar park', 'pflugerville', 'georgetown']
-    for city in cities:
-        stripped = re.sub(r'\b' + city + r'\b', '', stripped, flags=re.IGNORECASE)
-    address = stripped.strip(' ,.-')
+    # Remove county/city names only when NOT followed by a street suffix
+    # (protects addresses like "123 Dallas Pkwy" or "456 El Paso Dr")
+    all_place_names = list(TX_COUNTIES) + [
+        'austin', 'houston', 'san antonio', 'dallas', 'fort worth', 'el paso',
+        'arlington', 'corpus christi', 'plano', 'irving', 'laredo', 'garland',
+        'frisco', 'mckinney', 'round rock', 'cedar park', 'pflugerville', 'georgetown']
+    # Deduplicate and sort longest first so multi-word names match before single-word
+    all_place_names = sorted(set(all_place_names), key=len, reverse=True)
+    for name in all_place_names:
+        pattern = r'\b' + name + r'\b(?!\s+' + STREET_SUFFIXES + r'\b)'
+        stripped = re.sub(pattern, '', stripped, flags=re.IGNORECASE)
+    # Remove trailing state abbreviation (TX, Texas) and zip codes
+    stripped = re.sub(r'\b(?:TX|Texas)\b', '', stripped, flags=re.IGNORECASE)
+    stripped = re.sub(r'\b\d{5}(?:-\d{4})?\b', '', stripped)
+    address = re.sub(r'\s+', ' ', stripped).strip(' ,.-')
     return address if address else None
 
 def parse_offer_sms(text: str) -> dict:

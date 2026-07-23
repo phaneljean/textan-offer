@@ -2010,7 +2010,8 @@ def signup():
         email = request.form.get("email", "")
         if phone:
             try:
-                create_user(phone)
+                if not get_user(phone):
+                    create_user(phone)
                 track_event("signup", phone, {"name": name, "email": email})
                 # Send welcome SMS
                 from twilio.rest import Client
@@ -2707,8 +2708,8 @@ def profile():
                 "email": request.form.get("email", "").strip(),
                 "brokerage": request.form.get("brokerage", "").strip(),
                 "title_company": request.form.get("title_company", "").strip(),
-                "default_earnest_pct": float(request.form.get("earnest_pct", "1")) / 100,
-                "default_option_fee": int(request.form.get("option_fee", "250")),
+                "default_earnest_pct": float(request.form.get("earnest_pct", "1") or "1") / 100,
+                "default_option_fee": int(float(request.form.get("option_fee", "250") or "250")),
             })
             saved = True
 

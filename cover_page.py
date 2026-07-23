@@ -165,7 +165,7 @@ def generate_cover_page(parsed: dict, agent: dict) -> bytes:
         (f"Down Payment ({down_pct*100:.0f}%)", f"${down_amt:,}"),
         ("Loan Amount", f"${loan_amt:,}"),
         ("Earnest Money", f"${earnest:,}"),
-        ("Option Fee", f"${option}"),
+        ("Option Fee", f"${option:,}"),
         ("Closing Date", close_date),
     ]
 
