@@ -1720,6 +1720,7 @@ def pricing():
 <div class="page-header">
   <h1>Simple pricing.<br><span class="gradient">Massive time savings.</span></h1>
   <p>Stop spending 45 minutes per offer. Pick a plan and start generating contracts in seconds.</p>
+  <p style="margin-top:1rem;color:var(--accent-light);font-weight:600;font-size:0.95rem;">Try free — 3 offers, no card required.</p>
 </div>
 
 <div class="pricing-grid">
@@ -1740,8 +1741,9 @@ def pricing():
     </ul>
     <form action="/create-checkout-session" method="POST">
       <input type="hidden" name="plan" value="starter">
-      <button type="submit" class="cta-btn">Get Started</button>
+      <button type="submit" class="cta-btn">Start Free Trial</button>
     </form>
+    <p style="text-align:center;font-size:0.75rem;color:var(--text-dim);margin-top:0.75rem;">3 free offers, then $49/mo. Cancel anytime.</p>
   </div>
 
   <div class="pricing-card featured">
@@ -1761,8 +1763,9 @@ def pricing():
     </ul>
     <form action="/create-checkout-session" method="POST">
       <input type="hidden" name="plan" value="professional">
-      <button type="submit" class="cta-btn">Get Professional</button>
+      <button type="submit" class="cta-btn">Start Free Trial</button>
     </form>
+    <p style="text-align:center;font-size:0.75rem;color:var(--text-dim);margin-top:0.75rem;">3 free offers, then $99/mo. Cancel anytime.</p>
   </div>
 
   <div class="pricing-card">
@@ -1781,8 +1784,9 @@ def pricing():
     </ul>
     <form action="/create-checkout-session" method="POST">
       <input type="hidden" name="plan" value="brokerage">
-      <button type="submit" class="cta-btn">Get Brokerage</button>
+      <button type="submit" class="cta-btn">Start Free Trial</button>
     </form>
+    <p style="text-align:center;font-size:0.75rem;color:var(--text-dim);margin-top:0.75rem;">3 free offers, then $299/mo. Cancel anytime.</p>
   </div>
 
   <div class="pricing-card">
