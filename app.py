@@ -914,7 +914,7 @@ def sms_reply():
                 f"You've used your {FREE_OFFER_LIMIT} free offers! 🎉\n\n"
                 f"Subscribe for unlimited offers:\n"
                 f"{payment_url}\n\n"
-                f"$49/mo • Cancel anytime\n"
+                f"$29/mo • Cancel anytime\n"
                 f"Saves 45min per offer"
             )
             resp.message(reply)
@@ -1572,7 +1572,7 @@ def pricing():
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pricing — TxtAnOffer</title>
-<meta name="description" content="TxtAnOffer pricing plans for Texas real estate agents. Generate TREC contracts instantly from $49/month.">
+<meta name="description" content="TxtAnOffer pricing plans for Texas real estate agents. Generate TREC contracts instantly from $29/month.">
 <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1728,66 +1728,67 @@ def pricing():
 
   <div class="pricing-card">
     <h2 class="plan-name">Starter</h2>
-    <p class="plan-desc">For individual agents getting started.</p>
+    <p class="plan-desc">Submit offers faster than any other agent in the room.</p>
     <div class="price-row">
-      <span class="price-current">$49</span>
+      <span class="price-current">$29</span>
       <span class="price-period">/month</span>
     </div>
     <ul class="features">
-      <li><span class="check">&#10003;</span> Unlimited offers</li>
-      <li><span class="check">&#10003;</span> TREC 20-19 generation</li>
-      <li><span class="check">&#10003;</span> SMS + Web access</li>
+      <li><span class="check">&#10003;</span> Unlimited offers via SMS or web</li>
+      <li><span class="check">&#10003;</span> TREC 20-19 + Financing Addendum</li>
+      <li><span class="check">&#10003;</span> 10-second contract generation</li>
       <li><span class="check">&#10003;</span> Agent profile auto-fill</li>
-      <li><span class="check">&#10003;</span> Email delivery</li>
+      <li><span class="check">&#10003;</span> Email delivery to listing agents</li>
+      <li><span class="check">&#10003;</span> Offer history dashboard</li>
     </ul>
     <form action="/create-checkout-session" method="POST">
       <input type="hidden" name="plan" value="starter">
       <button type="submit" class="cta-btn">Start Free Trial</button>
     </form>
-    <p style="text-align:center;font-size:0.75rem;color:var(--text-dim);margin-top:0.75rem;">3 free offers, then $49/mo. Cancel anytime.</p>
+    <p style="text-align:center;font-size:0.75rem;color:var(--text-dim);margin-top:0.75rem;">3 free offers, then $29/mo. Cancel anytime.</p>
   </div>
 
   <div class="pricing-card featured">
     <span class="featured-badge">Most Popular</span>
     <h2 class="plan-name">Professional</h2>
-    <p class="plan-desc">For active agents who close multiple deals monthly.</p>
+    <p class="plan-desc">Close deals faster with one-click signing and CRM sync.</p>
     <div class="price-row">
-      <span class="price-current">$99</span>
+      <span class="price-current">$79</span>
       <span class="price-period">/month</span>
     </div>
     <ul class="features">
       <li><span class="check">&#10003;</span> Everything in Starter</li>
-      <li><span class="check">&#10003;</span> DocuSign integration</li>
-      <li><span class="check">&#10003;</span> Webhook / CRM sync</li>
+      <li><span class="check">&#10003;</span> One-click DocuSign send</li>
+      <li><span class="check">&#10003;</span> Webhook / CRM auto-sync</li>
+      <li><span class="check">&#10003;</span> Branded cover page</li>
       <li><span class="check">&#10003;</span> Priority support</li>
-      <li><span class="check">&#10003;</span> Custom cover page</li>
     </ul>
     <form action="/create-checkout-session" method="POST">
       <input type="hidden" name="plan" value="professional">
       <button type="submit" class="cta-btn">Start Free Trial</button>
     </form>
-    <p style="text-align:center;font-size:0.75rem;color:var(--text-dim);margin-top:0.75rem;">3 free offers, then $99/mo. Cancel anytime.</p>
+    <p style="text-align:center;font-size:0.75rem;color:var(--text-dim);margin-top:0.75rem;">3 free offers, then $79/mo. Cancel anytime.</p>
   </div>
 
   <div class="pricing-card">
     <h2 class="plan-name">Brokerage</h2>
-    <p class="plan-desc">For teams and offices with multiple agents.</p>
+    <p class="plan-desc">Equip your entire team with instant offer generation.</p>
     <div class="price-row">
-      <span class="price-current">$299</span>
+      <span class="price-current">$199</span>
       <span class="price-period">/month</span>
     </div>
     <ul class="features">
       <li><span class="check">&#10003;</span> Everything in Professional</li>
       <li><span class="check">&#10003;</span> Up to 10 agent seats</li>
-      <li><span class="check">&#10003;</span> Brokerage branding</li>
+      <li><span class="check">&#10003;</span> Brokerage branding on PDFs</li>
       <li><span class="check">&#10003;</span> Team analytics dashboard</li>
-      <li><span class="check">&#10003;</span> Dedicated onboarding</li>
+      <li><span class="check">&#10003;</span> Dedicated onboarding call</li>
     </ul>
     <form action="/create-checkout-session" method="POST">
       <input type="hidden" name="plan" value="brokerage">
       <button type="submit" class="cta-btn">Start Free Trial</button>
     </form>
-    <p style="text-align:center;font-size:0.75rem;color:var(--text-dim);margin-top:0.75rem;">3 free offers, then $299/mo. Cancel anytime.</p>
+    <p style="text-align:center;font-size:0.75rem;color:var(--text-dim);margin-top:0.75rem;">3 free offers, then $199/mo. Cancel anytime.</p>
   </div>
 
   <div class="pricing-card">
@@ -1819,8 +1820,8 @@ def pricing():
       <div class="value-text">Math calculated automatically. No more "$21,750 or 3%?" double-checking. Every field consistent.</div>
     </div>
     <div class="value-card">
-      <div class="value-title">Pays for Itself</div>
-      <div class="value-text">Starter pays for itself with a single offer. Everything after is pure time savings.</div>
+      <div class="value-title">Less Than $1/Offer</div>
+      <div class="value-text">At 5 offers/month, Starter costs $5.80 per contract. Less than a coffee for 45 minutes of your time back.</div>
     </div>
   </div>
 </div>
@@ -1932,7 +1933,7 @@ def success():
   <div class="card">
     <div class="logo"><a href="/"><img src="/static/logo.webp" alt="TxtAnOffer"></a></div>
     <h1>Welcome aboard!</h1>
-    <p class="sub">Your subscription is active. You're locked in at <strong>$49/month forever</strong>.</p>
+    <p class="sub">Your subscription is active. You're all set with <strong>unlimited offers</strong>.</p>
 
     <div class="next-steps">
       <h3>Next Steps</h3>
@@ -2504,7 +2505,7 @@ def terms():
     <p>We use publicly available TREC promulgated forms as templates. If TREC revises or replaces a form, there may be a delay before we update the Service. You are responsible for confirming that the form version used is current and appropriate for your transaction.</p>
 
     <h2><span class="section-num">6.</span> Subscription, Payment, and Cancellation</h2>
-    <p><strong>Pricing:</strong> The Service costs $49.00 per month, billed monthly via Stripe.</p>
+    <p><strong>Pricing:</strong> Plans start at $29.00 per month, billed monthly via Stripe. See <a href="/pricing" style="color:var(--accent-light);">pricing page</a> for current tiers.</p>
     <p><strong>Billing cycle:</strong> Your subscription renews automatically on the same date each month. You will be charged at the beginning of each billing period.</p>
     <p><strong>Cancellation:</strong> You may cancel your subscription at any time through your account settings or by contacting us. Cancellation takes effect at the end of your current billing period — you retain access until that date.</p>
     <p><strong>Refunds:</strong> Payments are non-refundable. We do not provide prorated refunds for partial months. If you cancel mid-cycle, you retain access through the remainder of the paid period but will not receive a refund for unused time.</p>
