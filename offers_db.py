@@ -33,18 +33,21 @@ def record_offer(phone: str, parsed: dict, filename: str):
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     now = datetime.utcnow().isoformat()
-    cursor.execute("""
-        INSERT INTO offers (phone, address, price, down_pct, close_days, filename, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    """, (
-        phone,
-        parsed.get("address", ""),
-        parsed.get("price", 0),
-        parsed.get("down_payment_pct", 0),
-        parsed.get("close_days", 0),
-        filename,
-        now,
-    ))
+    price = parsed.get("price", 0)
+    down_pct = parsed.get("down_payment_pct", 0)
+    close_days = parsed.get("close_days", 0)
+    address = parsed.get("address", "")
+    existing = cursor.execute("SELECT id, price FROM offers WHERE filename = ?", (filename,)).fetchone()
+    if existing and not existing[1]:
+        cursor.execute("""
+            UPDATE offers SET phone=?, address=?, price=?, down_pct=?, close_days=?, created_at=?
+            WHERE id=?
+        """, (phone, address, price, down_pct, close_days, now, existing[0]))
+    elif not existing:
+        cursor.execute("""
+            INSERT INTO offers (phone, address, price, down_pct, close_days, filename, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (phone, address, price, down_pct, close_days, filename, now))
     conn.commit()
     conn.close()
 

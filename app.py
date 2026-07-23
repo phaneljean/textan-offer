@@ -3332,7 +3332,7 @@ def review_offer(filename):
         abort(403)
 
     offer = get_offer_by_filename(filename)
-    if not offer:
+    if not offer or not offer["price"]:
         return redirect(f"/offers/{filename}?expires={expires}&sig={sig}")
     address = offer["address"]
     price = offer["price"]
