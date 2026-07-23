@@ -3709,6 +3709,20 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
 </html>"""
 
 
+@app.route("/health")
+def health():
+    """Health check for uptime monitoring and Railway restart."""
+    import sqlite3
+    db_path = os.environ.get("DATABASE_PATH", "subscriptions.db")
+    try:
+        conn = sqlite3.connect(db_path)
+        conn.execute("SELECT 1")
+        conn.close()
+    except Exception:
+        return jsonify({"status": "unhealthy", "db": "unreachable"}), 503
+    return jsonify({"status": "ok"}), 200
+
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
