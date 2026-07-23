@@ -627,7 +627,7 @@ def index():
             <button type="submit" class="input-btn">Generate &rarr;</button>
           </div>
         </form>
-        <div class="input-hint">Format: price &middot; down % &middot; closing days &middot; address</div>
+        <div class="input-hint">Type however feels natural — we handle messy texts. Just get the numbers in there.</div>
         <div class="demo-loading" id="demo-loading">Generating your contract...</div>
         <div class="demo-error" id="demo-error"></div>
         <div class="demo-result" id="demo-result">
@@ -770,6 +770,7 @@ def index():
       <a href="/terms">Terms of Service</a>
       <a href="/privacy">Privacy Policy</a>
       <a href="/pricing">Pricing</a>
+      <a href="/playground">Parser Playground</a>
       <a href="mailto:support@txtanoffer.com">Support</a>
     </div>
     <div class="footer-copy">
@@ -1020,7 +1021,21 @@ def sms_reply():
         parsed, pdf_path, error, warnings = process_offer(incoming_msg, agent_phone)
 
         if error:
-            resp.message(error)
+            # Provide helpful hint with what we DID parse
+            partial = parse_offer_sms(incoming_msg)
+            hints = []
+            if partial.get("price"):
+                hints.append(f"${partial['price']:,}")
+            if partial.get("down_payment_pct"):
+                hints.append(f"{partial['down_payment_pct']*100:.0f}%")
+            if partial.get("close_days"):
+                hints.append(f"{partial['close_days']}day")
+            if partial.get("address"):
+                hints.append(partial["address"])
+            hint_line = ""
+            if hints:
+                hint_line = f"\n\nWe got: {' · '.join(hints)}\nMissing pieces? Try again with all 4: price, down%, days, address"
+            resp.message(f"{error}{hint_line}")
             return Response(str(resp), mimetype="application/xml")
 
         # Track offer generation
@@ -1055,21 +1070,17 @@ def sms_reply():
                 status_line = f"\n🎉 Last free offer! Subscribe for unlimited:\n{payment_url}"
 
         reply = (
-            f"Offer ready for {parsed['address']}\n\n"
-            f"💰 Price: ${parsed['price']:,}\n"
-            f"📅 Close: {parsed['close_days']} days\n"
+            f"Got it — ${parsed['price']:,}, {parsed['down_payment_pct']*100:.0f}% down, {parsed['close_days']} days\n"
+            f"Generating for {parsed['address']}...\n\n"
+            f"💰 ${parsed['price']:,}\n"
             f"💵 Down: ${parsed['down_payment_amount']:,} ({parsed['down_payment_pct']*100:.0f}%)\n"
             f"🏦 Loan: ${parsed['loan_amount']:,}\n"
             f"✅ Earnest: ${parsed['earnest_money']:,}\n"
-            f"🎯 Option: ${parsed['option_fee']}\n"
-            f"\n"
-            f"⚡️ Generated in <1s (vs 45min manual)\n"
+            f"🎯 Option: ${parsed['option_fee']:,}\n"
+            f"📅 Close: {parsed['close_days']} days\n"
             f"{warning_line}\n"
-            f"Review: {pdf_url}\n"
-            f"{status_line}\n\n"
-            f"Share with your team:\n"
-            f"txtanoffer.com/demo\n"
-            f"(TREC 20-19 draft -- agent must review before signing)"
+            f"Review: {pdf_url}"
+            f"{status_line}"
         )
         resp.message(reply)
         print(f"[SMS] Sending reply, length: {len(reply)} chars")
@@ -1564,6 +1575,213 @@ def api_demo():
         "close_date": close_date,
         "pdf_url": pdf_url,
     })
+
+
+@app.route("/api/parse", methods=["POST"])
+def api_parse():
+    """Parse-only endpoint for the playground — no PDF generated."""
+    data = request.get_json()
+    if not data or not data.get("text"):
+        return jsonify({"error": "Please enter offer text."}), 400
+    text = data["text"].strip()
+    parsed = parse_offer_sms(text)
+    if "error" in parsed:
+        return jsonify({"success": False, "error": parsed["error"]}), 400
+    from datetime import timedelta
+    close_date = (datetime.now() + timedelta(days=parsed["close_days"])).strftime("%B %d, %Y")
+    down_amt = int(parsed["price"] * parsed["down_payment_pct"])
+    loan_amt = parsed["price"] - down_amt
+    return jsonify({
+        "success": True,
+        "price": parsed["price"],
+        "down_payment_pct": round(parsed["down_payment_pct"] * 100, 1),
+        "down_payment_amount": down_amt,
+        "loan_amount": loan_amt,
+        "close_days": parsed["close_days"],
+        "close_date": close_date,
+        "address": parsed["address"],
+        "county": parsed.get("county", ""),
+        "city": parsed.get("city", ""),
+    })
+
+
+@app.route("/playground")
+def playground():
+    return """<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Parser Playground — TxtAnOffer</title>
+<meta name="description" content="Test the TxtAnOffer SMS parser. See how messy texts become structured TREC offers in real-time.">
+<link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0f172a;--bg-card:rgba(255,255,255,0.03);--border:rgba(255,255,255,0.06);
+--text:#f8fafc;--text-muted:#94a3b8;--text-dim:#64748b;--accent:#10b981;--accent-light:#34d399;
+--radius:1.25rem;--radius-sm:0.75rem;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;
+-webkit-font-smoothing:antialiased;}
+a{color:inherit;text-decoration:none;}
+.nav{display:flex;align-items:center;justify-content:space-between;padding:1rem 2rem;
+background:rgba(15,23,42,0.9);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);
+position:sticky;top:0;z-index:100;}
+.nav-left{display:flex;align-items:center;gap:0.6rem;font-weight:700;font-size:1.1rem;}
+.nav-logo{width:34px;height:34px;border-radius:50%;overflow:hidden;}
+.nav-logo img{width:100%;height:100%;object-fit:cover;}
+.nav-links{display:flex;gap:2rem;font-size:0.875rem;font-weight:500;color:var(--text-muted);}
+.nav-links a:hover{color:var(--text);}
+.nav-cta{background:var(--accent);color:#fff;padding:0.55rem 1.35rem;border-radius:9999px;
+font-size:0.875rem;font-weight:600;}
+.container{max-width:900px;margin:0 auto;padding:3rem 2rem;}
+h1{font-size:2rem;font-weight:800;letter-spacing:-0.03em;margin-bottom:0.5rem;}
+.subtitle{color:var(--text-muted);font-size:1rem;margin-bottom:2rem;}
+.playground-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:2rem;}
+.input-area{margin-bottom:1.5rem;}
+.input-area label{display:block;font-size:0.8rem;font-weight:600;color:var(--text-dim);
+text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.5rem;}
+.input-area textarea{width:100%;background:rgba(255,255,255,0.04);border:1px solid var(--border);
+border-radius:var(--radius-sm);color:var(--text);font-family:inherit;font-size:1rem;
+padding:1rem;resize:none;outline:none;transition:border 0.2s;}
+.input-area textarea:focus{border-color:var(--accent);}
+.parse-btn{background:linear-gradient(135deg,var(--accent),#059669);color:#fff;border:none;
+padding:0.85rem 2rem;border-radius:var(--radius-sm);font-family:inherit;font-size:0.9rem;
+font-weight:600;cursor:pointer;transition:all 0.2s;}
+.parse-btn:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(16,185,129,0.3);}
+.result{margin-top:1.5rem;display:none;}
+.result.show{display:block;}
+.result-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;}
+.result-item{background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.05);
+border-radius:var(--radius-sm);padding:1rem;}
+.result-label{font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;
+color:var(--text-dim);margin-bottom:0.25rem;}
+.result-value{font-size:1.1rem;font-weight:700;color:var(--text);}
+.result-value.accent{color:var(--accent-light);}
+.error-msg{background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);
+border-radius:var(--radius-sm);padding:1rem;color:#fca5a5;font-size:0.9rem;margin-top:1rem;display:none;}
+.error-msg.show{display:block;}
+.examples{margin-top:2rem;}
+.examples h3{font-size:0.9rem;font-weight:700;margin-bottom:1rem;color:var(--text-muted);}
+.example-chips{display:flex;flex-wrap:wrap;gap:0.5rem;}
+.chip{background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:9999px;
+padding:0.4rem 0.85rem;font-size:0.8rem;color:var(--text-muted);cursor:pointer;transition:all 0.2s;}
+.chip:hover{border-color:var(--accent);color:var(--accent-light);}
+.formats{margin-top:2.5rem;padding-top:2rem;border-top:1px solid var(--border);}
+.formats h3{font-size:1rem;font-weight:700;margin-bottom:1rem;}
+.format-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+.format-item{font-size:0.85rem;color:var(--text-muted);line-height:1.6;}
+.format-item strong{color:var(--text);font-weight:600;}
+@media(max-width:600px){
+.result-grid{grid-template-columns:1fr;}
+.format-grid{grid-template-columns:1fr;}
+.nav-links{display:none;}
+}
+</style>
+</head>
+<body>
+<nav class="nav">
+<a href="/" class="nav-left">
+<div class="nav-logo"><img src="/static/logo.webp" alt="TxtAnOffer"></div>
+<span>TxtAnOffer</span>
+</a>
+<div class="nav-links">
+<a href="/">Home</a>
+<a href="/demo">Demo</a>
+<a href="/pricing">Pricing</a>
+</div>
+<a href="/signup" class="nav-cta">Start Free Trial</a>
+</nav>
+
+<div class="container">
+<h1>Parser Playground</h1>
+<p class="subtitle">Test how our parser handles your texts. No signup needed. Type however feels natural.</p>
+
+<div class="playground-card">
+<div class="input-area">
+<label>Your offer text</label>
+<textarea id="offer-input" rows="3" placeholder="725k 3% 21day 1740 Grand Ave, Austin"></textarea>
+</div>
+<button class="parse-btn" id="parse-btn">Parse &rarr;</button>
+
+<div class="error-msg" id="error-msg"></div>
+
+<div class="result" id="result">
+<div class="result-grid">
+<div class="result-item"><div class="result-label">Address</div><div class="result-value" id="r-addr"></div></div>
+<div class="result-item"><div class="result-label">Sales Price</div><div class="result-value accent" id="r-price"></div></div>
+<div class="result-item"><div class="result-label">Down Payment</div><div class="result-value" id="r-down"></div></div>
+<div class="result-item"><div class="result-label">Loan Amount</div><div class="result-value" id="r-loan"></div></div>
+<div class="result-item"><div class="result-label">Closing Date</div><div class="result-value" id="r-close"></div></div>
+<div class="result-item"><div class="result-label">Location</div><div class="result-value" id="r-location"></div></div>
+</div>
+</div>
+
+<div class="examples">
+<h3>Try these (click to load):</h3>
+<div class="example-chips">
+<span class="chip">725k 3% 21day 1740 Grand Ave</span>
+<span class="chip">Offer 650000 3 percent close in 30 days 456 Oak St Austin</span>
+<span class="chip">500k 5 down 14days 200 Preston Rd Plano</span>
+<span class="chip">1.2m 10% 45day Travis 789 Pine Blvd</span>
+<span class="chip">825k 3% close in 14 1900 Exposition Blvd</span>
+<span class="chip">375,000 3% 30days 2100 South Congress Ave</span>
+</div>
+</div>
+
+<div class="formats">
+<h3>We handle messy texts. Just get the numbers in there.</h3>
+<div class="format-grid">
+<div class="format-item"><strong>Price:</strong> 725k, 725000, 725,000, 1.2m, 1.2mil</div>
+<div class="format-item"><strong>Down:</strong> 3%, 3 percent, 3 pct, 3 down</div>
+<div class="format-item"><strong>Days:</strong> 21day, 21 days, close in 21, 21-day close</div>
+<div class="format-item"><strong>Address:</strong> Just include street number + name + type</div>
+</div>
+</div>
+</div>
+</div>
+
+<script>
+(function(){
+var input=document.getElementById('offer-input'),
+    btn=document.getElementById('parse-btn'),
+    result=document.getElementById('result'),
+    errEl=document.getElementById('error-msg');
+
+document.querySelectorAll('.chip').forEach(function(c){
+  c.addEventListener('click',function(){
+    input.value=c.textContent;
+    btn.click();
+  });
+});
+
+btn.addEventListener('click',function(){
+  var text=input.value.trim();
+  if(!text)return;
+  result.classList.remove('show');
+  errEl.classList.remove('show');
+  fetch('/api/parse',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({text:text})})
+  .then(function(r){return r.json();})
+  .then(function(d){
+    if(!d.success){errEl.textContent=d.error;errEl.classList.add('show');return;}
+    document.getElementById('r-addr').textContent=d.address;
+    document.getElementById('r-price').textContent='$'+d.price.toLocaleString();
+    document.getElementById('r-down').textContent=d.down_payment_pct+'% ($'+d.down_payment_amount.toLocaleString()+')';
+    document.getElementById('r-loan').textContent='$'+d.loan_amount.toLocaleString();
+    document.getElementById('r-close').textContent=d.close_date+' ('+d.close_days+' days)';
+    var loc=[];if(d.city)loc.push(d.city);if(d.county)loc.push(d.county+' County');loc.push('TX');
+    document.getElementById('r-location').textContent=loc.join(', ');
+    result.classList.add('show');
+  })
+  .catch(function(){errEl.textContent='Something went wrong.';errEl.classList.add('show');});
+});
+
+input.addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();btn.click();}});
+})();
+</script>
+</body>
+</html>"""
 
 
 # --- Integration endpoints -------------------------------------------------

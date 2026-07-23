@@ -90,7 +90,8 @@ STREET_SUFFIXES = r'(?:st|street|ave|avenue|blvd|boulevard|dr|drive|ln|lane|ct|c
 
 def _parse_address(text):
     # Strip out the price/pct/day tokens, what's left is the street address
-    stripped = re.sub(r'\d+(?:\.\d+)?\s*(k|m|million|mil)\b', '', text, flags=re.IGNORECASE)
+    # Only strip number+unit combos (not bare "million" in street names like "100 Million Dr")
+    stripped = re.sub(r'\d+(?:\.\d+)?\s*(k|m|million|mil)\b(?!\s+' + STREET_SUFFIXES + r'\b)', '', text, flags=re.IGNORECASE)
     stripped = re.sub(r'\b\d{6,}\b', '', stripped)  # bare large numbers (price)
     stripped = re.sub(r'\b\d{1,3}(?:,\d{3})+\b', '', stripped)  # comma-formatted numbers
     stripped = re.sub(r'\d+(?:\.\d+)?\s*(?:%|percent|pct)', '', stripped, flags=re.IGNORECASE)
