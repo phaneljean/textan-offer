@@ -756,6 +756,7 @@ def index():
         <li><strong>Opt-in:</strong> Users sign up at txtanoffer.com/signup by providing their phone number and explicitly consenting to receive SMS messages.</li>
         <li><strong>Message frequency:</strong> Messages are sent only in direct response to user-initiated texts. We do not send marketing or promotional messages.</li>
         <li><strong>Message content:</strong> Replies contain contract confirmation details and a download link to the generated PDF.</li>
+        <li><strong>Sample message:</strong> <em>"Got it — $725,000, 3% down, closing Aug 13 2026. Your TREC contract is ready: txtanoffer.com/review/1740-grand-ave.pdf — Reply STOP to unsubscribe, HELP for help. Msg&amp;data rates may apply."</em></li>
         <li><strong>Opt-out:</strong> Reply STOP at any time to unsubscribe from all messages. Reply HELP for support.</li>
         <li><strong>Standard message and data rates may apply.</strong></li>
       </ul>
