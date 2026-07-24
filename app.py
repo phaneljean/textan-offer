@@ -15,14 +15,13 @@ Flow (demo, no SMS/Twilio needed):
 """
 
 from flask import Flask, request, send_from_directory, Response, redirect, jsonify, abort
-from twilio.twiml.messaging_response import MessagingResponse
-from twilio.request_validator import RequestValidator
 from datetime import datetime
 import os
 import hmac
 import hashlib
 import time
 import stripe
+import requests as http_requests
 
 from parser import parse_offer_sms
 from pdf_filler import fill_offer_pdf, OUTPUT_DIR
@@ -49,8 +48,10 @@ API_BEARER_TOKEN = os.environ.get("API_BEARER_TOKEN", "")
 # Analytics dashboard password
 ANALYTICS_PASSWORD = os.environ.get("ANALYTICS_PASSWORD", "")
 
-# Twilio request validation
-TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN", "")
+# Telnyx configuration
+TELNYX_API_KEY = os.environ.get("TELNYX_API_KEY", "")
+TELNYX_PHONE_NUMBER = os.environ.get("TELNYX_PHONE_NUMBER", "+14696990893")
+TELNYX_PUBLIC_KEY = os.environ.get("TELNYX_PUBLIC_KEY", "")
 
 
 def require_api_auth():
@@ -931,35 +932,42 @@ def process_offer(incoming_msg: str, source_id: str):
     return parsed, pdf_path, None, warnings
 
 
+def telnyx_send_sms(to, body):
+    """Send an SMS via Telnyx API."""
+    if not TELNYX_API_KEY:
+        print("[SMS] TELNYX_API_KEY not set, skipping send")
+        return False
+    resp = http_requests.post(
+        "https://api.telnyx.com/v2/messages",
+        headers={"Authorization": f"Bearer {TELNYX_API_KEY}", "Content-Type": "application/json"},
+        json={"from": TELNYX_PHONE_NUMBER, "to": to, "text": body},
+    )
+    if resp.status_code not in (200, 201, 202):
+        print(f"[SMS] Telnyx send failed: {resp.status_code} {resp.text}")
+        return False
+    return True
+
+
 @app.route("/sms", methods=["GET", "POST"])
 def sms_reply():
     if request.method == "GET":
         return redirect("/")
 
-    if TWILIO_AUTH_TOKEN:
-        validator = RequestValidator(TWILIO_AUTH_TOKEN)
-        url = request.url
-        post_vars = request.form.to_dict()
-        signature = request.headers.get("X-Twilio-Signature", "")
-        if not validator.validate(url, post_vars, signature):
-            abort(403)
-
-    incoming_msg = request.values.get("Body", "")
-    agent_phone = request.values.get("From", "")
+    # Telnyx sends JSON webhooks
+    data = request.get_json(silent=True) or {}
+    payload = data.get("data", {}).get("payload", {})
+    incoming_msg = payload.get("text", "") or payload.get("body", "")
+    agent_phone = payload.get("from", {}).get("phone_number", "") if isinstance(payload.get("from"), dict) else payload.get("from", "")
 
     # Log all incoming SMS for debugging
     print(f"[SMS] From: {agent_phone}, Body: {incoming_msg}")
     track_event("sms_received", agent_phone, {"body": incoming_msg})
 
-    resp = MessagingResponse()
-
     # Handle keywords
     keyword = incoming_msg.strip().upper()
 
     if keyword in ("HELP", "MENU"):
-        user = get_user(agent_phone)
-        offer_count = user["offer_count"] if user else 0
-        resp.message(
+        telnyx_send_sms(agent_phone,
             "TxtAnOffer Commands:\n\n"
             "HELP - This menu\n"
             "DASHBOARD - Your offer history\n"
@@ -972,30 +980,30 @@ def sms_reply():
             "725k 3% 21day 1740 Grand Ave\n"
             "650000 3 percent 30 days 123 Main St"
         )
-        return Response(str(resp), mimetype="application/xml")
+        return "", 200
 
     if keyword == "DASHBOARD":
         dash_link = sign_dashboard_url(agent_phone, request.host_url.rstrip("/"))
-        resp.message(f"Your dashboard (valid 7 days):\n{dash_link}")
-        return Response(str(resp), mimetype="application/xml")
+        telnyx_send_sms(agent_phone, f"Your dashboard (valid 7 days):\n{dash_link}")
+        return "", 200
 
     if keyword == "STATUS":
         user = get_user(agent_phone)
         if not user:
             create_user(agent_phone)
-            resp.message(f"Welcome! You have {FREE_OFFER_LIMIT} free offers.\n\nJust text your offer:\n725k 3% 21day 1740 Grand Ave\n\nReply HELP for all commands.")
-            return Response(str(resp), mimetype="application/xml")
+            telnyx_send_sms(agent_phone, f"Welcome! You have {FREE_OFFER_LIMIT} free offers.\n\nJust text your offer:\n725k 3% 21day 1740 Grand Ave\n\nReply HELP for all commands.")
+            return "", 200
         elif user["is_subscribed"]:
-            resp.message(f"Plan: Unlimited\nOffers generated: {user['offer_count']}\n\nText HELP for commands.")
+            telnyx_send_sms(agent_phone, f"Plan: Unlimited\nOffers generated: {user['offer_count']}\n\nText HELP for commands.")
         else:
             remaining = max(0, FREE_OFFER_LIMIT - user["offer_count"])
-            resp.message(f"Plan: Free trial\nOffers used: {user['offer_count']}/{FREE_OFFER_LIMIT}\nRemaining: {remaining}\n\nUpgrade: txtanoffer.com/pricing")
-        return Response(str(resp), mimetype="application/xml")
+            telnyx_send_sms(agent_phone, f"Plan: Free trial\nOffers used: {user['offer_count']}/{FREE_OFFER_LIMIT}\nRemaining: {remaining}\n\nUpgrade: txtanoffer.com/pricing")
+        return "", 200
 
     if keyword == "PROFILE":
         profile_link = sign_dashboard_url(agent_phone, request.host_url.rstrip("/")).replace("/dashboard?", "/profile?")
-        resp.message(f"Edit your agent profile:\n{profile_link}\n\nYour name, license, brokerage, and defaults auto-fill into every contract.")
-        return Response(str(resp), mimetype="application/xml")
+        telnyx_send_sms(agent_phone, f"Edit your agent profile:\n{profile_link}\n\nYour name, license, brokerage, and defaults auto-fill into every contract.")
+        return "", 200
 
     try:
         # Check subscription status
@@ -1003,26 +1011,21 @@ def sms_reply():
         print(f"[SMS] Subscription check: can_generate={can_generate}, reason={reason}")
 
         if not can_generate:
-            # Track paywall hit
             track_event("limit_reached", agent_phone)
-
-            # Send payment link
             payment_url = request.host_url.rstrip("/") + "/pricing"
-            reply = (
-                f"You've used your {FREE_OFFER_LIMIT} free offers! 🎉\n\n"
+            telnyx_send_sms(agent_phone,
+                f"You've used your {FREE_OFFER_LIMIT} free offers!\n\n"
                 f"Subscribe for unlimited offers:\n"
                 f"{payment_url}\n\n"
-                f"$29/mo • Cancel anytime\n"
+                f"$29/mo - Cancel anytime\n"
                 f"Saves 45min per offer"
             )
-            resp.message(reply)
-            return Response(str(resp), mimetype="application/xml")
+            return "", 200
 
         # Process offer
         parsed, pdf_path, error, warnings = process_offer(incoming_msg, agent_phone)
 
         if error:
-            # Provide helpful hint with what we DID parse
             partial = parse_offer_sms(incoming_msg)
             hints = []
             if partial.get("price"):
@@ -1035,9 +1038,9 @@ def sms_reply():
                 hints.append(partial["address"])
             hint_line = ""
             if hints:
-                hint_line = f"\n\nWe got: {' · '.join(hints)}\nMissing pieces? Try again with all 4: price, down%, days, address"
-            resp.message(f"{error}{hint_line}")
-            return Response(str(resp), mimetype="application/xml")
+                hint_line = f"\n\nWe got: {' . '.join(hints)}\nMissing pieces? Try again with all 4: price, down%, days, address"
+            telnyx_send_sms(agent_phone, f"{error}{hint_line}")
+            return "", 200
 
         # Track offer generation
         track_event("offer_generated", agent_phone, {"price": parsed.get("price")})
@@ -1045,7 +1048,6 @@ def sms_reply():
         # Increment usage count
         new_count = increment_offer_count(agent_phone)
 
-        # Check if trial just completed
         if new_count == FREE_OFFER_LIMIT and reason == "free_trial":
             track_event("trial_completed", agent_phone)
 
@@ -1059,40 +1061,39 @@ def sms_reply():
 
         warning_line = f"\nNote: {' / '.join(warnings)}" if warnings else ""
 
-        # Status line based on subscription
         if reason == "subscribed":
             status_line = ""
         else:
             remaining = FREE_OFFER_LIMIT - new_count
             if remaining > 0:
-                status_line = f"\n✨ {remaining} free offers remaining"
+                status_line = f"\n{remaining} free offers remaining"
             else:
                 payment_url = request.host_url.rstrip("/") + "/pricing"
-                status_line = f"\n🎉 Last free offer! Subscribe for unlimited:\n{payment_url}"
+                status_line = f"\nLast free offer! Subscribe for unlimited:\n{payment_url}"
 
         reply = (
             f"Got it — ${parsed['price']:,}, {parsed['down_payment_pct']*100:.0f}% down, {parsed['close_days']} days\n"
             f"Generating for {parsed['address']}...\n\n"
-            f"💰 ${parsed['price']:,}\n"
-            f"💵 Down: ${parsed['down_payment_amount']:,} ({parsed['down_payment_pct']*100:.0f}%)\n"
-            f"🏦 Loan: ${parsed['loan_amount']:,}\n"
-            f"✅ Earnest: ${parsed['earnest_money']:,}\n"
-            f"🎯 Option: ${parsed['option_fee']:,}\n"
-            f"📅 Close: {parsed['close_days']} days\n"
+            f"${parsed['price']:,}\n"
+            f"Down: ${parsed['down_payment_amount']:,} ({parsed['down_payment_pct']*100:.0f}%)\n"
+            f"Loan: ${parsed['loan_amount']:,}\n"
+            f"Earnest: ${parsed['earnest_money']:,}\n"
+            f"Option: ${parsed['option_fee']:,}\n"
+            f"Close: {parsed['close_days']} days\n"
             f"{warning_line}\n"
             f"Review: {pdf_url}"
             f"{status_line}"
         )
-        resp.message(reply)
+        telnyx_send_sms(agent_phone, reply)
         print(f"[SMS] Sending reply, length: {len(reply)} chars")
-        return Response(str(resp), mimetype="application/xml")
+        return "", 200
 
     except Exception as e:
         print(f"[SMS] ERROR: {str(e)}")
         import traceback
         traceback.print_exc()
-        resp.message("Error generating offer. Please try again or contact support.")
-        return Response(str(resp), mimetype="application/xml")
+        telnyx_send_sms(agent_phone, "Error generating offer. Please try again or contact support.")
+        return "", 200
 
 
 DEMO_FORM = """
@@ -2270,7 +2271,7 @@ def success():
       <h3>Next Steps</h3>
       <ol>
         <li><strong>Set up your profile</strong> &mdash; your name, license, and brokerage auto-fill every offer</li>
-        <li>Text your first offer to <strong>1-833-897-0333</strong></li>
+        <li>Text your first offer to <strong>1-469-699-0893</strong></li>
         <li>Or use the web demo at <strong>txtanoffer.com/demo</strong></li>
       </ol>
     </div>
@@ -2414,7 +2415,7 @@ body{{font-family:system-ui;max-width:800px;margin:40px auto;padding:20px;}}
   {sms_rows}
 </table>
 <p style="color:#666;font-size:12px;margin-top:20px;">
-  Check Twilio dashboard for full logs: <a href="https://console.twilio.com/us1/monitor/logs/sms" target="_blank">console.twilio.com/monitor/logs/sms</a>
+  Check Telnyx dashboard for full logs: <a href="https://portal.telnyx.com/" target="_blank">portal.telnyx.com</a>
 </p>
 </body></html>
 """
@@ -2433,22 +2434,12 @@ def signup():
                     create_user(phone)
                 track_event("signup", phone, {"name": name, "email": email})
                 # Send welcome SMS
-                from twilio.rest import Client
-                twilio_sid = os.environ.get("TWILIO_ACCOUNT_SID", "")
-                twilio_token = os.environ.get("TWILIO_AUTH_TOKEN", "")
-                twilio_from = os.environ.get("TWILIO_PHONE_NUMBER", "+18338970333")
-                if twilio_sid and twilio_token:
-                    client = Client(twilio_sid, twilio_token)
-                    client.messages.create(
-                        body=(
-                            "Welcome to TxtAnOffer! "
-                            "Text an offer like: 725k 3% 21day 123 Main St, Austin TX\n\n"
-                            "Reply HELP for all commands. "
-                            "Msg & data rates may apply. Reply STOP to opt out."
-                        ),
-                        from_=twilio_from,
-                        to=phone,
-                    )
+                telnyx_send_sms(phone,
+                    "Welcome to TxtAnOffer! "
+                    "Text an offer like: 725k 3% 21day 123 Main St, Austin TX\n\n"
+                    "Reply HELP for all commands. "
+                    "Msg & data rates may apply. Reply STOP to opt out."
+                )
             except Exception:
                 pass
             profile_url = sign_dashboard_url(phone, request.host_url.rstrip("/")).replace("/dashboard?", "/profile?")
@@ -2531,7 +2522,7 @@ def signup():
   <div class="wrap">
     <a href="/" class="nav-back"><img src="/static/logo.webp" alt=""><span>&larr; TxtAnOffer</span></a>
     <h1>Get started with TxtAnOffer</h1>
-    <p class="sub">Enter your phone number to receive offer drafts via SMS at +1 (833) 897-0333.</p>
+    <p class="sub">Enter your phone number to receive offer drafts via SMS at +1 (469) 699-0893.</p>
     <div class="card">
       <form method="POST" action="/signup" id="signup-form">
         <label class="field-label">Phone number</label>
@@ -2542,7 +2533,7 @@ def signup():
         <input type="email" name="email" placeholder="you@brokerage.com">
         <div class="consent-row">
           <input type="checkbox" id="sms-consent" name="sms_consent" required>
-          <label for="sms-consent">By checking this box, I agree to receive automated transactional SMS messages from TxtAnOffer at +1 (833) 897-0333 about my offer drafts. Message frequency varies based on usage. Reply STOP to opt out, HELP for help. Msg &amp; data rates may apply. Consent is not a condition of purchase. <a href="/privacy">Privacy Policy</a> &amp; <a href="/terms">Terms</a></label>
+          <label for="sms-consent">By checking this box, I agree to receive automated transactional SMS messages from TxtAnOffer at +1 (469) 699-0893 about my offer drafts. Message frequency varies based on usage. Reply STOP to opt out, HELP for help. Msg &amp; data rates may apply. Consent is not a condition of purchase. <a href="/privacy">Privacy Policy</a> &amp; <a href="/terms">Terms</a></label>
         </div>
         <button type="submit">Sign up for SMS</button>
       </form>
@@ -2567,20 +2558,10 @@ def login():
 
         user = get_user(phone_clean)
         if user:
-            # Send dashboard link via Twilio
+            # Send dashboard link via Telnyx
             try:
-                from twilio.rest import Client
-                twilio_sid = os.environ.get("TWILIO_ACCOUNT_SID", "")
-                twilio_token = os.environ.get("TWILIO_AUTH_TOKEN", "")
-                twilio_from = os.environ.get("TWILIO_PHONE_NUMBER", "+18338970333")
-                if twilio_sid and twilio_token:
-                    client = Client(twilio_sid, twilio_token)
-                    dash_link = sign_dashboard_url(phone_clean, request.host_url.rstrip("/"))
-                    client.messages.create(
-                        body=f"Your TxtAnOffer dashboard link (valid 7 days):\n{dash_link}",
-                        from_=twilio_from,
-                        to=phone_clean,
-                    )
+                dash_link = sign_dashboard_url(phone_clean, request.host_url.rstrip("/"))
+                if telnyx_send_sms(phone_clean, f"Your TxtAnOffer dashboard link (valid 7 days):\n{dash_link}"):
                     message = "sent"
                 else:
                     message = "error"
@@ -2596,7 +2577,7 @@ def login():
     elif message == "not_found":
         msg_html = '<div class="msg error">No account found for that number. <a href="/signup">Sign up first</a>.</div>'
     elif message == "error":
-        msg_html = '<div class="msg error">Could not send SMS. Text DASHBOARD to (833) 897-0333 instead.</div>'
+        msg_html = '<div class="msg error">Could not send SMS. Text DASHBOARD to (469) 699-0893 instead.</div>'
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -2659,7 +2640,7 @@ def login():
     <form method="POST">
       <label>Phone number</label>
       <input type="tel" name="phone" placeholder="(512) 555-1234" required>
-      <p class="sms-note">By clicking below, you agree to receive one SMS message from TxtAnOffer at +1 (833) 897-0333 containing your login link. Msg &amp; data rates may apply. Reply STOP to opt out.</p>
+      <p class="sms-note">By clicking below, you agree to receive one SMS message from TxtAnOffer at +1 (469) 699-0893 containing your login link. Msg &amp; data rates may apply. Reply STOP to opt out.</p>
       <button type="submit">Send Login Link via SMS</button>
     </form>
     {msg_html}
@@ -2791,7 +2772,7 @@ def terms():
     <p>These Terms of Service ("Terms") govern your use of TxtAnOffer ("Service"), operated by Phanel ("we," "us," or "our"), a sole proprietorship based in Texas. By accessing or using the Service, you agree to be bound by these Terms. If you do not agree, do not use the Service.</p>
 
     <h2><span class="section-num">1.</span> Service Description</h2>
-    <p>TxtAnOffer is a document drafting tool that converts shorthand offer text into pre-filled TREC One to Four Family Residential Contract (Resale) forms (TREC No. 20-19). The Service accepts offer parameters via SMS (Twilio) or a web interface and generates a partially completed PDF contract for review by a licensed Texas real estate agent.</p>
+    <p>TxtAnOffer is a document drafting tool that converts shorthand offer text into pre-filled TREC One to Four Family Residential Contract (Resale) forms (TREC No. 20-19). The Service accepts offer parameters via SMS (Telnyx) or a web interface and generates a partially completed PDF contract for review by a licensed Texas real estate agent.</p>
     <p>The Service fills in standard TREC form fields based on information you provide. It does not create custom legal documents, negotiate terms, or exercise professional judgment on your behalf.</p>
 
     <h2><span class="section-num">2.</span> Not Legal Advice — No Attorney-Client Relationship</h2>
@@ -2877,7 +2858,7 @@ def terms():
       <li>Basic usage data (timestamps, request counts)</li>
     </ul>
     <p>We use this data solely to operate and improve the Service. We do not sell your personal information to third parties.</p>
-    <p><strong>Third-party services:</strong> The Service uses Twilio (SMS delivery), Stripe (payment processing), and Railway on Google Cloud Platform (infrastructure). These services have their own privacy policies and may process your data in accordance with their terms.</p>
+    <p><strong>Third-party services:</strong> The Service uses Telnyx (SMS delivery), Stripe (payment processing), and Railway on Google Cloud Platform (infrastructure). These services have their own privacy policies and may process your data in accordance with their terms.</p>
     <p><strong>Data retention:</strong> Generated PDFs are stored temporarily and may be deleted after a reasonable period. We retain account and billing records as required by law.</p>
     <p><strong>Security:</strong> We implement reasonable technical and organizational measures to protect your data. However, no system is perfectly secure, and we cannot guarantee absolute security of your information.</p>
 
@@ -3054,12 +3035,12 @@ def privacy():
 
     <h2>3. SMS Messaging</h2>
     <p><strong>Program Name:</strong> TxtAnOffer</p>
-    <p><strong>Toll-Free Number:</strong> +1 (833) 897-0333</p>
-    <p><strong>Opt-in Method:</strong> Users opt in by (1) entering their phone number and checking an unchecked checkbox on www.txtanoffer.com/signup that says "By checking this box, I agree to receive automated transactional SMS messages from TxtAnOffer at +1 (833) 897-0333 about my offer drafts. Message frequency varies based on usage. Reply STOP to opt out, HELP for help. Msg &amp; data rates may apply. Consent is not a condition of purchase." OR (2) by texting offer details directly to +1 (833) 897-0333 after seeing opt-in disclosure on our website.</p>
-    <p><strong>Consent:</strong> By texting our service number +1 (833) 897-0333 or submitting your phone number via our website, you consent to receive SMS messages from TxtAnOffer related to your offer requests and account.</p>
+    <p><strong>Phone Number:</strong> +1 (469) 699-0893</p>
+    <p><strong>Opt-in Method:</strong> Users opt in by (1) entering their phone number and checking an unchecked checkbox on www.txtanoffer.com/signup that says "By checking this box, I agree to receive automated transactional SMS messages from TxtAnOffer at +1 (469) 699-0893 about my offer drafts. Message frequency varies based on usage. Reply STOP to opt out, HELP for help. Msg &amp; data rates may apply. Consent is not a condition of purchase." OR (2) by texting offer details directly to +1 (469) 699-0893 after seeing opt-in disclosure on our website.</p>
+    <p><strong>Consent:</strong> By texting our service number +1 (469) 699-0893 or submitting your phone number via our website, you consent to receive SMS messages from TxtAnOffer related to your offer requests and account.</p>
     <p><strong>Message frequency:</strong> Message frequency varies based on your usage. You will receive one response per offer submitted, plus occasional account notifications (typically 1-5 messages per month).</p>
     <p><strong>Opt-out:</strong> Reply STOP to any message to unsubscribe from SMS. Reply START to re-subscribe. You can continue using the web interface after opting out of SMS.</p>
-    <p><strong>Help:</strong> Reply HELP for support information, or contact support@txtanoffer.com or +1 (833) 897-0333.</p>
+    <p><strong>Help:</strong> Reply HELP for support information, or contact support@txtanoffer.com or +1 (469) 699-0893.</p>
     <p><strong>Rates:</strong> Message and data rates may apply depending on your carrier plan.</p>
     <p><strong>Carriers:</strong> Compatible with all major US carriers. Carriers are not liable for delayed or undelivered messages.</p>
     <p>This is a transactional, user-initiated service only. We do not send marketing or promotional messages.</p>
@@ -3067,7 +3048,7 @@ def privacy():
     <h2>4. Data Sharing</h2>
     <p>We do not sell, rent, or trade your personal information. We share data only with:</p>
     <ul>
-      <li><strong>Twilio</strong> — SMS delivery (phone number, message content)</li>
+      <li><strong>Telnyx</strong> — SMS delivery (phone number, message content)</li>
       <li><strong>Stripe</strong> — Payment processing (billing details)</li>
       <li><strong>Railway (hosted on Google Cloud Platform)</strong> — Infrastructure provider, SOC 2 Type II certified. All data encrypted in transit (TLS 1.3) and at rest (AES-256). US region only.</li>
     </ul>
@@ -3535,7 +3516,7 @@ a:hover{text-decoration:underline;}
 </style></head><body><div class="box">
 <h2>Access Expired</h2>
 <p>Your dashboard link has expired or is invalid.<br>
-Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
+Text <strong>DASHBOARD</strong> to (469) 699-0893 to get a fresh link.</p>
 <p style="margin-top:1rem;"><a href="/">Back to home</a></p></div></body></html>""", 403
 
     user = get_user(phone)
