@@ -48,10 +48,10 @@ API_BEARER_TOKEN = os.environ.get("API_BEARER_TOKEN", "")
 # Analytics dashboard password
 ANALYTICS_PASSWORD = os.environ.get("ANALYTICS_PASSWORD", "")
 
-# Telnyx configuration
-TELNYX_API_KEY = os.environ.get("TELNYX_API_KEY", "")
-TELNYX_PHONE_NUMBER = os.environ.get("TELNYX_PHONE_NUMBER", "+14696990893")
-TELNYX_PUBLIC_KEY = os.environ.get("TELNYX_PUBLIC_KEY", "")
+# Vonage configuration
+VONAGE_API_KEY = os.environ.get("VONAGE_API_KEY", "")
+VONAGE_API_SECRET = os.environ.get("VONAGE_API_SECRET", "")
+VONAGE_PHONE_NUMBER = os.environ.get("VONAGE_PHONE_NUMBER", "+13306493879")
 
 
 def require_api_auth():
@@ -932,19 +932,33 @@ def process_offer(incoming_msg: str, source_id: str):
     return parsed, pdf_path, None, warnings
 
 
-def telnyx_send_sms(to, body):
-    """Send an SMS via Telnyx API."""
-    if not TELNYX_API_KEY:
-        print("[SMS] TELNYX_API_KEY not set, skipping send")
+def vonage_send_sms(to, body):
+    """Send an SMS via Vonage Messages API."""
+    if not VONAGE_API_KEY or not VONAGE_API_SECRET:
+        print("[SMS] VONAGE_API_KEY/SECRET not set, skipping send")
         return False
+    # Strip + from numbers for Vonage (they use E.164 without +)
+    to_clean = to.lstrip("+")
+    from_clean = VONAGE_PHONE_NUMBER.lstrip("+")
     resp = http_requests.post(
-        "https://api.telnyx.com/v2/messages",
-        headers={"Authorization": f"Bearer {TELNYX_API_KEY}", "Content-Type": "application/json"},
-        json={"from": TELNYX_PHONE_NUMBER, "to": to, "text": body},
+        "https://rest.nexmo.com/sms/json",
+        json={
+            "api_key": VONAGE_API_KEY,
+            "api_secret": VONAGE_API_SECRET,
+            "from": from_clean,
+            "to": to_clean,
+            "text": body,
+        },
     )
-    if resp.status_code not in (200, 201, 202):
-        print(f"[SMS] Telnyx send failed: {resp.status_code} {resp.text}")
+    if resp.status_code != 200:
+        print(f"[SMS] Vonage send failed: {resp.status_code} {resp.text}")
         return False
+    result = resp.json()
+    messages = result.get("messages", [])
+    if messages and messages[0].get("status") != "0":
+        print(f"[SMS] Vonage send error: {messages[0].get('error-text', 'unknown')}")
+        return False
+    print(f"[SMS] Vonage sent to {to_clean}: {body[:50]}...")
     return True
 
 
@@ -953,16 +967,15 @@ def sms_reply():
     if request.method == "GET":
         return redirect("/")
 
-    # Telnyx sends JSON webhooks
+    # Vonage sends inbound SMS as GET/POST with params, or JSON
     data = request.get_json(silent=True) or {}
-    print(f"[SMS] Raw webhook: {data}")
-    event_type = data.get("data", {}).get("event_type", "")
-    # Only process inbound messages, ignore delivery status updates
-    if event_type and event_type != "message.received":
-        return "", 200
-    payload = data.get("data", {}).get("payload", {})
-    incoming_msg = payload.get("text", "") or payload.get("body", "")
-    agent_phone = payload.get("from", {}).get("phone_number", "") if isinstance(payload.get("from"), dict) else payload.get("from", "")
+    print(f"[SMS] Raw webhook: {data or request.values.to_dict()}")
+    # Vonage inbound format: msisdn=from, text=message (query/form params or JSON)
+    incoming_msg = data.get("text", "") or request.values.get("text", "")
+    agent_phone = data.get("msisdn", "") or request.values.get("msisdn", "")
+    # Normalize to E.164 with +
+    if agent_phone and not agent_phone.startswith("+"):
+        agent_phone = "+" + agent_phone
 
     # Log all incoming SMS for debugging
     print(f"[SMS] From: {agent_phone}, Body: {incoming_msg}")
@@ -972,7 +985,7 @@ def sms_reply():
     keyword = incoming_msg.strip().upper()
 
     if keyword in ("HELP", "MENU"):
-        telnyx_send_sms(agent_phone,
+        vonage_send_sms(agent_phone,
             "TxtAnOffer Commands:\n\n"
             "HELP - This menu\n"
             "DASHBOARD - Your offer history\n"
@@ -989,25 +1002,25 @@ def sms_reply():
 
     if keyword == "DASHBOARD":
         dash_link = sign_dashboard_url(agent_phone, request.host_url.rstrip("/"))
-        telnyx_send_sms(agent_phone, f"Your dashboard (valid 7 days):\n{dash_link}")
+        vonage_send_sms(agent_phone, f"Your dashboard (valid 7 days):\n{dash_link}")
         return "", 200
 
     if keyword == "STATUS":
         user = get_user(agent_phone)
         if not user:
             create_user(agent_phone)
-            telnyx_send_sms(agent_phone, f"Welcome! You have {FREE_OFFER_LIMIT} free offers.\n\nJust text your offer:\n725k 3% 21day 1740 Grand Ave\n\nReply HELP for all commands.")
+            vonage_send_sms(agent_phone, f"Welcome! You have {FREE_OFFER_LIMIT} free offers.\n\nJust text your offer:\n725k 3% 21day 1740 Grand Ave\n\nReply HELP for all commands.")
             return "", 200
         elif user["is_subscribed"]:
-            telnyx_send_sms(agent_phone, f"Plan: Unlimited\nOffers generated: {user['offer_count']}\n\nText HELP for commands.")
+            vonage_send_sms(agent_phone, f"Plan: Unlimited\nOffers generated: {user['offer_count']}\n\nText HELP for commands.")
         else:
             remaining = max(0, FREE_OFFER_LIMIT - user["offer_count"])
-            telnyx_send_sms(agent_phone, f"Plan: Free trial\nOffers used: {user['offer_count']}/{FREE_OFFER_LIMIT}\nRemaining: {remaining}\n\nUpgrade: txtanoffer.com/pricing")
+            vonage_send_sms(agent_phone, f"Plan: Free trial\nOffers used: {user['offer_count']}/{FREE_OFFER_LIMIT}\nRemaining: {remaining}\n\nUpgrade: txtanoffer.com/pricing")
         return "", 200
 
     if keyword == "PROFILE":
         profile_link = sign_dashboard_url(agent_phone, request.host_url.rstrip("/")).replace("/dashboard?", "/profile?")
-        telnyx_send_sms(agent_phone, f"Edit your agent profile:\n{profile_link}\n\nYour name, license, brokerage, and defaults auto-fill into every contract.")
+        vonage_send_sms(agent_phone, f"Edit your agent profile:\n{profile_link}\n\nYour name, license, brokerage, and defaults auto-fill into every contract.")
         return "", 200
 
     try:
@@ -1018,7 +1031,7 @@ def sms_reply():
         if not can_generate:
             track_event("limit_reached", agent_phone)
             payment_url = request.host_url.rstrip("/") + "/pricing"
-            telnyx_send_sms(agent_phone,
+            vonage_send_sms(agent_phone,
                 f"You've used your {FREE_OFFER_LIMIT} free offers!\n\n"
                 f"Subscribe for unlimited offers:\n"
                 f"{payment_url}\n\n"
@@ -1044,7 +1057,7 @@ def sms_reply():
             hint_line = ""
             if hints:
                 hint_line = f"\n\nWe got: {' . '.join(hints)}\nMissing pieces? Try again with all 4: price, down%, days, address"
-            telnyx_send_sms(agent_phone, f"{error}{hint_line}")
+            vonage_send_sms(agent_phone, f"{error}{hint_line}")
             return "", 200
 
         # Track offer generation
@@ -1089,7 +1102,7 @@ def sms_reply():
             f"Review: {pdf_url}"
             f"{status_line}"
         )
-        telnyx_send_sms(agent_phone, reply)
+        vonage_send_sms(agent_phone, reply)
         print(f"[SMS] Sending reply, length: {len(reply)} chars")
         return "", 200
 
@@ -1097,7 +1110,7 @@ def sms_reply():
         print(f"[SMS] ERROR: {str(e)}")
         import traceback
         traceback.print_exc()
-        telnyx_send_sms(agent_phone, "Error generating offer. Please try again or contact support.")
+        vonage_send_sms(agent_phone, "Error generating offer. Please try again or contact support.")
         return "", 200
 
 
@@ -2276,7 +2289,7 @@ def success():
       <h3>Next Steps</h3>
       <ol>
         <li><strong>Set up your profile</strong> &mdash; your name, license, and brokerage auto-fill every offer</li>
-        <li>Text your first offer to <strong>1-469-699-0893</strong></li>
+        <li>Text your first offer to <strong>1-330-649-3879</strong></li>
         <li>Or use the web demo at <strong>txtanoffer.com/demo</strong></li>
       </ol>
     </div>
@@ -2420,7 +2433,7 @@ body{{font-family:system-ui;max-width:800px;margin:40px auto;padding:20px;}}
   {sms_rows}
 </table>
 <p style="color:#666;font-size:12px;margin-top:20px;">
-  Check Telnyx dashboard for full logs: <a href="https://portal.telnyx.com/" target="_blank">portal.telnyx.com</a>
+  Check Vonage dashboard for full logs: <a href="https://dashboard.nexmo.com/" target="_blank">dashboard.nexmo.com</a>
 </p>
 </body></html>
 """
@@ -2439,7 +2452,7 @@ def signup():
                     create_user(phone)
                 track_event("signup", phone, {"name": name, "email": email})
                 # Send welcome SMS
-                telnyx_send_sms(phone,
+                vonage_send_sms(phone,
                     "Welcome to TxtAnOffer! "
                     "Text an offer like: 725k 3% 21day 123 Main St, Austin TX\n\n"
                     "Reply HELP for all commands. "
@@ -2527,7 +2540,7 @@ def signup():
   <div class="wrap">
     <a href="/" class="nav-back"><img src="/static/logo.webp" alt=""><span>&larr; TxtAnOffer</span></a>
     <h1>Get started with TxtAnOffer</h1>
-    <p class="sub">Enter your phone number to receive offer drafts via SMS at +1 (469) 699-0893.</p>
+    <p class="sub">Enter your phone number to receive offer drafts via SMS at +1 (330) 649-3879.</p>
     <div class="card">
       <form method="POST" action="/signup" id="signup-form">
         <label class="field-label">Phone number</label>
@@ -2538,7 +2551,7 @@ def signup():
         <input type="email" name="email" placeholder="you@brokerage.com">
         <div class="consent-row">
           <input type="checkbox" id="sms-consent" name="sms_consent" required>
-          <label for="sms-consent">By checking this box, I agree to receive automated transactional SMS messages from TxtAnOffer at +1 (469) 699-0893 about my offer drafts. Message frequency varies based on usage. Reply STOP to opt out, HELP for help. Msg &amp; data rates may apply. Consent is not a condition of purchase. <a href="/privacy">Privacy Policy</a> &amp; <a href="/terms">Terms</a></label>
+          <label for="sms-consent">By checking this box, I agree to receive automated transactional SMS messages from TxtAnOffer at +1 (330) 649-3879 about my offer drafts. Message frequency varies based on usage. Reply STOP to opt out, HELP for help. Msg &amp; data rates may apply. Consent is not a condition of purchase. <a href="/privacy">Privacy Policy</a> &amp; <a href="/terms">Terms</a></label>
         </div>
         <button type="submit">Sign up for SMS</button>
       </form>
@@ -2563,10 +2576,10 @@ def login():
 
         user = get_user(phone_clean)
         if user:
-            # Send dashboard link via Telnyx
+            # Send dashboard link via Vonage
             try:
                 dash_link = sign_dashboard_url(phone_clean, request.host_url.rstrip("/"))
-                if telnyx_send_sms(phone_clean, f"Your TxtAnOffer dashboard link (valid 7 days):\n{dash_link}"):
+                if vonage_send_sms(phone_clean, f"Your TxtAnOffer dashboard link (valid 7 days):\n{dash_link}"):
                     message = "sent"
                 else:
                     message = "error"
@@ -2582,7 +2595,7 @@ def login():
     elif message == "not_found":
         msg_html = '<div class="msg error">No account found for that number. <a href="/signup">Sign up first</a>.</div>'
     elif message == "error":
-        msg_html = '<div class="msg error">Could not send SMS. Text DASHBOARD to (469) 699-0893 instead.</div>'
+        msg_html = '<div class="msg error">Could not send SMS. Text DASHBOARD to (330) 649-3879 instead.</div>'
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -2645,7 +2658,7 @@ def login():
     <form method="POST">
       <label>Phone number</label>
       <input type="tel" name="phone" placeholder="(512) 555-1234" required>
-      <p class="sms-note">By clicking below, you agree to receive one SMS message from TxtAnOffer at +1 (469) 699-0893 containing your login link. Msg &amp; data rates may apply. Reply STOP to opt out.</p>
+      <p class="sms-note">By clicking below, you agree to receive one SMS message from TxtAnOffer at +1 (330) 649-3879 containing your login link. Msg &amp; data rates may apply. Reply STOP to opt out.</p>
       <button type="submit">Send Login Link via SMS</button>
     </form>
     {msg_html}
@@ -2777,7 +2790,7 @@ def terms():
     <p>These Terms of Service ("Terms") govern your use of TxtAnOffer ("Service"), operated by Phanel ("we," "us," or "our"), a sole proprietorship based in Texas. By accessing or using the Service, you agree to be bound by these Terms. If you do not agree, do not use the Service.</p>
 
     <h2><span class="section-num">1.</span> Service Description</h2>
-    <p>TxtAnOffer is a document drafting tool that converts shorthand offer text into pre-filled TREC One to Four Family Residential Contract (Resale) forms (TREC No. 20-19). The Service accepts offer parameters via SMS (Telnyx) or a web interface and generates a partially completed PDF contract for review by a licensed Texas real estate agent.</p>
+    <p>TxtAnOffer is a document drafting tool that converts shorthand offer text into pre-filled TREC One to Four Family Residential Contract (Resale) forms (TREC No. 20-19). The Service accepts offer parameters via SMS (Vonage) or a web interface and generates a partially completed PDF contract for review by a licensed Texas real estate agent.</p>
     <p>The Service fills in standard TREC form fields based on information you provide. It does not create custom legal documents, negotiate terms, or exercise professional judgment on your behalf.</p>
 
     <h2><span class="section-num">2.</span> Not Legal Advice — No Attorney-Client Relationship</h2>
@@ -2863,7 +2876,7 @@ def terms():
       <li>Basic usage data (timestamps, request counts)</li>
     </ul>
     <p>We use this data solely to operate and improve the Service. We do not sell your personal information to third parties.</p>
-    <p><strong>Third-party services:</strong> The Service uses Telnyx (SMS delivery), Stripe (payment processing), and Railway on Google Cloud Platform (infrastructure). These services have their own privacy policies and may process your data in accordance with their terms.</p>
+    <p><strong>Third-party services:</strong> The Service uses Vonage (SMS delivery), Stripe (payment processing), and Railway on Google Cloud Platform (infrastructure). These services have their own privacy policies and may process your data in accordance with their terms.</p>
     <p><strong>Data retention:</strong> Generated PDFs are stored temporarily and may be deleted after a reasonable period. We retain account and billing records as required by law.</p>
     <p><strong>Security:</strong> We implement reasonable technical and organizational measures to protect your data. However, no system is perfectly secure, and we cannot guarantee absolute security of your information.</p>
 
@@ -3040,12 +3053,12 @@ def privacy():
 
     <h2>3. SMS Messaging</h2>
     <p><strong>Program Name:</strong> TxtAnOffer</p>
-    <p><strong>Phone Number:</strong> +1 (469) 699-0893</p>
-    <p><strong>Opt-in Method:</strong> Users opt in by (1) entering their phone number and checking an unchecked checkbox on www.txtanoffer.com/signup that says "By checking this box, I agree to receive automated transactional SMS messages from TxtAnOffer at +1 (469) 699-0893 about my offer drafts. Message frequency varies based on usage. Reply STOP to opt out, HELP for help. Msg &amp; data rates may apply. Consent is not a condition of purchase." OR (2) by texting offer details directly to +1 (469) 699-0893 after seeing opt-in disclosure on our website.</p>
-    <p><strong>Consent:</strong> By texting our service number +1 (469) 699-0893 or submitting your phone number via our website, you consent to receive SMS messages from TxtAnOffer related to your offer requests and account.</p>
+    <p><strong>Phone Number:</strong> +1 (330) 649-3879</p>
+    <p><strong>Opt-in Method:</strong> Users opt in by (1) entering their phone number and checking an unchecked checkbox on www.txtanoffer.com/signup that says "By checking this box, I agree to receive automated transactional SMS messages from TxtAnOffer at +1 (330) 649-3879 about my offer drafts. Message frequency varies based on usage. Reply STOP to opt out, HELP for help. Msg &amp; data rates may apply. Consent is not a condition of purchase." OR (2) by texting offer details directly to +1 (330) 649-3879 after seeing opt-in disclosure on our website.</p>
+    <p><strong>Consent:</strong> By texting our service number +1 (330) 649-3879 or submitting your phone number via our website, you consent to receive SMS messages from TxtAnOffer related to your offer requests and account.</p>
     <p><strong>Message frequency:</strong> Message frequency varies based on your usage. You will receive one response per offer submitted, plus occasional account notifications (typically 1-5 messages per month).</p>
     <p><strong>Opt-out:</strong> Reply STOP to any message to unsubscribe from SMS. Reply START to re-subscribe. You can continue using the web interface after opting out of SMS.</p>
-    <p><strong>Help:</strong> Reply HELP for support information, or contact support@txtanoffer.com or +1 (469) 699-0893.</p>
+    <p><strong>Help:</strong> Reply HELP for support information, or contact support@txtanoffer.com or +1 (330) 649-3879.</p>
     <p><strong>Rates:</strong> Message and data rates may apply depending on your carrier plan.</p>
     <p><strong>Carriers:</strong> Compatible with all major US carriers. Carriers are not liable for delayed or undelivered messages.</p>
     <p>This is a transactional, user-initiated service only. We do not send marketing or promotional messages.</p>
@@ -3053,7 +3066,7 @@ def privacy():
     <h2>4. Data Sharing</h2>
     <p>We do not sell, rent, or trade your personal information. We share data only with:</p>
     <ul>
-      <li><strong>Telnyx</strong> — SMS delivery (phone number, message content)</li>
+      <li><strong>Vonage</strong> — SMS delivery (phone number, message content)</li>
       <li><strong>Stripe</strong> — Payment processing (billing details)</li>
       <li><strong>Railway (hosted on Google Cloud Platform)</strong> — Infrastructure provider, SOC 2 Type II certified. All data encrypted in transit (TLS 1.3) and at rest (AES-256). US region only.</li>
     </ul>
@@ -3521,7 +3534,7 @@ a:hover{text-decoration:underline;}
 </style></head><body><div class="box">
 <h2>Access Expired</h2>
 <p>Your dashboard link has expired or is invalid.<br>
-Text <strong>DASHBOARD</strong> to (469) 699-0893 to get a fresh link.</p>
+Text <strong>DASHBOARD</strong> to (330) 649-3879 to get a fresh link.</p>
 <p style="margin-top:1rem;"><a href="/">Back to home</a></p></div></body></html>""", 403
 
     user = get_user(phone)
