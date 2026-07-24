@@ -955,6 +955,11 @@ def sms_reply():
 
     # Telnyx sends JSON webhooks
     data = request.get_json(silent=True) or {}
+    print(f"[SMS] Raw webhook: {data}")
+    event_type = data.get("data", {}).get("event_type", "")
+    # Only process inbound messages, ignore delivery status updates
+    if event_type and event_type != "message.received":
+        return "", 200
     payload = data.get("data", {}).get("payload", {})
     incoming_msg = payload.get("text", "") or payload.get("body", "")
     agent_phone = payload.get("from", {}).get("phone_number", "") if isinstance(payload.get("from"), dict) else payload.get("from", "")
