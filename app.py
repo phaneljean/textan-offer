@@ -874,16 +874,51 @@ def validate_address(address: str) -> dict:
 # --- stub MLS lookup ---------------------------------------------------
 # Replace this with a real MLS API call (e.g. Bridge Interactive, Spark API)
 # Real version should geocode address and query MLS for property data
+APIFY_API_TOKEN = os.environ.get("APIFY_API_TOKEN", "")
+
+
 def lookup_mls(address: str) -> dict:
-    # Stub: derive varied placeholder data from address hash
-    # Replace with real MLS API (Bridge Interactive, Spark, etc.) for production
-    h = sum(ord(c) for c in address)
-    return {
-        "bed": (h % 4) + 2,
-        "bath": (h % 3) + 1,
-        "sqft": 1000 + (h % 20) * 150,
-        "apn": "",
-    }
+    """Look up property details from Realtor.com via Apify.
+    Falls back to empty dict if unavailable (non-blocking)."""
+    if not APIFY_API_TOKEN:
+        return {}
+    try:
+        # Use Apify's Realtor.com scraper actor
+        resp = http_requests.post(
+            "https://api.apify.com/v2/acts/maxcopell~realtor-scraper/run-sync-get-dataset-items",
+            params={"token": APIFY_API_TOKEN},
+            json={
+                "searchType": "address",
+                "searchQuery": f"{address}, TX",
+                "maxResults": 1,
+            },
+            timeout=15,
+        )
+        if resp.status_code != 200:
+            print(f"[MLS] Apify request failed: {resp.status_code}")
+            return {}
+        results = resp.json()
+        if not results:
+            print(f"[MLS] No results for: {address}")
+            return {}
+        prop = results[0]
+        desc = prop.get("description", {})
+        return {
+            "bed": desc.get("beds") or 0,
+            "bath": desc.get("baths") or 0,
+            "sqft": desc.get("sqft") or 0,
+            "lot_sqft": desc.get("lot_sqft") or 0,
+            "year_built": desc.get("year_built") or 0,
+            "listing_price": prop.get("list_price") or 0,
+            "property_type": desc.get("type", ""),
+            "county": prop.get("location", {}).get("address", {}).get("county", ""),
+            "city": prop.get("location", {}).get("address", {}).get("city", ""),
+            "zip": prop.get("location", {}).get("address", {}).get("postal_code", ""),
+            "apn": "",
+        }
+    except Exception as e:
+        print(f"[MLS] Apify lookup error: {e}")
+        return {}
 
 
 def process_offer(incoming_msg: str, source_id: str):
