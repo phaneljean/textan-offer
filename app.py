@@ -887,7 +887,7 @@ def lookup_mls(address: str) -> dict:
         resp = http_requests.post(
             "https://api.apify.com/v2/acts/kawsar~Realtor-Property-Details-Cheap/run-sync-get-dataset-items",
             params={"token": APIFY_API_TOKEN},
-            json={"addresses": [full_address]},
+            json={"searchQueries": [full_address]},
             timeout=30,
         )
         if resp.status_code != 200:
