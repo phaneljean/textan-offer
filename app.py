@@ -890,7 +890,7 @@ def lookup_mls(address: str) -> dict:
             json={"searchQueries": [full_address]},
             timeout=30,
         )
-        if resp.status_code != 200:
+        if resp.status_code not in (200, 201):
             print(f"[MLS] Apify actor failed: {resp.status_code} {resp.text[:200]}")
             return {}
         results = resp.json()
@@ -898,18 +898,21 @@ def lookup_mls(address: str) -> dict:
             print(f"[MLS] No results for: {address}")
             return {}
         prop = results[0]
+        if not prop.get("beds") and not prop.get("sqft"):
+            print(f"[MLS] Property not found on Realtor.com: {address}")
+            return {}
         print(f"[MLS] Found: {prop.get('beds', '?')} bed, {prop.get('baths', '?')} bath, {prop.get('sqft', '?')} sqft")
         return {
             "bed": prop.get("beds") or 0,
             "bath": prop.get("baths") or 0,
             "sqft": prop.get("sqft") or 0,
-            "lot_sqft": prop.get("lot_sqft") or prop.get("lotSize") or 0,
-            "year_built": prop.get("year_built") or prop.get("yearBuilt") or 0,
-            "listing_price": prop.get("list_price") or prop.get("price") or 0,
-            "property_type": prop.get("property_type") or prop.get("propertyType") or "",
+            "lot_sqft": prop.get("lotSqft") or prop.get("lot_sqft") or 0,
+            "year_built": prop.get("yearBuilt") or prop.get("year_built") or 0,
+            "listing_price": prop.get("listPrice") or prop.get("list_price") or 0,
+            "property_type": prop.get("propertyType") or prop.get("property_type") or "",
             "county": prop.get("county") or "",
             "city": prop.get("city") or "",
-            "zip": prop.get("zip") or prop.get("postal_code") or "",
+            "zip": prop.get("zip") or prop.get("postalCode") or "",
             "apn": "",
         }
     except Exception as e:
