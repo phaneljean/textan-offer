@@ -878,31 +878,33 @@ APIFY_API_TOKEN = os.environ.get("APIFY_API_TOKEN", "")
 
 
 def lookup_mls(address: str) -> dict:
-    """Look up property details from Realtor.com via Apify.
+    """Look up property details via Realtor.com's autocomplete + detail API.
     Falls back to empty dict if unavailable (non-blocking)."""
-    if not APIFY_API_TOKEN:
-        return {}
     try:
-        # Use Apify's Realtor.com scraper actor
-        resp = http_requests.post(
-            "https://api.apify.com/v2/acts/maxcopell~realtor-scraper/run-sync-get-dataset-items",
-            params={"token": APIFY_API_TOKEN},
-            json={
-                "searchType": "address",
-                "searchQuery": f"{address}, TX",
-                "maxResults": 1,
+        # Step 1: Search for property by address
+        search_resp = http_requests.get(
+            "https://www.realtor.com/api/v1/hulk_main_srp",
+            params={
+                "client_id": "rdc-x",
+                "schema": "vesta",
+                "query": f"{address}, TX",
+                "limit": 1,
             },
-            timeout=15,
+            headers={"User-Agent": "Mozilla/5.0"},
+            timeout=8,
         )
-        if resp.status_code != 200:
-            print(f"[MLS] Apify request failed: {resp.status_code}")
-            return {}
-        results = resp.json()
+        if search_resp.status_code != 200:
+            print(f"[MLS] Realtor.com search failed: {search_resp.status_code}")
+            # Fallback to Apify if direct API fails
+            return _lookup_mls_apify(address)
+        data = search_resp.json()
+        results = data.get("data", {}).get("home_search", {}).get("results", [])
         if not results:
             print(f"[MLS] No results for: {address}")
-            return {}
+            return _lookup_mls_apify(address)
         prop = results[0]
         desc = prop.get("description", {})
+        location = prop.get("location", {}).get("address", {})
         return {
             "bed": desc.get("beds") or 0,
             "bath": desc.get("baths") or 0,
@@ -911,13 +913,49 @@ def lookup_mls(address: str) -> dict:
             "year_built": desc.get("year_built") or 0,
             "listing_price": prop.get("list_price") or 0,
             "property_type": desc.get("type", ""),
-            "county": prop.get("location", {}).get("address", {}).get("county", ""),
-            "city": prop.get("location", {}).get("address", {}).get("city", ""),
-            "zip": prop.get("location", {}).get("address", {}).get("postal_code", ""),
+            "county": location.get("county", ""),
+            "city": location.get("city", ""),
+            "zip": location.get("postal_code", ""),
             "apn": "",
         }
     except Exception as e:
-        print(f"[MLS] Apify lookup error: {e}")
+        print(f"[MLS] Lookup error: {e}")
+        return _lookup_mls_apify(address)
+
+
+def _lookup_mls_apify(address: str) -> dict:
+    """Fallback: look up via Apify actor if direct API fails."""
+    if not APIFY_API_TOKEN:
+        return {}
+    try:
+        resp = http_requests.post(
+            "https://api.apify.com/v2/acts/agentx~realtor-property-scraper/run-sync-get-dataset-items",
+            params={"token": APIFY_API_TOKEN},
+            json={"urls": [f"https://www.realtor.com/realestateandhomes-search/{address.replace(' ', '-')}_TX"]},
+            timeout=20,
+        )
+        if resp.status_code != 200:
+            print(f"[MLS] Apify fallback failed: {resp.status_code}")
+            return {}
+        results = resp.json()
+        if not results:
+            return {}
+        prop = results[0]
+        return {
+            "bed": prop.get("beds") or 0,
+            "bath": prop.get("baths") or 0,
+            "sqft": prop.get("sqft") or 0,
+            "lot_sqft": prop.get("lotSize") or 0,
+            "year_built": prop.get("yearBuilt") or 0,
+            "listing_price": prop.get("price") or 0,
+            "property_type": prop.get("propertyType", ""),
+            "county": prop.get("county", ""),
+            "city": prop.get("city", ""),
+            "zip": prop.get("zip", ""),
+            "apn": "",
+        }
+    except Exception as e:
+        print(f"[MLS] Apify fallback error: {e}")
         return {}
 
 
