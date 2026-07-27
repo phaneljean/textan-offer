@@ -1491,6 +1491,7 @@ def demo():
               <div class="result-row"><span class="k">Purchase price</span><span class="v">${parsed['price']:,}</span></div>
               <div class="result-row"><span class="k">Down payment</span><span class="v">{parsed['down_payment_pct']*100:.0f}%</span></div>
               <div class="result-row"><span class="k">Closing</span><span class="v">{close_date_str}</span></div>
+              {'<div class="result-row"><span class="k">Property</span><span class="v">' + ' · '.join([x for x in [f"{parsed.get('bed')} Bed" if parsed.get('bed') else '', f"{parsed.get('bath')} Bath" if parsed.get('bath') else '', f"{parsed.get('sqft'):,} Sqft" if parsed.get('sqft') else '', f"Built {parsed.get('year_built')}" if parsed.get('year_built') else ''] if x]) + '</span></div>' if parsed.get('bed') or parsed.get('sqft') else ''}
               <div class="result-ready">Ready for review.</div>
               {warning_html}
               <div class="pdf-preview">
