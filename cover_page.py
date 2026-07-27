@@ -154,6 +154,32 @@ def generate_cover_page(parsed: dict, agent: dict) -> bytes:
 
     y -= box_h + 0.2 * inch
 
+    # === PROPERTY DETAILS ROW (if MLS data available) ===
+    bed = parsed.get('bed', 0)
+    bath = parsed.get('bath', 0)
+    sqft = parsed.get('sqft', 0)
+    year_built = parsed.get('year_built', 0)
+    if bed or bath or sqft:
+        detail_parts = []
+        if bed:
+            detail_parts.append(f"{bed} Bed")
+        if bath:
+            detail_parts.append(f"{bath} Bath")
+        if sqft:
+            detail_parts.append(f"{sqft:,} Sqft")
+        if year_built:
+            detail_parts.append(f"Built {year_built}")
+        detail_text = "  ·  ".join(detail_parts)
+
+        detail_h = 0.35 * inch
+        _draw_rounded_rect(c, margin, y - detail_h, content_w, detail_h, r=6,
+                           fill_color=Color(1, 1, 1, alpha=0.02),
+                           stroke_color=Color(1, 1, 1, alpha=0.04))
+        c.setFillColor(TEXT_MUTED)
+        c.setFont("Helvetica", 8.5)
+        c.drawCentredString(cx, y - 0.22*inch, detail_text)
+        y -= detail_h + 0.15 * inch
+
     # === FINANCIAL BREAKDOWN TABLE ===
     close_days = parsed.get('close_days', 0)
     close_date = (datetime.now() + timedelta(days=close_days)).strftime("%B %d, %Y")

@@ -3375,6 +3375,7 @@ def review_offer(filename):
     close_days = offer["close_days"]
     down_amt = int(price * down_pct) if price else 0
     loan_amt = price - down_amt if price else 0
+    mls = offer.get("mls", {})
 
     pdf_url = f"/offers/{filename}?expires={expires}&sig={sig}"
 
@@ -3454,6 +3455,8 @@ border-top:1px solid var(--border);margin-top:1rem;}}
 <div class="stat"><div class="stat-label">Down</div><div class="stat-value">{down_pct*100:.0f}% (${down_amt:,})</div></div>
 <div class="stat"><div class="stat-label">Close</div><div class="stat-value">{close_date}</div></div>
 </div>
+
+{'<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:0.6rem;text-align:center;margin-bottom:1rem;color:var(--text-muted);font-size:0.8rem;">' + ' &middot; '.join([x for x in [f"{mls.get('bed')} Bed" if mls.get('bed') else '', f"{mls.get('bath')} Bath" if mls.get('bath') else '', f"{mls.get('sqft'):,} Sqft" if mls.get('sqft') else '', f"Built {mls.get('year_built')}" if mls.get('year_built') else ''] if x]) + '</div>' if any(mls.get(k) for k in ('bed','bath','sqft')) else ''}
 
 <div class="actions">
 <button class="btn btn-primary" id="email-toggle">Email to Listing Agent</button>

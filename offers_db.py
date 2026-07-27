@@ -21,10 +21,16 @@ def init_offers_table():
             down_pct REAL,
             close_days INTEGER,
             filename TEXT,
-            created_at TEXT NOT NULL
+            created_at TEXT NOT NULL,
+            mls_json TEXT DEFAULT ''
         )
     """)
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_offers_phone ON offers(phone)")
+    # Add mls_json column if table already exists without it
+    try:
+        cursor.execute("ALTER TABLE offers ADD COLUMN mls_json TEXT DEFAULT ''")
+    except sqlite3.OperationalError:
+        pass
     conn.commit()
     conn.close()
 
@@ -37,17 +43,18 @@ def record_offer(phone: str, parsed: dict, filename: str):
     down_pct = parsed.get("down_payment_pct", 0)
     close_days = parsed.get("close_days", 0)
     address = parsed.get("address", "")
+    mls = json.dumps({k: parsed.get(k, 0) for k in ("bed", "bath", "sqft", "year_built", "lot_sqft", "listing_price", "property_type")})
     existing = cursor.execute("SELECT id, price FROM offers WHERE filename = ?", (filename,)).fetchone()
     if existing and not existing[1]:
         cursor.execute("""
-            UPDATE offers SET phone=?, address=?, price=?, down_pct=?, close_days=?, created_at=?
+            UPDATE offers SET phone=?, address=?, price=?, down_pct=?, close_days=?, mls_json=?, created_at=?
             WHERE id=?
-        """, (phone, address, price, down_pct, close_days, now, existing[0]))
+        """, (phone, address, price, down_pct, close_days, mls, now, existing[0]))
     elif not existing:
         cursor.execute("""
-            INSERT INTO offers (phone, address, price, down_pct, close_days, filename, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (phone, address, price, down_pct, close_days, filename, now))
+            INSERT INTO offers (phone, address, price, down_pct, close_days, filename, mls_json, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (phone, address, price, down_pct, close_days, filename, mls, now))
     conn.commit()
     conn.close()
 
@@ -57,12 +64,19 @@ def get_offer_by_filename(filename: str) -> dict:
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT id, phone, address, price, down_pct, close_days, filename, created_at
+        SELECT id, phone, address, price, down_pct, close_days, filename, mls_json, created_at
         FROM offers WHERE filename = ?
     """, (filename,))
     row = cursor.fetchone()
     conn.close()
-    return dict(row) if row else None
+    if not row:
+        return None
+    result = dict(row)
+    if result.get("mls_json"):
+        result["mls"] = json.loads(result["mls_json"])
+    else:
+        result["mls"] = {}
+    return result
 
 
 def get_offers_for_phone(phone: str, limit: int = 50) -> list:
