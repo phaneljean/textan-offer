@@ -2324,7 +2324,7 @@ def success():
       <h3>Next Steps</h3>
       <ol>
         <li><strong>Set up your profile</strong> &mdash; your name, license, and brokerage auto-fill every offer</li>
-        <li>Text your first offer to <strong>1-330-649-3879</strong></li>
+        <li>Text your first offer to <strong>1-833-897-0333</strong></li>
         <li>Or use the web demo at <strong>txtanoffer.com/demo</strong></li>
       </ol>
     </div>
@@ -2468,7 +2468,7 @@ body{{font-family:system-ui;max-width:800px;margin:40px auto;padding:20px;}}
   {sms_rows}
 </table>
 <p style="color:#666;font-size:12px;margin-top:20px;">
-  Check Vonage dashboard for full logs: <a href="https://dashboard.nexmo.com/" target="_blank">dashboard.nexmo.com</a>
+  Check Twilio console for full logs: <a href="https://console.twilio.com/" target="_blank">console.twilio.com</a>
 </p>
 </body></html>
 """
@@ -2575,7 +2575,7 @@ def signup():
   <div class="wrap">
     <a href="/" class="nav-back"><img src="/static/logo.webp" alt=""><span>&larr; TxtAnOffer</span></a>
     <h1>Get started with TxtAnOffer</h1>
-    <p class="sub">Enter your phone number to receive offer drafts via SMS at +1 (330) 649-3879.</p>
+    <p class="sub">Enter your phone number to receive offer drafts via SMS at +1 (833) 897-0333.</p>
     <div class="card">
       <form method="POST" action="/signup" id="signup-form">
         <label class="field-label">Phone number</label>
@@ -2586,7 +2586,7 @@ def signup():
         <input type="email" name="email" placeholder="you@brokerage.com">
         <div class="consent-row">
           <input type="checkbox" id="sms-consent" name="sms_consent" required>
-          <label for="sms-consent">By checking this box, I agree to receive automated transactional SMS messages from TxtAnOffer at +1 (330) 649-3879 about my offer drafts. Message frequency varies based on usage. Reply STOP to opt out, HELP for help. Msg &amp; data rates may apply. Consent is not a condition of purchase. <a href="/privacy">Privacy Policy</a> &amp; <a href="/terms">Terms</a></label>
+          <label for="sms-consent">By checking this box, I agree to receive automated transactional SMS messages from TxtAnOffer at +1 (833) 897-0333 about my offer drafts. Message frequency varies based on usage. Reply STOP to opt out, HELP for help. Msg &amp; data rates may apply. Consent is not a condition of purchase. <a href="/privacy">Privacy Policy</a> &amp; <a href="/terms">Terms</a></label>
         </div>
         <button type="submit">Sign up for SMS</button>
       </form>
@@ -2630,7 +2630,7 @@ def login():
     elif message == "not_found":
         msg_html = '<div class="msg error">No account found for that number. <a href="/signup">Sign up first</a>.</div>'
     elif message == "error":
-        msg_html = '<div class="msg error">Could not send SMS. Text DASHBOARD to (330) 649-3879 instead.</div>'
+        msg_html = '<div class="msg error">Could not send SMS. Text DASHBOARD to (833) 897-0333 instead.</div>'
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -2693,7 +2693,7 @@ def login():
     <form method="POST">
       <label>Phone number</label>
       <input type="tel" name="phone" placeholder="(512) 555-1234" required>
-      <p class="sms-note">By clicking below, you agree to receive one SMS message from TxtAnOffer at +1 (330) 649-3879 containing your login link. Msg &amp; data rates may apply. Reply STOP to opt out.</p>
+      <p class="sms-note">By clicking below, you agree to receive one SMS message from TxtAnOffer at +1 (833) 897-0333 containing your login link. Msg &amp; data rates may apply. Reply STOP to opt out.</p>
       <button type="submit">Send Login Link via SMS</button>
     </form>
     {msg_html}
@@ -2825,7 +2825,7 @@ def terms():
     <p>These Terms of Service ("Terms") govern your use of TxtAnOffer ("Service"), operated by Phanel ("we," "us," or "our"), a sole proprietorship based in Texas. By accessing or using the Service, you agree to be bound by these Terms. If you do not agree, do not use the Service.</p>
 
     <h2><span class="section-num">1.</span> Service Description</h2>
-    <p>TxtAnOffer is a document drafting tool that converts shorthand offer text into pre-filled TREC One to Four Family Residential Contract (Resale) forms (TREC No. 20-19). The Service accepts offer parameters via SMS (Vonage) or a web interface and generates a partially completed PDF contract for review by a licensed Texas real estate agent.</p>
+    <p>TxtAnOffer is a document drafting tool that converts shorthand offer text into pre-filled TREC One to Four Family Residential Contract (Resale) forms (TREC No. 20-19). The Service accepts offer parameters via SMS or a web interface and generates a partially completed PDF contract for review by a licensed Texas real estate agent.</p>
     <p>The Service fills in standard TREC form fields based on information you provide. It does not create custom legal documents, negotiate terms, or exercise professional judgment on your behalf.</p>
 
     <h2><span class="section-num">2.</span> Not Legal Advice — No Attorney-Client Relationship</h2>
@@ -2911,7 +2911,7 @@ def terms():
       <li>Basic usage data (timestamps, request counts)</li>
     </ul>
     <p>We use this data solely to operate and improve the Service. We do not sell your personal information to third parties.</p>
-    <p><strong>Third-party services:</strong> The Service uses Vonage (SMS delivery), Stripe (payment processing), and Railway on Google Cloud Platform (infrastructure). These services have their own privacy policies and may process your data in accordance with their terms.</p>
+    <p><strong>Third-party services:</strong> The Service uses Twilio (SMS delivery), Stripe (payment processing), and Railway on Google Cloud Platform (infrastructure). These services have their own privacy policies and may process your data in accordance with their terms.</p>
     <p><strong>Data retention:</strong> Generated PDFs are stored temporarily and may be deleted after a reasonable period. We retain account and billing records as required by law.</p>
     <p><strong>Security:</strong> We implement reasonable technical and organizational measures to protect your data. However, no system is perfectly secure, and we cannot guarantee absolute security of your information.</p>
 
@@ -3088,12 +3088,12 @@ def privacy():
 
     <h2>3. SMS Messaging</h2>
     <p><strong>Program Name:</strong> TxtAnOffer</p>
-    <p><strong>Phone Number:</strong> +1 (330) 649-3879</p>
-    <p><strong>Opt-in Method:</strong> Users opt in by (1) entering their phone number and checking an unchecked checkbox on www.txtanoffer.com/signup that says "By checking this box, I agree to receive automated transactional SMS messages from TxtAnOffer at +1 (330) 649-3879 about my offer drafts. Message frequency varies based on usage. Reply STOP to opt out, HELP for help. Msg &amp; data rates may apply. Consent is not a condition of purchase." OR (2) by texting offer details directly to +1 (330) 649-3879 after seeing opt-in disclosure on our website.</p>
-    <p><strong>Consent:</strong> By texting our service number +1 (330) 649-3879 or submitting your phone number via our website, you consent to receive SMS messages from TxtAnOffer related to your offer requests and account.</p>
+    <p><strong>Phone Number:</strong> +1 (833) 897-0333</p>
+    <p><strong>Opt-in Method:</strong> Users opt in by (1) entering their phone number and checking an unchecked checkbox on www.txtanoffer.com/signup that says "By checking this box, I agree to receive automated transactional SMS messages from TxtAnOffer at +1 (833) 897-0333 about my offer drafts. Message frequency varies based on usage. Reply STOP to opt out, HELP for help. Msg &amp; data rates may apply. Consent is not a condition of purchase." OR (2) by texting offer details directly to +1 (833) 897-0333 after seeing opt-in disclosure on our website.</p>
+    <p><strong>Consent:</strong> By texting our service number +1 (833) 897-0333 or submitting your phone number via our website, you consent to receive SMS messages from TxtAnOffer related to your offer requests and account.</p>
     <p><strong>Message frequency:</strong> Message frequency varies based on your usage. You will receive one response per offer submitted, plus occasional account notifications (typically 1-5 messages per month).</p>
     <p><strong>Opt-out:</strong> Reply STOP to any message to unsubscribe from SMS. Reply START to re-subscribe. You can continue using the web interface after opting out of SMS.</p>
-    <p><strong>Help:</strong> Reply HELP for support information, or contact support@txtanoffer.com or +1 (330) 649-3879.</p>
+    <p><strong>Help:</strong> Reply HELP for support information, or contact support@txtanoffer.com or +1 (833) 897-0333.</p>
     <p><strong>Rates:</strong> Message and data rates may apply depending on your carrier plan.</p>
     <p><strong>Carriers:</strong> Compatible with all major US carriers. Carriers are not liable for delayed or undelivered messages.</p>
     <p>This is a transactional, user-initiated service only. We do not send marketing or promotional messages.</p>
@@ -3101,7 +3101,7 @@ def privacy():
     <h2>4. Data Sharing</h2>
     <p>We do not sell, rent, or trade your personal information. We share data only with:</p>
     <ul>
-      <li><strong>Vonage</strong> — SMS delivery (phone number, message content)</li>
+      <li><strong>Twilio</strong> — SMS delivery (phone number, message content)</li>
       <li><strong>Stripe</strong> — Payment processing (billing details)</li>
       <li><strong>Railway (hosted on Google Cloud Platform)</strong> — Infrastructure provider, SOC 2 Type II certified. All data encrypted in transit (TLS 1.3) and at rest (AES-256). US region only.</li>
     </ul>
@@ -3572,7 +3572,7 @@ a:hover{text-decoration:underline;}
 </style></head><body><div class="box">
 <h2>Access Expired</h2>
 <p>Your dashboard link has expired or is invalid.<br>
-Text <strong>DASHBOARD</strong> to (330) 649-3879 to get a fresh link.</p>
+Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
 <p style="margin-top:1rem;"><a href="/">Back to home</a></p></div></body></html>""", 403
 
     user = get_user(phone)
