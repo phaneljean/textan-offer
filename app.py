@@ -2585,8 +2585,8 @@ def signup():
         <label class="field-label">Email</label>
         <input type="email" name="email" placeholder="you@brokerage.com">
         <div class="consent-row">
-          <input type="checkbox" id="sms-consent" name="sms_consent" required>
-          <label for="sms-consent">By checking this box, I agree to receive automated transactional SMS messages from TxtAnOffer at +1 (833) 897-0333 about my offer drafts. Message frequency varies based on usage. Reply STOP to opt out, HELP for help. Msg &amp; data rates may apply. Consent is not a condition of purchase. <a href="/privacy">Privacy Policy</a> &amp; <a href="/terms">Terms</a></label>
+          <input type="checkbox" id="sms-consent" name="sms_consent">
+          <label for="sms-consent">(Optional) I agree to receive automated transactional SMS messages from TxtAnOffer at +1 (833) 897-0333 about my offer drafts. Message frequency varies based on usage. Reply STOP to opt out, HELP for help. Msg &amp; data rates may apply. Consent is not a condition of purchase or service. <a href="/privacy">Privacy Policy</a> &amp; <a href="/terms">Terms</a></label>
         </div>
         <button type="submit">Sign up for SMS</button>
       </form>
