@@ -26,6 +26,23 @@ def _get_twilio_signature():
     return request.headers.get("X-Twilio-Signature", "")
 
 
+def _external_url():
+    """Reconstruct the URL Twilio actually POSTed to.
+
+    Railway (and most PaaS reverse proxies) terminate TLS at the edge and forward
+    to the app over plain HTTP, so request.url reports http:// even though Twilio
+    hit https://. Twilio signs the exact URL it called, so validation fails on
+    every request unless the scheme is corrected using X-Forwarded-Proto, which
+    the proxy sets accurately even when request.url doesn't reflect it.
+    """
+    url = request.url
+    forwarded_proto = request.headers.get("X-Forwarded-Proto", "")
+    proto = forwarded_proto.split(",")[0].strip()
+    if proto == "https" and url.startswith("http://"):
+        url = "https://" + url[len("http://"):]
+    return url
+
+
 def parse_incoming_sms():
     """Parse and validate an inbound Twilio SMS webhook.
 
@@ -43,7 +60,7 @@ def parse_incoming_sms():
     # Validate Twilio signature if token configured and RequestValidator available
     if TWILIO_AUTH_TOKEN and RequestValidator is not None:
         validator = RequestValidator(TWILIO_AUTH_TOKEN)
-        full_url = request.url
+        full_url = _external_url()
         signature = _get_twilio_signature()
         try:
             valid = validator.validate(full_url, form, signature)
