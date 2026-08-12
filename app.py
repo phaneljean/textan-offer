@@ -1020,7 +1020,7 @@ def sms_reply():
 
     if keyword == "DASHBOARD":
         dash_link = sign_dashboard_url(agent_phone, request.host_url.rstrip("/"))
-        twilio_send_sms(agent_phone, f"Your dashboard (valid 7 days):\n{dash_link}")
+        twilio_send_sms(agent_phone, f"Your dashboard:\n{dash_link}")
         return "", 200
 
     if keyword == "STATUS":
@@ -1050,11 +1050,9 @@ def sms_reply():
             track_event("limit_reached", agent_phone)
             payment_url = request.host_url.rstrip("/") + "/pricing"
             twilio_send_sms(agent_phone,
-                f"You've used your {FREE_OFFER_LIMIT} free offers!\n\n"
-                f"Subscribe for unlimited offers:\n"
-                f"{payment_url}\n\n"
-                f"$29/mo - Cancel anytime\n"
-                f"Saves 45min per offer"
+                f"You've used your {FREE_OFFER_LIMIT} free offers!\n"
+                f"Subscribe for unlimited: {payment_url}\n"
+                f"$29/mo, cancel anytime"
             )
             return "", 200
 
@@ -1074,7 +1072,7 @@ def sms_reply():
                 hints.append(partial["address"])
             hint_line = ""
             if hints:
-                hint_line = f"\n\nWe got: {' . '.join(hints)}\nMissing pieces? Try again with all 4: price, down%, days, address"
+                hint_line = f"\n\nGot: {' . '.join(hints)}\nNeed: price, down%, days, address"
             twilio_send_sms(agent_phone, f"{error}{hint_line}")
             return "", 200
 
@@ -2472,9 +2470,7 @@ def signup():
                 track_event("signup", phone, {"name": name, "email": email})
                 # Send welcome SMS
                 twilio_send_sms(phone,
-                    "Welcome to TxtAnOffer! "
-                    "Text an offer like: 725k 3% 21day 123 Main St, Austin TX\n\n"
-                    "Reply HELP for all commands. "
+                    "Welcome to TxtAnOffer! Text your offer: 725k 3% 21day 123 Main St. "
                     "Msg & data rates may apply. Reply STOP to opt out."
                 )
             except Exception:
@@ -2598,7 +2594,7 @@ def login():
             # Send dashboard link via Twilio
             try:
                 dash_link = sign_dashboard_url(phone_clean, request.host_url.rstrip("/"))
-                if twilio_send_sms(phone_clean, f"Your TxtAnOffer dashboard link (valid 7 days):\n{dash_link}"):
+                if twilio_send_sms(phone_clean, f"Your dashboard:\n{dash_link}"):
                     message = "sent"
                 else:
                     message = "error"
