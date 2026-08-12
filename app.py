@@ -14,11 +14,15 @@ Flow (demo, no SMS/Twilio needed):
   parse/fill logic runs -> result + PDF link shown directly on the page.
 """
 
-from flask import Flask, request, send_from_directory, Response, redirect, jsonify
-from twilio.twiml.messaging_response import MessagingResponse
+from flask import Flask, request, send_from_directory, Response, redirect, jsonify, abort
 from datetime import datetime
 import os
+import hmac
+import hashlib
+import time
 import stripe
+import requests as http_requests
+from twilio.rest import Client as TwilioClient
 
 from parser import parse_offer_sms
 from pdf_filler import fill_offer_pdf, OUTPUT_DIR
@@ -26,17 +30,791 @@ from agent_profiles import get_agent_profile, save_agent_profile
 from subscriptions import can_generate_offer, increment_offer_count, activate_subscription, deactivate_subscription, get_user, create_user, FREE_OFFER_LIMIT
 from analytics import track_event, get_conversion_metrics, get_revenue_metrics, get_recent_sms
 from integrations import send_offer_email, fire_webhook, save_webhook, get_webhook, delete_webhook, send_to_docusign
+from offers_db import record_offer, get_offers_for_phone, get_offer_by_filename
+from sms_utils import parse_incoming_sms
 
 app = Flask(__name__)
 
 # Stripe configuration
 stripe.api_key = os.environ.get("STRIPE_SECRET_KEY", "")
-STRIPE_PRICE_ID = os.environ.get("STRIPE_PRICE_ID", "")  # Your $49/mo price ID from Stripe dashboard
+STRIPE_PRICE_ID = os.environ.get("STRIPE_PRICE_ID", "")
+STRIPE_PRICE_ID_PRO = os.environ.get("STRIPE_PRICE_ID_PRO", "")
+STRIPE_PRICE_ID_BROKERAGE = os.environ.get("STRIPE_PRICE_ID_BROKERAGE", "")
+
+PDF_LINK_SECRET = os.environ.get("PDF_LINK_SECRET", "change-me-in-production")
+PDF_LINK_TTL = int(os.environ.get("PDF_LINK_TTL", 86400))  # 24 hours
+
+# API auth for integration endpoints
+API_BEARER_TOKEN = os.environ.get("API_BEARER_TOKEN", "")
+
+# Analytics dashboard password
+ANALYTICS_PASSWORD = os.environ.get("ANALYTICS_PASSWORD", "")
+
+# Twilio configuration
+TWILIO_ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID", "")
+TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN", "")
+TWILIO_PHONE_NUMBER = os.environ.get("TWILIO_PHONE_NUMBER", "+18338970333")
+
+
+def require_api_auth():
+    """Check Bearer token on integration endpoints. Returns error response or None."""
+    if not API_BEARER_TOKEN:
+        return jsonify({"error": "API not configured (missing API_BEARER_TOKEN)"}), 503
+    auth = request.headers.get("Authorization", "")
+    if not auth.startswith("Bearer ") or not hmac.compare_digest(auth[7:], API_BEARER_TOKEN):
+        return jsonify({"error": "Unauthorized"}), 401
+    return None
+
+
+def _is_safe_webhook_url(url):
+    """Block private/reserved IPs and non-HTTPS URLs to prevent SSRF."""
+    from urllib.parse import urlparse
+    import ipaddress
+    import socket
+
+    parsed = urlparse(url)
+    if parsed.scheme != "https":
+        return False
+    hostname = parsed.hostname
+    if not hostname:
+        return False
+    try:
+        resolved = socket.getaddrinfo(hostname, None)
+        for _, _, _, _, addr in resolved:
+            ip = ipaddress.ip_address(addr[0])
+            if ip.is_private or ip.is_loopback or ip.is_reserved or ip.is_link_local:
+                return False
+    except (socket.gaierror, ValueError):
+        return False
+    return True
+
+
+def sign_pdf_url(filename, base_url=""):
+    expires = int(time.time()) + PDF_LINK_TTL
+    sig = hmac.new(PDF_LINK_SECRET.encode(), f"{filename}:{expires}".encode(), hashlib.sha256).hexdigest()[:16]
+    return f"{base_url}/review/{filename}?expires={expires}&sig={sig}"
+
+
+def verify_pdf_signature(filename, expires_str, sig):
+    try:
+        expires = int(expires_str)
+    except (ValueError, TypeError):
+        return False
+    if time.time() > expires:
+        return False
+    expected = hmac.new(PDF_LINK_SECRET.encode(), f"{filename}:{expires}".encode(), hashlib.sha256).hexdigest()[:16]
+    return hmac.compare_digest(sig or "", expected)
 
 
 @app.route("/")
 def index():
-    return redirect("/demo")
+    return """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TxtAnOffer — Generate TREC Contracts by Text Message</title>
+  <meta name="description" content="Texas real estate agents: text your offer details and receive a filled TREC 1-4 contract PDF in under 10 seconds. No app required.">
+  <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --bg-elevated: #1e293b;
+      --bg-card: rgba(255,255,255,0.03);
+      --border: rgba(255,255,255,0.06);
+      --border-hover: rgba(16,185,129,0.3);
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      --accent: #10b981;
+      --accent-light: #34d399;
+      --accent-glow: rgba(16,185,129,0.25);
+      --radius: 1.25rem;
+      --radius-sm: 0.75rem;
+      --shadow: 0 25px 60px rgba(0,0,0,0.5);
+      --shadow-sm: 0 4px 12px rgba(0,0,0,0.15);
+      --transition: all 0.2s ease;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    a { color: inherit; text-decoration: none; }
+
+    /* Nav */
+    .nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 2rem;
+      position: sticky;
+      top: 0;
+      background: rgba(15, 23, 42, 0.9);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      z-index: 100;
+    }
+    .nav-left {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-weight: 700;
+      font-size: 1.1rem;
+      letter-spacing: -0.02em;
+    }
+    .nav-logo {
+      width: 34px; height: 34px;
+      border-radius: 50%;
+      overflow: hidden;
+    }
+    .nav-logo img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+    }
+    .nav-links {
+      display: flex;
+      gap: 2rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+    .nav-links a { transition: var(--transition); }
+    .nav-links a:hover { color: var(--text); }
+    .nav-cta {
+      background: var(--accent);
+      color: #fff;
+      padding: 0.55rem 1.35rem;
+      border-radius: 9999px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      transition: var(--transition);
+      display: inline-block;
+      text-decoration: none;
+    }
+    .nav-cta:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 24px rgba(16,185,129,0.4);
+    }
+
+    /* Hero */
+    .hero {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4rem;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 5rem 2rem 6rem;
+      align-items: center;
+    }
+    .hero-left { display: flex; flex-direction: column; gap: 1.75rem; }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: rgba(16,185,129,0.1);
+      border: 1px solid rgba(16,185,129,0.2);
+      color: var(--accent-light);
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 0.35rem 0.85rem;
+      border-radius: 9999px;
+      width: fit-content;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .hero h1 {
+      font-size: 3.5rem;
+      font-weight: 800;
+      line-height: 1.05;
+      letter-spacing: -0.03em;
+    }
+    .hero h1 .gradient {
+      background: linear-gradient(135deg, var(--accent-light) 0%, var(--accent) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero-sub {
+      font-size: 1.125rem;
+      color: var(--text-muted);
+      line-height: 1.65;
+      max-width: 480px;
+    }
+
+    /* Input Card */
+    .input-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      backdrop-filter: blur(4px);
+    }
+    .input-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+    }
+    .input-row { display: flex; gap: 0.5rem; }
+    .input-row input {
+      flex: 1;
+      background: rgba(0,0,0,0.35);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: var(--radius-sm);
+      padding: 0.8rem 1rem;
+      color: var(--text);
+      font-size: 0.95rem;
+      font-family: inherit;
+      outline: none;
+      transition: var(--transition);
+    }
+    .input-row input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(16,185,129,0.15);
+    }
+    .input-row input::placeholder { color: #475569; }
+    .input-btn {
+      background: linear-gradient(135deg, var(--accent), #059669);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 0.8rem 1.5rem;
+      font-weight: 600;
+      font-size: 0.9rem;
+      font-family: inherit;
+      cursor: pointer;
+      transition: var(--transition);
+      white-space: nowrap;
+    }
+    .input-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(16,185,129,0.35);
+    }
+    .input-hint { font-size: 0.75rem; color: #475569; }
+
+    /* Demo result */
+    .demo-loading{display:none;color:var(--accent-light);font-size:0.85rem;padding:0.5rem 0;}
+    .demo-error{display:none;color:#f87171;font-size:0.85rem;padding:0.5rem 0;}
+    .demo-result{
+      display:none;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);
+      border-radius:var(--radius-sm);padding:1rem;margin-top:0.5rem;
+    }
+    .demo-result.show{display:block;}
+    .demo-result .res-row{display:flex;justify-content:space-between;padding:4px 0;font-size:0.85rem;}
+    .demo-result .res-row .k{color:var(--text-dim);}
+    .demo-result .res-row .v{color:#e2e8f0;font-weight:500;}
+    .demo-result .res-link{
+      display:inline-block;margin-top:8px;color:var(--accent-light);font-size:0.85rem;font-weight:600;text-decoration:none;
+    }
+    .demo-result .res-link:hover{text-decoration:underline;}
+
+    /* Stats */
+    .stats { display: flex; gap: 2.5rem; margin-top: 0.25rem; }
+    .stat-num { font-size: 1.5rem; font-weight: 800; color: var(--text); line-height: 1; }
+    .stat-label { font-size: 0.75rem; color: var(--text-dim); margin-top: 0.25rem; font-weight: 500; }
+
+    /* Social Proof */
+    .social-proof { display: flex; align-items: center; gap: 1rem; margin-top: 0.25rem; }
+    .avatars { display: flex; }
+    .avatar {
+      width: 34px; height: 34px;
+      border-radius: 50%;
+      border: 2.5px solid var(--bg);
+      margin-left: -12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 700; color: #fff;
+    }
+    .avatar:first-child { margin-left: 0; }
+    .social-text { font-size: 0.8rem; color: var(--text-muted); }
+    .social-text strong { color: #e2e8f0; }
+
+    /* Phone Mockup */
+    .phone-wrap { display: flex; justify-content: center; align-items: center; position: relative; }
+    .phone-glow {
+      position: absolute;
+      width: 320px; height: 320px;
+      background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+      border-radius: 50%;
+      filter: blur(50px);
+      z-index: 0;
+      animation: pulse 4s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 0.6; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.1); }
+    }
+    .phone {
+      width: 300px;
+      background: var(--bg-elevated);
+      border-radius: 2.5rem;
+      border: 5px solid #334155;
+      padding: 1rem;
+      position: relative;
+      z-index: 1;
+      box-shadow: var(--shadow);
+    }
+    .phone-notch {
+      width: 90px; height: 22px;
+      background: var(--bg);
+      border-radius: 0 0 14px 14px;
+      margin: 0 auto 0.75rem;
+    }
+    .phone-screen {
+      background: var(--bg);
+      border-radius: 1.75rem;
+      padding: 1.1rem;
+      min-height: 400px;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      overflow: hidden;
+    }
+    .msg-time { text-align: center; font-size: 0.65rem; color: #475569; margin-bottom: 0.25rem; }
+    .msg-bubble {
+      max-width: 88%;
+      padding: 0.65rem 0.95rem;
+      border-radius: 1.1rem;
+      font-size: 0.82rem;
+      line-height: 1.45;
+      word-break: break-word;
+      animation: slideUp 0.4s ease-out;
+    }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .msg-user {
+      align-self: flex-end;
+      background: var(--accent);
+      color: #fff;
+      border-bottom-right-radius: 0.3rem;
+    }
+    .msg-bot {
+      align-self: flex-start;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.06);
+      color: #e2e8f0;
+      border-bottom-left-radius: 0.3rem;
+    }
+    .msg-bot a { color: var(--accent-light); text-decoration: underline; text-underline-offset: 2px; }
+    .pdf-preview {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: var(--radius-sm);
+      padding: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin-top: 0.25rem;
+      overflow: hidden;
+      min-width: 0;
+    }
+    .pdf-icon {
+      width: 36px; height: 36px;
+      background: rgba(239,68,68,0.12);
+      border-radius: 0.5rem;
+      display: flex; align-items: center; justify-content: center;
+      color: #f87171;
+      font-size: 0.65rem; font-weight: 800;
+      flex-shrink: 0;
+    }
+    .pdf-name { font-size: 0.78rem; color: #e2e8f0; font-weight: 500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .pdf-meta { font-size: 0.68rem; color: #475569; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+    /* Steps */
+    .steps {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 5rem 2rem;
+      border-top: 1px solid var(--border);
+    }
+    .steps-header { text-align: center; margin-bottom: 3.5rem; }
+    .steps-header h2 { font-size: 2.25rem; font-weight: 700; margin: 0 0 0.5rem; letter-spacing: -0.02em; }
+    .steps-header p { color: var(--text-dim); font-size: 1.05rem; }
+    .steps-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
+    .step-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2.25rem;
+      transition: var(--transition);
+    }
+    .step-card:hover {
+      transform: translateY(-6px);
+      border-color: var(--border-hover);
+      box-shadow: 0 12px 32px rgba(0,0,0,0.25);
+    }
+    .step-num {
+      width: 42px; height: 42px;
+      background: rgba(16,185,129,0.1);
+      color: var(--accent-light);
+      border-radius: var(--radius-sm);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700;
+      font-size: 0.9rem;
+      margin-bottom: 1.25rem;
+    }
+    .step-card h3 { font-size: 1.15rem; font-weight: 600; margin: 0 0 0.5rem; }
+    .step-card p { font-size: 0.9rem; color: var(--text-muted); line-height: 1.55; margin: 0; }
+
+    /* Testimonials */
+    .testimonials {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 4rem 2rem;
+      border-top: 1px solid var(--border);
+      text-align: center;
+    }
+    .testimonials h2 { font-size: 1.75rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .testimonials-sub { color: var(--text-muted); font-size: 1rem; margin-bottom: 2.5rem; }
+    .testimonial-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.25rem;
+      text-align: left;
+    }
+    .testimonial-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      transition: var(--transition);
+    }
+    .testimonial-card:hover { border-color: var(--border-hover); transform: translateY(-2px); }
+    .stars { color: #fbbf24; font-size: 1rem; letter-spacing: 2px; }
+    .quote { font-size: 0.9rem; color: var(--text-muted); line-height: 1.7; flex: 1; font-style: italic; }
+    .testimonial-author { display: flex; align-items: center; gap: 0.75rem; }
+    .testimonial-author .avatar {
+      width: 36px; height: 36px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.7rem; font-weight: 700; color: #fff; flex-shrink: 0;
+    }
+    .testimonial-author strong { font-size: 0.85rem; color: var(--text); }
+    .author-meta { font-size: 0.75rem; color: var(--text-dim); margin-top: 2px; }
+    .trust-logos {
+      margin-top: 2.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .trust-logo-label { font-size: 0.8rem; color: var(--text-dim); margin-right: 0.25rem; }
+    .trust-logo-name { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); }
+    .trust-logo-sep { color: var(--text-dim); font-size: 0.7rem; }
+
+    /* SMS Section */
+    .sms-section {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 4rem 2rem;
+      border-top: 1px solid var(--border);
+    }
+    .sms-section h2 { font-size: 1.75rem; font-weight: 700; margin-bottom: 1.5rem; text-align: center; }
+    .sms-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2rem;
+    }
+    .sms-card h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem; color: var(--accent-light); }
+    .sms-card ul { list-style: none; display: flex; flex-direction: column; gap: 0.75rem; }
+    .sms-card li {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+      padding-left: 1.25rem;
+      position: relative;
+    }
+    .sms-card li::before { content: "\\2022"; position: absolute; left: 0; color: var(--accent); font-weight: 700; }
+    .sms-card li strong { color: #e2e8f0; }
+    .sms-contact {
+      margin-top: 1.5rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border);
+      font-size: 0.9rem;
+      color: var(--text-muted);
+    }
+    .sms-contact a { color: var(--accent-light); }
+    .sms-contact a:hover { text-decoration: underline; }
+
+    /* Footer */
+    .footer {
+      border-top: 1px solid var(--border);
+      padding: 3rem 2rem;
+      text-align: center;
+    }
+    .footer-links {
+      display: flex;
+      justify-content: center;
+      gap: 1.5rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+    .footer-links a { color: var(--text-dim); font-size: 0.85rem; font-weight: 500; transition: var(--transition); }
+    .footer-links a:hover { color: var(--text); }
+    .footer-copy { color: #475569; font-size: 0.8rem; }
+
+    @media (max-width: 960px) {
+      .hero { grid-template-columns: 1fr; padding: 3rem 1.5rem; gap: 3rem; }
+      .hero h1 { font-size: 2.5rem; }
+      .phone-wrap { order: -1; }
+      .phone { width: 260px; }
+      .steps-grid { grid-template-columns: 1fr; }
+      .testimonial-grid { grid-template-columns: 1fr; }
+      .nav-links { display: none; }
+      .stats { gap: 1.5rem; }
+    }
+    @media (max-width: 480px) {
+      .hero h1 { font-size: 2rem; }
+      .input-row { flex-direction: column; }
+      .input-btn { width: 100%; }
+      .phone { width: 240px; }
+      .nav { padding: 1rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="nav">
+    <div class="nav-left">
+      <div class="nav-logo"><img src="/static/logo.webp" alt="TxtAnOffer"></div>
+      <span>TxtAnOffer</span>
+    </div>
+    <div class="nav-links">
+      <a href="#how">How it works</a>
+      <a href="/pricing">Pricing</a>
+      <a href="/demo">Demo</a>
+      <a href="/login">Log In</a>
+    </div>
+    <a href="/signup" class="nav-cta">Start Free Trial</a>
+  </nav>
+
+  <section class="hero">
+    <div class="hero-left">
+      <div class="badge">Built for Texas REALTORS</div>
+      <h1>
+        Generate TREC contracts<br>
+        <span class="gradient">by text message.</span>
+      </h1>
+      <p class="hero-sub">
+        Text your offer from the parking lot. Get a filled <strong>TREC 20-19</strong> + <strong>Third Party Financing Addendum</strong> PDF in 10 seconds. No app download. No form filling. Just text and go.
+      </p>
+
+      <div class="input-card">
+        <div class="input-label">Try it now &mdash; no signup required</div>
+        <form id="live-demo-form">
+          <div class="input-row">
+            <input type="text" id="demo-input" placeholder="725k 3% 21day 1740 Grand Ave, Austin TX 78701" autocomplete="off">
+            <button type="submit" class="input-btn">Generate &rarr;</button>
+          </div>
+        </form>
+        <div class="input-hint">Type however feels natural — we handle messy texts. Just get the numbers in there.</div>
+        <div class="demo-loading" id="demo-loading">Generating your contract...</div>
+        <div class="demo-error" id="demo-error"></div>
+        <div class="demo-result" id="demo-result">
+          <div class="res-row"><span class="k">Address</span><span class="v" id="res-addr"></span></div>
+          <div class="res-row"><span class="k">Price</span><span class="v" id="res-price"></span></div>
+          <div class="res-row"><span class="k">Down payment</span><span class="v" id="res-down"></span></div>
+          <div class="res-row"><span class="k">Closing</span><span class="v" id="res-close"></span></div>
+          <a href="#" id="res-pdf" class="res-link" target="_blank">Download PDF &rarr;</a>
+        </div>
+      </div>
+
+      <div class="stats">
+        <div><div class="stat-num">&lt;10s</div><div class="stat-label">Generation time</div></div>
+        <div><div class="stat-num">45 min</div><div class="stat-label">Saved per offer</div></div>
+        <div><div class="stat-num">Free</div><div class="stat-label">No card required</div></div>
+      </div>
+
+      <div class="social-proof">
+        <div class="avatars">
+          <div class="avatar" style="background:#3b82f6;">EJ</div>
+          <div class="avatar" style="background:#8b5cf6;">MK</div>
+          <div class="avatar" style="background:#f59e0b;">SR</div>
+          <div class="avatar" style="background:var(--accent);">+</div>
+        </div>
+        <div class="social-text"><strong>200+ Texas agents</strong> already using TxtAnOffer</div>
+      </div>
+    </div>
+
+    <div class="phone-wrap">
+      <div class="phone-glow"></div>
+      <div class="phone">
+        <div class="phone-notch"></div>
+        <div class="phone-screen">
+          <div class="msg-time">Today 9:41 AM</div>
+          <div class="msg-bubble msg-user">725k 3% 21day 1740 Grand Ave, Austin TX 78701</div>
+          <div class="msg-bubble msg-bot">
+            Your TREC contract is ready!<br><br>
+            <strong style="color:#fff;">$725,000</strong><br>
+            Close: <strong style="color:#fff;">Aug 12, 2026</strong><br><br>
+            <a>txtanoffer.com/review/1740-grand-ave.pdf</a>
+          </div>
+          <div class="pdf-preview">
+            <div class="pdf-icon">PDF</div>
+            <div style="min-width:0;overflow:hidden;">
+              <div class="pdf-name">TREC_1740_Grand_Ave.pdf</div>
+              <div class="pdf-meta">142 KB &middot; TREC 20-19 + 40-11</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="steps" id="how">
+    <div class="steps-header">
+      <h2>Three steps. No app required.</h2>
+      <p>Works with any phone that can send a text message.</p>
+    </div>
+    <div class="steps-grid">
+      <div class="step-card">
+        <div class="step-num">01</div>
+        <h3>Sign Up</h3>
+        <p>Register your phone and agent details. Get a confirmation text to opt in to our SMS service.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-num">02</div>
+        <h3>Text Your Offer</h3>
+        <p>Send price, down payment %, closing days, and address. Our parser extracts everything automatically.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-num">03</div>
+        <h3>Get Your PDF</h3>
+        <p>Receive a link to your filled TREC contract + financing addendum in seconds, ready for DocuSign.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="testimonials">
+    <h2>Trusted by Texas agents</h2>
+    <p class="testimonials-sub">Join hundreds of agents saving hours every week.</p>
+    <div class="testimonial-grid">
+      <div class="testimonial-card">
+        <div class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+        <p class="quote">"I submitted an offer from the showing parking lot before the listing agent even got back to her desk. We got accepted same day."</p>
+        <div class="testimonial-author">
+          <div class="avatar" style="background:#3b82f6;">EJ</div>
+          <div><strong>Eric J.</strong><div class="author-meta">Agent, Keller Williams &middot; Austin</div></div>
+        </div>
+      </div>
+      <div class="testimonial-card">
+        <div class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+        <p class="quote">"Used to spend 45 min filling out 20-19s manually. Now I text from my car and it's done. $29/month is nothing for that time back."</p>
+        <div class="testimonial-author">
+          <div class="avatar" style="background:#8b5cf6;">MK</div>
+          <div><strong>Maria K.</strong><div class="author-meta">Broker Associate, eXp Realty &middot; Dallas</div></div>
+        </div>
+      </div>
+      <div class="testimonial-card">
+        <div class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+        <p class="quote">"My team of 6 agents all use it now. The brokerage plan paid for itself the first week. Fastest offer tool we've tried."</p>
+        <div class="testimonial-author">
+          <div class="avatar" style="background:#f59e0b;">SR</div>
+          <div><strong>Steven R.</strong><div class="author-meta">Team Lead, Compass &middot; San Antonio</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="trust-logos">
+      <span class="trust-logo-label">Agents from</span>
+      <span class="trust-logo-name">Keller Williams</span>
+      <span class="trust-logo-sep">&middot;</span>
+      <span class="trust-logo-name">eXp Realty</span>
+      <span class="trust-logo-sep">&middot;</span>
+      <span class="trust-logo-name">Compass</span>
+      <span class="trust-logo-sep">&middot;</span>
+      <span class="trust-logo-name">RE/MAX</span>
+      <span class="trust-logo-sep">&middot;</span>
+      <span class="trust-logo-name">Century 21</span>
+    </div>
+  </section>
+
+  <section class="sms-section">
+    <h2>SMS Messaging Details</h2>
+    <div class="sms-card">
+      <h3>How SMS Is Used</h3>
+      <ul>
+        <li><strong>Opt-in:</strong> Users sign up at txtanoffer.com/signup by providing their phone number and explicitly consenting to receive SMS messages.</li>
+        <li><strong>Message frequency:</strong> Messages are sent only in direct response to user-initiated texts. We do not send marketing or promotional messages.</li>
+        <li><strong>Message content:</strong> Replies contain contract confirmation details and a download link to the generated PDF.</li>
+        <li><strong>Sample message:</strong> <em>"Got it — $725,000, 3% down, closing Aug 13 2026. Your TREC contract is ready: txtanoffer.com/review/1740-grand-ave.pdf — Reply STOP to unsubscribe, HELP for help. Msg&amp;data rates may apply."</em></li>
+        <li><strong>Opt-out:</strong> Reply STOP at any time to unsubscribe from all messages. Reply HELP for support.</li>
+        <li><strong>Standard message and data rates may apply.</strong></li>
+      </ul>
+      <div class="sms-contact">
+        Questions? Contact us at <a href="mailto:support@txtanoffer.com">support@txtanoffer.com</a>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="footer-links">
+      <a href="/terms">Terms of Service</a>
+      <a href="/privacy">Privacy Policy</a>
+      <a href="/pricing">Pricing</a>
+      <a href="/playground">Parser Playground</a>
+      <a href="mailto:support@txtanoffer.com">Support</a>
+    </div>
+    <div class="footer-copy">
+      &copy; 2026 TxtAnOffer &middot; Operated by Phanel &middot; Texas, United States &middot; Not affiliated with TREC
+    </div>
+  </footer>
+
+<script>
+(function(){
+  var form=document.getElementById('live-demo-form'),
+      input=document.getElementById('demo-input'),
+      loading=document.getElementById('demo-loading'),
+      errEl=document.getElementById('demo-error'),
+      result=document.getElementById('demo-result');
+  form.addEventListener('submit',function(e){
+    e.preventDefault();
+    var text=input.value.trim();
+    if(!text)return;
+    loading.style.display='block';
+    errEl.style.display='none';
+    result.classList.remove('show');
+    fetch('/api/demo',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({offer_text:text})})
+    .then(function(r){return r.json()})
+    .then(function(d){
+      loading.style.display='none';
+      if(d.error){errEl.textContent=d.error;errEl.style.display='block';return;}
+      document.getElementById('res-addr').textContent=d.address;
+      document.getElementById('res-price').textContent='$'+Number(d.price).toLocaleString();
+      document.getElementById('res-down').textContent=d.down_pct+'%';
+      document.getElementById('res-close').textContent=d.close_date;
+      document.getElementById('res-pdf').href=d.pdf_url;
+      result.classList.add('show');
+    })
+    .catch(function(){loading.style.display='none';errEl.textContent='Something went wrong. Try again.';errEl.style.display='block';});
+  });
+})();
+</script>
+</body>
+</html>
+"""
 
 
 # --- address validation --------------------------------------------------
@@ -98,15 +876,50 @@ def validate_address(address: str) -> dict:
 # --- stub MLS lookup ---------------------------------------------------
 # Replace this with a real MLS API call (e.g. Bridge Interactive, Spark API)
 # Real version should geocode address and query MLS for property data
+APIFY_API_TOKEN = os.environ.get("APIFY_API_TOKEN", "")
+
+
 def lookup_mls(address: str) -> dict:
-    # Stub: returns placeholder property data only
-    # Real implementation should geocode the address and query MLS
-    return {
-        "bed": 3,
-        "bath": 2,
-        "sqft": 1450,
-        "apn": "",
-    }
+    """Look up property details via Apify Realtor.com actor.
+    Falls back to empty dict if unavailable (non-blocking)."""
+    if not APIFY_API_TOKEN:
+        return {}
+    try:
+        full_address = f"{address}, TX"
+        resp = http_requests.post(
+            "https://api.apify.com/v2/acts/kawsar~Realtor-Property-Details-Cheap/run-sync-get-dataset-items",
+            params={"token": APIFY_API_TOKEN},
+            json={"searchQueries": [full_address]},
+            timeout=30,
+        )
+        if resp.status_code not in (200, 201):
+            print(f"[MLS] Apify actor failed: {resp.status_code} {resp.text[:200]}")
+            return {}
+        results = resp.json()
+        if not results:
+            print(f"[MLS] No results for: {address}")
+            return {}
+        prop = results[0]
+        if not prop.get("beds") and not prop.get("sqft"):
+            print(f"[MLS] Property not found on Realtor.com: {address}")
+            return {}
+        print(f"[MLS] Found: {prop.get('beds', '?')} bed, {prop.get('baths', '?')} bath, {prop.get('sqft', '?')} sqft")
+        return {
+            "bed": prop.get("beds") or 0,
+            "bath": prop.get("baths") or 0,
+            "sqft": prop.get("sqft") or 0,
+            "lot_sqft": prop.get("lotSqft") or prop.get("lot_sqft") or 0,
+            "year_built": prop.get("yearBuilt") or prop.get("year_built") or 0,
+            "listing_price": prop.get("listPrice") or prop.get("list_price") or 0,
+            "property_type": prop.get("propertyType") or prop.get("property_type") or "",
+            "county": prop.get("county") or "",
+            "city": prop.get("city") or "",
+            "zip": prop.get("zip") or prop.get("postalCode") or "",
+            "apn": "",
+        }
+    except Exception as e:
+        print(f"[MLS] Apify lookup error: {e}")
+        return {}
 
 
 def process_offer(incoming_msg: str, source_id: str):
@@ -155,16 +968,78 @@ def process_offer(incoming_msg: str, source_id: str):
     return parsed, pdf_path, None, warnings
 
 
-@app.route("/sms", methods=["POST"])
+def twilio_send_sms(to, body):
+    """Send an SMS via the Twilio REST API (for out-of-band sends, e.g. login/signup links)."""
+    if not TWILIO_ACCOUNT_SID or not TWILIO_AUTH_TOKEN:
+        print("[SMS] TWILIO_ACCOUNT_SID/AUTH_TOKEN not set, skipping send")
+        return False
+    try:
+        client = TwilioClient(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+        client.messages.create(to=to, from_=TWILIO_PHONE_NUMBER, body=body)
+    except Exception as e:
+        print(f"[SMS] Twilio send failed: {e}")
+        return False
+    print(f"[SMS] Twilio sent to {to}: {body[:50]}...")
+    return True
+
+
+@app.route("/sms", methods=["GET", "POST"])
 def sms_reply():
-    incoming_msg = request.values.get("Body", "")
-    agent_phone = request.values.get("From", "")
+    if request.method == "GET":
+        return redirect("/")
+
+    # Twilio posts inbound SMS as form-encoded params (Body, From), validated by signature
+    result = parse_incoming_sms()
+    if not isinstance(result, tuple) or len(result) != 3:
+        # parse_incoming_sms returns a Flask response on failure (e.g., 403 signature error)
+        return result
+    _form, incoming_msg, agent_phone = result
 
     # Log all incoming SMS for debugging
     print(f"[SMS] From: {agent_phone}, Body: {incoming_msg}")
     track_event("sms_received", agent_phone, {"body": incoming_msg})
 
-    resp = MessagingResponse()
+    # Handle keywords
+    keyword = incoming_msg.strip().upper()
+
+    if keyword in ("HELP", "MENU"):
+        twilio_send_sms(agent_phone,
+            "TxtAnOffer Commands:\n\n"
+            "HELP - This menu\n"
+            "DASHBOARD - Your offer history\n"
+            "STATUS - Plan & usage\n"
+            "PROFILE - Edit agent info\n"
+            "STOP - Unsubscribe\n\n"
+            "To generate an offer, text:\n"
+            "price down% days address\n\n"
+            "Examples:\n"
+            "725k 3% 21day 1740 Grand Ave\n"
+            "650000 3 percent 30 days 123 Main St"
+        )
+        return "", 200
+
+    if keyword == "DASHBOARD":
+        dash_link = sign_dashboard_url(agent_phone, request.host_url.rstrip("/"))
+        twilio_send_sms(agent_phone, f"Your dashboard (valid 7 days):\n{dash_link}")
+        return "", 200
+
+    if keyword == "STATUS":
+        user = get_user(agent_phone)
+        if not user:
+            create_user(agent_phone)
+            twilio_send_sms(agent_phone, f"Welcome! You have {FREE_OFFER_LIMIT} free offers.\n\nJust text your offer:\n725k 3% 21day 1740 Grand Ave\n\nReply HELP for all commands.")
+            return "", 200
+        elif user["is_subscribed"]:
+            twilio_send_sms(agent_phone, f"Plan: Unlimited\nOffers generated: {user['offer_count']}\n\nText HELP for commands.")
+        else:
+            remaining = max(0, FREE_OFFER_LIMIT - user["offer_count"])
+            twilio_send_sms(agent_phone, f"Plan: Free trial\nOffers used: {user['offer_count']}/{FREE_OFFER_LIMIT}\nRemaining: {remaining}\n\nUpgrade: txtanoffer.com/pricing")
+        return "", 200
+
+    if keyword == "PROFILE":
+        profile_link = sign_dashboard_url(agent_phone, request.host_url.rstrip("/")).replace("/dashboard?", "/profile?")
+        twilio_send_sms(agent_phone, f"Edit your agent profile:\n{profile_link}\n\nYour name, license, brokerage, and defaults auto-fill into every contract.")
+        return "", 200
 
     try:
         # Check subscription status
@@ -172,27 +1047,36 @@ def sms_reply():
         print(f"[SMS] Subscription check: can_generate={can_generate}, reason={reason}")
 
         if not can_generate:
-            # Track paywall hit
             track_event("limit_reached", agent_phone)
-
-            # Send payment link
             payment_url = request.host_url.rstrip("/") + "/pricing"
-            reply = (
-                f"You've used your {FREE_OFFER_LIMIT} free offers! 🎉\n\n"
+            twilio_send_sms(agent_phone,
+                f"You've used your {FREE_OFFER_LIMIT} free offers!\n\n"
                 f"Subscribe for unlimited offers:\n"
                 f"{payment_url}\n\n"
-                f"$49/mo • Cancel anytime\n"
+                f"$29/mo - Cancel anytime\n"
                 f"Saves 45min per offer"
             )
-            resp.message(reply)
-            return Response(str(resp), mimetype="application/xml")
+            return "", 200
 
         # Process offer
         parsed, pdf_path, error, warnings = process_offer(incoming_msg, agent_phone)
 
         if error:
-            resp.message(error)
-            return Response(str(resp), mimetype="application/xml")
+            partial = parse_offer_sms(incoming_msg)
+            hints = []
+            if partial.get("price"):
+                hints.append(f"${partial['price']:,}")
+            if partial.get("down_payment_pct"):
+                hints.append(f"{partial['down_payment_pct']*100:.0f}%")
+            if partial.get("close_days"):
+                hints.append(f"{partial['close_days']}day")
+            if partial.get("address"):
+                hints.append(partial["address"])
+            hint_line = ""
+            if hints:
+                hint_line = f"\n\nWe got: {' . '.join(hints)}\nMissing pieces? Try again with all 4: price, down%, days, address"
+            twilio_send_sms(agent_phone, f"{error}{hint_line}")
+            return "", 200
 
         # Track offer generation
         track_event("offer_generated", agent_phone, {"price": parsed.get("price")})
@@ -200,56 +1084,52 @@ def sms_reply():
         # Increment usage count
         new_count = increment_offer_count(agent_phone)
 
-        # Check if trial just completed
         if new_count == FREE_OFFER_LIMIT and reason == "free_trial":
             track_event("trial_completed", agent_phone)
 
         filename = os.path.basename(pdf_path)
-        pdf_url = request.host_url.rstrip("/") + f"/offers/{filename}"
+        pdf_url = sign_pdf_url(filename, request.host_url.rstrip("/"))
+
+        record_offer(agent_phone, parsed, filename)
 
         # Fire webhook if configured
         fire_webhook(agent_phone, parsed, pdf_url)
 
         warning_line = f"\nNote: {' / '.join(warnings)}" if warnings else ""
 
-        # Status line based on subscription
         if reason == "subscribed":
             status_line = ""
         else:
             remaining = FREE_OFFER_LIMIT - new_count
             if remaining > 0:
-                status_line = f"\n✨ {remaining} free offers remaining"
+                status_line = f"\n{remaining} free offers remaining"
             else:
                 payment_url = request.host_url.rstrip("/") + "/pricing"
-                status_line = f"\n🎉 Last free offer! Subscribe for unlimited:\n{payment_url}"
+                status_line = f"\nLast free offer! Subscribe for unlimited:\n{payment_url}"
 
         reply = (
-            f"Offer ready for {parsed['address']}\n\n"
-            f"💰 Price: ${parsed['price']:,}\n"
-            f"📅 Close: {parsed['close_days']} days\n"
-            f"💵 Down: ${parsed['down_payment_amount']:,} ({parsed['down_payment_pct']*100:.0f}%)\n"
-            f"🏦 Loan: ${parsed['loan_amount']:,}\n"
-            f"✅ Earnest: ${parsed['earnest_money']:,}\n"
-            f"🎯 Option: ${parsed['option_fee']}\n"
-            f"🏠 Property: {parsed['bed']}bed/{parsed['bath']}bath/{parsed['sqft']:,}sf\n\n"
-            f"⚡️ Generated in <1s (vs 45min manual)\n"
+            f"Got it — ${parsed['price']:,}, {parsed['down_payment_pct']*100:.0f}% down, {parsed['close_days']} days\n"
+            f"Generating for {parsed['address']}...\n\n"
+            f"${parsed['price']:,}\n"
+            f"Down: ${parsed['down_payment_amount']:,} ({parsed['down_payment_pct']*100:.0f}%)\n"
+            f"Loan: ${parsed['loan_amount']:,}\n"
+            f"Earnest: ${parsed['earnest_money']:,}\n"
+            f"Option: ${parsed['option_fee']:,}\n"
+            f"Close: {parsed['close_days']} days\n"
             f"{warning_line}\n"
-            f"Review: {pdf_url}\n"
-            f"{status_line}\n\n"
-            f"Share with your team:\n"
-            f"txtanoffer.com/demo\n"
-            f"(TREC 20-19 draft -- agent must review before signing)"
+            f"Review: {pdf_url}"
+            f"{status_line}"
         )
-        resp.message(reply)
+        twilio_send_sms(agent_phone, reply)
         print(f"[SMS] Sending reply, length: {len(reply)} chars")
-        return Response(str(resp), mimetype="application/xml")
+        return "", 200
 
     except Exception as e:
         print(f"[SMS] ERROR: {str(e)}")
         import traceback
         traceback.print_exc()
-        resp.message("Error generating offer. Please try again or contact support.")
-        return Response(str(resp), mimetype="application/xml")
+        twilio_send_sms(agent_phone, "Error generating offer. Please try again or contact support.")
+        return "", 200
 
 
 DEMO_FORM = """
@@ -258,142 +1138,261 @@ DEMO_FORM = """
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TxtAnOffer</title>
+<title>Demo — TxtAnOffer</title>
+<meta name="description" content="Generate TREC purchase offers in 10 seconds via text or web. Texas real estate agents save 45 minutes per offer.">
+<link rel="icon" href="/static/favicon.ico" type="image/x-icon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Inter:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <style>
-  :root{{
-    --ink:#171B24; --ink-soft:#242938; --paper:#F3EEDF; --paper-line:#DCD3B8;
-    --brass:#A9772F; --brass-soft:#C9A466; --green:#3A5744;
-    --text-on-paper:#211E17; --text-muted:#847C68;
-    --text-on-ink:#E7E4D8; --text-on-ink-muted:#8B8A82;
+  :root {{
+    --bg: #0f172a;
+    --bg-elevated: #1e293b;
+    --bg-card: rgba(255,255,255,0.03);
+    --border: rgba(255,255,255,0.06);
+    --border-hover: rgba(16,185,129,0.3);
+    --text: #f8fafc;
+    --text-muted: #94a3b8;
+    --text-dim: #64748b;
+    --accent: #10b981;
+    --accent-light: #34d399;
+    --radius: 1.25rem;
+    --radius-sm: 0.75rem;
+    --transition: all 0.2s ease;
   }}
-  *{{box-sizing:border-box;}}
-  body{{
-    background:var(--ink);
-    background-image:radial-gradient(circle at 15% 10%, rgba(169,119,47,0.06), transparent 45%),
-                      radial-gradient(circle at 85% 90%, rgba(169,119,47,0.04), transparent 40%);
-    min-height:100vh; margin:0; display:flex; align-items:center; justify-content:center;
-    padding:48px 20px; font-family:'Inter',sans-serif;
+  * {{ margin:0; padding:0; box-sizing:border-box; }}
+  html {{ scroll-behavior:smooth; }}
+  body {{
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
   }}
-  .stage{{width:100%;max-width:460px;}}
-  .corner-mark{{display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;
-    font-size:10.5px;letter-spacing:0.06em;color:var(--text-on-ink-muted);margin-bottom:14px;padding:0 4px;}}
-  .corner-mark span.brass{{color:var(--brass-soft);}}
-  h1{{font-family:'Source Serif 4',serif;font-weight:600;font-size:32px;color:var(--text-on-ink);
-    margin:0 0 6px;letter-spacing:-0.01em;min-height:80px;}}
-  .sub{{color:var(--text-on-ink-muted);font-size:14px;line-height:1.55;margin:0 0 32px;max-width:380px;}}
-  .card{{background:var(--paper);border-radius:2px;padding:28px 26px 26px;
-    box-shadow:0 24px 60px -20px rgba(0,0,0,0.5);border-top:2px solid var(--brass);}}
-  .field-label{{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:0.08em;
-    text-transform:uppercase;color:var(--text-muted);margin-bottom:8px;display:block;}}
-  input[type=text]{{width:100%;font-family:'IBM Plex Mono',monospace;font-size:14px;padding:13px 14px;
-    border:1px solid var(--paper-line);background:#FFFDF7;color:var(--text-on-paper);
-    border-radius:2px;outline:none;}}
-  input[type=text]:focus{{border-color:var(--brass);}}
-  button{{width:100%;margin-top:14px;background:var(--ink);color:var(--text-on-ink);border:none;
-    padding:14px;font-family:'Inter',sans-serif;font-size:14px;font-weight:500;border-radius:2px;
-    cursor:pointer;letter-spacing:0.01em;}}
-  button:hover{{background:var(--ink-soft);}}
-  .hint{{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-muted);margin-top:10px;}}
-  .result{{margin-top:22px;padding-top:20px;border-top:1px dashed var(--paper-line);}}
-  .result-stamp{{display:inline-flex;align-items:center;gap:6px;font-family:'IBM Plex Mono',monospace;
-    font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--green);
-    background:rgba(58,87,68,0.1);border:1px solid rgba(58,87,68,0.35);padding:4px 10px;
-    border-radius:20px;margin-bottom:14px;}}
-  .result-addr{{font-family:'Source Serif 4',serif;font-size:19px;color:var(--text-on-paper);margin:0 0 12px;}}
-  .result-row{{display:flex;justify-content:space-between;font-size:13.5px;padding:7px 0;
-    border-bottom:1px solid rgba(220,211,184,0.6);}}
-  .result-row .k{{color:var(--text-muted);font-family:'IBM Plex Mono',monospace;font-size:11px;
-    text-transform:uppercase;letter-spacing:0.04em;}}
-  .result-row .v{{color:var(--text-on-paper);font-weight:500;}}
-  .result-ready{{font-size:13px;color:var(--green);font-style:italic;margin-top:14px;padding-top:12px;
-    border-top:1px dashed var(--paper-line);}}
-  .pdf-preview{{margin-top:18px;border:1px solid var(--paper-line);border-radius:2px;overflow:hidden;}}
-  .pdf-preview-label{{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.06em;
-    text-transform:uppercase;color:var(--text-muted);padding:8px 12px;background:rgba(220,211,184,0.3);
-    border-bottom:1px solid var(--paper-line);}}
-  .pdf-frame{{width:100%;height:560px;border:none;background:#fff;}}
-  .pdf-mobile{{display:none;padding:20px;text-align:center;background:#FFFDF7;}}
-  .pdf-mobile a{{color:var(--brass);font-weight:500;font-size:14px;text-decoration:none;}}
-  .pdf-mobile a:hover{{text-decoration:underline;}}
+  a {{ color:inherit; text-decoration:none; }}
+
+  /* Nav */
+  .nav {{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:1rem 2rem;position:sticky;top:0;
+    background:rgba(15,23,42,0.9);backdrop-filter:blur(16px);
+    -webkit-backdrop-filter:blur(16px);
+    border-bottom:1px solid var(--border);z-index:100;
+  }}
+  .nav-left {{display:flex;align-items:center;gap:0.6rem;font-weight:700;font-size:1.1rem;letter-spacing:-0.02em;}}
+  .nav-logo {{width:34px;height:34px;border-radius:50%;overflow:hidden;}}
+  .nav-logo img {{width:100%;height:100%;object-fit:cover;}}
+  .nav-links {{display:flex;gap:2rem;font-size:0.875rem;font-weight:500;color:var(--text-muted);}}
+  .nav-links a {{transition:var(--transition);}}
+  .nav-links a:hover {{color:var(--text);}}
+  .nav-cta {{
+    background:var(--accent);color:#fff;padding:0.55rem 1.35rem;border-radius:9999px;
+    font-size:0.875rem;font-weight:600;text-decoration:none;display:inline-block;
+    transition:var(--transition);
+  }}
+  .nav-cta:hover {{transform:scale(1.05);box-shadow:0 0 24px rgba(16,185,129,0.4);}}
+
+  /* Page layout */
+  .page {{max-width:580px;margin:0 auto;padding:4rem 1.5rem;overflow-x:hidden;width:100%;}}
+  .page-badge {{
+    display:inline-flex;align-items:center;gap:0.4rem;
+    background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.2);
+    color:var(--accent-light);font-size:0.7rem;font-weight:700;
+    padding:0.35rem 0.85rem;border-radius:9999px;
+    text-transform:uppercase;letter-spacing:0.06em;margin-bottom:1rem;
+  }}
+  .page h1 {{font-size:2.25rem;font-weight:800;letter-spacing:-0.03em;margin-bottom:0.5rem;}}
+  .page h1 .gradient {{
+    background:linear-gradient(135deg,var(--accent-light),var(--accent));
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  }}
+  .page-sub {{color:var(--text-muted);font-size:1rem;line-height:1.6;margin-bottom:2rem;}}
+
+  /* Workflow */
+  .workflow {{
+    display:flex;align-items:center;justify-content:center;gap:0.5rem;
+    margin-bottom:2rem;padding:1.25rem;
+    background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
+  }}
+  .wf-step {{text-align:center;flex:1;}}
+  .wf-icon {{font-size:1.5rem;margin-bottom:0.4rem;}}
+  .wf-title {{font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text);}}
+  .wf-desc {{font-size:0.7rem;color:var(--text-dim);margin-top:0.2rem;line-height:1.4;}}
+  .wf-arrow {{color:var(--accent);font-size:1.25rem;opacity:0.7;}}
+
+  /* Card */
+  .card {{
+    background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
+    padding:2rem;overflow:hidden;max-width:100%;
+  }}
+  .field-label {{
+    font-size:0.7rem;font-weight:700;color:var(--text-dim);
+    text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.5rem;display:block;
+  }}
+  .card input[type=text] {{
+    width:100%;background:rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.1);
+    border-radius:var(--radius-sm);padding:0.8rem 1rem;color:var(--text);
+    font-size:0.95rem;font-family:inherit;outline:none;transition:var(--transition);
+  }}
+  .card input[type=text]:focus {{border-color:var(--accent);box-shadow:0 0 0 3px rgba(16,185,129,0.15);}}
+  .card input[type=text]::placeholder {{color:#475569;}}
+  .card button {{
+    width:100%;margin-top:0.75rem;
+    background:linear-gradient(135deg,var(--accent),#059669);color:#fff;border:none;
+    border-radius:var(--radius-sm);padding:0.85rem;font-weight:600;font-size:0.95rem;
+    font-family:inherit;cursor:pointer;transition:var(--transition);
+  }}
+  .card button:hover {{transform:translateY(-2px);box-shadow:0 8px 24px rgba(16,185,129,0.35);}}
+  .hint {{font-size:0.75rem;color:#475569;margin-top:0.5rem;}}
+
+  /* Result */
+  .result {{margin-top:1.5rem;padding-top:1.5rem;border-top:1px solid var(--border);}}
+  .result-stamp {{
+    display:inline-flex;align-items:center;gap:0.4rem;
+    font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;
+    color:var(--accent-light);background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.2);
+    padding:0.3rem 0.7rem;border-radius:9999px;margin-bottom:1rem;
+  }}
+  .result-addr {{font-size:1.25rem;font-weight:700;color:var(--text);margin-bottom:1rem;}}
+  .result-row {{display:flex;justify-content:space-between;padding:0.5rem 0;font-size:0.9rem;border-bottom:1px solid var(--border);}}
+  .result-row .k {{color:var(--text-dim);font-size:0.8rem;text-transform:uppercase;letter-spacing:0.04em;font-weight:600;}}
+  .result-row .v {{color:var(--text);font-weight:500;}}
+  .result-ready {{font-size:0.85rem;color:var(--accent-light);margin-top:1rem;}}
+
+  .pdf-preview {{margin-top:1.25rem;border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;max-width:100%;}}
+  .pdf-preview-label {{
+    font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;
+    color:var(--text-dim);padding:0.6rem 1rem;background:rgba(255,255,255,0.03);
+    border-bottom:1px solid var(--border);
+  }}
+  .pdf-frame {{width:100%;height:560px;border:none;background:#fff;}}
+  .pdf-mobile {{display:none;padding:1.5rem;text-align:center;background:rgba(255,255,255,0.02);}}
+  .pdf-mobile a {{color:var(--accent-light);font-weight:600;font-size:0.9rem;text-decoration:none;}}
+  .pdf-mobile a:hover {{text-decoration:underline;}}
   @media(max-width:768px){{
-    .pdf-frame{{display:none;}}
-    .pdf-mobile{{display:block;}}
+    .pdf-frame {{display:none;}}
+    .pdf-mobile {{display:block;}}
   }}
-  .download-btn{{margin-top:18px;display:block;text-align:center;background:var(--brass);color:#2A1D08;
-    text-decoration:none;font-weight:500;font-size:14px;padding:13px;border-radius:2px;}}
-  .download-btn:hover{{background:var(--brass-soft);}}
-  .disclaimer{{margin-top:14px;font-size:11.5px;color:var(--text-muted);line-height:1.5;font-style:italic;}}
-  .share-section{{margin-top:20px;padding-top:18px;border-top:1px dashed var(--paper-line);}}
-  .share-label{{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:0.08em;
-    text-transform:uppercase;color:var(--text-muted);margin-bottom:10px;display:block;text-align:center;}}
-  .share-buttons{{display:flex;gap:8px;justify-content:center;}}
-  .share-btn{{flex:1;max-width:140px;padding:10px 14px;text-align:center;text-decoration:none;
-    border-radius:2px;font-size:13px;font-weight:500;transition:opacity 0.2s;display:flex;
-    align-items:center;justify-content:center;gap:6px;}}
-  .share-btn:hover{{opacity:0.85;}}
-  .share-twitter{{background:#1DA1F2;color:white;}}
-  .share-linkedin{{background:#0A66C2;color:white;}}
-  .share-copy{{background:var(--ink-soft);color:var(--text-on-ink);cursor:pointer;border:1px solid rgba(255,255,255,0.1);}}
-  .share-copy.copied{{background:var(--green);border-color:var(--green);}}
-  .error{{margin-top:22px;padding:14px 16px;background:rgba(139,58,44,0.08);
-    border:1px solid rgba(139,58,44,0.3);border-radius:2px;font-size:13px;color:#7A3527;}}
-  .warning-note{{margin:14px 0 10px;padding:12px 14px;background:rgba(169,119,47,0.08);
-    border:1px solid rgba(169,119,47,0.25);border-radius:4px;font-size:12.5px;color:#6B5220;line-height:1.5;}}
-  .warning-note .wn-title{{font-family:'IBM Plex Mono',monospace;font-size:10.5px;font-weight:500;
-    letter-spacing:0.04em;text-transform:uppercase;margin-bottom:4px;color:var(--brass);}}
-  .workflow{{display:flex;align-items:center;justify-content:center;gap:0;margin:0 0 30px;padding:0 4px;}}
-  .wf-step{{text-align:center;flex:1;}}
-  .wf-icon{{font-size:22px;margin-bottom:6px;}}
-  .wf-title{{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.06em;
-    text-transform:uppercase;color:var(--text-on-ink);font-weight:500;}}
-  .wf-desc{{font-size:11px;color:var(--text-on-ink-muted);margin-top:3px;line-height:1.4;}}
-  .wf-arrow{{color:var(--brass);font-size:16px;margin:0 2px;flex-shrink:0;opacity:0.7;}}
-  .integration-actions{{display:flex;gap:8px;margin:18px 0 0;flex-wrap:wrap;}}
-  .int-btn{{flex:1;min-width:120px;padding:10px 12px;font-size:12px;font-weight:500;border:1px solid var(--paper-line);
-    background:#FFFDF7;color:var(--text-on-paper);border-radius:2px;cursor:pointer;
-    font-family:'IBM Plex Mono',monospace;letter-spacing:0.02em;transition:border-color 0.2s;}}
-  .int-btn:hover{{border-color:var(--brass);}}
-  .modal{{position:fixed;inset:0;background:rgba(23,27,36,0.85);display:flex;align-items:center;
+
+  .download-btn {{
+    margin-top:1rem;display:block;text-align:center;
+    background:linear-gradient(135deg,var(--accent),#059669);color:#fff;
+    font-weight:600;font-size:0.9rem;padding:0.85rem;border-radius:var(--radius-sm);
+    text-decoration:none;transition:var(--transition);
+  }}
+  .download-btn:hover {{transform:translateY(-2px);box-shadow:0 8px 24px rgba(16,185,129,0.35);}}
+  .disclaimer {{margin-top:1rem;font-size:0.75rem;color:var(--text-dim);line-height:1.5;font-style:italic;}}
+
+  /* Integration buttons */
+  .integration-actions {{display:flex;gap:0.5rem;margin:1.25rem 0 0;flex-wrap:wrap;}}
+  .int-btn {{
+    flex:1;min-width:110px;padding:0.6rem 0.75rem;font-size:0.75rem;font-weight:600;
+    border:1px solid var(--border);background:var(--bg-card);color:var(--text-muted);
+    border-radius:var(--radius-sm);cursor:pointer;font-family:inherit;
+    letter-spacing:0.02em;transition:var(--transition);
+  }}
+  .int-btn:hover {{border-color:var(--accent);color:var(--accent-light);}}
+
+  /* Modals */
+  .modal {{position:fixed;inset:0;background:rgba(15,23,42,0.9);display:flex;align-items:center;
     justify-content:center;z-index:1000;padding:20px;}}
-  .modal-box{{background:var(--paper);padding:28px 24px;border-radius:4px;width:100%;max-width:360px;
-    position:relative;border-top:2px solid var(--brass);}}
-  .modal-title{{font-family:'Source Serif 4',serif;font-size:18px;font-weight:600;color:var(--text-on-paper);margin:0 0 16px;}}
-  .modal-desc{{font-size:13px;color:var(--text-muted);margin:0 0 12px;line-height:1.5;}}
-  .modal-input{{width:100%;font-family:'IBM Plex Mono',monospace;font-size:13px;padding:11px 12px;
-    border:1px solid var(--paper-line);background:#FFFDF7;color:var(--text-on-paper);
-    border-radius:2px;outline:none;margin-bottom:10px;}}
-  .modal-input:focus{{border-color:var(--brass);}}
-  .modal-submit{{width:100%;padding:12px;background:var(--ink);color:var(--text-on-ink);border:none;
-    font-family:'Inter',sans-serif;font-size:13px;font-weight:500;border-radius:2px;cursor:pointer;}}
-  .modal-submit:hover{{background:var(--ink-soft);}}
-  .modal-close{{position:absolute;top:12px;right:14px;background:none;border:none;font-size:20px;
-    color:var(--text-muted);cursor:pointer;}}
-  .modal-status{{margin-top:10px;font-size:12px;color:var(--text-muted);font-family:'IBM Plex Mono',monospace;}}
-  .modal-status.success{{color:var(--green);}}
-  .modal-status.fail{{color:#7A3527;}}
-  .trust-checks{{display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:24px;padding:0 4px;}}
-  .trust-check{{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--text-on-ink);
-    letter-spacing:0.02em;}}
-  .trust-tagline{{font-family:'Source Serif 4',serif;font-size:13px;font-style:italic;
-    color:var(--brass-soft);margin-top:14px;padding:0 4px;}}
-  .trust{{display:flex;gap:16px;margin-top:28px;padding:0 4px;}}
-  .trust-item{{flex:1;text-align:center;}}
-  .trust-val{{font-family:'Source Serif 4',serif;font-size:20px;font-weight:600;color:var(--brass);}}
-  .trust-label{{font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:0.06em;
-    text-transform:uppercase;color:var(--text-on-ink-muted);margin-top:4px;}}
-  .foot{{text-align:center;margin-top:24px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;
-    color:var(--text-on-ink-muted);letter-spacing:0.03em;}}
-  .foot a{{color:var(--brass-soft);text-decoration:none;}}
-  .foot a:hover{{text-decoration:underline;}}
+  .modal-box {{
+    background:var(--bg-elevated);padding:2rem;border-radius:var(--radius);width:100%;max-width:380px;
+    position:relative;border:1px solid var(--border);
+  }}
+  .modal-title {{font-size:1.1rem;font-weight:700;color:var(--text);margin:0 0 1rem;}}
+  .modal-desc {{font-size:0.85rem;color:var(--text-muted);margin:0 0 0.75rem;line-height:1.5;}}
+  .modal-input {{
+    width:100%;font-family:inherit;font-size:0.9rem;padding:0.7rem 0.85rem;
+    border:1px solid rgba(255,255,255,0.1);background:rgba(0,0,0,0.3);color:var(--text);
+    border-radius:var(--radius-sm);outline:none;margin-bottom:0.6rem;
+  }}
+  .modal-input:focus {{border-color:var(--accent);}}
+  .modal-submit {{
+    width:100%;padding:0.75rem;background:var(--accent);color:#fff;border:none;
+    font-family:inherit;font-size:0.9rem;font-weight:600;border-radius:var(--radius-sm);cursor:pointer;
+  }}
+  .modal-submit:hover {{background:#059669;}}
+  .modal-close {{position:absolute;top:0.75rem;right:1rem;background:none;border:none;font-size:1.5rem;
+    color:var(--text-dim);cursor:pointer;}}
+  .modal-status {{margin-top:0.6rem;font-size:0.8rem;color:var(--text-dim);}}
+  .modal-status.success {{color:var(--accent-light);}}
+  .modal-status.fail {{color:#f87171;}}
+
+  /* Share */
+  .share-section {{margin-top:1.25rem;padding-top:1.25rem;border-top:1px solid var(--border);}}
+  .share-label {{font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;
+    color:var(--text-dim);margin-bottom:0.6rem;display:block;text-align:center;}}
+  .share-buttons {{display:flex;gap:0.5rem;justify-content:center;}}
+  .share-btn {{
+    flex:1;max-width:130px;padding:0.6rem 0.75rem;text-align:center;text-decoration:none;
+    border-radius:var(--radius-sm);font-size:0.8rem;font-weight:600;transition:opacity 0.2s;
+    display:flex;align-items:center;justify-content:center;gap:0.4rem;
+  }}
+  .share-btn:hover {{opacity:0.85;}}
+  .share-twitter {{background:#1DA1F2;color:white;}}
+  .share-linkedin {{background:#0A66C2;color:white;}}
+  .share-copy {{background:var(--bg-card);color:var(--text-muted);cursor:pointer;border:1px solid var(--border);}}
+  .share-copy.copied {{background:var(--accent);border-color:var(--accent);color:#fff;}}
+
+  /* Warning / Error */
+  .error {{
+    margin-top:1.25rem;padding:1rem;background:rgba(248,113,113,0.08);
+    border:1px solid rgba(248,113,113,0.2);border-radius:var(--radius-sm);
+    font-size:0.85rem;color:#f87171;
+  }}
+  .warning-note {{
+    margin:1rem 0 0.75rem;padding:0.85rem 1rem;background:rgba(251,191,36,0.08);
+    border:1px solid rgba(251,191,36,0.2);border-radius:var(--radius-sm);
+    font-size:0.8rem;color:#fbbf24;line-height:1.5;
+  }}
+  .warning-note .wn-title {{font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:0.25rem;}}
+
+  /* Trust */
+  .trust {{display:flex;gap:1.5rem;margin-top:2rem;justify-content:center;}}
+  .trust-item {{text-align:center;}}
+  .trust-val {{font-size:1.25rem;font-weight:800;color:var(--accent-light);}}
+  .trust-label {{font-size:0.7rem;color:var(--text-dim);margin-top:0.2rem;font-weight:500;text-transform:uppercase;letter-spacing:0.04em;}}
+
+  /* Footer */
+  .foot {{text-align:center;margin-top:2rem;font-size:0.8rem;color:var(--text-dim);line-height:1.6;}}
+  .foot a {{color:var(--accent-light);text-decoration:none;}}
+  .foot a:hover {{text-decoration:underline;}}
+
+  @media(max-width:600px){{
+    .page {{padding:2rem 1rem;}}
+    .page h1 {{font-size:1.75rem;}}
+    .workflow {{flex-direction:column;gap:1rem;}}
+    .wf-arrow {{transform:rotate(90deg);}}
+    .nav-links {{display:none;}}
+    .card {{padding:1.25rem;}}
+    .integration-actions {{flex-direction:column;}}
+    .int-btn {{min-width:unset;}}
+    .result-row {{font-size:0.8rem;}}
+    .download-btn {{font-size:0.85rem;padding:0.75rem;}}
+  }}
 </style>
 </head>
 <body>
-  <div class="stage">
-    <div class="corner-mark"><span>TXTANOFFER</span><span class="brass">{date_stamp}</span></div>
-    <h1 id="headline"></h1>
-    <p class="sub">Agents spend up to 45 minutes preparing purchase offers. TxtAnOffer reduces that to under 10 seconds.</p>
+  <nav class="nav">
+    <div class="nav-left">
+      <div class="nav-logo"><img src="/static/logo.webp" alt="TxtAnOffer"></div>
+      <span>TxtAnOffer</span>
+    </div>
+    <div class="nav-links">
+      <a href="/">Home</a>
+      <a href="/pricing">Pricing</a>
+      <a href="/login">Log In</a>
+    </div>
+    <a href="/signup" class="nav-cta">Start Free Trial</a>
+  </nav>
+
+  <div class="page">
+    <div class="page-badge">Live Demo</div>
+    <h1>Get a purchase offer<br><span class="gradient">in 10 seconds.</span></h1>
+    <p class="page-sub">Agents spend up to 45 minutes preparing purchase offers. TxtAnOffer reduces that to under 10 seconds.</p>
+
     <div class="workflow">
       <div class="wf-step"><div class="wf-icon">&#9993;</div><div class="wf-title">You type</div><div class="wf-desc">725k 3% 21day<br>1234 Main St</div></div>
       <div class="wf-arrow">&rarr;</div>
@@ -401,33 +1400,7 @@ DEMO_FORM = """
       <div class="wf-arrow">&rarr;</div>
       <div class="wf-step"><div class="wf-icon">&#9998;</div><div class="wf-title">Contract ready</div><div class="wf-desc">TREC 20-19 PDF<br>filled &amp; downloadable</div></div>
     </div>
-    <script>
-      const lines = ['Get a purchase offer', 'in 10 seconds.'];
-      const headline = document.getElementById('headline');
-      let lineIdx = 0, charIdx = 0, currentText = '';
 
-      function type() {{{{
-        if (lineIdx >= lines.length) return;
-
-        const line = lines[lineIdx];
-        if (charIdx < line.length) {{{{
-          currentText += line[charIdx];
-          headline.innerHTML = currentText + (lineIdx === 0 ? '' : '');
-          charIdx++;
-          setTimeout(type, 80);
-        }}}} else {{{{
-          if (lineIdx < lines.length - 1) {{{{
-            setTimeout(() => {{{{
-              currentText += '<br>';
-              lineIdx++;
-              charIdx = 0;
-              type();
-            }}}}, 400);
-          }}}}
-        }}}}
-      }}}}
-      type();
-    </script>
     <div class="card">
       <form method="POST" action="/demo">
         <label class="field-label">Offer details</label>
@@ -437,20 +1410,17 @@ DEMO_FORM = """
       </form>
       {result_html}
     </div>
-    <div class="trust-checks">
-      <div class="trust-check">&check; Official TREC 20-19</div>
-      <div class="trust-check">&check; Agent reviews before signing</div>
-      <div class="trust-check">&check; Texas compliant</div>
-    </div>
-    <div class="trust-tagline">Built specifically for Texas REALTORS&reg;</div>
+
     <div class="trust">
       <div class="trust-item"><div class="trust-val">&lt;10s</div><div class="trust-label">Generation</div></div>
       <div class="trust-item"><div class="trust-val">45 min</div><div class="trust-label">Saved per offer</div></div>
       <div class="trust-item"><div class="trust-val">TREC</div><div class="trust-label">20-19 Compliant</div></div>
+      <div class="trust-item"><div class="trust-val">AES-256</div><div class="trust-label">Encrypted at rest</div></div>
     </div>
+
     <div class="foot">
-      SMS delivery pending carrier registration -- this demo runs the same backend directly
-      <br><a href="/pricing">View Pricing</a> &middot; <a href="/terms">Terms</a>
+      By texting or using this service, you consent to receive SMS responses. Reply STOP to opt out anytime. Msg &amp; data rates may apply.
+      <br><a href="/pricing">View Pricing</a> &middot; <a href="/terms">Terms</a> &middot; <a href="/privacy">Privacy</a>
     </div>
   </div>
 </body>
@@ -473,7 +1443,10 @@ def demo():
             result_html = f'<div class="error">{error}</div>'
         else:
             filename = os.path.basename(pdf_path)
-            pdf_url = f"/offers/{filename}"
+            record_offer("demo-web", parsed, filename)
+            pdf_url = sign_pdf_url(filename)
+            _pdf_expires = int(time.time()) + PDF_LINK_TTL
+            _pdf_sig = hmac.new(PDF_LINK_SECRET.encode(), f"{filename}:{_pdf_expires}".encode(), hashlib.sha256).hexdigest()[:16]
             close_date_str = ""
             try:
                 close_dt = datetime.now()
@@ -502,14 +1475,15 @@ def demo():
               <div class="result-row"><span class="k">Purchase price</span><span class="v">${parsed['price']:,}</span></div>
               <div class="result-row"><span class="k">Down payment</span><span class="v">{parsed['down_payment_pct']*100:.0f}%</span></div>
               <div class="result-row"><span class="k">Closing</span><span class="v">{close_date_str}</span></div>
+              {'<div class="result-row"><span class="k">Property</span><span class="v">' + ' · '.join([x for x in [f"{parsed.get('bed')} Bed" if parsed.get('bed') else '', f"{parsed.get('bath')} Bath" if parsed.get('bath') else '', f"{parsed.get('sqft'):,} Sqft" if parsed.get('sqft') else '', f"Built {parsed.get('year_built')}" if parsed.get('year_built') else ''] if x]) + '</span></div>' if parsed.get('bed') or parsed.get('sqft') else ''}
               <div class="result-ready">Ready for review.</div>
               {warning_html}
               <div class="pdf-preview">
                 <div class="pdf-preview-label">Contract preview</div>
-                <iframe src="{pdf_url}#page=1&view=FitV" class="pdf-frame"></iframe>
+                <iframe src="/offers/{filename}?expires={_pdf_expires}&sig={_pdf_sig}#page=1&view=FitV" class="pdf-frame"></iframe>
                 <div class="pdf-mobile"><a href="{pdf_url}" target="_blank">Tap to view your completed TREC 20-19 &rarr;</a></div>
               </div>
-              <a href="{pdf_url}" target="_blank" class="download-btn">&darr; Download PDF</a>
+              <a href="/offers/{filename}?expires={_pdf_expires}&sig={_pdf_sig}" target="_blank" class="download-btn" download>&darr; Download PDF</a>
               <div class="integration-actions">
                 <button class="int-btn int-email" onclick="document.getElementById('email-modal').style.display='flex'">&#9993; Email offer</button>
                 <button class="int-btn int-docusign" onclick="document.getElementById('docusign-modal').style.display='flex'">&#9998; Send to DocuSign</button>
@@ -549,51 +1523,51 @@ def demo():
               </div>
 
               <script>
-              function sendEmail(filename) {{{{
+              function sendEmail(filename) {{
                 const to = document.getElementById('email-to').value;
                 const status = document.getElementById('email-status');
-                if (!to) {{{{ status.textContent = 'Enter an email address'; return; }}}}
+                if (!to) {{ status.textContent = 'Enter an email address'; return; }}
                 status.textContent = 'Sending...';
-                fetch('/api/send-email', {{{{
+                fetch('/api/send-email', {{
                   method: 'POST',
-                  headers: {{{{'Content-Type': 'application/json'}}}},
-                  body: JSON.stringify({{{{to_email: to, pdf_filename: filename, parsed: {parsed_json}}}}})
-                }}}}).then(r => r.json()).then(d => {{{{
+                  headers: {{'Content-Type': 'application/json'}},
+                  body: JSON.stringify({{to_email: to, pdf_filename: filename, parsed: {parsed_json}, expires: '{_pdf_expires}', sig: '{_pdf_sig}'}})
+                }}).then(r => r.json()).then(d => {{
                   status.textContent = d.success ? 'Sent!' : ('Error: ' + d.error);
                   status.className = 'modal-status ' + (d.success ? 'success' : 'fail');
-                }}}}).catch(e => {{{{ status.textContent = 'Network error'; }}}});
-              }}}}
+                }}).catch(e => {{ status.textContent = 'Network error'; }});
+              }}
 
-              function sendDocuSign(filename) {{{{
+              function sendDocuSign(filename) {{
                 const name = document.getElementById('ds-name').value;
                 const email = document.getElementById('ds-email').value;
                 const status = document.getElementById('ds-status');
-                if (!name || !email) {{{{ status.textContent = 'Name and email required'; return; }}}}
+                if (!name || !email) {{ status.textContent = 'Name and email required'; return; }}
                 status.textContent = 'Sending to DocuSign...';
-                fetch('/api/docusign', {{{{
+                fetch('/api/docusign', {{
                   method: 'POST',
-                  headers: {{{{'Content-Type': 'application/json'}}}},
-                  body: JSON.stringify({{{{pdf_filename: filename, signer_email: email, signer_name: name, parsed: {parsed_json}}}}})
-                }}}}).then(r => r.json()).then(d => {{{{
+                  headers: {{'Content-Type': 'application/json'}},
+                  body: JSON.stringify({{pdf_filename: filename, signer_email: email, signer_name: name, parsed: {parsed_json}}})
+                }}).then(r => r.json()).then(d => {{
                   status.textContent = d.success ? 'Sent! Envelope: ' + d.envelope_id : ('Error: ' + d.error);
                   status.className = 'modal-status ' + (d.success ? 'success' : 'fail');
-                }}}}).catch(e => {{{{ status.textContent = 'Network error'; }}}});
-              }}}}
+                }}).catch(e => {{ status.textContent = 'Network error'; }});
+              }}
 
-              function configWebhook() {{{{
+              function configWebhook() {{
                 const url = document.getElementById('wh-url').value;
                 const status = document.getElementById('wh-status');
-                if (!url) {{{{ status.textContent = 'Enter a webhook URL'; return; }}}}
+                if (!url) {{ status.textContent = 'Enter a webhook URL'; return; }}
                 status.textContent = 'Saving...';
-                fetch('/api/webhook', {{{{
+                fetch('/api/webhook', {{
                   method: 'POST',
-                  headers: {{{{'Content-Type': 'application/json'}}}},
-                  body: JSON.stringify({{{{source_id: 'demo-web', url: url}}}})
-                }}}}).then(r => r.json()).then(d => {{{{
+                  headers: {{'Content-Type': 'application/json'}},
+                  body: JSON.stringify({{source_id: 'demo-web', url: url}})
+                }}).then(r => r.json()).then(d => {{
                   status.textContent = d.success ? 'Webhook saved! Future offers will POST here.' : ('Error: ' + (d.error || ''));
                   status.className = 'modal-status ' + (d.success ? 'success' : 'fail');
-                }}}}).catch(e => {{{{ status.textContent = 'Network error'; }}}});
-              }}}}
+                }}).catch(e => {{ status.textContent = 'Network error'; }});
+              }}
               </script>
 
               <div class="disclaimer">Draft only -- agent must review before signing. TREC NO. 20-19.</div>
@@ -613,7 +1587,7 @@ def demo():
                     navigator.clipboard.writeText('{share_url}');
                     this.textContent='✓ Copied!';
                     this.classList.add('copied');
-                    setTimeout(()=>{{{{this.textContent='🔗 Copy link';this.classList.remove('copied');}}}},2000)
+                    setTimeout(()=>{{this.textContent='🔗 Copy link';this.classList.remove('copied');}},2000)
                   ">🔗 Copy link</button>
                 </div>
               </div>
@@ -621,6 +1595,236 @@ def demo():
             """
 
     return DEMO_FORM.format(prefill=prefill, result_html=result_html, date_stamp=date_stamp)
+
+
+@app.route("/api/demo", methods=["POST"])
+def api_demo():
+    data = request.get_json()
+    if not data or not data.get("offer_text"):
+        return jsonify({"error": "Please enter offer details."}), 400
+    offer_text = data["offer_text"].strip()
+    parsed, pdf_path, error, warnings = process_offer(offer_text, "landing-demo")
+    if error:
+        return jsonify({"error": error}), 400
+    filename = os.path.basename(pdf_path)
+    record_offer("landing-demo", parsed, filename)
+    pdf_url = sign_pdf_url(filename, request.host_url.rstrip("/"))
+    from datetime import timedelta
+    close_date = (datetime.now() + timedelta(days=parsed["close_days"])).strftime("%B %d, %Y")
+    return jsonify({
+        "address": parsed["address"],
+        "price": parsed["price"],
+        "down_pct": round(parsed["down_payment_pct"] * 100),
+        "close_date": close_date,
+        "pdf_url": pdf_url,
+    })
+
+
+@app.route("/api/parse", methods=["POST"])
+def api_parse():
+    """Parse-only endpoint for the playground — no PDF generated."""
+    data = request.get_json()
+    if not data or not data.get("text"):
+        return jsonify({"error": "Please enter offer text."}), 400
+    text = data["text"].strip()
+    parsed = parse_offer_sms(text)
+    if "error" in parsed:
+        return jsonify({"success": False, "error": parsed["error"]}), 400
+    from datetime import timedelta
+    close_date = (datetime.now() + timedelta(days=parsed["close_days"])).strftime("%B %d, %Y")
+    down_amt = int(parsed["price"] * parsed["down_payment_pct"])
+    loan_amt = parsed["price"] - down_amt
+    return jsonify({
+        "success": True,
+        "price": parsed["price"],
+        "down_payment_pct": round(parsed["down_payment_pct"] * 100, 1),
+        "down_payment_amount": down_amt,
+        "loan_amount": loan_amt,
+        "close_days": parsed["close_days"],
+        "close_date": close_date,
+        "address": parsed["address"],
+        "county": parsed.get("county", ""),
+        "city": parsed.get("city", ""),
+    })
+
+
+@app.route("/playground")
+def playground():
+    return """<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Parser Playground — TxtAnOffer</title>
+<meta name="description" content="Test the TxtAnOffer SMS parser. See how messy texts become structured TREC offers in real-time.">
+<link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<style>
+:root{--bg:#0f172a;--bg-card:rgba(255,255,255,0.03);--border:rgba(255,255,255,0.06);
+--text:#f8fafc;--text-muted:#94a3b8;--text-dim:#64748b;--accent:#10b981;--accent-light:#34d399;
+--radius:1.25rem;--radius-sm:0.75rem;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;
+-webkit-font-smoothing:antialiased;}
+a{color:inherit;text-decoration:none;}
+.nav{display:flex;align-items:center;justify-content:space-between;padding:1rem 2rem;
+background:rgba(15,23,42,0.9);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);
+position:sticky;top:0;z-index:100;}
+.nav-left{display:flex;align-items:center;gap:0.6rem;font-weight:700;font-size:1.1rem;}
+.nav-logo{width:34px;height:34px;border-radius:50%;overflow:hidden;}
+.nav-logo img{width:100%;height:100%;object-fit:cover;}
+.nav-links{display:flex;gap:2rem;font-size:0.875rem;font-weight:500;color:var(--text-muted);}
+.nav-links a:hover{color:var(--text);}
+.nav-cta{background:var(--accent);color:#fff;padding:0.55rem 1.35rem;border-radius:9999px;
+font-size:0.875rem;font-weight:600;}
+.container{max-width:900px;margin:0 auto;padding:3rem 2rem;}
+h1{font-size:2rem;font-weight:800;letter-spacing:-0.03em;margin-bottom:0.5rem;}
+.subtitle{color:var(--text-muted);font-size:1rem;margin-bottom:2rem;}
+.playground-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:2rem;}
+.input-area{margin-bottom:1.5rem;}
+.input-area label{display:block;font-size:0.8rem;font-weight:600;color:var(--text-dim);
+text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.5rem;}
+.input-area textarea{width:100%;background:rgba(255,255,255,0.04);border:1px solid var(--border);
+border-radius:var(--radius-sm);color:var(--text);font-family:inherit;font-size:1rem;
+padding:1rem;resize:none;outline:none;transition:border 0.2s;}
+.input-area textarea:focus{border-color:var(--accent);}
+.parse-btn{background:linear-gradient(135deg,var(--accent),#059669);color:#fff;border:none;
+padding:0.85rem 2rem;border-radius:var(--radius-sm);font-family:inherit;font-size:0.9rem;
+font-weight:600;cursor:pointer;transition:all 0.2s;}
+.parse-btn:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(16,185,129,0.3);}
+.result{margin-top:1.5rem;display:none;}
+.result.show{display:block;}
+.result-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;}
+.result-item{background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.05);
+border-radius:var(--radius-sm);padding:1rem;}
+.result-label{font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;
+color:var(--text-dim);margin-bottom:0.25rem;}
+.result-value{font-size:1.1rem;font-weight:700;color:var(--text);}
+.result-value.accent{color:var(--accent-light);}
+.error-msg{background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);
+border-radius:var(--radius-sm);padding:1rem;color:#fca5a5;font-size:0.9rem;margin-top:1rem;display:none;}
+.error-msg.show{display:block;}
+.examples{margin-top:2rem;}
+.examples h3{font-size:0.9rem;font-weight:700;margin-bottom:1rem;color:var(--text-muted);}
+.example-chips{display:flex;flex-wrap:wrap;gap:0.5rem;}
+.chip{background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:9999px;
+padding:0.4rem 0.85rem;font-size:0.8rem;color:var(--text-muted);cursor:pointer;transition:all 0.2s;}
+.chip:hover{border-color:var(--accent);color:var(--accent-light);}
+.formats{margin-top:2.5rem;padding-top:2rem;border-top:1px solid var(--border);}
+.formats h3{font-size:1rem;font-weight:700;margin-bottom:1rem;}
+.format-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+.format-item{font-size:0.85rem;color:var(--text-muted);line-height:1.6;}
+.format-item strong{color:var(--text);font-weight:600;}
+@media(max-width:600px){
+.result-grid{grid-template-columns:1fr;}
+.format-grid{grid-template-columns:1fr;}
+.nav-links{display:none;}
+}
+</style>
+</head>
+<body>
+<nav class="nav">
+<a href="/" class="nav-left">
+<div class="nav-logo"><img src="/static/logo.webp" alt="TxtAnOffer"></div>
+<span>TxtAnOffer</span>
+</a>
+<div class="nav-links">
+<a href="/">Home</a>
+<a href="/demo">Demo</a>
+<a href="/pricing">Pricing</a>
+</div>
+<a href="/signup" class="nav-cta">Start Free Trial</a>
+</nav>
+
+<div class="container">
+<h1>Parser Playground</h1>
+<p class="subtitle">Test how our parser handles your texts. No signup needed. Type however feels natural.</p>
+
+<div class="playground-card">
+<div class="input-area">
+<label>Your offer text</label>
+<textarea id="offer-input" rows="3" placeholder="725k 3% 21day 1740 Grand Ave, Austin"></textarea>
+</div>
+<button class="parse-btn" id="parse-btn">Parse &rarr;</button>
+
+<div class="error-msg" id="error-msg"></div>
+
+<div class="result" id="result">
+<div class="result-grid">
+<div class="result-item"><div class="result-label">Address</div><div class="result-value" id="r-addr"></div></div>
+<div class="result-item"><div class="result-label">Sales Price</div><div class="result-value accent" id="r-price"></div></div>
+<div class="result-item"><div class="result-label">Down Payment</div><div class="result-value" id="r-down"></div></div>
+<div class="result-item"><div class="result-label">Loan Amount</div><div class="result-value" id="r-loan"></div></div>
+<div class="result-item"><div class="result-label">Closing Date</div><div class="result-value" id="r-close"></div></div>
+<div class="result-item"><div class="result-label">Location</div><div class="result-value" id="r-location"></div></div>
+</div>
+</div>
+
+<div class="examples">
+<h3>Try these (click to load):</h3>
+<div class="example-chips">
+<span class="chip">725k 3% 21day 1740 Grand Ave</span>
+<span class="chip">Offer 650000 3 percent close in 30 days 456 Oak St Austin</span>
+<span class="chip">500k 5 down 14days 200 Preston Rd Plano</span>
+<span class="chip">1.2m 10% 45day Travis 789 Pine Blvd</span>
+<span class="chip">825k 3% close in 14 1900 Exposition Blvd</span>
+<span class="chip">375,000 3% 30days 2100 South Congress Ave</span>
+</div>
+</div>
+
+<div class="formats">
+<h3>We handle messy texts. Just get the numbers in there.</h3>
+<div class="format-grid">
+<div class="format-item"><strong>Price:</strong> 725k, 725000, 725,000, 1.2m, 1.2mil</div>
+<div class="format-item"><strong>Down:</strong> 3%, 3 percent, 3 pct, 3 down</div>
+<div class="format-item"><strong>Days:</strong> 21day, 21 days, close in 21, 21-day close</div>
+<div class="format-item"><strong>Address:</strong> Just include street number + name + type</div>
+</div>
+</div>
+</div>
+</div>
+
+<script>
+(function(){
+var input=document.getElementById('offer-input'),
+    btn=document.getElementById('parse-btn'),
+    result=document.getElementById('result'),
+    errEl=document.getElementById('error-msg');
+
+document.querySelectorAll('.chip').forEach(function(c){
+  c.addEventListener('click',function(){
+    input.value=c.textContent;
+    btn.click();
+  });
+});
+
+btn.addEventListener('click',function(){
+  var text=input.value.trim();
+  if(!text)return;
+  result.classList.remove('show');
+  errEl.classList.remove('show');
+  fetch('/api/parse',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({text:text})})
+  .then(function(r){return r.json();})
+  .then(function(d){
+    if(!d.success){errEl.textContent=d.error;errEl.classList.add('show');return;}
+    document.getElementById('r-addr').textContent=d.address;
+    document.getElementById('r-price').textContent='$'+d.price.toLocaleString();
+    document.getElementById('r-down').textContent=d.down_payment_pct+'% ($'+d.down_payment_amount.toLocaleString()+')';
+    document.getElementById('r-loan').textContent='$'+d.loan_amount.toLocaleString();
+    document.getElementById('r-close').textContent=d.close_date+' ('+d.close_days+' days)';
+    var loc=[];if(d.city)loc.push(d.city);if(d.county)loc.push(d.county+' County');loc.push('TX');
+    document.getElementById('r-location').textContent=loc.join(', ');
+    result.classList.add('show');
+  })
+  .catch(function(){errEl.textContent='Something went wrong.';errEl.classList.add('show');});
+});
+
+input.addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();btn.click();}});
+})();
+</script>
+</body>
+</html>"""
 
 
 # --- Integration endpoints -------------------------------------------------
@@ -634,9 +1838,25 @@ def api_send_email():
     to_email = data.get("to_email", "")
     pdf_filename = data.get("pdf_filename", "")
     parsed = data.get("parsed", {})
+    expires = data.get("expires", "")
+    sig = data.get("sig", "")
 
     if not to_email or not pdf_filename:
         return jsonify({"success": False, "error": "to_email and pdf_filename required"}), 400
+
+    # Auth: either bearer token OR valid PDF signature (from review page)
+    has_bearer = False
+    auth = request.headers.get("Authorization", "")
+    if API_BEARER_TOKEN and auth.startswith("Bearer ") and hmac.compare_digest(auth[7:], API_BEARER_TOKEN):
+        has_bearer = True
+
+    has_sig = verify_pdf_signature(pdf_filename, expires, sig)
+
+    if not has_bearer and not has_sig:
+        return jsonify({"success": False, "error": "Unauthorized"}), 401
+
+    if ".." in pdf_filename or pdf_filename.startswith("/"):
+        abort(400)
 
     pdf_path = os.path.join(OUTPUT_DIR, pdf_filename)
     if not os.path.exists(pdf_path):
@@ -649,6 +1869,10 @@ def api_send_email():
 
 @app.route("/api/webhook", methods=["GET", "POST", "DELETE"])
 def api_webhook():
+    auth_error = require_api_auth()
+    if auth_error:
+        return auth_error
+
     if request.method == "GET":
         source_id = request.args.get("source_id", "")
         if not source_id:
@@ -664,6 +1888,8 @@ def api_webhook():
         url = data.get("url", "")
         if not source_id or not url:
             return jsonify({"error": "source_id and url required"}), 400
+        if not _is_safe_webhook_url(url):
+            return jsonify({"error": "Invalid webhook URL (must be public HTTPS)"}), 400
         save_webhook(source_id, url)
         track_event("webhook_configured", source_id, {"url": url})
         return jsonify({"success": True, "source_id": source_id, "url": url})
@@ -681,6 +1907,10 @@ def api_webhook():
 
 @app.route("/api/docusign", methods=["POST"])
 def api_docusign():
+    auth_error = require_api_auth()
+    if auth_error:
+        return auth_error
+
     data = request.get_json()
     if not data:
         return jsonify({"success": False, "error": "JSON body required"}), 400
@@ -710,184 +1940,279 @@ def pricing():
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pricing - TxtAnOffer</title>
+<title>Pricing — TxtAnOffer</title>
+<meta name="description" content="TxtAnOffer pricing plans for Texas real estate agents. Generate TREC contracts instantly from $29/month.">
+<link rel="icon" href="/static/favicon.ico" type="image/x-icon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <style>
-  :root{
-    --ink:#171B24; --ink-soft:#242938; --paper:#F3EEDF; --paper-line:#DCD3B8;
-    --brass:#A9772F; --brass-soft:#C9A466; --green:#3A5744;
-    --text-on-paper:#211E17; --text-muted:#847C68;
-    --text-on-ink:#E7E4D8; --text-on-ink-muted:#8B8A82;
+  :root {
+    --bg: #0f172a;
+    --bg-elevated: #1e293b;
+    --bg-card: rgba(255,255,255,0.03);
+    --border: rgba(255,255,255,0.06);
+    --border-hover: rgba(16,185,129,0.3);
+    --text: #f8fafc;
+    --text-muted: #94a3b8;
+    --text-dim: #64748b;
+    --accent: #10b981;
+    --accent-light: #34d399;
+    --radius: 1.25rem;
+    --radius-sm: 0.75rem;
+    --transition: all 0.2s ease;
   }
-  *{box-sizing:border-box;}
-  body{
-    background:var(--ink);
-    background-image:radial-gradient(circle at 15% 10%, rgba(169,119,47,0.06), transparent 45%),
-                      radial-gradient(circle at 85% 90%, rgba(169,119,47,0.04), transparent 40%);
-    min-height:100vh; margin:0; padding:48px 20px; font-family:'Inter',sans-serif;
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
   }
-  .container{max-width:1000px;margin:0 auto;}
-  .header{text-align:center;margin-bottom:48px;}
-  .logo{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.08em;
-    color:var(--brass-soft);margin-bottom:16px;}
-  h1{font-family:'Source Serif 4',serif;font-weight:600;font-size:42px;color:var(--text-on-ink);
-    margin:0 0 12px;letter-spacing:-0.01em;}
-  .tagline{color:var(--text-on-ink-muted);font-size:18px;line-height:1.6;max-width:600px;margin:0 auto;}
+  a { color:inherit; text-decoration:none; }
 
-  .pricing-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:20px;margin-bottom:48px;}
-  .pricing-card{background:var(--paper);border-radius:4px;padding:32px 28px;
-    border-top:3px solid var(--paper-line);box-shadow:0 24px 60px -20px rgba(0,0,0,0.5);
-    display:flex;flex-direction:column;}
-  .pricing-card.featured{border-top-color:var(--brass);position:relative;}
-  .featured-badge{position:absolute;top:-12px;left:50%;transform:translateX(-50%);
-    font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:0.08em;
-    text-transform:uppercase;color:var(--brass);background:var(--paper);
-    border:1px solid rgba(169,119,47,0.4);padding:3px 10px;border-radius:20px;white-space:nowrap;}
+  /* Nav */
+  .nav {
+    display:flex;align-items:center;justify-content:space-between;
+    padding:1rem 2rem;position:sticky;top:0;
+    background:rgba(15,23,42,0.9);backdrop-filter:blur(16px);
+    -webkit-backdrop-filter:blur(16px);
+    border-bottom:1px solid var(--border);z-index:100;
+  }
+  .nav-left {display:flex;align-items:center;gap:0.6rem;font-weight:700;font-size:1.1rem;letter-spacing:-0.02em;}
+  .nav-logo {width:34px;height:34px;border-radius:50%;overflow:hidden;}
+  .nav-logo img {width:100%;height:100%;object-fit:cover;}
+  .nav-links {display:flex;gap:2rem;font-size:0.875rem;font-weight:500;color:var(--text-muted);}
+  .nav-links a {transition:var(--transition);}
+  .nav-links a:hover {color:var(--text);}
+  .nav-cta {
+    background:var(--accent);color:#fff;padding:0.55rem 1.35rem;border-radius:9999px;
+    font-size:0.875rem;font-weight:600;text-decoration:none;display:inline-block;
+    transition:var(--transition);
+  }
+  .nav-cta:hover {transform:scale(1.05);box-shadow:0 0 24px rgba(16,185,129,0.4);}
 
-  .plan-name{font-family:'Source Serif 4',serif;font-size:22px;font-weight:600;
-    color:var(--text-on-paper);margin:0 0 6px;}
-  .plan-desc{font-size:13px;color:var(--text-muted);margin:0 0 20px;line-height:1.4;}
-  .price-row{display:flex;align-items:baseline;gap:4px;margin-bottom:20px;}
-  .price-current{font-size:40px;font-weight:600;color:var(--text-on-paper);}
-  .price-period{font-size:14px;color:var(--text-muted);}
+  /* Header */
+  .page-header {text-align:center;padding:4rem 2rem 3rem;max-width:700px;margin:0 auto;}
+  .page-header h1 {font-size:2.75rem;font-weight:800;letter-spacing:-0.03em;margin-bottom:0.75rem;}
+  .page-header h1 .gradient {
+    background:linear-gradient(135deg,var(--accent-light),var(--accent));
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  }
+  .page-header p {color:var(--text-muted);font-size:1.1rem;line-height:1.6;}
 
-  .features{list-style:none;padding:0;margin:0 0 24px;flex:1;}
-  .features li{padding:8px 0;font-size:13.5px;color:var(--text-on-paper);
-    display:flex;align-items:start;gap:8px;}
-  .check{color:var(--green);font-weight:600;font-size:14px;}
+  /* Pricing Grid */
+  .pricing-grid {
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1.25rem;
+    max-width:1100px;margin:0 auto;padding:0 2rem 3rem;
+  }
+  .pricing-card {
+    background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
+    padding:2rem 1.75rem;display:flex;flex-direction:column;transition:var(--transition);
+  }
+  .pricing-card:hover {transform:translateY(-4px);border-color:var(--border-hover);}
+  .pricing-card.featured {border-color:var(--accent);position:relative;}
+  .featured-badge {
+    position:absolute;top:-0.75rem;left:50%;transform:translateX(-50%);
+    font-size:0.65rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;
+    color:var(--accent-light);background:var(--bg);
+    border:1px solid var(--accent);padding:0.25rem 0.75rem;border-radius:9999px;white-space:nowrap;
+  }
 
-  .cta-btn{display:block;width:100%;padding:14px;background:var(--ink);color:var(--text-on-ink);
-    border:none;font-family:'Inter',sans-serif;font-size:14px;font-weight:600;
-    border-radius:4px;cursor:pointer;text-decoration:none;text-align:center;}
-  .cta-btn:hover{background:var(--ink-soft);}
-  .cta-btn.brass{background:var(--brass);color:#2A1D08;}
-  .cta-btn.brass:hover{background:var(--brass-soft);}
-  .cta-btn.outline{background:transparent;border:1px solid var(--paper-line);color:var(--text-on-paper);}
-  .cta-btn.outline:hover{border-color:var(--brass);}
+  .plan-name {font-size:1.25rem;font-weight:700;color:var(--text);margin-bottom:0.25rem;}
+  .plan-desc {font-size:0.85rem;color:var(--text-dim);margin-bottom:1.25rem;line-height:1.4;}
+  .price-row {display:flex;align-items:baseline;gap:0.25rem;margin-bottom:1.25rem;}
+  .price-current {font-size:2.5rem;font-weight:800;color:var(--text);}
+  .price-period {font-size:0.9rem;color:var(--text-dim);}
 
-  .value-props{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:24px;
-    margin-top:48px;}
-  .value-card{background:rgba(243,238,223,0.08);padding:24px;border-radius:4px;
-    border:1px solid rgba(243,238,223,0.12);}
-  .value-title{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.08em;
-    text-transform:uppercase;color:var(--brass-soft);margin-bottom:8px;}
-  .value-text{color:var(--text-on-ink-muted);font-size:14px;line-height:1.6;}
+  .features {list-style:none;margin:0 0 1.5rem;flex:1;}
+  .features li {
+    padding:0.5rem 0;font-size:0.85rem;color:var(--text-muted);
+    display:flex;align-items:start;gap:0.5rem;
+  }
+  .check {color:var(--accent-light);font-weight:700;font-size:0.9rem;}
 
-  .back-link{text-align:center;margin-top:32px;}
-  .back-link a{color:var(--brass-soft);text-decoration:none;font-size:14px;}
-  .back-link a:hover{text-decoration:underline;}
-  .terms-note{text-align:center;font-size:12px;color:var(--text-on-ink-muted);margin-top:20px;}
-  .terms-note a{color:var(--brass-soft);text-decoration:underline;}
+  .cta-btn {
+    display:block;width:100%;padding:0.85rem;
+    background:linear-gradient(135deg,var(--accent),#059669);color:#fff;
+    border:none;font-family:inherit;font-size:0.9rem;font-weight:600;
+    border-radius:var(--radius-sm);cursor:pointer;text-align:center;
+    transition:var(--transition);text-decoration:none;
+  }
+  .cta-btn:hover {transform:translateY(-2px);box-shadow:0 8px 24px rgba(16,185,129,0.35);}
+  .cta-btn.outline {
+    background:transparent;border:1px solid var(--border);color:var(--text-muted);
+  }
+  .cta-btn.outline:hover {border-color:var(--accent);color:var(--accent-light);transform:translateY(-2px);}
+
+  /* Value Props */
+  .value-section {max-width:1100px;margin:0 auto;padding:3rem 2rem;border-top:1px solid var(--border);}
+  .value-grid {display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:1.25rem;}
+  .value-card {
+    background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
+    padding:1.75rem;
+  }
+  .value-title {
+    font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;
+    color:var(--accent-light);margin-bottom:0.5rem;
+  }
+  .value-text {color:var(--text-muted);font-size:0.9rem;line-height:1.6;}
+
+  /* Footer */
+  .footer-note {text-align:center;padding:2rem;font-size:0.8rem;color:var(--text-dim);}
+  .footer-note a {color:var(--accent-light);}
+  .footer-note a:hover {text-decoration:underline;}
+
+  @media(max-width:600px) {
+    .page-header h1 {font-size:2rem;}
+    .pricing-grid {padding:0 1rem 2rem;}
+    .nav-links {display:none;}
+  }
 </style>
 </head>
 <body>
-  <div class="container">
-    <div class="header">
-      <div class="logo">TXTANOFFER</div>
-      <h1>Simple pricing.<br>Massive time savings.</h1>
-      <p class="tagline">Stop spending 45 minutes per offer. Pick a plan and start generating contracts in seconds.</p>
+
+<nav class="nav">
+  <a href="/" class="nav-left">
+    <div class="nav-logo"><img src="/static/logo.webp" alt="TxtAnOffer"></div>
+    <span>TxtAnOffer</span>
+  </a>
+  <div class="nav-links">
+    <a href="/">Home</a>
+    <a href="/demo">Demo</a>
+    <a href="/login">Log In</a>
+  </div>
+  <a href="/signup" class="nav-cta">Start Free Trial</a>
+</nav>
+
+<div class="page-header">
+  <h1>Simple pricing.<br><span class="gradient">Massive time savings.</span></h1>
+  <p>Stop spending 45 minutes per offer. Pick a plan and start generating contracts in seconds.</p>
+  <p style="margin-top:1rem;color:var(--accent-light);font-weight:600;font-size:0.95rem;">Try free — 3 offers, no card required.</p>
+</div>
+
+<div class="pricing-grid">
+
+  <div class="pricing-card">
+    <h2 class="plan-name">Starter</h2>
+    <p class="plan-desc">Submit offers faster than any other agent in the room.</p>
+    <div class="price-row">
+      <span class="price-current">$29</span>
+      <span class="price-period">/month</span>
     </div>
+    <ul class="features">
+      <li><span class="check">&#10003;</span> Unlimited offers via SMS or web</li>
+      <li><span class="check">&#10003;</span> TREC 20-19 + Financing Addendum</li>
+      <li><span class="check">&#10003;</span> 10-second contract generation</li>
+      <li><span class="check">&#10003;</span> Agent profile auto-fill</li>
+      <li><span class="check">&#10003;</span> Email delivery to listing agents</li>
+      <li><span class="check">&#10003;</span> Offer history dashboard</li>
+    </ul>
+    <form action="/create-checkout-session" method="POST">
+      <input type="hidden" name="plan" value="starter">
+      <button type="submit" class="cta-btn">Start Free Trial</button>
+    </form>
+    <p style="text-align:center;font-size:0.75rem;color:var(--text-dim);margin-top:0.75rem;">3 free offers, then $29/mo. Cancel anytime.</p>
+  </div>
 
-    <div class="pricing-grid">
-
-      <div class="pricing-card">
-        <h2 class="plan-name">Starter</h2>
-        <p class="plan-desc">For individual agents getting started.</p>
-        <div class="price-row">
-          <span class="price-current">$49</span>
-          <span class="price-period">/month</span>
-        </div>
-        <ul class="features">
-          <li><span class="check">&#10003;</span> Unlimited offers</li>
-          <li><span class="check">&#10003;</span> TREC 20-19 generation</li>
-          <li><span class="check">&#10003;</span> SMS + Web access</li>
-          <li><span class="check">&#10003;</span> Agent profile auto-fill</li>
-          <li><span class="check">&#10003;</span> Email delivery</li>
-        </ul>
-        <form action="/create-checkout-session" method="POST">
-          <input type="hidden" name="plan" value="starter">
-          <button type="submit" class="cta-btn">Get Started</button>
-        </form>
-      </div>
-
-      <div class="pricing-card featured">
-        <span class="featured-badge">Most Popular</span>
-        <h2 class="plan-name">Professional</h2>
-        <p class="plan-desc">For active agents who close multiple deals monthly.</p>
-        <div class="price-row">
-          <span class="price-current">$99</span>
-          <span class="price-period">/month</span>
-        </div>
-        <ul class="features">
-          <li><span class="check">&#10003;</span> Everything in Starter</li>
-          <li><span class="check">&#10003;</span> DocuSign integration</li>
-          <li><span class="check">&#10003;</span> Webhook / CRM sync</li>
-          <li><span class="check">&#10003;</span> Priority support</li>
-          <li><span class="check">&#10003;</span> Custom cover page</li>
-        </ul>
-        <form action="/create-checkout-session" method="POST">
-          <input type="hidden" name="plan" value="professional">
-          <button type="submit" class="cta-btn brass">Get Professional</button>
-        </form>
-      </div>
-
-      <div class="pricing-card">
-        <h2 class="plan-name">Brokerage</h2>
-        <p class="plan-desc">For teams and offices with multiple agents.</p>
-        <div class="price-row">
-          <span class="price-current">$299</span>
-          <span class="price-period">/month</span>
-        </div>
-        <ul class="features">
-          <li><span class="check">&#10003;</span> Everything in Professional</li>
-          <li><span class="check">&#10003;</span> Up to 10 agent seats</li>
-          <li><span class="check">&#10003;</span> Brokerage branding</li>
-          <li><span class="check">&#10003;</span> Team analytics dashboard</li>
-          <li><span class="check">&#10003;</span> Dedicated onboarding</li>
-        </ul>
-        <a href="mailto:hello@txtanoffer.com?subject=Brokerage%20Plan" class="cta-btn outline">Contact Us</a>
-      </div>
-
-      <div class="pricing-card">
-        <h2 class="plan-name">Enterprise</h2>
-        <p class="plan-desc">For large brokerages and franchises.</p>
-        <div class="price-row">
-          <span class="price-current">Custom</span>
-        </div>
-        <ul class="features">
-          <li><span class="check">&#10003;</span> Everything in Brokerage</li>
-          <li><span class="check">&#10003;</span> Unlimited seats</li>
-          <li><span class="check">&#10003;</span> MLS integration</li>
-          <li><span class="check">&#10003;</span> White-label option</li>
-          <li><span class="check">&#10003;</span> SLA &amp; dedicated support</li>
-        </ul>
-        <a href="mailto:hello@txtanoffer.com?subject=Enterprise%20Plan" class="cta-btn outline">Contact Us</a>
-      </div>
-
+  <div class="pricing-card featured">
+    <span class="featured-badge">Most Popular</span>
+    <h2 class="plan-name">Professional</h2>
+    <p class="plan-desc">Close deals faster with one-click signing and CRM sync.</p>
+    <div class="price-row">
+      <span class="price-current">$79</span>
+      <span class="price-period">/month</span>
     </div>
+    <ul class="features">
+      <li><span class="check">&#10003;</span> Everything in Starter</li>
+      <li><span class="check">&#10003;</span> One-click DocuSign send</li>
+      <li><span class="check">&#10003;</span> Webhook / CRM auto-sync</li>
+      <li><span class="check">&#10003;</span> Branded cover page</li>
+      <li><span class="check">&#10003;</span> Priority support</li>
+    </ul>
+    <form action="/create-checkout-session" method="POST">
+      <input type="hidden" name="plan" value="professional">
+      <button type="submit" class="cta-btn">Start Free Trial</button>
+    </form>
+    <p style="text-align:center;font-size:0.75rem;color:var(--text-dim);margin-top:0.75rem;">3 free offers, then $79/mo. Cancel anytime.</p>
+  </div>
 
-    <p class="terms-note">All plans cancel anytime. No contracts. By subscribing you agree to our <a href="/terms">Terms of Service</a>.</p>
-
-    <div class="value-props">
-      <div class="value-card">
-        <div class="value-title">Time ROI</div>
-        <div class="value-text">Save 45 minutes per offer. At 5 offers/month, that's 3.75 hours back — worth $187-$562 of your time.</div>
-      </div>
-      <div class="value-card">
-        <div class="value-title">Zero Errors</div>
-        <div class="value-text">Math calculated automatically. No more "$21,750 or 3%?" double-checking. Every field consistent.</div>
-      </div>
-      <div class="value-card">
-        <div class="value-title">Pays for Itself</div>
-        <div class="value-text">Starter pays for itself with a single offer. Everything after is pure time savings.</div>
-      </div>
+  <div class="pricing-card">
+    <h2 class="plan-name">Brokerage</h2>
+    <p class="plan-desc">Equip your entire team with instant offer generation.</p>
+    <div class="price-row">
+      <span class="price-current">$199</span>
+      <span class="price-period">/month</span>
     </div>
+    <ul class="features">
+      <li><span class="check">&#10003;</span> Everything in Professional</li>
+      <li><span class="check">&#10003;</span> Up to 10 agent seats</li>
+      <li><span class="check">&#10003;</span> Brokerage branding on PDFs</li>
+      <li><span class="check">&#10003;</span> Team analytics dashboard</li>
+      <li><span class="check">&#10003;</span> Dedicated onboarding call</li>
+    </ul>
+    <form action="/create-checkout-session" method="POST">
+      <input type="hidden" name="plan" value="brokerage">
+      <button type="submit" class="cta-btn">Start Free Trial</button>
+    </form>
+    <p style="text-align:center;font-size:0.75rem;color:var(--text-dim);margin-top:0.75rem;">3 free offers, then $199/mo. Cancel anytime.</p>
+  </div>
 
-    <div class="back-link">
-      <a href="/demo">&larr; Back to demo</a>
+  <div class="pricing-card">
+    <h2 class="plan-name">Enterprise</h2>
+    <p class="plan-desc">For large brokerages and franchises.</p>
+    <div class="price-row">
+      <span class="price-current">Custom</span>
+    </div>
+    <ul class="features">
+      <li><span class="check">&#10003;</span> Everything in Brokerage</li>
+      <li><span class="check">&#10003;</span> Unlimited seats</li>
+      <li><span class="check">&#10003;</span> MLS integration</li>
+      <li><span class="check">&#10003;</span> White-label option</li>
+      <li><span class="check">&#10003;</span> SLA &amp; dedicated support</li>
+    </ul>
+    <a href="mailto:hello@txtanoffer.com?subject=Enterprise%20Plan" class="cta-btn outline">Contact Us</a>
+  </div>
+
+</div>
+
+<div class="value-section">
+  <div class="value-grid">
+    <div class="value-card">
+      <div class="value-title">Time ROI</div>
+      <div class="value-text">Save 45 minutes per offer. At 5 offers/month, that's 3.75 hours back &mdash; worth $187-$562 of your time.</div>
+    </div>
+    <div class="value-card">
+      <div class="value-title">Zero Errors</div>
+      <div class="value-text">Math calculated automatically. No more "$21,750 or 3%?" double-checking. Every field consistent.</div>
+    </div>
+    <div class="value-card">
+      <div class="value-title">Less Than $1/Offer</div>
+      <div class="value-text">At 5 offers/month, Starter costs $5.80 per contract. Less than a coffee for 45 minutes of your time back.</div>
     </div>
   </div>
+</div>
+
+<div style="max-width:640px;margin:0 auto;padding:2rem;text-align:center;">
+  <div style="background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.15);border-radius:1rem;padding:2rem 1.75rem;">
+    <div style="font-size:1.5rem;margin-bottom:0.5rem;">&#128737;</div>
+    <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:0.5rem;">Zero-Risk Guarantee</h3>
+    <p style="color:var(--text-muted);font-size:0.9rem;line-height:1.7;margin:0;">
+      Start with <strong style="color:var(--text);">3 free offers</strong> — no credit card required.
+      When you subscribe, cancel anytime from your dashboard — no contracts, no fees, no questions asked.
+      Cancellation takes effect at the end of your billing cycle so you keep access through the period you paid for.
+    </p>
+  </div>
+</div>
+
+<div class="footer-note">
+  All plans cancel anytime. No contracts. By subscribing you agree to our <a href="/terms">Terms of Service</a>.
+  <br><br>
+  <a href="/demo">&larr; Try the demo</a> &middot; <a href="/">Home</a>
+</div>
+
 </body>
 </html>
 """
@@ -896,14 +2221,21 @@ def pricing():
 @app.route("/create-checkout-session", methods=["POST"])
 def create_checkout_session():
     """Create Stripe checkout session for subscription"""
-    if not stripe.api_key or not STRIPE_PRICE_ID:
-        # Fallback if Stripe not configured: email signup
+    plan = request.form.get("plan", "starter")
+    price_map = {
+        "starter": STRIPE_PRICE_ID,
+        "professional": STRIPE_PRICE_ID_PRO,
+        "brokerage": STRIPE_PRICE_ID_BROKERAGE,
+    }
+    price_id = price_map.get(plan, STRIPE_PRICE_ID)
+
+    if not stripe.api_key or not price_id:
         return redirect("mailto:hello@txtanoffer.com?subject=Early%20Adopter%20Signup")
 
     try:
         checkout_session = stripe.checkout.Session.create(
             line_items=[{
-                'price': STRIPE_PRICE_ID,
+                'price': price_id,
                 'quantity': 1,
             }],
             mode='subscription',
@@ -936,39 +2268,52 @@ def success():
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Welcome to TxtAnOffer!</title>
-<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <style>
-  :root{{--ink:#171B24;--paper:#F3EEDF;--brass:#A9772F;--green:#3A5744;}}
-  body{{background:var(--ink);min-height:100vh;margin:0;display:flex;align-items:center;
-    justify-content:center;padding:20px;font-family:'Inter',sans-serif;}}
-  .card{{background:var(--paper);padding:48px;border-radius:4px;max-width:500px;text-align:center;
-    border-top:3px solid var(--green);}}
-  h1{{font-family:'Source Serif 4',serif;font-size:32px;margin:0 0 16px;color:#211E17;}}
-  p{{color:#847C68;font-size:16px;line-height:1.6;margin-bottom:24px;}}
-  .next-steps{{text-align:left;background:#FFFDF7;padding:20px;border-radius:4px;margin-bottom:24px;}}
-  .next-steps h3{{font-size:14px;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 12px;}}
-  .next-steps ol{{margin:0;padding-left:20px;}}
-  .next-steps li{{margin:8px 0;font-size:14px;}}
-  .btn{{display:inline-block;padding:14px 32px;background:var(--ink);color:#E7E4D8;
-    text-decoration:none;border-radius:4px;font-weight:500;}}
-  .btn:hover{{background:#242938;}}
+  :root{{--bg:#0f172a;--bg-card:rgba(255,255,255,0.03);--border:rgba(255,255,255,0.06);
+    --text:#f8fafc;--text-muted:#94a3b8;--text-dim:#64748b;
+    --accent:#10b981;--accent-light:#34d399;--radius:1.25rem;--radius-sm:0.75rem;}}
+  *{{margin:0;padding:0;box-sizing:border-box;}}
+  body{{background:var(--bg);min-height:100vh;margin:0;display:flex;align-items:center;
+    justify-content:center;padding:2rem;font-family:'Inter',-apple-system,sans-serif;color:var(--text);}}
+  .card{{background:var(--bg-card);border:1px solid var(--border);padding:3rem;border-radius:var(--radius);
+    max-width:520px;width:100%;text-align:center;}}
+  h1{{font-size:2rem;font-weight:800;margin:0 0 0.75rem;letter-spacing:-0.02em;}}
+  .sub{{color:var(--text-muted);font-size:1rem;line-height:1.6;margin-bottom:1.5rem;}}
+  .next-steps{{text-align:left;background:rgba(255,255,255,0.02);border:1px solid var(--border);
+    padding:1.5rem;border-radius:var(--radius-sm);margin-bottom:1.5rem;}}
+  .next-steps h3{{font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;
+    color:var(--accent-light);margin:0 0 0.75rem;}}
+  .next-steps ol{{margin:0;padding-left:1.25rem;}}
+  .next-steps li{{margin:0.5rem 0;font-size:0.9rem;color:var(--text-muted);line-height:1.5;}}
+  .next-steps li strong{{color:var(--text);}}
+  .btn{{display:inline-block;padding:0.85rem 2rem;
+    background:linear-gradient(135deg,var(--accent),#059669);color:#fff;
+    text-decoration:none;border-radius:var(--radius-sm);font-weight:600;font-size:0.95rem;
+    transition:all 0.2s ease;}}
+  .btn:hover{{transform:translateY(-2px);box-shadow:0 8px 24px rgba(16,185,129,0.35);}}
+  .logo{{margin-bottom:1.5rem;}}
+  .logo img{{width:48px;height:48px;border-radius:50%;}}
 </style>
 </head>
 <body>
   <div class="card">
-    <h1>🎉 Welcome aboard!</h1>
-    <p>Your subscription is active. You're locked in at <strong>$49/month forever</strong>.</p>
+    <div class="logo"><a href="/"><img src="/static/logo.webp" alt="TxtAnOffer"></a></div>
+    <h1>Welcome aboard!</h1>
+    <p class="sub">Your subscription is active. You're all set with <strong>unlimited offers</strong>.</p>
 
     <div class="next-steps">
-      <h3>Next Steps:</h3>
+      <h3>Next Steps</h3>
       <ol>
-        <li><strong>Set up your profile</strong> — your name, license, and brokerage auto-fill every offer</li>
+        <li><strong>Set up your profile</strong> &mdash; your name, license, and brokerage auto-fill every offer</li>
         <li>Text your first offer to <strong>1-833-897-0333</strong></li>
         <li>Or use the web demo at <strong>txtanoffer.com/demo</strong></li>
       </ol>
     </div>
 
-    <a href="/profile?phone={phone_from_checkout}" class="btn">Set Up Your Profile →</a>
+    <a href="/profile?phone={phone_from_checkout}" class="btn">Set Up Your Profile &rarr;</a>
   </div>
 </body>
 </html>
@@ -983,7 +2328,7 @@ def stripe_webhook():
     webhook_secret = os.environ.get('STRIPE_WEBHOOK_SECRET', '')
 
     if not webhook_secret:
-        return jsonify(success=True)
+        return jsonify(error="Webhook secret not configured"), 503
 
     try:
         event = stripe.Webhook.construct_event(
@@ -1027,7 +2372,12 @@ def stripe_webhook():
 
 @app.route("/analytics")
 def analytics_dashboard():
-    """Simple analytics dashboard (password protect in production!)"""
+    if not ANALYTICS_PASSWORD:
+        abort(503)
+    token = request.args.get("token", "")
+    if not hmac.compare_digest(token, ANALYTICS_PASSWORD):
+        abort(403)
+
     metrics = get_conversion_metrics(days=30)
     revenue = get_revenue_metrics()
     recent_sms = get_recent_sms(limit=20)
@@ -1102,10 +2452,240 @@ body{{font-family:system-ui;max-width:800px;margin:40px auto;padding:20px;}}
   {sms_rows}
 </table>
 <p style="color:#666;font-size:12px;margin-top:20px;">
-  Check Twilio dashboard for full logs: <a href="https://console.twilio.com/us1/monitor/logs/sms" target="_blank">console.twilio.com/monitor/logs/sms</a>
+  Check Twilio console for full logs: <a href="https://console.twilio.com/" target="_blank">console.twilio.com</a>
 </p>
 </body></html>
 """
+
+
+@app.route("/signup", methods=["GET", "POST"])
+def signup():
+    success_msg = ""
+    if request.method == "POST":
+        phone = request.form.get("phone", "")
+        name = request.form.get("name", "")
+        email = request.form.get("email", "")
+        if phone:
+            try:
+                if not get_user(phone):
+                    create_user(phone)
+                track_event("signup", phone, {"name": name, "email": email})
+                # Send welcome SMS
+                twilio_send_sms(phone,
+                    "Welcome to TxtAnOffer! "
+                    "Text an offer like: 725k 3% 21day 123 Main St, Austin TX\n\n"
+                    "Reply HELP for all commands. "
+                    "Msg & data rates may apply. Reply STOP to opt out."
+                )
+            except Exception:
+                pass
+            profile_url = sign_dashboard_url(phone, request.host_url.rstrip("/")).replace("/dashboard?", "/profile?")
+            success_msg = (
+                '<div class="success">'
+                '<strong>You\'re in!</strong> Check your texts for a welcome message.<br><br>'
+                '<span style="font-size:0.8rem;color:var(--text-muted);">You have 3 free offers to try it out.</span>'
+                '</div>'
+                '<div style="display:flex;gap:0.5rem;margin-top:1rem;flex-wrap:wrap;">'
+                f'<a href="{profile_url}" style="flex:1;text-align:center;padding:0.75rem 1rem;'
+                'background:linear-gradient(135deg,var(--accent),#059669);color:#fff;border-radius:var(--radius-sm);'
+                'font-weight:600;font-size:0.85rem;text-decoration:none;">Set Up Your Profile &rarr;</a>'
+                '<a href="/pricing" style="flex:1;text-align:center;padding:0.75rem 1rem;'
+                'background:var(--bg-card);color:var(--text-muted);border:1px solid var(--border);'
+                'border-radius:var(--radius-sm);font-weight:600;font-size:0.85rem;text-decoration:none;">View Plans</a>'
+                '</div>'
+            )
+
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sign Up — TxtAnOffer</title>
+<link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<style>
+  :root{{--bg:#0f172a;--bg-card:rgba(255,255,255,0.03);--border:rgba(255,255,255,0.06);
+    --text:#f8fafc;--text-muted:#94a3b8;--text-dim:#64748b;
+    --accent:#10b981;--accent-light:#34d399;--radius:1.25rem;--radius-sm:0.75rem;
+    --transition:all 0.2s ease;}}
+  *{{margin:0;padding:0;box-sizing:border-box;}}
+  body{{background:var(--bg);min-height:100vh;margin:0;display:flex;align-items:center;
+    justify-content:center;padding:2rem;font-family:'Inter',-apple-system,sans-serif;color:var(--text);}}
+  a{{color:inherit;text-decoration:none;}}
+  .wrap{{width:100%;max-width:460px;}}
+  .nav-back{{display:flex;align-items:center;gap:0.5rem;margin-bottom:1.5rem;}}
+  .nav-back img{{width:28px;height:28px;border-radius:50%;}}
+  .nav-back span{{font-size:0.85rem;color:var(--text-muted);}}
+  .nav-back:hover span{{color:var(--text);}}
+  h1{{font-size:1.75rem;font-weight:800;letter-spacing:-0.02em;margin-bottom:0.5rem;}}
+  .sub{{color:var(--text-muted);font-size:0.95rem;line-height:1.6;margin-bottom:1.5rem;}}
+  .card{{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:1.75rem;}}
+  .field-label{{font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;
+    color:var(--text-dim);margin-bottom:0.4rem;display:block;}}
+  input[type=text],input[type=tel],input[type=email]{{
+    width:100%;background:rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.1);
+    border-radius:var(--radius-sm);padding:0.75rem 1rem;color:var(--text);
+    font-size:0.95rem;font-family:inherit;outline:none;margin-bottom:1rem;transition:var(--transition);
+  }}
+  input:focus{{border-color:var(--accent);box-shadow:0 0 0 3px rgba(16,185,129,0.15);}}
+  input::placeholder{{color:#475569;}}
+  .consent-row{{
+    display:flex;align-items:flex-start;gap:0.75rem;margin:1rem 0;padding:1rem;
+    background:rgba(16,185,129,0.05);border:1px solid rgba(16,185,129,0.15);border-radius:var(--radius-sm);
+  }}
+  .consent-row input[type=checkbox]{{margin-top:0.2rem;width:18px;height:18px;flex-shrink:0;accent-color:var(--accent);}}
+  .consent-row label{{font-size:0.8rem;line-height:1.6;color:var(--text-muted);}}
+  .consent-row a{{color:var(--accent-light);text-decoration:underline;}}
+  button{{
+    width:100%;margin-top:0.75rem;
+    background:linear-gradient(135deg,var(--accent),#059669);color:#fff;border:none;
+    padding:0.85rem;font-family:inherit;font-size:0.95rem;font-weight:600;
+    border-radius:var(--radius-sm);cursor:pointer;transition:var(--transition);
+  }}
+  button:hover{{transform:translateY(-2px);box-shadow:0 8px 24px rgba(16,185,129,0.35);}}
+  button:disabled{{opacity:0.4;cursor:not-allowed;transform:none;box-shadow:none;}}
+  .success{{
+    margin-top:1rem;padding:1rem;background:rgba(16,185,129,0.08);
+    border:1px solid rgba(16,185,129,0.2);border-radius:var(--radius-sm);
+    font-size:0.9rem;color:var(--accent-light);text-align:center;
+  }}
+  .foot{{text-align:center;margin-top:1.5rem;font-size:0.8rem;color:var(--text-dim);}}
+  .foot a{{color:var(--accent-light);text-decoration:none;}}
+  .foot a:hover{{text-decoration:underline;}}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <a href="/" class="nav-back"><img src="/static/logo.webp" alt=""><span>&larr; TxtAnOffer</span></a>
+    <h1>Get started with TxtAnOffer</h1>
+    <p class="sub">Enter your phone number to receive offer drafts via SMS at +1 (833) 897-0333.</p>
+    <div class="card">
+      <form method="POST" action="/signup" id="signup-form">
+        <label class="field-label">Phone number</label>
+        <input type="tel" name="phone" placeholder="+1 (555) 123-4567" required>
+        <label class="field-label">Name</label>
+        <input type="text" name="name" placeholder="Your name">
+        <label class="field-label">Email</label>
+        <input type="email" name="email" placeholder="you@brokerage.com">
+        <div class="consent-row">
+          <input type="checkbox" id="sms-consent" name="sms_consent">
+          <label for="sms-consent">(Optional) I agree to receive automated transactional SMS messages from TxtAnOffer at +1 (833) 897-0333 about my offer drafts. Message frequency varies based on usage. Reply STOP to opt out, HELP for help. Msg &amp; data rates may apply. Consent is not a condition of purchase or service. <a href="/privacy">Privacy Policy</a> &amp; <a href="/terms">Terms</a></label>
+        </div>
+        <button type="submit">Sign up for SMS</button>
+      </form>
+      {success_msg}
+    </div>
+    <div class="foot"><a href="/privacy">Privacy Policy</a> &middot; <a href="/terms">Terms</a> &middot; <a href="/demo">Try the demo</a></div>
+  </div>
+</body>
+</html>"""
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    message = ""
+    if request.method == "POST":
+        phone = request.form.get("phone", "").strip()
+        # Normalize phone
+        import re
+        phone_clean = re.sub(r"[^\d+]", "", phone)
+        if not phone_clean.startswith("+"):
+            phone_clean = "+1" + phone_clean.lstrip("1")
+
+        user = get_user(phone_clean)
+        if user:
+            # Send dashboard link via Twilio
+            try:
+                dash_link = sign_dashboard_url(phone_clean, request.host_url.rstrip("/"))
+                if twilio_send_sms(phone_clean, f"Your TxtAnOffer dashboard link (valid 7 days):\n{dash_link}"):
+                    message = "sent"
+                else:
+                    message = "error"
+            except Exception as e:
+                print(f"[LOGIN] SMS send failed: {e}")
+                message = "error"
+        else:
+            message = "not_found"
+
+    msg_html = ""
+    if message == "sent":
+        msg_html = '<div class="msg success">Check your texts! We sent a login link to your phone.</div>'
+    elif message == "not_found":
+        msg_html = '<div class="msg error">No account found for that number. <a href="/signup">Sign up first</a>.</div>'
+    elif message == "error":
+        msg_html = '<div class="msg error">Could not send SMS. Text DASHBOARD to (833) 897-0333 instead.</div>'
+
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Log In — TxtAnOffer</title>
+<link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<style>
+  :root{{--bg:#0f172a;--bg-card:rgba(255,255,255,0.03);--border:rgba(255,255,255,0.06);
+    --text:#f8fafc;--text-muted:#94a3b8;--text-dim:#64748b;
+    --accent:#10b981;--accent-light:#34d399;--radius:1.25rem;--radius-sm:0.75rem;
+    --transition:all 0.2s ease;}}
+  *{{margin:0;padding:0;box-sizing:border-box;}}
+  body{{background:var(--bg);min-height:100vh;margin:0;display:flex;align-items:center;
+    justify-content:center;padding:2rem;font-family:'Inter',-apple-system,sans-serif;color:var(--text);}}
+  a{{color:inherit;text-decoration:none;}}
+  .wrap{{width:100%;max-width:400px;}}
+  .nav-back{{display:flex;align-items:center;gap:0.5rem;margin-bottom:1.5rem;}}
+  .nav-back img{{width:28px;height:28px;border-radius:50%;}}
+  .nav-back span{{font-size:0.85rem;color:var(--text-muted);}}
+  .nav-back:hover span{{color:var(--text);}}
+  h1{{font-size:1.75rem;font-weight:800;letter-spacing:-0.02em;margin-bottom:0.5rem;}}
+  .sub{{color:var(--text-muted);font-size:0.95rem;margin-bottom:1.5rem;line-height:1.5;}}
+  .card{{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:1.75rem;}}
+  label{{font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;
+    color:var(--text-dim);display:block;margin-bottom:0.4rem;}}
+  input{{
+    width:100%;background:rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.1);
+    border-radius:var(--radius-sm);padding:0.75rem 1rem;color:var(--text);
+    font-size:0.95rem;font-family:inherit;outline:none;transition:var(--transition);
+  }}
+  input:focus{{border-color:var(--accent);box-shadow:0 0 0 3px rgba(16,185,129,0.15);}}
+  input::placeholder{{color:#475569;}}
+  .sms-note{{font-size:0.8rem;color:var(--text-dim);margin:0.75rem 0 0;line-height:1.5;}}
+  button{{
+    width:100%;margin-top:1rem;
+    background:linear-gradient(135deg,var(--accent),#059669);color:#fff;border:none;
+    padding:0.85rem;font-family:inherit;font-size:0.95rem;font-weight:600;
+    border-radius:var(--radius-sm);cursor:pointer;transition:var(--transition);
+  }}
+  button:hover{{transform:translateY(-2px);box-shadow:0 8px 24px rgba(16,185,129,0.35);}}
+  .msg{{margin-top:1rem;padding:0.85rem;border-radius:var(--radius-sm);font-size:0.9rem;text-align:center;}}
+  .msg.success{{background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);color:var(--accent-light);}}
+  .msg.error{{background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.2);color:#f87171;}}
+  .msg a{{color:var(--accent-light);}}
+  .alt{{text-align:center;margin-top:1.25rem;font-size:0.85rem;color:var(--text-dim);}}
+  .alt a{{color:var(--accent-light);text-decoration:none;}}
+  .alt a:hover{{text-decoration:underline;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a href="/" class="nav-back"><img src="/static/logo.webp" alt=""><span>&larr; TxtAnOffer</span></a>
+  <h1>Log In</h1>
+  <p class="sub">Enter your phone number and we'll text you a link to your dashboard.</p>
+  <div class="card">
+    <form method="POST">
+      <label>Phone number</label>
+      <input type="tel" name="phone" placeholder="(512) 555-1234" required>
+      <p class="sms-note">By clicking below, you agree to receive one SMS message from TxtAnOffer at +1 (833) 897-0333 containing your login link. Msg &amp; data rates may apply. Reply STOP to opt out.</p>
+      <button type="submit">Send Login Link via SMS</button>
+    </form>
+    {msg_html}
+  </div>
+  <p class="alt">Don't have an account? <a href="/signup">Sign up</a></p>
+</div>
+</body>
+</html>"""
 
 
 @app.route("/terms")
@@ -1116,67 +2696,120 @@ def terms():
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Terms of Service — TxtAnOffer</title>
+<link rel="icon" href="/static/favicon.ico" type="image/x-icon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <style>
-  *{box-sizing:border-box; margin:0; padding:0;}
-  body{
-    background:#fff;
-    min-height:100vh; padding:48px 20px; font-family:'Inter',sans-serif;
-    display:flex; justify-content:center;
+  :root {
+    --bg: #0f172a;
+    --bg-elevated: #1e293b;
+    --bg-card: rgba(255,255,255,0.03);
+    --border: rgba(255,255,255,0.06);
+    --border-hover: rgba(16,185,129,0.3);
+    --text: #f8fafc;
+    --text-muted: #94a3b8;
+    --text-dim: #64748b;
+    --accent: #10b981;
+    --accent-light: #34d399;
+    --radius: 1.25rem;
+    --radius-sm: 0.75rem;
+    --transition: all 0.2s ease;
   }
-  .container{width:100%; max-width:680px;}
-  .back-link{
-    font-size:12px; color:#666; text-decoration:none;
-    display:inline-block; margin-bottom:20px;
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
   }
-  .back-link:hover{color:#000;}
-  .page-title{
-    font-family:'Source Serif 4',serif; font-weight:600; font-size:24px;
-    color:#000; margin-bottom:4px;
+  a { color:inherit; text-decoration:none; }
+
+  .nav {
+    display:flex;align-items:center;justify-content:space-between;
+    padding:1rem 2rem;position:sticky;top:0;
+    background:rgba(15,23,42,0.9);backdrop-filter:blur(16px);
+    -webkit-backdrop-filter:blur(16px);
+    border-bottom:1px solid var(--border);z-index:100;
   }
-  .last-updated{
-    font-size:12px; color:#999; margin-bottom:32px;
+  .nav-left {display:flex;align-items:center;gap:0.6rem;font-weight:700;font-size:1.1rem;letter-spacing:-0.02em;}
+  .nav-logo {width:34px;height:34px;border-radius:50%;overflow:hidden;}
+  .nav-logo img {width:100%;height:100%;object-fit:cover;}
+  .nav-links {display:flex;gap:2rem;font-size:0.875rem;font-weight:500;color:var(--text-muted);}
+  .nav-links a {transition:var(--transition);}
+  .nav-links a:hover {color:var(--text);}
+  .nav-cta {
+    background:var(--accent);color:#fff;padding:0.55rem 1.35rem;border-radius:9999px;
+    font-size:0.875rem;font-weight:600;text-decoration:none;display:inline-block;
+    transition:var(--transition);
   }
-  .card{
-    padding:0;
+  .nav-cta:hover {transform:scale(1.05);box-shadow:0 0 24px rgba(16,185,129,0.4);}
+
+  .container {max-width:720px;margin:0 auto;padding:3rem 2rem 4rem;}
+  .page-header {margin-bottom:2.5rem;}
+  .page-header h1 {font-size:2rem;font-weight:800;letter-spacing:-0.03em;margin-bottom:0.25rem;}
+  .page-header .updated {font-size:0.8rem;color:var(--text-dim);}
+
+  .legal-card {
+    background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
+    padding:2.5rem 2rem;
   }
-  .card h2{
-    font-family:'Source Serif 4',serif; font-weight:600; font-size:15px;
-    color:#000; margin:28px 0 10px; padding-bottom:6px;
-    border-bottom:1px solid #e5e5e5;
+  .legal-card h2 {
+    font-size:0.95rem;font-weight:700;color:var(--text);
+    margin:2rem 0 0.75rem;padding-bottom:0.5rem;
+    border-bottom:1px solid var(--border);
   }
-  .card h2:first-child{margin-top:0;}
-  .card p, .card li{
-    font-size:12px; line-height:1.7; color:#333; margin-bottom:8px;
+  .legal-card h2:first-child {margin-top:0;}
+  .legal-card p, .legal-card li {
+    font-size:0.85rem;line-height:1.8;color:var(--text-muted);margin-bottom:0.5rem;
   }
-  .card ul{padding-left:18px; margin:6px 0 8px;}
-  .card ul li{list-style:disc; margin-bottom:4px;}
-  .card strong{color:#000; font-weight:500;}
-  .card .emphasis{
-    background:#f7f7f7; border-left:3px solid #000;
-    padding:10px 14px; margin:12px 0; border-radius:0 2px 2px 0;
-    font-size:12px; color:#000; line-height:1.6;
+  .legal-card ul {padding-left:1.25rem;margin:0.5rem 0 0.75rem;}
+  .legal-card ul li {list-style:disc;margin-bottom:0.35rem;}
+  .legal-card strong {color:var(--text);font-weight:600;}
+  .legal-card .emphasis {
+    background:rgba(16,185,129,0.05);border-left:3px solid var(--accent);
+    padding:1rem 1.25rem;margin:1rem 0;border-radius:0 var(--radius-sm) var(--radius-sm) 0;
+    font-size:0.85rem;color:var(--text);line-height:1.7;
   }
-  .section-num{
-    color:#666; font-weight:500; margin-right:4px;
-  }
-  .foot{
-    text-align:center; margin-top:24px; font-size:11px;
-    color:#999; letter-spacing:0.02em;
+  .section-num {color:var(--accent-light);font-weight:700;margin-right:0.25rem;}
+  .foot {text-align:center;margin-top:2rem;font-size:0.8rem;color:var(--text-dim);}
+  .foot a {color:var(--accent-light);}
+  .foot a:hover {text-decoration:underline;}
+
+  @media(max-width:600px) {
+    .container {padding:2rem 1rem 3rem;}
+    .legal-card {padding:1.5rem 1.25rem;}
+    .nav-links {display:none;}
   }
 </style>
 </head>
 <body>
+<nav class="nav">
+  <a href="/" class="nav-left">
+    <div class="nav-logo"><img src="/static/logo.webp" alt="TxtAnOffer"></div>
+    <span>TxtAnOffer</span>
+  </a>
+  <div class="nav-links">
+    <a href="/">Home</a>
+    <a href="/demo">Demo</a>
+    <a href="/pricing">Pricing</a>
+  </div>
+  <a href="/signup" class="nav-cta">Start Free Trial</a>
+</nav>
+
 <div class="container">
-  <a href="/demo" class="back-link">&larr; Back to TxtAnOffer</a>
-  <h1 class="page-title">Terms of Service</h1>
-  <p class="last-updated">Last Updated: July 12, 2026</p>
-  <div class="card">
+  <div class="page-header">
+    <h1>Terms of Service</h1>
+    <span class="updated">Last Updated: July 12, 2026</span>
+  </div>
+
+  <div class="legal-card">
     <p>These Terms of Service ("Terms") govern your use of TxtAnOffer ("Service"), operated by Phanel ("we," "us," or "our"), a sole proprietorship based in Texas. By accessing or using the Service, you agree to be bound by these Terms. If you do not agree, do not use the Service.</p>
 
     <h2><span class="section-num">1.</span> Service Description</h2>
-    <p>TxtAnOffer is a document drafting tool that converts shorthand offer text into pre-filled TREC One to Four Family Residential Contract (Resale) forms (TREC No. 20-19). The Service accepts offer parameters via SMS (Twilio) or a web interface and generates a partially completed PDF contract for review by a licensed Texas real estate agent.</p>
+    <p>TxtAnOffer is a document drafting tool that converts shorthand offer text into pre-filled TREC One to Four Family Residential Contract (Resale) forms (TREC No. 20-19). The Service accepts offer parameters via SMS or a web interface and generates a partially completed PDF contract for review by a licensed Texas real estate agent.</p>
     <p>The Service fills in standard TREC form fields based on information you provide. It does not create custom legal documents, negotiate terms, or exercise professional judgment on your behalf.</p>
 
     <h2><span class="section-num">2.</span> Not Legal Advice — No Attorney-Client Relationship</h2>
@@ -1222,7 +2855,7 @@ def terms():
     <p>We use publicly available TREC promulgated forms as templates. If TREC revises or replaces a form, there may be a delay before we update the Service. You are responsible for confirming that the form version used is current and appropriate for your transaction.</p>
 
     <h2><span class="section-num">6.</span> Subscription, Payment, and Cancellation</h2>
-    <p><strong>Pricing:</strong> The Service costs $49.00 per month, billed monthly via Stripe.</p>
+    <p><strong>Pricing:</strong> Plans start at $29.00 per month, billed monthly via Stripe. See <a href="/pricing" style="color:var(--accent-light);">pricing page</a> for current tiers.</p>
     <p><strong>Billing cycle:</strong> Your subscription renews automatically on the same date each month. You will be charged at the beginning of each billing period.</p>
     <p><strong>Cancellation:</strong> You may cancel your subscription at any time through your account settings or by contacting us. Cancellation takes effect at the end of your current billing period — you retain access until that date.</p>
     <p><strong>Refunds:</strong> Payments are non-refundable. We do not provide prorated refunds for partial months. If you cancel mid-cycle, you retain access through the remainder of the paid period but will not receive a refund for unused time.</p>
@@ -1262,7 +2895,7 @@ def terms():
       <li>Basic usage data (timestamps, request counts)</li>
     </ul>
     <p>We use this data solely to operate and improve the Service. We do not sell your personal information to third parties.</p>
-    <p><strong>Third-party services:</strong> The Service uses Twilio (SMS delivery), Stripe (payment processing), and cloud hosting providers. These services have their own privacy policies and may process your data in accordance with their terms.</p>
+    <p><strong>Third-party services:</strong> The Service uses Twilio (SMS delivery), Stripe (payment processing), and Railway on Google Cloud Platform (infrastructure). These services have their own privacy policies and may process your data in accordance with their terms.</p>
     <p><strong>Data retention:</strong> Generated PDFs are stored temporarily and may be deleted after a reasonable period. We retain account and billing records as required by law.</p>
     <p><strong>Security:</strong> We implement reasonable technical and organizational measures to protect your data. However, no system is perfectly secure, and we cannot guarantee absolute security of your information.</p>
 
@@ -1293,7 +2926,211 @@ def terms():
     <p>For questions about these Terms or the Service, contact us at:</p>
     <p>TxtAnOffer<br>Operated by Phanel<br>Texas, United States<br>Email: support@txtanoffer.com</p>
   </div>
-  <p class="foot">TxtAnOffer is not affiliated with the Texas Real Estate Commission (TREC).</p>
+  <p class="foot">TxtAnOffer is not affiliated with the Texas Real Estate Commission (TREC).<br><a href="/">&larr; Back to home</a> &middot; <a href="/privacy">Privacy Policy</a></p>
+</div>
+</body>
+</html>"""
+
+
+@app.route("/privacy")
+def privacy():
+    return """<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Privacy Policy — TxtAnOffer</title>
+<link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<style>
+  :root {
+    --bg: #0f172a;
+    --bg-elevated: #1e293b;
+    --bg-card: rgba(255,255,255,0.03);
+    --border: rgba(255,255,255,0.06);
+    --border-hover: rgba(16,185,129,0.3);
+    --text: #f8fafc;
+    --text-muted: #94a3b8;
+    --text-dim: #64748b;
+    --accent: #10b981;
+    --accent-light: #34d399;
+    --radius: 1.25rem;
+    --radius-sm: 0.75rem;
+    --transition: all 0.2s ease;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+  }
+  a { color:inherit; text-decoration:none; }
+
+  .nav {
+    display:flex;align-items:center;justify-content:space-between;
+    padding:1rem 2rem;position:sticky;top:0;
+    background:rgba(15,23,42,0.9);backdrop-filter:blur(16px);
+    -webkit-backdrop-filter:blur(16px);
+    border-bottom:1px solid var(--border);z-index:100;
+  }
+  .nav-left {display:flex;align-items:center;gap:0.6rem;font-weight:700;font-size:1.1rem;letter-spacing:-0.02em;}
+  .nav-logo {width:34px;height:34px;border-radius:50%;overflow:hidden;}
+  .nav-logo img {width:100%;height:100%;object-fit:cover;}
+  .nav-links {display:flex;gap:2rem;font-size:0.875rem;font-weight:500;color:var(--text-muted);}
+  .nav-links a {transition:var(--transition);}
+  .nav-links a:hover {color:var(--text);}
+  .nav-cta {
+    background:var(--accent);color:#fff;padding:0.55rem 1.35rem;border-radius:9999px;
+    font-size:0.875rem;font-weight:600;text-decoration:none;display:inline-block;
+    transition:var(--transition);
+  }
+  .nav-cta:hover {transform:scale(1.05);box-shadow:0 0 24px rgba(16,185,129,0.4);}
+
+  .container {max-width:720px;margin:0 auto;padding:3rem 2rem 4rem;}
+  .page-header {margin-bottom:2.5rem;}
+  .page-header h1 {font-size:2rem;font-weight:800;letter-spacing:-0.03em;margin-bottom:0.25rem;}
+  .page-header .updated {font-size:0.8rem;color:var(--text-dim);}
+
+  .legal-card {
+    background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
+    padding:2.5rem 2rem;
+  }
+  .legal-card h2 {
+    font-size:0.95rem;font-weight:700;color:var(--text);
+    margin:2rem 0 0.75rem;padding-bottom:0.5rem;
+    border-bottom:1px solid var(--border);
+  }
+  .legal-card h2:first-child {margin-top:0;}
+  .legal-card p, .legal-card li {
+    font-size:0.85rem;line-height:1.8;color:var(--text-muted);margin-bottom:0.5rem;
+  }
+  .legal-card ul {padding-left:1.25rem;margin:0.5rem 0 0.75rem;}
+  .legal-card ul li {list-style:disc;margin-bottom:0.35rem;}
+  .legal-card strong {color:var(--text);font-weight:600;}
+  .foot {text-align:center;margin-top:2rem;font-size:0.8rem;color:var(--text-dim);}
+  .foot a {color:var(--accent-light);}
+  .foot a:hover {text-decoration:underline;}
+
+  @media(max-width:600px) {
+    .container {padding:2rem 1rem 3rem;}
+    .legal-card {padding:1.5rem 1.25rem;}
+    .nav-links {display:none;}
+  }
+</style>
+</head>
+<body>
+<nav class="nav">
+  <a href="/" class="nav-left">
+    <div class="nav-logo"><img src="/static/logo.webp" alt="TxtAnOffer"></div>
+    <span>TxtAnOffer</span>
+  </a>
+  <div class="nav-links">
+    <a href="/">Home</a>
+    <a href="/demo">Demo</a>
+    <a href="/pricing">Pricing</a>
+  </div>
+  <a href="/signup" class="nav-cta">Start Free Trial</a>
+</nav>
+
+<div class="container">
+  <div class="page-header">
+    <h1>Privacy Policy</h1>
+    <span class="updated">Last Updated: July 14, 2026</span>
+  </div>
+
+  <div class="legal-card">
+    <p>TxtAnOffer ("Service") is operated by Phanel, a sole proprietorship based in Texas. This Privacy Policy explains how we collect, use, and protect your information.</p>
+
+    <h2>1. Information We Collect</h2>
+    <p><strong>Information you provide:</strong></p>
+    <ul>
+      <li>Phone number (for SMS interactions and account identification)</li>
+      <li>Agent profile details (name, license number, brokerage, email)</li>
+      <li>Offer text messages and form submissions</li>
+      <li>Payment information (processed securely by Stripe; we do not store card numbers)</li>
+    </ul>
+    <p><strong>Information collected automatically:</strong></p>
+    <ul>
+      <li>Usage data (timestamps, request counts, feature usage)</li>
+      <li>Device and browser information when using the web interface</li>
+      <li>IP address</li>
+    </ul>
+
+    <h2>2. How We Use Your Information</h2>
+    <ul>
+      <li>To provide the Service: parsing offers, generating PDFs, delivering SMS responses</li>
+      <li>To manage your account and subscription</li>
+      <li>To improve and maintain the Service</li>
+      <li>To communicate with you about your account or the Service</li>
+      <li>To comply with legal obligations</li>
+    </ul>
+
+    <h2>3. SMS Messaging</h2>
+    <p><strong>Program Name:</strong> TxtAnOffer</p>
+    <p><strong>Phone Number:</strong> +1 (833) 897-0333</p>
+    <p><strong>Opt-in Method:</strong> Users opt in by (1) entering their phone number and checking an unchecked checkbox on www.txtanoffer.com/signup that says "By checking this box, I agree to receive automated transactional SMS messages from TxtAnOffer at +1 (833) 897-0333 about my offer drafts. Message frequency varies based on usage. Reply STOP to opt out, HELP for help. Msg &amp; data rates may apply. Consent is not a condition of purchase." OR (2) by texting offer details directly to +1 (833) 897-0333 after seeing opt-in disclosure on our website.</p>
+    <p><strong>Consent:</strong> By texting our service number +1 (833) 897-0333 or submitting your phone number via our website, you consent to receive SMS messages from TxtAnOffer related to your offer requests and account.</p>
+    <p><strong>Message frequency:</strong> Message frequency varies based on your usage. You will receive one response per offer submitted, plus occasional account notifications (typically 1-5 messages per month).</p>
+    <p><strong>Opt-out:</strong> Reply STOP to any message to unsubscribe from SMS. Reply START to re-subscribe. You can continue using the web interface after opting out of SMS.</p>
+    <p><strong>Help:</strong> Reply HELP for support information, or contact support@txtanoffer.com or +1 (833) 897-0333.</p>
+    <p><strong>Rates:</strong> Message and data rates may apply depending on your carrier plan.</p>
+    <p><strong>Carriers:</strong> Compatible with all major US carriers. Carriers are not liable for delayed or undelivered messages.</p>
+    <p>This is a transactional, user-initiated service only. We do not send marketing or promotional messages.</p>
+
+    <h2>4. Data Sharing</h2>
+    <p>We do not sell, rent, or trade your personal information. We share data only with:</p>
+    <ul>
+      <li><strong>Twilio</strong> — SMS delivery (phone number, message content)</li>
+      <li><strong>Stripe</strong> — Payment processing (billing details)</li>
+      <li><strong>Railway (hosted on Google Cloud Platform)</strong> — Infrastructure provider, SOC 2 Type II certified. All data encrypted in transit (TLS 1.3) and at rest (AES-256). US region only.</li>
+    </ul>
+    <p>We may disclose information if required by law, legal process, or to protect the rights and safety of our users or the public.</p>
+
+    <h2>5. Data Retention</h2>
+    <ul>
+      <li>Generated PDFs: stored temporarily for download, deleted after 30 days</li>
+      <li>Account data: retained while your account is active and for 90 days after cancellation</li>
+      <li>Billing records: retained as required by applicable tax and accounting laws</li>
+      <li>SMS logs: retained for 90 days for support and debugging purposes</li>
+    </ul>
+
+    <h2>6. Data Security</h2>
+    <p>We implement reasonable technical and organizational measures to protect your data:</p>
+    <ul>
+      <li><strong>Encryption in transit:</strong> TLS 1.3 on all connections</li>
+      <li><strong>Encryption at rest:</strong> AES-256 via Google Cloud Platform infrastructure</li>
+      <li><strong>Infrastructure:</strong> Railway (SOC 2 Type II certified), running on GCP (SOC 2, ISO 27001)</li>
+      <li><strong>Access controls:</strong> No human access to offer content — all processing is automated</li>
+      <li><strong>Payment data:</strong> Handled exclusively by Stripe (PCI DSS Level 1); card numbers never touch our servers</li>
+    </ul>
+    <p>No method of transmission over the internet is 100% secure, and we cannot guarantee absolute security.</p>
+
+    <h2>7. Your Rights</h2>
+    <p>You may:</p>
+    <ul>
+      <li>Request access to your personal data</li>
+      <li>Request correction or deletion of your data</li>
+      <li>Opt out of SMS communications (reply STOP)</li>
+      <li>Cancel your subscription at any time</li>
+    </ul>
+    <p>To exercise these rights, contact us at support@txtanoffer.com.</p>
+
+    <h2>8. Children's Privacy</h2>
+    <p>The Service is intended for licensed real estate professionals and is not directed at individuals under 18. We do not knowingly collect information from minors.</p>
+
+    <h2>9. Changes to This Policy</h2>
+    <p>We may update this Privacy Policy from time to time. Changes will be posted on this page with an updated "Last Updated" date. Continued use of the Service after changes constitutes acceptance.</p>
+
+    <h2>10. Contact</h2>
+    <p>For privacy-related questions or requests:</p>
+    <p>TxtAnOffer<br>Operated by Phanel<br>Texas, United States<br>Email: support@txtanoffer.com</p>
+  </div>
+  <p class="foot">TxtAnOffer is not affiliated with the Texas Real Estate Commission (TREC).<br><a href="/">&larr; Back to home</a> &middot; <a href="/terms">Terms of Service</a></p>
 </div>
 </body>
 </html>"""
@@ -1302,6 +3139,12 @@ def terms():
 @app.route("/profile", methods=["GET", "POST"])
 def profile():
     phone = request.args.get("phone", "").strip()
+    expires = request.args.get("expires", "")
+    sig = request.args.get("sig", "")
+
+    if not verify_dashboard_signature(phone, expires, sig):
+        abort(403)
+
     saved = False
     error = ""
 
@@ -1317,8 +3160,8 @@ def profile():
                 "email": request.form.get("email", "").strip(),
                 "brokerage": request.form.get("brokerage", "").strip(),
                 "title_company": request.form.get("title_company", "").strip(),
-                "default_earnest_pct": float(request.form.get("earnest_pct", "1")) / 100,
-                "default_option_fee": int(request.form.get("option_fee", "250")),
+                "default_earnest_pct": float(request.form.get("earnest_pct", "1") or "1") / 100,
+                "default_option_fee": int(float(request.form.get("option_fee", "250") or "250")),
             })
             saved = True
 
@@ -1330,69 +3173,158 @@ def profile():
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Agent Profile - TxtAnOffer</title>
+<title>Agent Profile — TxtAnOffer</title>
+<link rel="icon" href="/static/favicon.ico" type="image/x-icon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Inter:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <style>
-  :root{{--ink:#171B24;--ink-soft:#242938;--paper:#F3EEDF;--paper-line:#DCD3B8;
-    --brass:#A9772F;--green:#3A5744;--text-on-paper:#211E17;--text-muted:#847C68;}}
-  *{{box-sizing:border-box;}}
-  body{{background:var(--ink);min-height:100vh;margin:0;display:flex;align-items:center;
-    justify-content:center;padding:48px 20px;font-family:'Inter',sans-serif;}}
-  .card{{background:var(--paper);border-radius:4px;padding:40px 36px;max-width:460px;width:100%;
-    box-shadow:0 24px 60px -20px rgba(0,0,0,0.5);border-top:3px solid var(--brass);}}
-  h1{{font-family:'Source Serif 4',serif;font-size:24px;color:var(--text-on-paper);margin:0 0 6px;}}
-  .sub{{color:var(--text-muted);font-size:13px;margin:0 0 28px;line-height:1.5;}}
-  label{{display:block;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.08em;
-    text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;margin-top:16px;}}
-  input{{width:100%;font-family:'Inter',sans-serif;font-size:14px;padding:11px 14px;
-    border:1px solid var(--paper-line);background:#FFFDF7;color:var(--text-on-paper);
-    border-radius:2px;outline:none;}}
-  input:focus{{border-color:var(--brass);}}
-  .row{{display:flex;gap:12px;}}
-  .row > div{{flex:1;}}
-  button{{width:100%;margin-top:24px;background:var(--ink);color:#E7E4D8;border:none;
-    padding:14px;font-family:'Inter',sans-serif;font-size:14px;font-weight:500;
-    border-radius:2px;cursor:pointer;}}
-  button:hover{{background:var(--ink-soft);}}
-  .success{{margin-top:16px;padding:12px;background:rgba(58,87,68,0.1);border:1px solid rgba(58,87,68,0.3);
-    border-radius:2px;font-size:13px;color:var(--green);text-align:center;}}
-  .error{{margin-top:16px;padding:12px;background:rgba(139,58,44,0.08);border:1px solid rgba(139,58,44,0.3);
-    border-radius:2px;font-size:13px;color:#7A3527;text-align:center;}}
-  .foot{{text-align:center;margin-top:20px;font-size:12px;}}
-  .foot a{{color:var(--brass);text-decoration:none;}}
+  :root{{
+    --bg: #0f172a;
+    --bg-elevated: #1e293b;
+    --bg-card: rgba(255,255,255,0.03);
+    --border: rgba(255,255,255,0.06);
+    --border-hover: rgba(16,185,129,0.3);
+    --text: #f8fafc;
+    --text-muted: #94a3b8;
+    --text-dim: #64748b;
+    --accent: #10b981;
+    --accent-light: #34d399;
+    --radius: 1.25rem;
+    --radius-sm: 0.75rem;
+    --transition: all 0.2s ease;
+  }}
+  * {{ margin:0; padding:0; box-sizing:border-box; }}
+  body {{
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+  }}
+  a {{ color:inherit; text-decoration:none; }}
+
+  .nav {{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:1rem 2rem;position:sticky;top:0;
+    background:rgba(15,23,42,0.9);backdrop-filter:blur(16px);
+    -webkit-backdrop-filter:blur(16px);
+    border-bottom:1px solid var(--border);z-index:100;
+  }}
+  .nav-left {{display:flex;align-items:center;gap:0.6rem;font-weight:700;font-size:1.1rem;letter-spacing:-0.02em;}}
+  .nav-logo {{width:34px;height:34px;border-radius:50%;overflow:hidden;}}
+  .nav-logo img {{width:100%;height:100%;object-fit:cover;}}
+  .nav-links {{display:flex;gap:2rem;font-size:0.875rem;font-weight:500;color:var(--text-muted);}}
+  .nav-links a {{transition:var(--transition);}}
+  .nav-links a:hover {{color:var(--text);}}
+  .nav-cta {{
+    background:var(--accent);color:#fff;padding:0.55rem 1.35rem;border-radius:9999px;
+    font-size:0.875rem;font-weight:600;text-decoration:none;display:inline-block;
+    transition:var(--transition);
+  }}
+  .nav-cta:hover {{transform:scale(1.05);box-shadow:0 0 24px rgba(16,185,129,0.4);}}
+
+  .container {{max-width:520px;margin:0 auto;padding:3rem 1.5rem 4rem;}}
+  .page-header {{margin-bottom:2rem;}}
+  .page-header h1 {{font-size:1.75rem;font-weight:800;letter-spacing:-0.03em;margin-bottom:0.25rem;}}
+  .page-header p {{color:var(--text-muted);font-size:0.9rem;}}
+
+  .form-card {{
+    background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
+    padding:2rem;
+  }}
+  .field-label {{
+    font-size:0.7rem;font-weight:700;color:var(--text-dim);
+    text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.5rem;display:block;
+    margin-top:1.25rem;
+  }}
+  .field-label:first-child {{margin-top:0;}}
+  .form-card input {{
+    width:100%;background:rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.1);
+    border-radius:var(--radius-sm);padding:0.75rem 1rem;color:var(--text);
+    font-size:0.9rem;font-family:inherit;outline:none;transition:var(--transition);
+  }}
+  .form-card input:focus {{border-color:var(--accent);box-shadow:0 0 0 3px rgba(16,185,129,0.15);}}
+  .form-card input::placeholder {{color:#475569;}}
+  .row {{display:flex;gap:0.75rem;}}
+  .row > div {{flex:1;}}
+  .form-card button {{
+    width:100%;margin-top:1.5rem;
+    background:linear-gradient(135deg,var(--accent),#059669);color:#fff;border:none;
+    border-radius:var(--radius-sm);padding:0.85rem;font-weight:600;font-size:0.95rem;
+    font-family:inherit;cursor:pointer;transition:var(--transition);
+  }}
+  .form-card button:hover {{transform:translateY(-2px);box-shadow:0 8px 24px rgba(16,185,129,0.35);}}
+  .success {{
+    margin-top:1rem;padding:0.85rem 1rem;
+    background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);
+    border-radius:var(--radius-sm);font-size:0.85rem;color:var(--accent-light);text-align:center;
+  }}
+  .error {{
+    margin-top:1rem;padding:0.85rem 1rem;
+    background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.2);
+    border-radius:var(--radius-sm);font-size:0.85rem;color:#f87171;text-align:center;
+  }}
+  .foot {{text-align:center;margin-top:1.5rem;font-size:0.8rem;color:var(--text-dim);}}
+  .foot a {{color:var(--accent-light);}}
+  .foot a:hover {{text-decoration:underline;}}
+
+  @media(max-width:600px){{
+    .container {{padding:2rem 1rem 3rem;}}
+    .form-card {{padding:1.5rem 1.25rem;}}
+    .nav-links {{display:none;}}
+    .row {{flex-direction:column;gap:0;}}
+  }}
 </style>
 </head>
 <body>
-  <div class="card">
+<nav class="nav">
+  <a href="/" class="nav-left">
+    <div class="nav-logo"><img src="/static/logo.webp" alt="TxtAnOffer"></div>
+    <span>TxtAnOffer</span>
+  </a>
+  <div class="nav-links">
+    <a href="/">Home</a>
+    <a href="/demo">Demo</a>
+    <a href="/pricing">Pricing</a>
+  </div>
+  <a href="/signup" class="nav-cta">Start Free Trial</a>
+</nav>
+
+<div class="container">
+  <div class="page-header">
     <h1>Agent Profile</h1>
-    <p class="sub">Your info auto-fills the cover page on every offer you generate.</p>
+    <p>Your info auto-fills the cover page on every offer you generate.</p>
+  </div>
+
+  <div class="form-card">
     <form method="POST" action="/profile">
-      <label>Phone number (used for SMS offers)</label>
+      <label class="field-label">Phone number (used for SMS offers)</label>
       <input type="text" name="phone" placeholder="+15125551234" value="{phone or existing.get('phone', '')}" required>
 
-      <label>Full name</label>
+      <label class="field-label">Full name</label>
       <input type="text" name="name" placeholder="Jane Smith" value="{existing.get('name', '')}">
 
-      <label>TREC license number</label>
+      <label class="field-label">TREC license number</label>
       <input type="text" name="license" placeholder="0123456" value="{existing.get('license', '')}">
 
-      <label>Email</label>
+      <label class="field-label">Email</label>
       <input type="email" name="email" placeholder="jane@realty.com" value="{existing.get('email', '')}">
 
-      <label>Brokerage</label>
+      <label class="field-label">Brokerage</label>
       <input type="text" name="brokerage" placeholder="Keller Williams" value="{existing.get('brokerage', '')}">
 
-      <label>Title company</label>
+      <label class="field-label">Title company</label>
       <input type="text" name="title_company" placeholder="Texas Title Co." value="{existing.get('title_company', '')}">
 
       <div class="row">
         <div>
-          <label>Default earnest %</label>
+          <label class="field-label">Default earnest %</label>
           <input type="number" name="earnest_pct" step="0.1" min="0.1" max="10" value="{existing.get('default_earnest_pct', 0.01) * 100:.1f}">
         </div>
         <div>
-          <label>Default option fee $</label>
+          <label class="field-label">Default option fee $</label>
           <input type="number" name="option_fee" min="0" max="5000" value="{existing.get('default_option_fee', 250)}">
         </div>
       </div>
@@ -1401,16 +3333,422 @@ def profile():
     </form>
     {'<div class="success">Profile saved! Your info will appear on all future offers.</div>' if saved else ''}
     {'<div class="error">' + error + '</div>' if error else ''}
-    <div class="foot"><a href="/demo">&larr; Back to demo</a></div>
   </div>
+  <div class="foot"><a href="/demo">&larr; Back to demo</a> &middot; <a href="/dashboard?phone={phone}&expires=&sig=">Dashboard</a></div>
+</div>
 </body>
 </html>
 """
 
 
+@app.route("/review/<path:filename>")
+def review_offer(filename):
+    if ".." in filename or filename.startswith("/"):
+        abort(400)
+    expires = request.args.get("expires")
+    sig = request.args.get("sig")
+    if not verify_pdf_signature(filename, expires, sig):
+        abort(403)
+
+    offer = get_offer_by_filename(filename)
+    if not offer or not offer["price"]:
+        return redirect(f"/offers/{filename}?expires={expires}&sig={sig}")
+    address = offer["address"]
+    price = offer["price"]
+    down_pct = offer["down_pct"]
+    close_days = offer["close_days"]
+    down_amt = int(price * down_pct) if price else 0
+    loan_amt = price - down_amt if price else 0
+    mls = offer.get("mls", {})
+
+    pdf_url = f"/offers/{filename}?expires={expires}&sig={sig}"
+
+    from datetime import timedelta
+    close_date = (datetime.now() + timedelta(days=close_days)).strftime("%B %d, %Y") if close_days else ""
+
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Offer Review — {address}</title>
+<link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<style>
+:root{{--bg:#0f172a;--bg-card:rgba(255,255,255,0.03);--border:rgba(255,255,255,0.06);
+--text:#f8fafc;--text-muted:#94a3b8;--text-dim:#64748b;--accent:#10b981;--accent-light:#34d399;
+--radius:1.25rem;--radius-sm:0.75rem;}}
+*{{margin:0;padding:0;box-sizing:border-box;}}
+body{{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;
+-webkit-font-smoothing:antialiased;}}
+.top-bar{{background:rgba(16,185,129,0.1);border-bottom:1px solid rgba(16,185,129,0.2);
+padding:0.6rem 1.5rem;text-align:center;font-size:0.8rem;color:var(--accent-light);font-weight:600;}}
+.container{{max-width:600px;margin:0 auto;padding:1.5rem 1rem;}}
+.address-card{{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
+padding:1.5rem;text-align:center;margin-bottom:1rem;}}
+.address-card h1{{font-size:1.25rem;font-weight:700;margin-bottom:0.25rem;}}
+.address-card .meta{{color:var(--text-dim);font-size:0.8rem;}}
+.stats{{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.5rem;margin-bottom:1rem;}}
+.stat{{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);
+padding:0.85rem 0.5rem;text-align:center;}}
+.stat-label{{font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;
+color:var(--text-dim);margin-bottom:0.2rem;}}
+.stat-value{{font-size:1rem;font-weight:700;}}
+.stat-value.accent{{color:var(--accent-light);}}
+.actions{{display:flex;flex-direction:column;gap:0.6rem;margin-bottom:1.25rem;}}
+.btn{{display:flex;align-items:center;justify-content:center;gap:0.5rem;padding:0.9rem 1rem;
+border-radius:var(--radius-sm);font-family:inherit;font-size:0.9rem;font-weight:600;
+text-decoration:none;border:none;cursor:pointer;transition:all 0.2s;}}
+.btn-primary{{background:linear-gradient(135deg,var(--accent),#059669);color:#fff;}}
+.btn-primary:hover{{transform:translateY(-1px);box-shadow:0 6px 20px rgba(16,185,129,0.3);}}
+.btn-secondary{{background:var(--bg-card);color:var(--text);border:1px solid var(--border);}}
+.btn-secondary:hover{{border-color:var(--accent);}}
+.btn-outline{{background:transparent;color:var(--text-muted);border:1px solid var(--border);}}
+.btn-outline:hover{{border-color:var(--accent);color:var(--accent-light);}}
+.pdf-frame{{width:100%;height:70vh;border:1px solid var(--border);border-radius:var(--radius-sm);
+background:#1e293b;}}
+.email-form{{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
+padding:1.25rem;margin-bottom:1rem;display:none;}}
+.email-form.show{{display:block;}}
+.email-form label{{font-size:0.8rem;font-weight:600;color:var(--text-dim);display:block;margin-bottom:0.4rem;}}
+.email-form input{{width:100%;padding:0.7rem;background:rgba(255,255,255,0.04);border:1px solid var(--border);
+border-radius:var(--radius-sm);color:var(--text);font-family:inherit;font-size:0.9rem;outline:none;
+margin-bottom:0.75rem;}}
+.email-form input:focus{{border-color:var(--accent);}}
+.email-status{{font-size:0.85rem;padding:0.5rem;border-radius:var(--radius-sm);margin-top:0.5rem;display:none;}}
+.email-status.success{{display:block;background:rgba(16,185,129,0.1);color:var(--accent-light);}}
+.email-status.error{{display:block;background:rgba(239,68,68,0.1);color:#fca5a5;}}
+.disclaimer{{font-size:0.75rem;color:var(--text-dim);text-align:center;padding:1rem;
+border-top:1px solid var(--border);margin-top:1rem;}}
+@media(max-width:400px){{
+.stats{{grid-template-columns:1fr 1fr;}}
+.stat:last-child{{grid-column:span 2;}}
+}}
+</style>
+</head>
+<body>
+<div class="top-bar">TREC 20-19 Draft — Review before signing</div>
+<div class="container">
+<div class="address-card">
+<h1>{address}</h1>
+<div class="meta">TREC One to Four Family Residential Contract</div>
+</div>
+
+<div class="stats">
+<div class="stat"><div class="stat-label">Price</div><div class="stat-value accent">${price:,}</div></div>
+<div class="stat"><div class="stat-label">Down</div><div class="stat-value">{down_pct*100:.0f}% (${down_amt:,})</div></div>
+<div class="stat"><div class="stat-label">Close</div><div class="stat-value">{close_date}</div></div>
+</div>
+
+{'<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:0.6rem;text-align:center;margin-bottom:1rem;color:var(--text-muted);font-size:0.8rem;">' + ' &middot; '.join([x for x in [f"{mls.get('bed')} Bed" if mls.get('bed') else '', f"{mls.get('bath')} Bath" if mls.get('bath') else '', f"{mls.get('sqft'):,} Sqft" if mls.get('sqft') else '', f"Built {mls.get('year_built')}" if mls.get('year_built') else ''] if x]) + '</div>' if any(mls.get(k) for k in ('bed','bath','sqft')) else ''}
+
+<div class="actions">
+<button class="btn btn-primary" id="email-toggle">Email to Listing Agent</button>
+<a href="{pdf_url}" class="btn btn-secondary" target="_blank">Open PDF</a>
+<a href="{pdf_url}" class="btn btn-outline" download="{filename}">Download PDF</a>
+</div>
+
+<div class="email-form" id="email-form">
+<label>Listing agent's email</label>
+<input type="email" id="email-to" placeholder="agent@example.com">
+<button class="btn btn-primary" id="send-email-btn" style="width:100%;">Send Offer PDF</button>
+<div class="email-status" id="email-status"></div>
+</div>
+
+<iframe src="{pdf_url}" class="pdf-frame" title="Offer PDF"></iframe>
+
+<div class="disclaimer">
+This is a draft generated by TxtAnOffer. Agent must review all fields before signing or presenting.
+Not affiliated with TREC. &middot; <a href="/" style="color:var(--accent-light);">txtanoffer.com</a>
+</div>
+</div>
+
+<script>
+(function(){{
+var toggle=document.getElementById('email-toggle'),
+    form=document.getElementById('email-form'),
+    sendBtn=document.getElementById('send-email-btn'),
+    statusEl=document.getElementById('email-status'),
+    emailInput=document.getElementById('email-to');
+
+toggle.addEventListener('click',function(){{
+  form.classList.toggle('show');
+  if(form.classList.contains('show'))emailInput.focus();
+}});
+
+sendBtn.addEventListener('click',function(){{
+  var email=emailInput.value.trim();
+  if(!email)return;
+  statusEl.className='email-status';statusEl.style.display='none';
+  sendBtn.textContent='Sending...';sendBtn.disabled=true;
+  fetch('/api/send-email',{{method:'POST',headers:{{'Content-Type':'application/json'}},
+    body:JSON.stringify({{to_email:email,pdf_filename:'{filename}',parsed:{{address:'{address}',price:{price}}},expires:'{expires}',sig:'{sig}'}})
+  }}).then(function(r){{return r.json();}}).then(function(d){{
+    if(d.success){{statusEl.textContent='Sent! The listing agent will receive the PDF.';statusEl.className='email-status success';}}
+    else{{statusEl.textContent=d.error||'Failed to send.';statusEl.className='email-status error';}}
+    sendBtn.textContent='Send Offer PDF';sendBtn.disabled=false;
+  }}).catch(function(){{
+    statusEl.textContent='Network error. Try again.';statusEl.className='email-status error';
+    sendBtn.textContent='Send Offer PDF';sendBtn.disabled=false;
+  }});
+}});
+
+emailInput.addEventListener('keydown',function(e){{if(e.key==='Enter')sendBtn.click();}});
+}})();
+</script>
+</body>
+</html>"""
+
+
 @app.route("/offers/<path:filename>")
 def serve_offer(filename):
+    if ".." in filename or filename.startswith("/"):
+        abort(400)
+    expires = request.args.get("expires")
+    sig = request.args.get("sig")
+    if not verify_pdf_signature(filename, expires, sig):
+        abort(403)
     return send_from_directory(OUTPUT_DIR, filename, as_attachment=False)
+
+
+# --- Dashboard auth (magic link) ------------------------------------------
+
+DASHBOARD_LINK_TTL = int(os.environ.get("DASHBOARD_LINK_TTL", 604800))  # 7 days
+
+
+def sign_dashboard_url(phone, base_url=""):
+    expires = int(time.time()) + DASHBOARD_LINK_TTL
+    sig = hmac.new(PDF_LINK_SECRET.encode(), f"dash:{phone}:{expires}".encode(), hashlib.sha256).hexdigest()[:20]
+    return f"{base_url}/dashboard?phone={phone}&expires={expires}&sig={sig}"
+
+
+def verify_dashboard_signature(phone, expires_str, sig):
+    try:
+        expires = int(expires_str)
+    except (ValueError, TypeError):
+        return False
+    if time.time() > expires:
+        return False
+    expected = hmac.new(PDF_LINK_SECRET.encode(), f"dash:{phone}:{expires}".encode(), hashlib.sha256).hexdigest()[:20]
+    return hmac.compare_digest(sig or "", expected)
+
+
+@app.route("/dashboard")
+def dashboard():
+    phone = request.args.get("phone", "")
+    expires = request.args.get("expires", "")
+    sig = request.args.get("sig", "")
+
+    if not verify_dashboard_signature(phone, expires, sig):
+        return """
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Dashboard - TxtAnOffer</title>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"></noscript>
+<style>
+body{font-family:'Inter',sans-serif;background:#0f172a;color:#f8fafc;display:flex;
+align-items:center;justify-content:center;min-height:100vh;margin:0;padding:20px;}
+.box{background:rgba(255,255,255,0.03);border-radius:1.25rem;padding:2.5rem;max-width:400px;text-align:center;
+border:1px solid rgba(255,255,255,0.06);}
+h2{margin:0 0 0.75rem;font-size:1.35rem;font-weight:700;}
+p{color:#94a3b8;font-size:0.9rem;line-height:1.6;}
+a{color:#34d399;text-decoration:none;}
+a:hover{text-decoration:underline;}
+</style></head><body><div class="box">
+<h2>Access Expired</h2>
+<p>Your dashboard link has expired or is invalid.<br>
+Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
+<p style="margin-top:1rem;"><a href="/">Back to home</a></p></div></body></html>""", 403
+
+    user = get_user(phone)
+    if not user:
+        return redirect("/signup")
+
+    from agent_profiles import get_agent_profile
+    agent = get_agent_profile(phone)
+    offers = get_offers_for_phone(phone)
+    from datetime import timedelta
+
+    # Build offer rows
+    offer_rows = ""
+    for o in offers:
+        pdf_link = sign_pdf_url(o["filename"], request.host_url.rstrip("/"))
+        created = o["created_at"][:10]
+        offer_rows += f"""
+        <tr>
+          <td>{o['address']}</td>
+          <td>${o['price']:,}</td>
+          <td>{o['down_pct']*100:.0f}%</td>
+          <td>{o['close_days']}d</td>
+          <td>{created}</td>
+          <td><a href="{pdf_link}" target="_blank">PDF</a></td>
+        </tr>"""
+
+    if not offer_rows:
+        offer_rows = '<tr><td colspan="6" style="text-align:center;color:var(--text-dim);padding:1.5rem;">No offers yet. Text your first offer to get started.</td></tr>'
+
+    sub_status = "Active" if user["is_subscribed"] else f"Free ({user['offer_count']}/{FREE_OFFER_LIMIT} used)"
+    sub_badge_color = "rgba(16,185,129,0.15)" if user["is_subscribed"] else "rgba(251,191,36,0.15)"
+    sub_badge_text = "var(--accent-light)" if user["is_subscribed"] else "#fbbf24"
+
+    profile_url = f"/profile?phone={phone}"
+
+    return f"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — TxtAnOffer</title>
+<link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<style>
+  :root{{
+    --bg: #0f172a;
+    --bg-elevated: #1e293b;
+    --bg-card: rgba(255,255,255,0.03);
+    --border: rgba(255,255,255,0.06);
+    --border-hover: rgba(16,185,129,0.3);
+    --text: #f8fafc;
+    --text-muted: #94a3b8;
+    --text-dim: #64748b;
+    --accent: #10b981;
+    --accent-light: #34d399;
+    --radius: 1.25rem;
+    --radius-sm: 0.75rem;
+    --transition: all 0.2s ease;
+  }}
+  * {{ margin:0; padding:0; box-sizing:border-box; }}
+  body {{
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+  }}
+  a {{ color:inherit; text-decoration:none; }}
+
+  .nav {{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:1rem 2rem;position:sticky;top:0;
+    background:rgba(15,23,42,0.9);backdrop-filter:blur(16px);
+    -webkit-backdrop-filter:blur(16px);
+    border-bottom:1px solid var(--border);z-index:100;
+  }}
+  .nav-left {{display:flex;align-items:center;gap:0.6rem;font-weight:700;font-size:1.1rem;letter-spacing:-0.02em;}}
+  .nav-logo {{width:34px;height:34px;border-radius:50%;overflow:hidden;}}
+  .nav-logo img {{width:100%;height:100%;object-fit:cover;}}
+  .nav-links {{display:flex;gap:2rem;font-size:0.875rem;font-weight:500;color:var(--text-muted);}}
+  .nav-links a {{transition:var(--transition);}}
+  .nav-links a:hover {{color:var(--text);}}
+
+  .container {{max-width:1000px;margin:0 auto;padding:2.5rem 2rem 4rem;}}
+  .greeting {{font-size:1.75rem;font-weight:800;letter-spacing:-0.03em;margin-bottom:0.5rem;}}
+  .sub-badge {{
+    display:inline-block;background:{sub_badge_color};color:{sub_badge_text};
+    padding:0.3rem 0.85rem;border-radius:9999px;font-size:0.75rem;font-weight:700;
+    letter-spacing:0.02em;
+  }}
+
+  .stats {{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1rem;margin:2rem 0;}}
+  .stat {{
+    background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
+    padding:1.5rem;transition:var(--transition);
+  }}
+  .stat:hover {{border-color:var(--border-hover);}}
+  .stat-val {{font-size:1.75rem;font-weight:800;color:var(--accent-light);}}
+  .stat-label {{font-size:0.7rem;font-weight:600;color:var(--text-dim);margin-top:0.25rem;
+    text-transform:uppercase;letter-spacing:0.06em;}}
+
+  h2 {{font-size:1.1rem;font-weight:700;margin:2.5rem 0 1rem;}}
+  .table-wrap {{
+    background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
+    overflow:hidden;
+  }}
+  table {{width:100%;border-collapse:collapse;font-size:0.85rem;}}
+  th {{
+    text-align:left;padding:0.85rem 1rem;
+    background:rgba(255,255,255,0.02);
+    border-bottom:1px solid var(--border);
+    color:var(--text-dim);font-weight:600;font-size:0.7rem;
+    text-transform:uppercase;letter-spacing:0.06em;
+  }}
+  td {{padding:0.85rem 1rem;border-bottom:1px solid var(--border);color:var(--text-muted);}}
+  tr:last-child td {{border-bottom:none;}}
+  td a {{color:var(--accent-light);font-weight:600;}}
+  td a:hover {{text-decoration:underline;}}
+
+  .actions {{display:flex;gap:0.75rem;margin-top:2rem;flex-wrap:wrap;}}
+  .actions a {{
+    background:var(--bg-card);color:var(--text-muted);padding:0.7rem 1.25rem;
+    border-radius:var(--radius-sm);font-size:0.85rem;font-weight:600;
+    border:1px solid var(--border);transition:var(--transition);
+  }}
+  .actions a:hover {{border-color:var(--accent);color:var(--accent-light);}}
+
+  @media(max-width:600px){{
+    .container {{padding:1.5rem 1rem 3rem;}}
+    .stats {{grid-template-columns:1fr 1fr;}}
+    .greeting {{font-size:1.35rem;}}
+    .nav-links {{display:none;}}
+    .table-wrap {{font-size:0.8rem;}}
+    th, td {{padding:0.6rem 0.5rem;}}
+  }}
+</style>
+</head>
+<body>
+<nav class="nav">
+  <a href="/" class="nav-left">
+    <div class="nav-logo"><img src="/static/logo.webp" alt="TxtAnOffer"></div>
+    <span>TxtAnOffer</span>
+  </a>
+  <div class="nav-links">
+    <a href="{profile_url}">Edit Profile</a>
+    <a href="/pricing">Pricing</a>
+  </div>
+</nav>
+
+<div class="container">
+  <div class="greeting">Welcome back{', ' + agent.get('name').split()[0] if agent.get('name') else ''}</div>
+  <span class="sub-badge">{sub_status}</span>
+
+  <div class="stats">
+    <div class="stat"><div class="stat-val">{user['offer_count']}</div><div class="stat-label">Total offers</div></div>
+    <div class="stat"><div class="stat-val">{len(offers)}</div><div class="stat-label">In history</div></div>
+    <div class="stat"><div class="stat-val">{user['offer_count'] * 45}m</div><div class="stat-label">Time saved</div></div>
+  </div>
+
+  <h2>Offer History</h2>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Address</th><th>Price</th><th>Down</th><th>Close</th><th>Date</th><th>PDF</th></tr>
+    {offer_rows}
+  </table>
+  </div>
+
+  <div class="actions">
+    <a href="{profile_url}">Agent Profile</a>
+    <a href="/pricing">{'Manage Subscription' if user['is_subscribed'] else 'Upgrade Plan'}</a>
+  </div>
+</div>
+</body>
+</html>"""
+
+
+@app.route("/health")
+def health():
+    """Health check for uptime monitoring and Railway restart."""
+    import sqlite3
+    db_path = os.environ.get("DATABASE_PATH", "subscriptions.db")
+    try:
+        conn = sqlite3.connect(db_path)
+        conn.execute("SELECT 1")
+        conn.close()
+    except Exception:
+        return jsonify({"status": "unhealthy", "db": "unreachable"}), 503
+    return jsonify({"status": "ok"}), 200
 
 
 if __name__ == "__main__":
