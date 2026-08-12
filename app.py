@@ -31,6 +31,7 @@ from subscriptions import can_generate_offer, increment_offer_count, activate_su
 from analytics import track_event, get_conversion_metrics, get_revenue_metrics, get_recent_sms
 from integrations import send_offer_email, fire_webhook, save_webhook, get_webhook, delete_webhook, send_to_docusign
 from offers_db import record_offer, get_offers_for_phone, get_offer_by_filename
+from sms_utils import parse_incoming_sms
 
 app = Flask(__name__)
 
@@ -53,8 +54,6 @@ ANALYTICS_PASSWORD = os.environ.get("ANALYTICS_PASSWORD", "")
 TWILIO_ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID", "")
 TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN", "")
 TWILIO_PHONE_NUMBER = os.environ.get("TWILIO_PHONE_NUMBER", "+18338970333")
-
-
 def require_api_auth():
     """Check Bearer token on integration endpoints. Returns error response or None."""
     if not API_BEARER_TOKEN:
