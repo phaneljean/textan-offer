@@ -1,3 +1,4 @@
+pip requirements
 Flask==3.0.3
 requests==2.32.3
 pypdf==4.3.1
@@ -7,3 +8,7 @@ reportlab==4.0.7
 PyJWT==2.8.0
 cryptography==42.0.5
 Pillow==10.4.0
+
+# Twilio helper library (used for validating inbound webhook signatures)
+# Pin to a recent 8.x release that's compatible with RequestValidator
+twilio==8.4.0
