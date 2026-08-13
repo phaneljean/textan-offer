@@ -95,4 +95,56 @@ def get_offers_for_phone(phone: str, limit: int = 50) -> list:
     return rows
 
 
+def init_amendments_table():
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS amendments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            offer_id INTEGER NOT NULL,
+            phone TEXT NOT NULL,
+            field TEXT NOT NULL,
+            value INTEGER NOT NULL,
+            filename TEXT,
+            created_at TEXT NOT NULL
+        )
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_amendments_offer ON amendments(offer_id)")
+    conn.commit()
+    conn.close()
+
+
+def record_amendment(offer_id: int, phone: str, field: str, value: int, filename: str):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    now = datetime.utcnow().isoformat()
+    cursor.execute("""
+        INSERT INTO amendments (offer_id, phone, field, value, filename, created_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (offer_id, phone, field, value, filename, now))
+    conn.commit()
+    conn.close()
+
+
+def get_amendments_for_phone(phone: str) -> list:
+    """Grouped by offer_id so dashboard() can nest each amendment under its
+    original offer row."""
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT id, offer_id, field, value, filename, created_at
+        FROM amendments
+        WHERE phone = ?
+        ORDER BY created_at DESC
+    """, (phone,))
+    rows = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    by_offer = {}
+    for r in rows:
+        by_offer.setdefault(r["offer_id"], []).append(r)
+    return by_offer
+
+
 init_offers_table()
+init_amendments_table()

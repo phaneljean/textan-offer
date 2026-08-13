@@ -32,7 +32,7 @@ from agent_profiles import get_agent_profile, save_agent_profile
 from subscriptions import can_generate_offer, increment_offer_count, activate_subscription, deactivate_subscription, get_user, create_user, FREE_OFFER_LIMIT
 from analytics import track_event, get_conversion_metrics, get_revenue_metrics, get_recent_sms
 from integrations import send_offer_email, fire_webhook, save_webhook, get_webhook, delete_webhook, send_to_docusign
-from offers_db import record_offer, get_offers_for_phone, get_offer_by_filename
+from offers_db import record_offer, get_offers_for_phone, get_offer_by_filename, record_amendment, get_amendments_for_phone
 from sms_utils import parse_incoming_sms
 from cleanup import run_cleanup_if_due
 
@@ -1069,6 +1069,7 @@ def sms_reply():
             twilio_send_sms(agent_phone, "Error generating amendment. Please try again or contact support.")
             return "", 200
         filename = os.path.basename(pdf_path)
+        record_amendment(offer["id"], agent_phone, amend["field"], amend["value"], filename)
         pdf_url = sign_pdf_url(filename, request.host_url.rstrip("/"))
         if amend["field"] == "price":
             change_line = f"New Sales Price: ${amend['value']:,}"
@@ -1514,6 +1515,7 @@ def demo():
                         result_html = f'<div class="error">Couldn\'t generate amendment: {e}</div>'
                     else:
                         filename = os.path.basename(pdf_path)
+                        record_amendment(offer["id"], "demo-web", amend["field"], amend["value"], filename)
                         pdf_url = sign_pdf_url(filename)
                         _pdf_expires = int(time.time()) + PDF_LINK_TTL
                         _pdf_sig = hmac.new(PDF_LINK_SECRET.encode(), f"{filename}:{_pdf_expires}".encode(), hashlib.sha256).hexdigest()[:16]
@@ -2220,6 +2222,7 @@ def pricing():
     <ul class="features">
       <li><span class="check">&#10003;</span> Unlimited offers via SMS or web</li>
       <li><span class="check">&#10003;</span> TREC 20-19 + Financing Addendum</li>
+      <li><span class="check">&#10003;</span> Contract amendments (TREC 39-11)</li>
       <li><span class="check">&#10003;</span> 10-second contract generation</li>
       <li><span class="check">&#10003;</span> Agent profile auto-fill</li>
       <li><span class="check">&#10003;</span> Email delivery to listing agents</li>
@@ -3377,6 +3380,11 @@ def faq():
   </div>
 
   <div class="faq-item">
+    <h2>Can I amend an offer after I've already sent it?</h2>
+    <p>Yes &mdash; text <strong>AMEND &lt;address&gt; price &lt;value&gt;</strong> or <strong>AMEND &lt;address&gt; close +&lt;days&gt;</strong> (e.g. <em>"AMEND 1740 Grand Ave price 730k"</em> or <em>"AMEND 1740 Grand Ave close +10"</em>) and you'll get back a filled TREC 39-11 Amendment for that contract. It's included on every plan, works the same way in the <a href="/demo" style="color:var(--accent-light);">web demo</a>, and shows up nested under the original offer on your <strong>Dashboard</strong>. Only the price or closing-date field you asked to change is filled &mdash; everything else on the form is left blank for you to complete, same as the main contract.</p>
+  </div>
+
+  <div class="faq-item">
     <h2>Do you store my texts or offers?</h2>
     <p>Generated PDFs are stored temporarily for download and deleted after 30 days. SMS logs are retained for 90 days for support and debugging. We do not sell or share your data. See our <a href="/privacy" style="color:var(--accent-light);">Privacy Policy</a> for the full breakdown.</p>
   </div>
@@ -3835,9 +3843,10 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
     from agent_profiles import get_agent_profile
     agent = get_agent_profile(phone)
     offers = get_offers_for_phone(phone)
+    amendments_by_offer = get_amendments_for_phone(phone)
     from datetime import timedelta
 
-    # Build offer rows
+    # Build offer rows, with each offer's amendments nested as indented sub-rows
     offer_rows = ""
     for o in offers:
         pdf_link = sign_pdf_url(o["filename"], request.host_url.rstrip("/"))
@@ -3850,6 +3859,17 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
           <td>{o['close_days']}d</td>
           <td>{created}</td>
           <td><a href="{pdf_link}" target="_blank">PDF</a></td>
+        </tr>"""
+        for a in amendments_by_offer.get(o["id"], []):
+            a_pdf_link = sign_pdf_url(a["filename"], request.host_url.rstrip("/"))
+            a_created = a["created_at"][:10]
+            a_desc = f"New price ${a['value']:,}" if a["field"] == "price" else f"Closing +{a['value']}d"
+            offer_rows += f"""
+        <tr style="font-size:0.8rem;color:var(--text-dim);">
+          <td>&#8618; Amendment</td>
+          <td colspan="3">{a_desc}</td>
+          <td>{a_created}</td>
+          <td><a href="{a_pdf_link}" target="_blank">PDF</a></td>
         </tr>"""
 
     if not offer_rows:
