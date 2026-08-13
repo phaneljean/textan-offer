@@ -205,6 +205,55 @@ def parse_offer_sms(text: str) -> dict:
 
     return result
 
+AMEND_PRICE_RE = re.compile(r'\bprice\s+\$?(\d+(?:\.\d+)?)\s*(k|m|million|mil)?\b', re.IGNORECASE)
+AMEND_CLOSE_RE = re.compile(r'\bclose\s+\+\s*(\d+)\b', re.IGNORECASE)
+
+
+def parse_amendment_sms(text: str) -> dict:
+    """
+    Parses "AMEND <address> price <value>" or "AMEND <address> close +<days>".
+    Only one field per amendment -- keeps each generated 39-11 to a single,
+    unambiguous change instead of guessing at combined edits.
+    Returns {"address": str, "field": "price"|"close", "value": int} or {"error": str}.
+    """
+    text = re.sub(r'^AMEND\s+', '', text.strip(), flags=re.IGNORECASE)
+
+    price_m = AMEND_PRICE_RE.search(text)
+    close_m = AMEND_CLOSE_RE.search(text)
+
+    if price_m and close_m:
+        return {"error": "Amend one thing at a time -- price OR close, not both. Send two separate AMEND texts."}
+
+    if not price_m and not close_m:
+        return {"error": "Amend format: AMEND <address> price <value>  OR  AMEND <address> close +<days>\n"
+                          "Example: AMEND 1740 Grand Ave price 730k"}
+
+    if price_m:
+        num = float(price_m.group(1))
+        unit = (price_m.group(2) or '').lower()
+        if unit == 'k':
+            value = int(num * 1_000)
+        elif unit in ('m', 'million', 'mil'):
+            value = int(num * 1_000_000)
+        else:
+            value = int(num)
+        if value <= 0 or value > 50_000_000:
+            return {"error": f"Amended price ${value:,} is out of range."}
+        field = "price"
+        address = text[:price_m.start()].strip(' ,.-')
+    else:
+        value = int(close_m.group(1))
+        if value <= 0 or value > 180:
+            return {"error": f"Amended closing extension of {value} days is out of range (max 180)."}
+        field = "close"
+        address = text[:close_m.start()].strip(' ,.-')
+
+    if len(address) < 5:
+        return {"error": "Could not find a property address. Format: AMEND <address> price <value>  OR  AMEND <address> close +<days>"}
+
+    return {"address": address, "field": field, "value": value}
+
+
 if __name__ == "__main__":
     tests = [
         # Original format

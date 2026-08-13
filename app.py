@@ -25,8 +25,9 @@ import stripe
 import requests as http_requests
 from twilio.rest import Client as TwilioClient
 
-from parser import parse_offer_sms
+from parser import parse_offer_sms, parse_amendment_sms
 from pdf_filler import fill_offer_pdf, OUTPUT_DIR
+from amendment import fill_amendment_pdf
 from agent_profiles import get_agent_profile, save_agent_profile
 from subscriptions import can_generate_offer, increment_offer_count, activate_subscription, deactivate_subscription, get_user, create_user, FREE_OFFER_LIMIT
 from analytics import track_event, get_conversion_metrics, get_revenue_metrics, get_recent_sms
@@ -930,6 +931,23 @@ def lookup_mls(address: str) -> dict:
         return {}
 
 
+def _normalize_addr(s):
+    import re as _re
+    return _re.sub(r'[^a-z0-9]', '', (s or "").lower())
+
+
+def find_recent_offer(phone: str, address_query: str):
+    """Fuzzy-match an address against an agent's offer history for AMEND lookups.
+    Tolerant of abbreviations/partial text since agents won't retype the exact
+    stored address -- most recent match wins (get_offers_for_phone is DESC)."""
+    nq = _normalize_addr(address_query)
+    for o in get_offers_for_phone(phone):
+        no = _normalize_addr(o["address"])
+        if nq and (nq in no or no in nq):
+            return o
+    return None
+
+
 def process_offer(incoming_msg: str, source_id: str):
     """Shared logic: parse -> validate address -> lookup MLS -> fill PDF.
     Returns (parsed, pdf_path_or_None, error_or_None, warnings)."""
@@ -1023,8 +1041,42 @@ def sms_reply():
             "price down% days address\n\n"
             "Examples:\n"
             "725k 3% 21day 1740 Grand Ave\n"
-            "650000 3 percent 30 days 123 Main St"
+            "650000 3 percent 30 days 123 Main St\n\n"
+            "To amend an existing offer:\n"
+            "AMEND <address> price <value>\n"
+            "AMEND <address> close +<days>\n\n"
+            "Examples:\n"
+            "AMEND 1740 Grand Ave price 730k\n"
+            "AMEND 1740 Grand Ave close +10"
         )
+        return "", 200
+
+    if keyword.startswith("AMEND "):
+        amend = parse_amendment_sms(incoming_msg)
+        if "error" in amend:
+            twilio_send_sms(agent_phone, amend["error"])
+            return "", 200
+        offer = find_recent_offer(agent_phone, amend["address"])
+        if not offer:
+            twilio_send_sms(agent_phone,
+                f'No offer found matching "{amend["address"]}". '
+                f'Text DASHBOARD to see your offer history.')
+            return "", 200
+        try:
+            pdf_path = fill_amendment_pdf(offer, amend)
+        except Exception as e:
+            print(f"[SMS] Amendment ERROR: {e}")
+            twilio_send_sms(agent_phone, "Error generating amendment. Please try again or contact support.")
+            return "", 200
+        filename = os.path.basename(pdf_path)
+        pdf_url = sign_pdf_url(filename, request.host_url.rstrip("/"))
+        if amend["field"] == "price":
+            change_line = f"New Sales Price: ${amend['value']:,}"
+        else:
+            change_line = f"Closing extended {amend['value']} days"
+        twilio_send_sms(agent_phone,
+            f"Amendment (TREC 39-11) for {offer['address']}:\n{change_line}\n\n{pdf_url}\n\n"
+            f"Draft only -- review before signing.")
         return "", 200
 
     if keyword == "DASHBOARD":
