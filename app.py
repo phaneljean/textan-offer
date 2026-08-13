@@ -43,9 +43,10 @@ STRIPE_PRICE_ID = os.environ.get("STRIPE_PRICE_ID", "")
 STRIPE_PRICE_ID_PRO = os.environ.get("STRIPE_PRICE_ID_PRO", "")
 STRIPE_PRICE_ID_BROKERAGE = os.environ.get("STRIPE_PRICE_ID_BROKERAGE", "")
 
-# Printed on every page footer of 20-19_2.pdf ("05-04-2026") -- update this
-# alongside the template whenever TREC republishes the form.
-TREC_FORM_CURRENT_AS_OF = "May 4, 2026"
+# TREC's mandatory-use date for the 05-04-2026 revision printed on every page
+# footer of 20-19_2.pdf -- update this alongside the template whenever TREC
+# republishes the form or moves the mandatory-use date.
+TREC_FORM_CURRENT_AS_OF = "July 1, 2026"
 
 PDF_LINK_SECRET = os.environ.get("PDF_LINK_SECRET", "change-me-in-production")
 PDF_LINK_TTL = int(os.environ.get("PDF_LINK_TTL", 86400))  # 24 hours
@@ -1577,7 +1578,7 @@ def demo():
               }}
               </script>
 
-              <div class="disclaimer">Draft only -- agent must review before signing. TREC NO. 20-19 (current as of {TREC_FORM_CURRENT_AS_OF}).</div>
+              <div class="disclaimer">Draft only -- agent must review before signing. TREC NO. 20-19 (mandatory as of {TREC_FORM_CURRENT_AS_OF}).</div>
 
               <div class="share-section">
                 <span class="share-label">Save 45 minutes per offer</span>
@@ -2895,7 +2896,7 @@ def terms():
 
     <h2><span class="section-num">5.</span> TREC Disclaimer</h2>
     <p>TxtAnOffer is an independent, third-party tool. We are NOT affiliated with, endorsed by, or partnered with the Texas Real Estate Commission (TREC) in any capacity. "TREC" and the form numbers referenced herein are trademarks or designations of the Texas Real Estate Commission.</p>
-    <p>We use publicly available TREC promulgated forms as templates. The template currently in use is TREC 20-19, current as of __TREC_FORM_DATE__. If TREC revises or replaces a form, there may be a delay before we update the Service. You are responsible for confirming that the form version used is current and appropriate for your transaction.</p>
+    <p>We use publicly available TREC promulgated forms as templates. The template currently in use is TREC 20-19, mandatory as of __TREC_FORM_DATE__. If TREC revises or replaces a form, there may be a delay before we update the Service. You are responsible for confirming that the form version used is current and appropriate for your transaction.</p>
 
     <h2><span class="section-num">6.</span> Subscription, Payment, and Cancellation</h2>
     <p><strong>Pricing:</strong> Plans start at $29.00 per month, billed monthly via Stripe. See <a href="/pricing" style="color:var(--accent-light);">pricing page</a> for current tiers.</p>
@@ -3278,7 +3279,7 @@ def faq():
 
   <div class="faq-item">
     <h2>Is TxtAnOffer officially approved by TREC?</h2>
-    <p><strong>No</strong> &mdash; and that's important. TxtAnOffer is an independent tool that fills publicly available TREC promulgated forms (currently TREC 20-19, current as of __TREC_FORM_DATE__). We are not affiliated with, endorsed by, or partnered with the Texas Real Estate Commission. You, the licensed agent, are responsible for reviewing every field before signing.</p>
+    <p><strong>No</strong> &mdash; and that's important. TxtAnOffer is an independent tool that fills publicly available TREC promulgated forms (currently TREC 20-19, mandatory as of __TREC_FORM_DATE__). We are not affiliated with, endorsed by, or partnered with the Texas Real Estate Commission. You, the licensed agent, are responsible for reviewing every field before signing.</p>
   </div>
 
   <div class="faq-item">
@@ -3604,7 +3605,7 @@ border-top:1px solid var(--border);margin-top:1rem;}}
 </style>
 </head>
 <body>
-<div class="top-bar">TREC 20-19 (current as of {TREC_FORM_CURRENT_AS_OF}) — Review before signing</div>
+<div class="top-bar">TREC 20-19 (mandatory as of {TREC_FORM_CURRENT_AS_OF}) — Review before signing</div>
 <div class="container">
 <div class="address-card">
 <h1>{address}</h1>
