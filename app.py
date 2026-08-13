@@ -1011,6 +1011,27 @@ def twilio_send_sms(to, body):
     return True
 
 
+SMS_HELP_TEXT = (
+    "TxtAnOffer Commands:\n\n"
+    "HELP - This menu\n"
+    "DASHBOARD - Your offer history\n"
+    "STATUS - Plan & usage\n"
+    "PROFILE - Edit agent info\n"
+    "STOP - Unsubscribe\n\n"
+    "To generate an offer, text:\n"
+    "price down% days address\n\n"
+    "Examples:\n"
+    "725k 3% 21day 1740 Grand Ave\n"
+    "650000 3 percent 30 days 123 Main St\n\n"
+    "To amend an existing offer:\n"
+    "AMEND <address> price <value>\n"
+    "AMEND <address> close +<days>\n\n"
+    "Examples:\n"
+    "AMEND 1740 Grand Ave price 730k\n"
+    "AMEND 1740 Grand Ave close +10"
+)
+
+
 @app.route("/sms", methods=["GET", "POST"])
 def sms_reply():
     if request.method == "GET":
@@ -1033,25 +1054,7 @@ def sms_reply():
     keyword = incoming_msg.strip().upper()
 
     if keyword in ("HELP", "MENU"):
-        twilio_send_sms(agent_phone,
-            "TxtAnOffer Commands:\n\n"
-            "HELP - This menu\n"
-            "DASHBOARD - Your offer history\n"
-            "STATUS - Plan & usage\n"
-            "PROFILE - Edit agent info\n"
-            "STOP - Unsubscribe\n\n"
-            "To generate an offer, text:\n"
-            "price down% days address\n\n"
-            "Examples:\n"
-            "725k 3% 21day 1740 Grand Ave\n"
-            "650000 3 percent 30 days 123 Main St\n\n"
-            "To amend an existing offer:\n"
-            "AMEND <address> price <value>\n"
-            "AMEND <address> close +<days>\n\n"
-            "Examples:\n"
-            "AMEND 1740 Grand Ave price 730k\n"
-            "AMEND 1740 Grand Ave close +10"
-        )
+        twilio_send_sms(agent_phone, SMS_HELP_TEXT)
         return "", 200
 
     if keyword.startswith("AMEND "):
@@ -1523,6 +1526,11 @@ def demo():
     if request.method == "POST":
         offer_text = request.form.get("offer_text", "")
         prefill = offer_text
+
+        if offer_text.strip().upper() in ("HELP", "MENU"):
+            help_html = SMS_HELP_TEXT.replace("<", "&lt;").replace(">", "&gt;").replace("\n", "<br>")
+            result_html = f'<div class="result"><div class="result-stamp">Commands</div><div style="line-height:1.8;color:var(--text-muted);">{help_html}</div></div>'
+            return DEMO_FORM.format(result_html=result_html, prefill=prefill, date_stamp=date_stamp)
 
         if offer_text.strip().upper().startswith("AMEND "):
             amend = parse_amendment_sms(offer_text)
