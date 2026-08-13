@@ -20,8 +20,11 @@ wheels/
 *.egg
 generated_offers/
 .last_cleanup
+.last_reminder_check
 .env
 .venv
 venv/
 ENV/
 
+subscriptions.db
+*.db

@@ -35,6 +35,7 @@ from integrations import send_offer_email, fire_webhook, save_webhook, get_webho
 from offers_db import record_offer, get_offers_for_phone, get_offer_by_filename, record_amendment, get_amendments_for_phone
 from sms_utils import parse_incoming_sms
 from cleanup import run_cleanup_if_due
+from reminders import run_reminders_if_due
 
 app = Flask(__name__)
 
@@ -766,9 +767,10 @@ def index():
       <h3>How SMS Is Used</h3>
       <ul>
         <li><strong>Opt-in:</strong> Users sign up at txtanoffer.com/signup by providing their phone number and explicitly consenting to receive SMS messages.</li>
-        <li><strong>Message frequency:</strong> Messages are sent only in direct response to user-initiated texts. We do not send marketing or promotional messages.</li>
-        <li><strong>Message content:</strong> Replies contain contract confirmation details and a download link to the generated PDF.</li>
+        <li><strong>Message frequency:</strong> Most messages are sent in direct response to user-initiated texts. We also send a one-time reminder a few days before the closing date of an offer you generated. We do not send marketing or promotional messages.</li>
+        <li><strong>Message content:</strong> Replies contain contract confirmation details and a download link to the generated PDF; reminders reference the closing date of an offer already on file.</li>
         <li><strong>Sample message:</strong> <em>"Got it — $725,000, 3% down, closing Aug 13 2026. Your TREC contract is ready: txtanoffer.com/review/1740-grand-ave.pdf — Reply STOP to unsubscribe, HELP for help. Msg&amp;data rates may apply."</em></li>
+        <li><strong>Sample reminder message:</strong> <em>"Reminder: 1740 Grand Ave is scheduled to close on August 13, 2026 (3 days from now). Text DASHBOARD to review. Reply STOP to unsubscribe, HELP for help."</em></li>
         <li><strong>Opt-out:</strong> Reply STOP at any time to unsubscribe from all messages. Reply HELP for support.</li>
         <li><strong>Standard message and data rates may apply.</strong></li>
       </ul>
@@ -1025,6 +1027,7 @@ def sms_reply():
     print(f"[SMS] From: {agent_phone}, Body: {incoming_msg}")
     track_event("sms_received", agent_phone, {"body": incoming_msg})
     run_cleanup_if_due(OUTPUT_DIR)
+    run_reminders_if_due(twilio_send_sms)
 
     # Handle keywords
     keyword = incoming_msg.strip().upper()
@@ -3213,12 +3216,12 @@ def privacy():
     <p><strong>Phone Number:</strong> +1 (833) 897-0333</p>
     <p><strong>Opt-in Method:</strong> Users opt in by (1) entering their phone number and checking an unchecked checkbox on www.txtanoffer.com/signup that says "By checking this box, I agree to receive automated transactional SMS messages from TxtAnOffer at +1 (833) 897-0333 about my offer drafts. Message frequency varies based on usage. Reply STOP to opt out, HELP for help. Msg &amp; data rates may apply. Consent is not a condition of purchase." OR (2) by texting offer details directly to +1 (833) 897-0333 after seeing opt-in disclosure on our website.</p>
     <p><strong>Consent:</strong> By texting our service number +1 (833) 897-0333 or submitting your phone number via our website, you consent to receive SMS messages from TxtAnOffer related to your offer requests and account.</p>
-    <p><strong>Message frequency:</strong> Message frequency varies based on your usage. You will receive one response per offer submitted, plus occasional account notifications (typically 1-5 messages per month).</p>
+    <p><strong>Message frequency:</strong> Message frequency varies based on your usage. You will receive one response per offer submitted, plus occasional account notifications (typically 1-5 messages per month), including a one-time reminder a few days before the closing date of an offer you generated.</p>
     <p><strong>Opt-out:</strong> Reply STOP to any message to unsubscribe from SMS. Reply START to re-subscribe. You can continue using the web interface after opting out of SMS.</p>
     <p><strong>Help:</strong> Reply HELP for support information, or contact support@txtanoffer.com or +1 (833) 897-0333.</p>
     <p><strong>Rates:</strong> Message and data rates may apply depending on your carrier plan.</p>
     <p><strong>Carriers:</strong> Compatible with all major US carriers. Carriers are not liable for delayed or undelivered messages.</p>
-    <p>This is a transactional, user-initiated service only. We do not send marketing or promotional messages.</p>
+    <p>This is a transactional service tied to offers you generate -- most messages are user-initiated, plus the closing-date reminder described above. We do not send marketing or promotional messages.</p>
 
     <h2>4. Data Sharing</h2>
     <p>We do not sell, rent, or trade your personal information. We share data only with:</p>
@@ -3394,6 +3397,11 @@ def faq():
   <div class="faq-item">
     <h2>Can I use this for commercial properties or new construction?</h2>
     <p>TxtAnOffer is designed for residential resale using TREC Form 20-19. For commercial, new construction, or complex transactions, consult a Texas real estate attorney.</p>
+  </div>
+
+  <div class="faq-item">
+    <h2>Will I get reminded before an offer's closing date?</h2>
+    <p>Yes &mdash; TxtAnOffer sends a one-time text a few days before the closing date of an offer you generated, so it doesn't slip past you. This is the one message we send without you texting first; reply STOP anytime to opt out of all messages, including this one.</p>
   </div>
 
   <div class="faq-item">
