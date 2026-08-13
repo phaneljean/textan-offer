@@ -1412,6 +1412,15 @@ DEMO_FORM = """
   }}
   .warning-note .wn-title {{font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:0.25rem;}}
 
+  /* SMS command menu */
+  .cmd-menu {{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem;margin-top:1.5rem;}}
+  .cmd-menu-title {{font-size:0.7rem;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:1rem;}}
+  .cmd-row {{display:flex;gap:1rem;padding:0.55rem 0;border-bottom:1px solid var(--border);align-items:baseline;}}
+  .cmd-row:last-child {{border-bottom:none;}}
+  .cmd-key {{font-family:monospace;color:var(--accent-light);font-size:0.85rem;flex:0 0 auto;white-space:nowrap;}}
+  .cmd-desc {{color:var(--text-dim);font-size:0.85rem;}}
+  @media(max-width:600px){{.cmd-row {{flex-direction:column;gap:0.15rem;}}}}
+
   /* Trust */
   .trust {{display:flex;gap:1.5rem;margin-top:2rem;justify-content:center;}}
   .trust-item {{text-align:center;}}
@@ -1474,6 +1483,18 @@ DEMO_FORM = """
         <div class="hint">Already sent one? Amend it: <code>AMEND 1234 Westheimer Rd price 730k</code> or <code>AMEND 1234 Westheimer Rd close +10</code></div>
       </form>
       {result_html}
+    </div>
+
+    <div class="cmd-menu">
+      <div class="cmd-menu-title">Text these to 1-833-897-0333</div>
+      <div class="cmd-row"><span class="cmd-key">price down% days address</span><span class="cmd-desc">Generate an offer &mdash; e.g. 725k 3% 21day 1740 Grand Ave</span></div>
+      <div class="cmd-row"><span class="cmd-key">AMEND &lt;address&gt; price &lt;value&gt;</span><span class="cmd-desc">Change the sales price on an offer you sent</span></div>
+      <div class="cmd-row"><span class="cmd-key">AMEND &lt;address&gt; close +&lt;days&gt;</span><span class="cmd-desc">Push back the closing date on an offer you sent</span></div>
+      <div class="cmd-row"><span class="cmd-key">DASHBOARD</span><span class="cmd-desc">Get a link to your offer history</span></div>
+      <div class="cmd-row"><span class="cmd-key">STATUS</span><span class="cmd-desc">Check your plan and usage</span></div>
+      <div class="cmd-row"><span class="cmd-key">PROFILE</span><span class="cmd-desc">Edit your agent info (name, license, brokerage)</span></div>
+      <div class="cmd-row"><span class="cmd-key">HELP</span><span class="cmd-desc">Text this menu back to yourself</span></div>
+      <div class="cmd-row"><span class="cmd-key">STOP</span><span class="cmd-desc">Unsubscribe from all messages</span></div>
     </div>
 
     <div class="trust">
