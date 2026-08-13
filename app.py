@@ -1467,6 +1467,7 @@ DEMO_FORM = """
         <input type="text" name="offer_text" placeholder="725k 3% 21day Harris 1234 Westheimer Rd" value="{prefill}">
         <button type="submit">Generate My Contract</button>
         <div class="hint">price &middot; down % &middot; closing days &middot; county (optional) &middot; address</div>
+        <div class="hint">Already sent one? Amend it: <code>AMEND 1234 Westheimer Rd price 730k</code> or <code>AMEND 1234 Westheimer Rd close +10</code></div>
       </form>
       {result_html}
     </div>
@@ -1497,6 +1498,42 @@ def demo():
     if request.method == "POST":
         offer_text = request.form.get("offer_text", "")
         prefill = offer_text
+
+        if offer_text.strip().upper().startswith("AMEND "):
+            amend = parse_amendment_sms(offer_text)
+            if "error" in amend:
+                result_html = f'<div class="error">{amend["error"]}</div>'
+            else:
+                offer = find_recent_offer("demo-web", amend["address"])
+                if not offer:
+                    result_html = f'<div class="error">No demo offer found matching "{amend["address"]}". Generate an offer for that address above first, then amend it.</div>'
+                else:
+                    try:
+                        pdf_path = fill_amendment_pdf(offer, amend)
+                    except Exception as e:
+                        result_html = f'<div class="error">Couldn\'t generate amendment: {e}</div>'
+                    else:
+                        filename = os.path.basename(pdf_path)
+                        pdf_url = sign_pdf_url(filename)
+                        _pdf_expires = int(time.time()) + PDF_LINK_TTL
+                        _pdf_sig = hmac.new(PDF_LINK_SECRET.encode(), f"{filename}:{_pdf_expires}".encode(), hashlib.sha256).hexdigest()[:16]
+                        change_line = f"New Sales Price: ${amend['value']:,}" if amend["field"] == "price" else f"Closing extended {amend['value']} days"
+                        result_html = f"""
+                        <div class="result">
+                          <div class="result-stamp">Amendment (TREC 39-11)</div>
+                          <div class="result-addr">{offer['address']}</div>
+                          <div class="result-row"><span class="k">Change</span><span class="v">{change_line}</span></div>
+                          <div class="result-ready">Ready for review.</div>
+                          <div class="pdf-preview">
+                            <div class="pdf-preview-label">Amendment preview</div>
+                            <iframe src="/offers/{filename}?expires={_pdf_expires}&sig={_pdf_sig}#page=1&view=FitV" class="pdf-frame"></iframe>
+                            <div class="pdf-mobile"><a href="{pdf_url}" target="_blank">Tap to view your amendment &rarr;</a></div>
+                          </div>
+                          <a href="/offers/{filename}?expires={_pdf_expires}&sig={_pdf_sig}" target="_blank" class="download-btn" download>&darr; Download PDF</a>
+                        </div>
+                        """
+            return DEMO_FORM.format(result_html=result_html, prefill=prefill, date_stamp=date_stamp)
+
         parsed, pdf_path, error, warnings = process_offer(offer_text, "demo-web")
 
         if error:
