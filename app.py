@@ -632,7 +632,7 @@ def index():
         <div class="input-label">Try it now &mdash; no signup required</div>
         <form id="live-demo-form">
           <div class="input-row">
-            <input type="text" id="demo-input" placeholder="725k 3% 21day 1740 Grand Ave, Austin TX 78701" autocomplete="off">
+            <input type="text" id="demo-input" placeholder="725k 3% 21day Harris 1234 Westheimer Rd" autocomplete="off">
             <button type="submit" class="input-btn">Generate &rarr;</button>
           </div>
         </form>
