@@ -3032,7 +3032,7 @@ def terms():
     </ul>
     <p>We use this data solely to operate and improve the Service. We do not sell your personal information to third parties.</p>
     <p><strong>Third-party services:</strong> The Service uses Twilio (SMS delivery), Stripe (payment processing), and Railway on Google Cloud Platform (infrastructure). These services have their own privacy policies and may process your data in accordance with their terms.</p>
-    <p><strong>Data retention:</strong> Generated PDFs are stored temporarily and may be deleted after a reasonable period. We retain account and billing records as required by law.</p>
+    <p><strong>Data retention:</strong> Generated PDFs are stored temporarily and may be deleted after a reasonable period (currently 30 days). We retain account and billing records as required by law. <strong>This is shorter than the 4-year offer/contract/addenda retention period brokers are independently required to maintain under TREC Rule &sect;535.2.</strong> Our retention does not satisfy that obligation &mdash; you are responsible for downloading and separately retaining your own copy of every offer and amendment.</p>
     <p><strong>Security:</strong> We implement reasonable technical and organizational measures to protect your data. However, no system is perfectly secure, and we cannot guarantee absolute security of your information.</p>
 
     <h2><span class="section-num">10.</span> Acceptable Use</h2>
@@ -3236,6 +3236,7 @@ def privacy():
       <li>Billing records: retained as required by applicable tax and accounting laws</li>
       <li>SMS logs: retained for 90 days for support and debugging purposes</li>
     </ul>
+    <p><strong>Note for licensees:</strong> TREC Rule &sect;535.2 requires brokers to independently retain offers, contracts, and related addenda for at least 4 years from closing or termination. Our 30-day PDF retention does not satisfy that requirement &mdash; you are responsible for downloading and separately retaining your own copy of every offer and amendment.</p>
 
     <h2>6. Data Security</h2>
     <p>We implement reasonable technical and organizational measures to protect your data:</p>
@@ -3387,6 +3388,7 @@ def faq():
   <div class="faq-item">
     <h2>Do you store my texts or offers?</h2>
     <p>Generated PDFs are stored temporarily for download and deleted after 30 days. SMS logs are retained for 90 days for support and debugging. We do not sell or share your data. See our <a href="/privacy" style="color:var(--accent-light);">Privacy Policy</a> for the full breakdown.</p>
+    <p><strong>Important:</strong> TREC Rule &sect;535.2 requires brokers to independently retain records of offers, contracts, and related addenda for at least 4 years from closing or termination of the transaction. Our 30-day retention does not satisfy that requirement &mdash; download and save your own copy of every offer and amendment PDF.</p>
   </div>
 
   <div class="faq-item">
