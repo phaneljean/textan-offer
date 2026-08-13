@@ -63,16 +63,15 @@ def fill_financing_addendum(parsed: dict) -> bytes:
     values[FIELD_MAP["address_p1"]] = full_addr
     values[FIELD_MAP["address_p2"]] = full_addr
 
-    # Default: Conventional financing with first mortgage
+    # Default: Conventional financing with first mortgage. Loan amount is real
+    # (derived from the actual offer), but interest rate, term, and origination
+    # cap are terms nobody has agreed to yet -- left blank for the agent to fill
+    # in, same as buyer/seller names and earnest money elsewhere in the app.
     loan_amount = parsed.get("loan_amount", 0)
     if loan_amount > 0:
         checkboxes.append(FIELD_MAP["conventional"])
         checkboxes.append(FIELD_MAP["first_mortgage"])
         values[FIELD_MAP["first_loan_amount"]] = f"${loan_amount:,}"
-        values[FIELD_MAP["first_due_years"]] = "30"
-        values[FIELD_MAP["first_rate"]] = "8"
-        values[FIELD_MAP["first_rate_years"]] = "30"
-        values[FIELD_MAP["first_origination"]] = "2"
 
     # Buyer Approval: default to subject to approval, 21 days
     checkboxes.append(FIELD_MAP["buyer_approval"])
