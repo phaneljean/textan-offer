@@ -36,12 +36,19 @@ def _mark_cleanup_ran():
 
 
 def cleanup_old_pdfs(output_dir: str, max_age_days: int = PDF_RETENTION_DAYS) -> int:
-    """Delete generated PDFs older than max_age_days. Returns count deleted."""
+    """Delete generated PDFs older than max_age_days. Returns count deleted.
+
+    Only touches *.pdf files -- output_dir may be shared with non-PDF files
+    (e.g. subscriptions.db, if DATABASE_PATH points into the same volume),
+    which must never be swept up by this.
+    """
     if not os.path.isdir(output_dir):
         return 0
     cutoff = time.time() - max_age_days * 86400
     deleted = 0
     for name in os.listdir(output_dir):
+        if not name.lower().endswith(".pdf"):
+            continue
         path = os.path.join(output_dir, name)
         try:
             if os.path.isfile(path) and os.path.getmtime(path) < cutoff:
