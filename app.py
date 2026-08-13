@@ -1628,6 +1628,10 @@ def api_parse():
     parsed = parse_offer_sms(text)
     if "error" in parsed:
         return jsonify({"success": False, "error": parsed["error"]}), 400
+    addr_check = validate_address(parsed.get("address", ""))
+    address_issue = addr_check["reason"] if not addr_check["valid"] else (
+        addr_check["warnings"][0] if addr_check["warnings"] else None
+    )
     from datetime import timedelta
     close_date = (datetime.now() + timedelta(days=parsed["close_days"])).strftime("%B %d, %Y")
     down_amt = int(parsed["price"] * parsed["down_payment_pct"])
@@ -1643,6 +1647,8 @@ def api_parse():
         "address": parsed["address"],
         "county": parsed.get("county", ""),
         "city": parsed.get("city", ""),
+        "address_valid": addr_check["valid"],
+        "address_issue": address_issue,
     })
 
 
@@ -1702,6 +1708,9 @@ color:var(--text-dim);margin-bottom:0.25rem;}
 .error-msg{background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);
 border-radius:var(--radius-sm);padding:1rem;color:#fca5a5;font-size:0.9rem;margin-top:1rem;display:none;}
 .error-msg.show{display:block;}
+.warn-msg{background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.2);
+border-radius:var(--radius-sm);padding:1rem;color:#fcd34d;font-size:0.9rem;margin-bottom:1rem;display:none;}
+.warn-msg.show{display:block;}
 .examples{margin-top:2rem;}
 .examples h3{font-size:0.9rem;font-weight:700;margin-bottom:1rem;color:var(--text-muted);}
 .example-chips{display:flex;flex-wrap:wrap;gap:0.5rem;}
@@ -1748,6 +1757,7 @@ padding:0.4rem 0.85rem;font-size:0.8rem;color:var(--text-muted);cursor:pointer;t
 <div class="error-msg" id="error-msg"></div>
 
 <div class="result" id="result">
+<div class="warn-msg" id="warn-msg"></div>
 <div class="result-grid">
 <div class="result-item"><div class="result-label">Address</div><div class="result-value" id="r-addr"></div></div>
 <div class="result-item"><div class="result-label">Sales Price</div><div class="result-value accent" id="r-price"></div></div>
@@ -1787,7 +1797,8 @@ padding:0.4rem 0.85rem;font-size:0.8rem;color:var(--text-muted);cursor:pointer;t
 var input=document.getElementById('offer-input'),
     btn=document.getElementById('parse-btn'),
     result=document.getElementById('result'),
-    errEl=document.getElementById('error-msg');
+    errEl=document.getElementById('error-msg'),
+    warnEl=document.getElementById('warn-msg');
 
 document.querySelectorAll('.chip').forEach(function(c){
   c.addEventListener('click',function(){
@@ -1801,6 +1812,7 @@ btn.addEventListener('click',function(){
   if(!text)return;
   result.classList.remove('show');
   errEl.classList.remove('show');
+  warnEl.classList.remove('show');
   fetch('/api/parse',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({text:text})})
   .then(function(r){return r.json();})
@@ -1813,6 +1825,10 @@ btn.addEventListener('click',function(){
     document.getElementById('r-close').textContent=d.close_date+' ('+d.close_days+' days)';
     var loc=[];if(d.city)loc.push(d.city);if(d.county)loc.push(d.county+' County');loc.push('TX');
     document.getElementById('r-location').textContent=loc.join(', ');
+    if(d.address_issue){
+      warnEl.textContent=(d.address_valid?'Heads up: ':'This address would be rejected when sent for real: ')+d.address_issue;
+      warnEl.classList.add('show');
+    }
     result.classList.add('show');
   })
   .catch(function(){errEl.textContent='Something went wrong.';errEl.classList.add('show');});
