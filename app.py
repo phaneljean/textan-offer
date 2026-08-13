@@ -20,6 +20,7 @@ import os
 import hmac
 import hashlib
 import time
+from urllib.parse import quote as _urlquote
 import stripe
 import requests as http_requests
 from twilio.rest import Client as TwilioClient
@@ -3492,7 +3493,7 @@ def profile():
     {'<div class="success">Profile saved! Your info will appear on all future offers.</div>' if saved else ''}
     {'<div class="error">' + error + '</div>' if error else ''}
   </div>
-  <div class="foot"><a href="/demo">&larr; Back to demo</a> &middot; <a href="/dashboard?phone={phone}&expires=&sig=">Dashboard</a></div>
+  <div class="foot"><a href="/demo">&larr; Back to demo</a> &middot; <a href="/dashboard?phone={_urlquote(phone, safe='')}&expires={expires}&sig={sig}">Dashboard</a></div>
 </div>
 </body>
 </html>
@@ -3677,7 +3678,9 @@ DASHBOARD_LINK_TTL = int(os.environ.get("DASHBOARD_LINK_TTL", 604800))  # 7 days
 def sign_dashboard_url(phone, base_url=""):
     expires = int(time.time()) + DASHBOARD_LINK_TTL
     sig = hmac.new(PDF_LINK_SECRET.encode(), f"dash:{phone}:{expires}".encode(), hashlib.sha256).hexdigest()[:20]
-    return f"{base_url}/dashboard?phone={phone}&expires={expires}&sig={sig}"
+    # Phone starts with "+" -- must be percent-encoded (%2B) or query-string parsing
+    # (which treats literal "+" as a space) corrupts it and every signature check fails.
+    return f"{base_url}/dashboard?phone={_urlquote(phone, safe='')}&expires={expires}&sig={sig}"
 
 
 def verify_dashboard_signature(phone, expires_str, sig):
@@ -3748,7 +3751,7 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
     sub_badge_color = "rgba(16,185,129,0.15)" if user["is_subscribed"] else "rgba(251,191,36,0.15)"
     sub_badge_text = "var(--accent-light)" if user["is_subscribed"] else "#fbbf24"
 
-    profile_url = f"/profile?phone={phone}"
+    profile_url = f"/profile?phone={_urlquote(phone, safe='')}&expires={expires}&sig={sig}"
 
     return f"""
 <!DOCTYPE html>
