@@ -32,6 +32,7 @@ from analytics import track_event, get_conversion_metrics, get_revenue_metrics, 
 from integrations import send_offer_email, fire_webhook, save_webhook, get_webhook, delete_webhook, send_to_docusign
 from offers_db import record_offer, get_offers_for_phone, get_offer_by_filename
 from sms_utils import parse_incoming_sms
+from cleanup import run_cleanup_if_due
 
 app = Flask(__name__)
 
@@ -610,6 +611,7 @@ def index():
       <a href="#how">How it works</a>
       <a href="/pricing">Pricing</a>
       <a href="/demo">Demo</a>
+      <a href="/faq">FAQ</a>
       <a href="/login">Log In</a>
     </div>
     <a href="/signup" class="nav-cta">Start Free Trial</a>
@@ -1002,6 +1004,7 @@ def sms_reply():
     # Log all incoming SMS for debugging
     print(f"[SMS] From: {agent_phone}, Body: {incoming_msg}")
     track_event("sms_received", agent_phone, {"body": incoming_msg})
+    run_cleanup_if_due(OUTPUT_DIR)
 
     # Handle keywords
     keyword = incoming_msg.strip().upper()
@@ -1385,6 +1388,7 @@ DEMO_FORM = """
     <div class="nav-links">
       <a href="/">Home</a>
       <a href="/pricing">Pricing</a>
+      <a href="/faq">FAQ</a>
       <a href="/login">Log In</a>
     </div>
     <a href="/signup" class="nav-cta">Start Free Trial</a>
@@ -1743,6 +1747,7 @@ padding:0.4rem 0.85rem;font-size:0.8rem;color:var(--text-muted);cursor:pointer;t
 <a href="/">Home</a>
 <a href="/demo">Demo</a>
 <a href="/pricing">Pricing</a>
+<a href="/faq">FAQ</a>
 </div>
 <a href="/signup" class="nav-cta">Start Free Trial</a>
 </nav>
@@ -2100,6 +2105,7 @@ def pricing():
   <div class="nav-links">
     <a href="/">Home</a>
     <a href="/demo">Demo</a>
+    <a href="/faq">FAQ</a>
     <a href="/login">Log In</a>
   </div>
   <a href="/signup" class="nav-cta">Start Free Trial</a>
@@ -2811,6 +2817,7 @@ def terms():
     <a href="/">Home</a>
     <a href="/demo">Demo</a>
     <a href="/pricing">Pricing</a>
+    <a href="/faq">FAQ</a>
   </div>
   <a href="/signup" class="nav-cta">Start Free Trial</a>
 </nav>
@@ -3051,6 +3058,7 @@ def privacy():
     <a href="/">Home</a>
     <a href="/demo">Demo</a>
     <a href="/pricing">Pricing</a>
+    <a href="/faq">FAQ</a>
   </div>
   <a href="/signup" class="nav-cta">Start Free Trial</a>
 </nav>
@@ -3152,6 +3160,138 @@ def privacy():
 </div>
 </body>
 </html>"""
+
+
+@app.route("/faq")
+def faq():
+    html = """<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FAQ — TxtAnOffer</title>
+<meta name="description" content="Answers to common questions about TxtAnOffer: TREC affiliation, parser accuracy, data retention, and what the Service does and doesn't cover.">
+<link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<style>
+  :root {
+    --bg: #0f172a;
+    --bg-card: rgba(255,255,255,0.03);
+    --border: rgba(255,255,255,0.06);
+    --text: #f8fafc;
+    --text-muted: #94a3b8;
+    --text-dim: #64748b;
+    --accent: #10b981;
+    --accent-light: #34d399;
+    --radius: 1.25rem;
+    --radius-sm: 0.75rem;
+    --transition: all 0.2s ease;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+    background:var(--bg); color:var(--text); line-height:1.5;
+    -webkit-font-smoothing:antialiased; min-height:100vh;
+  }
+  a { color:inherit; text-decoration:none; }
+  .nav {
+    display:flex;align-items:center;justify-content:space-between;
+    padding:1rem 2rem;position:sticky;top:0;
+    background:rgba(15,23,42,0.9);backdrop-filter:blur(16px);
+    -webkit-backdrop-filter:blur(16px);
+    border-bottom:1px solid var(--border);z-index:100;
+  }
+  .nav-left {display:flex;align-items:center;gap:0.6rem;font-weight:700;font-size:1.1rem;letter-spacing:-0.02em;}
+  .nav-logo {width:34px;height:34px;border-radius:50%;overflow:hidden;}
+  .nav-logo img {width:100%;height:100%;object-fit:cover;}
+  .nav-links {display:flex;gap:2rem;font-size:0.875rem;font-weight:500;color:var(--text-muted);}
+  .nav-links a {transition:var(--transition);}
+  .nav-links a:hover {color:var(--text);}
+  .nav-cta {
+    background:var(--accent);color:#fff;padding:0.55rem 1.35rem;border-radius:9999px;
+    font-size:0.875rem;font-weight:600;text-decoration:none;display:inline-block;
+    transition:var(--transition);
+  }
+  .nav-cta:hover {transform:scale(1.05);box-shadow:0 0 24px rgba(16,185,129,0.4);}
+  .container {max-width:720px;margin:0 auto;padding:3rem 2rem 4rem;}
+  .page-header {margin-bottom:2.5rem;}
+  .page-header h1 {font-size:2rem;font-weight:800;letter-spacing:-0.03em;margin-bottom:0.25rem;}
+  .page-header p {font-size:0.9rem;color:var(--text-muted);}
+  .faq-item {
+    background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
+    padding:1.5rem 1.75rem;margin-bottom:1rem;
+  }
+  .faq-item h2 {font-size:1rem;font-weight:700;margin-bottom:0.6rem;}
+  .faq-item p {font-size:0.85rem;line-height:1.75;color:var(--text-muted);}
+  .faq-item p + p {margin-top:0.5rem;}
+  .faq-item strong {color:var(--text);font-weight:600;}
+  .foot {text-align:center;margin-top:2rem;font-size:0.8rem;color:var(--text-dim);}
+  .foot a {color:var(--accent-light);}
+  .foot a:hover {text-decoration:underline;}
+  @media(max-width:600px) {
+    .container {padding:2rem 1rem 3rem;}
+    .faq-item {padding:1.25rem 1.25rem;}
+    .nav-links {display:none;}
+  }
+</style>
+</head>
+<body>
+<nav class="nav">
+  <a href="/" class="nav-left">
+    <div class="nav-logo"><img src="/static/logo.webp" alt="TxtAnOffer"></div>
+    <span>TxtAnOffer</span>
+  </a>
+  <div class="nav-links">
+    <a href="/">Home</a>
+    <a href="/demo">Demo</a>
+    <a href="/pricing">Pricing</a>
+  </div>
+  <a href="/signup" class="nav-cta">Start Free Trial</a>
+</nav>
+
+<div class="container">
+  <div class="page-header">
+    <h1>Frequently Asked Questions</h1>
+    <p>Straight answers about what TxtAnOffer does, what it doesn't, and how your data is handled.</p>
+  </div>
+
+  <div class="faq-item">
+    <h2>Is TxtAnOffer officially approved by TREC?</h2>
+    <p><strong>No</strong> &mdash; and that's important. TxtAnOffer is an independent tool that fills publicly available TREC promulgated forms (currently TREC 20-19, current as of __TREC_FORM_DATE__). We are not affiliated with, endorsed by, or partnered with the Texas Real Estate Commission. You, the licensed agent, are responsible for reviewing every field before signing.</p>
+  </div>
+
+  <div class="faq-item">
+    <h2>What if the parser gets a number wrong?</h2>
+    <p>Every generated PDF is a draft. You must review all fields &mdash; price, dates, address, percentages &mdash; before presenting to clients. The parser is highly accurate, but you are the final check. Fields like buyer/seller names, earnest money, and financing terms are intentionally left blank for you to complete.</p>
+  </div>
+
+  <div class="faq-item">
+    <h2>Do you store my texts or offers?</h2>
+    <p>Generated PDFs are stored temporarily for download and deleted after 30 days. SMS logs are retained for 90 days for support and debugging. We do not sell or share your data. See our <a href="/privacy" style="color:var(--accent-light);">Privacy Policy</a> for the full breakdown.</p>
+  </div>
+
+  <div class="faq-item">
+    <h2>Can I use this for commercial properties or new construction?</h2>
+    <p>TxtAnOffer is designed for residential resale using TREC Form 20-19. For commercial, new construction, or complex transactions, consult a Texas real estate attorney.</p>
+  </div>
+
+  <div class="faq-item">
+    <h2>What happens if my text doesn't go through?</h2>
+    <p>You'll receive a confirmation reply for every offer received, generally within seconds. If you don't get one within 30 seconds, try again or use the <a href="/demo" style="color:var(--accent-light);">web interface</a> at txtanoffer.com/demo.</p>
+  </div>
+
+  <div class="faq-item">
+    <h2>Do I need E&amp;O insurance to use TxtAnOffer?</h2>
+    <p>TxtAnOffer does not carry Errors &amp; Omissions insurance. Any E&amp;O coverage applicable to a transaction is your own policy as a licensed agent &mdash; it's your responsibility to review and stand behind every document you present or sign. See <a href="/terms" style="color:var(--accent-light);">Terms of Service</a> for details.</p>
+  </div>
+
+  <p class="foot">Still have a question? Email <a href="mailto:support@txtanoffer.com">support@txtanoffer.com</a>.<br><a href="/">&larr; Back to home</a> &middot; <a href="/terms">Terms</a> &middot; <a href="/privacy">Privacy Policy</a></p>
+</div>
+</body>
+</html>"""
+    return html.replace("__TREC_FORM_DATE__", TREC_FORM_CURRENT_AS_OF)
 
 
 @app.route("/profile", methods=["GET", "POST"])

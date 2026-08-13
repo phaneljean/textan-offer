@@ -19,6 +19,7 @@ wheels/
 .installed.cfg
 *.egg
 generated_offers/
+.last_cleanup
 .env
 .venv
 venv/
