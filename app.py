@@ -2286,6 +2286,7 @@ def success():
             phone_from_checkout = sess.customer_details.get('phone', '') if sess.customer_details else ''
         except Exception:
             pass
+    profile_link = sign_dashboard_url(phone_from_checkout, request.host_url.rstrip("/")).replace("/dashboard?", "/profile?")
     return f"""
 <!DOCTYPE html>
 <html lang="en">
@@ -2338,7 +2339,7 @@ def success():
       </ol>
     </div>
 
-    <a href="/profile?phone={phone_from_checkout}" class="btn">Set Up Your Profile &rarr;</a>
+    <a href="{profile_link}" class="btn">Set Up Your Profile &rarr;</a>
   </div>
 </body>
 </html>
@@ -2491,32 +2492,44 @@ def signup():
         name = request.form.get("name", "")
         email = request.form.get("email", "")
         if phone:
+            account_ok = True
             try:
                 if not get_user(phone):
                     create_user(phone)
-                track_event("signup", phone, {"name": name, "email": email})
-                # Send welcome SMS
-                twilio_send_sms(phone,
+            except Exception as e:
+                account_ok = False
+                print(f"[SIGNUP] create_user failed for {phone}: {e}")
+
+            if not account_ok:
+                success_msg = (
+                    '<div class="error">Something went wrong creating your account. '
+                    'Please try again, or text your offer directly to (833) 897-0333 to get started.</div>'
+                )
+            else:
+                try:
+                    track_event("signup", phone, {"name": name, "email": email})
+                except Exception:
+                    pass
+                sms_sent = twilio_send_sms(phone,
                     "Welcome to TxtAnOffer! Text your offer: 725k 3% 21day 123 Main St. "
                     "Msg & data rates may apply. Reply STOP to opt out."
                 )
-            except Exception:
-                pass
-            profile_url = sign_dashboard_url(phone, request.host_url.rstrip("/")).replace("/dashboard?", "/profile?")
-            success_msg = (
-                '<div class="success">'
-                '<strong>You\'re in!</strong> Check your texts for a welcome message.<br><br>'
-                '<span style="font-size:0.8rem;color:var(--text-muted);">You have 3 free offers to try it out.</span>'
-                '</div>'
-                '<div style="display:flex;gap:0.5rem;margin-top:1rem;flex-wrap:wrap;">'
-                f'<a href="{profile_url}" style="flex:1;text-align:center;padding:0.75rem 1rem;'
-                'background:linear-gradient(135deg,var(--accent),#059669);color:#fff;border-radius:var(--radius-sm);'
-                'font-weight:600;font-size:0.85rem;text-decoration:none;">Set Up Your Profile &rarr;</a>'
-                '<a href="/pricing" style="flex:1;text-align:center;padding:0.75rem 1rem;'
-                'background:var(--bg-card);color:var(--text-muted);border:1px solid var(--border);'
-                'border-radius:var(--radius-sm);font-weight:600;font-size:0.85rem;text-decoration:none;">View Plans</a>'
-                '</div>'
-            )
+                profile_url = sign_dashboard_url(phone, request.host_url.rstrip("/")).replace("/dashboard?", "/profile?")
+                intro_line = "Check your texts for a welcome message." if sms_sent else "Tap below to set up your profile now."
+                success_msg = (
+                    '<div class="success">'
+                    f'<strong>You\'re in!</strong> {intro_line}<br><br>'
+                    '<span style="font-size:0.8rem;color:var(--text-muted);">You have 3 free offers to try it out.</span>'
+                    '</div>'
+                    '<div style="display:flex;gap:0.5rem;margin-top:1rem;flex-wrap:wrap;">'
+                    f'<a href="{profile_url}" style="flex:1;text-align:center;padding:0.75rem 1rem;'
+                    'background:linear-gradient(135deg,var(--accent),#059669);color:#fff;border-radius:var(--radius-sm);'
+                    'font-weight:600;font-size:0.85rem;text-decoration:none;">Set Up Your Profile &rarr;</a>'
+                    '<a href="/pricing" style="flex:1;text-align:center;padding:0.75rem 1rem;'
+                    'background:var(--bg-card);color:var(--text-muted);border:1px solid var(--border);'
+                    'border-radius:var(--radius-sm);font-weight:600;font-size:0.85rem;text-decoration:none;">View Plans</a>'
+                    '</div>'
+                )
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -2572,6 +2585,11 @@ def signup():
     margin-top:1rem;padding:1rem;background:rgba(16,185,129,0.08);
     border:1px solid rgba(16,185,129,0.2);border-radius:var(--radius-sm);
     font-size:0.9rem;color:var(--accent-light);text-align:center;
+  }}
+  .error{{
+    margin-top:1rem;padding:1rem;background:rgba(239,68,68,0.08);
+    border:1px solid rgba(239,68,68,0.2);border-radius:var(--radius-sm);
+    font-size:0.9rem;color:#fca5a5;text-align:center;
   }}
   .foot{{text-align:center;margin-top:1.5rem;font-size:0.8rem;color:var(--text-dim);}}
   .foot a{{color:var(--accent-light);text-decoration:none;}}
