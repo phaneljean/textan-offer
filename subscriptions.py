@@ -8,6 +8,16 @@ from datetime import datetime
 DB_PATH = os.environ.get("DATABASE_PATH", "subscriptions.db")
 FREE_OFFER_LIMIT = 3
 
+# Comma-separated phone numbers (e.g. "+15622570392,+13105057120") that get
+# unlimited offers without a real Stripe subscription -- for testing on
+# production. Env-var driven rather than hardcoded so a real phone number
+# never lands in the public repo.
+ADMIN_PHONES = {p.strip() for p in os.environ.get("ADMIN_PHONES", "").split(",") if p.strip()}
+
+
+def is_admin_phone(phone: str) -> bool:
+    return phone in ADMIN_PHONES
+
 def init_db():
     """Create tables if they don't exist"""
     conn = sqlite3.connect(DB_PATH)
@@ -135,6 +145,10 @@ def can_generate_offer(phone: str) -> tuple[bool, str, dict]:
 
     if not user:
         user = create_user(phone)
+
+    # Admin/test numbers have unlimited access without a real subscription
+    if is_admin_phone(phone):
+        return True, "admin", user
 
     # Subscribed users have unlimited access
     if user["is_subscribed"]:

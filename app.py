@@ -29,7 +29,7 @@ from parser import parse_offer_sms, parse_amendment_sms
 from pdf_filler import fill_offer_pdf, OUTPUT_DIR
 from amendment import fill_amendment_pdf
 from agent_profiles import get_agent_profile, save_agent_profile
-from subscriptions import can_generate_offer, increment_offer_count, activate_subscription, deactivate_subscription, get_user, create_user, FREE_OFFER_LIMIT
+from subscriptions import can_generate_offer, increment_offer_count, activate_subscription, deactivate_subscription, get_user, create_user, FREE_OFFER_LIMIT, is_admin_phone
 from analytics import track_event, get_conversion_metrics, get_revenue_metrics, get_recent_sms
 from integrations import send_offer_email, fire_webhook, save_webhook, get_webhook, delete_webhook, send_to_docusign
 from offers_db import record_offer, get_offers_for_phone, get_offer_by_filename, record_amendment, get_amendments_for_phone
@@ -1139,6 +1139,8 @@ def sms_reply():
             create_user(agent_phone)
             twilio_send_sms(agent_phone, f"Welcome! You have {FREE_OFFER_LIMIT} free offers.\n\nJust text your offer:\n725k 3% 21day 1740 Grand Ave\n\nReply HELP for all commands.")
             return "", 200
+        elif is_admin_phone(agent_phone):
+            twilio_send_sms(agent_phone, f"Plan: Admin (Unlimited)\nOffers generated: {user['offer_count']}\n\nText HELP for commands.")
         elif user["is_subscribed"]:
             twilio_send_sms(agent_phone, f"Plan: Unlimited\nOffers generated: {user['offer_count']}\n\nText HELP for commands.")
         else:
@@ -1188,7 +1190,7 @@ def sms_reply():
         record_offer(agent_phone, draft, filename)
         fire_webhook(agent_phone, draft, pdf_url)
 
-        if reason == "subscribed":
+        if reason in ("subscribed", "admin"):
             status_line = ""
         else:
             remaining = FREE_OFFER_LIMIT - new_count
@@ -4020,9 +4022,18 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
     if not offer_rows:
         offer_rows = '<tr><td colspan="6" style="text-align:center;color:var(--text-dim);padding:1.5rem;">No offers yet. Text your first offer to get started.</td></tr>'
 
-    sub_status = "Active" if user["is_subscribed"] else f"Free ({user['offer_count']}/{FREE_OFFER_LIMIT} used)"
-    sub_badge_color = "rgba(16,185,129,0.15)" if user["is_subscribed"] else "rgba(251,191,36,0.15)"
-    sub_badge_text = "var(--accent-light)" if user["is_subscribed"] else "#fbbf24"
+    if is_admin_phone(phone):
+        sub_status = "Admin (Unlimited)"
+        sub_badge_color = "rgba(157,148,255,0.15)"
+        sub_badge_text = "#9d94ff"
+    elif user["is_subscribed"]:
+        sub_status = "Active"
+        sub_badge_color = "rgba(16,185,129,0.15)"
+        sub_badge_text = "var(--accent-light)"
+    else:
+        sub_status = f"Free ({user['offer_count']}/{FREE_OFFER_LIMIT} used)"
+        sub_badge_color = "rgba(251,191,36,0.15)"
+        sub_badge_text = "#fbbf24"
 
     profile_url = f"/profile?phone={_urlquote(phone, safe='')}&expires={expires}&sig={sig}"
 
