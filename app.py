@@ -4026,6 +4026,26 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
 
     profile_url = f"/profile?phone={_urlquote(phone, safe='')}&expires={expires}&sig={sig}"
 
+    def _pf(label, value, fallback="Not set"):
+        shown = value if value else fallback
+        cls = "profile-field-val" if value else "profile-field-val unset"
+        return f'<div><div class="profile-field-label">{label}</div><div class="{cls}">{shown}</div></div>'
+
+    has_profile = any(agent.get(k) for k in ("name", "license", "brokerage", "email", "title_company"))
+    if has_profile:
+        profile_body = f"""
+        <div class="profile-grid">
+          {_pf("Name", agent.get("name"))}
+          {_pf("TREC License", agent.get("license"))}
+          {_pf("Brokerage", agent.get("brokerage"))}
+          {_pf("Email", agent.get("email"))}
+          {_pf("Title Company", agent.get("title_company"))}
+          {_pf("Default Earnest %", f"{agent['default_earnest_pct']*100:.1f}%" if agent.get("default_earnest_pct") else None)}
+          {_pf("Default Option Fee", f"${agent['default_option_fee']:,}" if agent.get("default_option_fee") else None)}
+        </div>"""
+    else:
+        profile_body = f'<p class="profile-empty">Not set up yet. Your name, license, and brokerage auto-fill into every contract once saved. <a href="{profile_url}">Set up your profile &rarr;</a></p>'
+
     return f"""
 <!DOCTYPE html>
 <html lang="en">
@@ -4096,6 +4116,26 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
   .stat-label {{font-size:0.7rem;font-weight:600;color:var(--text-dim);margin-top:0.25rem;
     text-transform:uppercase;letter-spacing:0.06em;}}
 
+  .profile-card {{
+    background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
+    padding:1.5rem 1.75rem;margin-top:0.5rem;
+  }}
+  .profile-card-head {{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;}}
+  .profile-card-head h2 {{margin:0;}}
+  .profile-edit-link {{
+    font-size:0.8rem;font-weight:600;color:var(--accent-light);
+    border:1px solid var(--border);border-radius:var(--radius-sm);padding:0.4rem 0.85rem;
+    transition:var(--transition);
+  }}
+  .profile-edit-link:hover {{border-color:var(--accent);}}
+  .profile-grid {{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1.1rem;}}
+  .profile-field-label {{font-size:0.7rem;font-weight:600;color:var(--text-dim);
+    text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem;}}
+  .profile-field-val {{font-size:0.9rem;color:var(--text);}}
+  .profile-field-val.unset {{color:var(--text-dim);font-style:italic;}}
+  .profile-empty {{color:var(--text-muted);font-size:0.9rem;line-height:1.6;}}
+  .profile-empty a {{color:var(--accent-light);font-weight:600;}}
+
   h2 {{font-size:1.1rem;font-weight:700;margin:2.5rem 0 1rem;}}
   .table-wrap {{
     background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
@@ -4152,6 +4192,14 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
     <div class="stat"><div class="stat-val">{user['offer_count']}</div><div class="stat-label">Total offers</div></div>
     <div class="stat"><div class="stat-val">{len(offers)}</div><div class="stat-label">In history</div></div>
     <div class="stat"><div class="stat-val">{user['offer_count'] * 45}m</div><div class="stat-label">Time saved</div></div>
+  </div>
+
+  <div class="profile-card">
+    <div class="profile-card-head">
+      <h2>Agent Profile</h2>
+      <a href="{profile_url}" class="profile-edit-link">Edit</a>
+    </div>
+    {profile_body}
   </div>
 
   <h2>Offer History</h2>
