@@ -6,11 +6,33 @@ No LLM call needed for the common patterns. Falls back to
 returning an 'error' key with a hint message if it can't parse.
 """
 import re
+from datetime import datetime
 
 PRICE_RE = re.compile(r'(\d+(?:\.\d+)?)\s*([kK]|million|mil|m\b)?')
 PCT_RE = re.compile(r'(\d+(?:\.\d+)?)\s*(?:%|percent|pct)', re.IGNORECASE)
 DAYS_RE = re.compile(r'(\d+)\s*(?:day|days)', re.IGNORECASE)
 CLOSE_PHRASE_RE = re.compile(r'close\s+(?:in\s+)?(\d+)\s*(?:day|days)?', re.IGNORECASE)
+
+# Inspection/option period ("10-day inspection", "10 day option period") --
+# stripped out before the generic day-count patterns above run, so a message
+# combining both a closing timeframe and an inspection period doesn't have
+# the inspection number mistaken for the closing days.
+INSPECTION_RE = re.compile(r'(\d+)[\s-]*day\s*(?:inspection|option)', re.IGNORECASE)
+
+FINANCING_RE = re.compile(r'\b(conventional|fha|va|cash)\b', re.IGNORECASE)
+
+MONTH_NAMES = {
+    'jan': 1, 'january': 1, 'feb': 2, 'february': 2, 'mar': 3, 'march': 3,
+    'apr': 4, 'april': 4, 'may': 5, 'jun': 6, 'june': 6, 'jul': 7, 'july': 7,
+    'aug': 8, 'august': 8, 'sep': 9, 'sept': 9, 'september': 9, 'oct': 10,
+    'october': 10, 'nov': 11, 'november': 11, 'dec': 12, 'december': 12,
+}
+# "close Sept 15", "closing September 15th" -- an absolute date instead of
+# the relative "21day" shorthand. Converted to a day count from today.
+CLOSE_DATE_RE = re.compile(
+    r'clos(?:e|ing)\s+(?:on\s+)?(' + '|'.join(MONTH_NAMES.keys()) + r')\.?\s+(\d{1,2})(?:st|nd|rd|th)?\b',
+    re.IGNORECASE
+)
 # Common TX counties - agents can specify to avoid geocoding lookup
 TX_COUNTIES = [
     'travis', 'harris', 'bexar', 'dallas', 'tarrant', 'collin', 'denton',
@@ -52,20 +74,54 @@ def _parse_pct(text):
             return val / 100
     return None
 
-def _parse_days(text):
+def _parse_days(text, today=None):
+    # Absolute date ("close Sept 15") takes priority when present -- convert
+    # to a day count from today so the rest of the app (which works entirely
+    # in close_days) doesn't need to change.
+    m = CLOSE_DATE_RE.search(text)
+    if m:
+        month = MONTH_NAMES[m.group(1).lower()]
+        day = int(m.group(2))
+        today = today or datetime.now()
+        try:
+            target = datetime(today.year, month, day)
+        except ValueError:
+            target = None
+        if target is not None:
+            if target.date() < today.date():
+                target = datetime(today.year + 1, month, day)
+            return (target.date() - today.date()).days
+
+    # Strip inspection/option-period phrases first so a message that mentions
+    # both a closing timeframe and an inspection period ("21day ... 10-day
+    # inspection") doesn't have the inspection number mistaken for close_days.
+    stripped = INSPECTION_RE.sub('', text)
+
     # "21day", "21 days", "21days"
-    m = DAYS_RE.search(text)
+    m = DAYS_RE.search(stripped)
     if m:
         return int(m.group(1))
     # "close in 21", "close in 21 days"
-    m = CLOSE_PHRASE_RE.search(text)
+    m = CLOSE_PHRASE_RE.search(stripped)
     if m:
         return int(m.group(1))
     # "21 day close" or "21-day close"
-    m = re.search(r'(\d+)[\s-]*day\s*clos', text, re.IGNORECASE)
+    m = re.search(r'(\d+)[\s-]*day\s*clos', stripped, re.IGNORECASE)
     if m:
         return int(m.group(1))
     return None
+
+def _parse_inspection_days(text):
+    # "10-day inspection", "10 day option", "10day option period"
+    m = INSPECTION_RE.search(text)
+    return int(m.group(1)) if m else None
+
+def _parse_financing_type(text):
+    # "conventional", "FHA", "VA", "cash" -- optional; left unset (agent
+    # fills it in) rather than guessed, same policy as every other field
+    # this parser doesn't have explicit evidence for.
+    m = FINANCING_RE.search(text)
+    return m.group(1).lower() if m else None
 
 def _parse_county(text):
     # Look for county name in the text
@@ -98,7 +154,8 @@ def _parse_address(text):
     stripped = re.sub(r'\d+(?:\.\d+)?\s*down\b', '', stripped, flags=re.IGNORECASE)
     stripped = re.sub(r'\d+[\s-]*day\w*', '', stripped, flags=re.IGNORECASE)
     stripped = re.sub(r'\bclose\s+(?:in\s+)?\d+\s*(?:day|days)?\b', '', stripped, flags=re.IGNORECASE)
-    stripped = re.sub(r'\b(?:offer|down|closing|percent|pct)\b', '', stripped, flags=re.IGNORECASE)
+    stripped = CLOSE_DATE_RE.sub('', stripped)
+    stripped = re.sub(r'\b(?:offer|down|closing|percent|pct|inspection|option|conventional|fha|va|cash)\b', '', stripped, flags=re.IGNORECASE)
     # Remove county/city names only when NOT followed by a street suffix
     # (protects addresses like "123 Dallas Pkwy" or "456 El Paso Dr")
     all_place_names = list(TX_COUNTIES) + [
@@ -136,6 +193,8 @@ def parse_offer_sms(text: str) -> dict:
     county = _parse_county(text)  # optional
     city = _parse_city(text)  # optional
     address = _parse_address(text)
+    financing_type = _parse_financing_type(text)  # optional
+    inspection_days = _parse_inspection_days(text)  # optional
 
     missing = [name for name, val in
         [("price", price), ("down_payment_pct", pct),
@@ -202,6 +261,10 @@ def parse_offer_sms(text: str) -> dict:
         result["county"] = county
     if city:
         result["city"] = city
+    if financing_type:
+        result["financing_type"] = financing_type
+    if inspection_days is not None:
+        result["inspection_days"] = inspection_days
 
     return result
 

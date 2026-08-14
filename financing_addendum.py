@@ -14,14 +14,19 @@ FIELD_MAP = {
     "address_p2": "Address of Property",
 
     # Section 1: Financing type checkboxes
+    # NOTE: TREC's PDF export mis-named the VA/USDA/Reverse-Mortgage checkbox
+    # widgets -- their /T field names don't match their on-page position
+    # (confirmed by cross-checking each widget's /Rect against the actual
+    # printed layout). Mapped here by verified position, not by trusting the
+    # field name text.
     "conventional": "1 Conventional Financing",
     "first_mortgage": "a A first mortgage loan in the principal amount of",
     "second_mortgage": "b A second mortgage loan in the principal amount of",
     "texas_veterans": "2 Texas Veterans Loan A loans from the Texas Veterans Land Board of",
     "fha": "3 FHA Insured Financing A Section",
-    "va": "4 VA Guaranteed Financing A VA guaranteed loan of not less than",
-    "usda": "5 USDA Guaranteed Financing A USDAguaranteed loan of not less than",
-    "reverse_mortgage": "6 Reverse Mortgage Financing A reverse mortgage loan also known as a Home Equity",
+    "va": "6 Reverse Mortgage Financing A reverse mortgage loan also known as a Home Equity",
+    "usda": "4 VA Guaranteed Financing A VA guaranteed loan of not less than",
+    "reverse_mortgage": "5 USDA Guaranteed Financing A USDAguaranteed loan of not less than",
 
     # Section 1A(1): Conventional first mortgage fields
     "first_loan_amount": "years with interest not to exceed",
@@ -63,15 +68,25 @@ def fill_financing_addendum(parsed: dict) -> bytes:
     values[FIELD_MAP["address_p1"]] = full_addr
     values[FIELD_MAP["address_p2"]] = full_addr
 
-    # Default: Conventional financing with first mortgage. Loan amount is real
-    # (derived from the actual offer), but interest rate, term, and origination
-    # cap are terms nobody has agreed to yet -- left blank for the agent to fill
-    # in, same as buyer/seller names and earnest money elsewhere in the app.
+    # Financing type checkbox -- defaults to Conventional when the agent
+    # didn't specify one (or said "cash", which this app's model doesn't
+    # support: loan_amount is always > 0 since down_payment_pct tops out at
+    # 50%, so there's always a loan to describe here regardless). Loan amount
+    # is real (derived from the actual offer), but interest rate, term, and
+    # origination cap are terms nobody has agreed to yet -- left blank for
+    # the agent to fill in, same as buyer/seller names and earnest money
+    # elsewhere in the app.
     loan_amount = parsed.get("loan_amount", 0)
+    financing_type = parsed.get("financing_type") or "conventional"
     if loan_amount > 0:
-        checkboxes.append(FIELD_MAP["conventional"])
-        checkboxes.append(FIELD_MAP["first_mortgage"])
-        values[FIELD_MAP["first_loan_amount"]] = f"${loan_amount:,}"
+        if financing_type == "fha":
+            checkboxes.append(FIELD_MAP["fha"])
+        elif financing_type == "va":
+            checkboxes.append(FIELD_MAP["va"])
+        else:
+            checkboxes.append(FIELD_MAP["conventional"])
+            checkboxes.append(FIELD_MAP["first_mortgage"])
+            values[FIELD_MAP["first_loan_amount"]] = f"${loan_amount:,}"
 
     # Buyer Approval: default to subject to approval, 21 days
     checkboxes.append(FIELD_MAP["buyer_approval"])

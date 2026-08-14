@@ -309,6 +309,30 @@ def fill_offer_pdf(parsed: dict, agent_phone: str) -> str:
         overlay_page = PdfReader(overlay_buf).pages[0]
         addr_page.merge_page(overlay_page)
 
+    # Option Period ("Buyer's unrestricted right to terminate... within ___
+    # days after the Effective Date") -- Paragraph 5B on TREC page 2. This
+    # blank has no AcroForm field at all (not even a broken /Kids one like
+    # closing date had) -- confirmed by inspecting every annotation on the
+    # page, none sit in that area. Same reportlab-overlay technique as
+    # closing date and the page-11 address header above.
+    # TREC page 2 of 10 = final PDF page index 2 (cover=0, TREC page 1=idx 1).
+    if parsed.get("inspection_days") is not None:
+        from reportlab.lib.pagesizes import letter
+        from reportlab.pdfgen import canvas as rl_canvas
+
+        option_page = final_writer.pages[2]
+        overlay_buf = io.BytesIO()
+        c = rl_canvas.Canvas(overlay_buf, pagesize=letter)
+        c.setFont("Helvetica", 10)
+        # Blank starts at x=75.6 (top-down y 284.5-296.6); baseline just
+        # above the bottom of that text line, 792 - 296.6 = 495.4.
+        c.drawString(82, 496, str(parsed["inspection_days"]))
+        c.save()
+        overlay_buf.seek(0)
+
+        overlay_page = PdfReader(overlay_buf).pages[0]
+        option_page.merge_page(overlay_page)
+
     safe_addr = "".join(ch for ch in (parsed.get("address") or "offer") if ch.isalnum())[:30]
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     out_path = os.path.join(OUTPUT_DIR, f"TREC20-19_{safe_addr}_{timestamp}.pdf")

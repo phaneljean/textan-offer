@@ -15,7 +15,7 @@ Flow (demo, no SMS/Twilio needed):
 """
 
 from flask import Flask, request, send_from_directory, Response, redirect, jsonify, abort
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 import hmac
 import hashlib
@@ -36,6 +36,7 @@ from offers_db import record_offer, get_offers_for_phone, get_offer_by_filename,
 from sms_utils import parse_incoming_sms
 from cleanup import run_cleanup_if_due
 from reminders import run_reminders_if_due
+from drafts import save_draft, get_draft, clear_draft
 
 app = Flask(__name__)
 
@@ -950,16 +951,19 @@ def find_recent_offer(phone: str, address_query: str):
     return None
 
 
-def process_offer(incoming_msg: str, source_id: str):
-    """Shared logic: parse -> validate address -> lookup MLS -> fill PDF.
-    Returns (parsed, pdf_path_or_None, error_or_None, warnings)."""
+def build_offer_draft(incoming_msg: str, source_id: str):
+    """Parse -> validate address -> lookup MLS -> compute money fields, but
+    stop short of generating the PDF. Used by the AI Offer Builder
+    confirmation flow, which shows this back to the agent and waits for a
+    YES before actually calling fill_offer_pdf.
+    Returns (parsed, error_or_None, warnings)."""
     parsed = parse_offer_sms(incoming_msg)
     if "error" in parsed:
-        return parsed, None, parsed["error"], []
+        return parsed, parsed["error"], []
 
     addr_check = validate_address(parsed.get("address", ""))
     if not addr_check["valid"]:
-        return parsed, None, addr_check["reason"], []
+        return parsed, addr_check["reason"], []
     parsed["address"] = addr_check["normalized"]
     warnings = addr_check["warnings"]
 
@@ -988,12 +992,47 @@ def process_offer(incoming_msg: str, source_id: str):
     parsed["earnest_money"] = int(price * agent["default_earnest_pct"])
     parsed["option_fee"] = agent["default_option_fee"]
 
+    return parsed, None, warnings
+
+
+def process_offer(incoming_msg: str, source_id: str):
+    """Shared logic: build_offer_draft() then immediately fill the PDF, no
+    confirmation step. Used by callers that don't do the AI Offer Builder
+    conversation (e.g. the homepage's instant /api/demo widget).
+    Returns (parsed, pdf_path_or_None, error_or_None, warnings)."""
+    parsed, error, warnings = build_offer_draft(incoming_msg, source_id)
+    if error:
+        return parsed, None, error, warnings
+
     try:
         pdf_path = fill_offer_pdf(parsed, source_id)
     except Exception as e:
         return parsed, None, f"Parsed OK but couldn't generate the PDF yet: {e}", warnings
 
     return parsed, pdf_path, None, warnings
+
+
+FINANCING_LABELS = {"conventional": "Conventional", "fha": "FHA", "va": "VA", "cash": "Cash"}
+
+
+def format_offer_confirmation(parsed: dict) -> str:
+    """The AI Offer Builder's structured confirmation, shown before a PDF is
+    generated. Anything the agent didn't specify shows as "Not specified"
+    rather than a guessed default -- never silently assume; let them add it
+    via a correction before confirming."""
+    close_dt = datetime.now() + timedelta(days=parsed["close_days"])
+    financing_label = FINANCING_LABELS.get(parsed.get("financing_type"), "Not specified")
+    lines = [
+        f"${parsed['price']:,}",
+        f"{parsed['down_payment_pct']*100:.0f}% down",
+        f"{financing_label} financing",
+        f"{close_dt.strftime('%b %d')} closing",
+    ]
+    if parsed.get("inspection_days") is not None:
+        lines.append(f"{parsed['inspection_days']}-day inspection")
+    lines.append(f"\n{parsed['address']}")
+    lines.append("\nEverything look good? Reply YES to create the offer, or send corrections.")
+    return "\n".join(lines)
 
 
 def twilio_send_sms(to, body):
@@ -1019,10 +1058,13 @@ SMS_HELP_TEXT = (
     "PROFILE - Edit agent info\n"
     "STOP - Unsubscribe\n\n"
     "To generate an offer, text:\n"
-    "price down% days address\n\n"
+    "price down% days address\n"
+    "(optionally add financing type and inspection days)\n\n"
     "Examples:\n"
     "725k 3% 21day 1740 Grand Ave\n"
-    "650000 3 percent 30 days 123 Main St\n\n"
+    "725k 10% down conventional close Sept 15 10-day inspection 1740 Grand Ave\n\n"
+    "You'll get a confirmation to review -- reply YES to create the PDF, "
+    "NO to cancel, or send corrections.\n\n"
     "To amend an existing offer:\n"
     "AMEND <address> price <value>\n"
     "AMEND <address> close +<days>\n\n"
@@ -1109,6 +1151,75 @@ def sms_reply():
         twilio_send_sms(agent_phone, f"Edit your agent profile:\n{profile_link}\n\nYour name, license, brokerage, and defaults auto-fill into every contract.")
         return "", 200
 
+    if keyword in ("YES", "Y", "CONFIRM", "CREATE"):
+        draft = get_draft(agent_phone)
+        if not draft:
+            twilio_send_sms(agent_phone, "No pending offer to confirm. Text your offer details to get started.")
+            return "", 200
+
+        try:
+            can_generate, reason, user = can_generate_offer(agent_phone)
+            if not can_generate:
+                track_event("limit_reached", agent_phone)
+                payment_url = request.host_url.rstrip("/") + "/pricing"
+                twilio_send_sms(agent_phone,
+                    f"You've used your {FREE_OFFER_LIMIT} free offers!\n"
+                    f"Subscribe for unlimited: {payment_url}\n"
+                    f"$29/mo, cancel anytime"
+                )
+                return "", 200
+
+            pdf_path = fill_offer_pdf(draft, agent_phone)
+        except Exception as e:
+            print(f"[SMS] Finalize ERROR: {e}")
+            import traceback
+            traceback.print_exc()
+            twilio_send_sms(agent_phone, "Error generating offer. Please try again or contact support.")
+            return "", 200
+
+        clear_draft(agent_phone)
+        track_event("offer_generated", agent_phone, {"price": draft.get("price")})
+        new_count = increment_offer_count(agent_phone)
+        if new_count == FREE_OFFER_LIMIT and reason == "free_trial":
+            track_event("trial_completed", agent_phone)
+
+        filename = os.path.basename(pdf_path)
+        pdf_url = sign_pdf_url(filename, request.host_url.rstrip("/"))
+        record_offer(agent_phone, draft, filename)
+        fire_webhook(agent_phone, draft, pdf_url)
+
+        if reason == "subscribed":
+            status_line = ""
+        else:
+            remaining = FREE_OFFER_LIMIT - new_count
+            if remaining > 0:
+                status_line = f"\n{remaining} free offers remaining"
+            else:
+                payment_url = request.host_url.rstrip("/") + "/pricing"
+                status_line = f"\nLast free offer! Subscribe for unlimited:\n{payment_url}"
+
+        reply = (
+            f"Offer created for {draft['address']}\n\n"
+            f"${draft['price']:,}\n"
+            f"Down: ${draft['down_payment_amount']:,} ({draft['down_payment_pct']*100:.0f}%)\n"
+            f"Loan: ${draft['loan_amount']:,}\n"
+            f"Earnest: ${draft['earnest_money']:,}\n"
+            f"Option: ${draft['option_fee']:,}\n"
+            f"Close: {draft['close_days']} days\n"
+            f"Review: {pdf_url}"
+            f"{status_line}"
+        )
+        twilio_send_sms(agent_phone, reply)
+        return "", 200
+
+    if keyword in ("NO", "CANCEL"):
+        if get_draft(agent_phone):
+            clear_draft(agent_phone)
+            twilio_send_sms(agent_phone, "Offer cancelled. Text new details anytime.")
+        else:
+            twilio_send_sms(agent_phone, "Nothing pending to cancel.")
+        return "", 200
+
     try:
         # Check subscription status
         can_generate, reason, user = can_generate_offer(agent_phone)
@@ -1124,8 +1235,9 @@ def sms_reply():
             )
             return "", 200
 
-        # Process offer
-        parsed, pdf_path, error, warnings = process_offer(incoming_msg, agent_phone)
+        # Build the draft (parse -> validate -> MLS -> money math), but don't
+        # generate the PDF yet -- show a confirmation first and wait for YES.
+        parsed, error, warnings = build_offer_draft(incoming_msg, agent_phone)
 
         if error:
             partial = parse_offer_sms(incoming_msg)
@@ -1144,50 +1256,9 @@ def sms_reply():
             twilio_send_sms(agent_phone, f"{error}{hint_line}")
             return "", 200
 
-        # Track offer generation
-        track_event("offer_generated", agent_phone, {"price": parsed.get("price")})
-
-        # Increment usage count
-        new_count = increment_offer_count(agent_phone)
-
-        if new_count == FREE_OFFER_LIMIT and reason == "free_trial":
-            track_event("trial_completed", agent_phone)
-
-        filename = os.path.basename(pdf_path)
-        pdf_url = sign_pdf_url(filename, request.host_url.rstrip("/"))
-
-        record_offer(agent_phone, parsed, filename)
-
-        # Fire webhook if configured
-        fire_webhook(agent_phone, parsed, pdf_url)
-
-        warning_line = f"\nNote: {' / '.join(warnings)}" if warnings else ""
-
-        if reason == "subscribed":
-            status_line = ""
-        else:
-            remaining = FREE_OFFER_LIMIT - new_count
-            if remaining > 0:
-                status_line = f"\n{remaining} free offers remaining"
-            else:
-                payment_url = request.host_url.rstrip("/") + "/pricing"
-                status_line = f"\nLast free offer! Subscribe for unlimited:\n{payment_url}"
-
-        reply = (
-            f"Got it — ${parsed['price']:,}, {parsed['down_payment_pct']*100:.0f}% down, {parsed['close_days']} days\n"
-            f"Generating for {parsed['address']}...\n\n"
-            f"${parsed['price']:,}\n"
-            f"Down: ${parsed['down_payment_amount']:,} ({parsed['down_payment_pct']*100:.0f}%)\n"
-            f"Loan: ${parsed['loan_amount']:,}\n"
-            f"Earnest: ${parsed['earnest_money']:,}\n"
-            f"Option: ${parsed['option_fee']:,}\n"
-            f"Close: {parsed['close_days']} days\n"
-            f"{warning_line}\n"
-            f"Review: {pdf_url}"
-            f"{status_line}"
-        )
-        twilio_send_sms(agent_phone, reply)
-        print(f"[SMS] Sending reply, length: {len(reply)} chars")
+        save_draft(agent_phone, parsed)
+        warning_line = f"\n\nNote: {' / '.join(warnings)}" if warnings else ""
+        twilio_send_sms(agent_phone, format_offer_confirmation(parsed) + warning_line)
         return "", 200
 
     except Exception as e:
@@ -1482,7 +1553,8 @@ DEMO_FORM = """
         <label class="field-label">Offer details</label>
         <input type="text" name="offer_text" placeholder="725k 3% 21day Harris 1234 Westheimer Rd" value="{prefill}">
         <button type="submit">Generate My Contract</button>
-        <div class="hint">price &middot; down % &middot; closing days &middot; county (optional) &middot; address</div>
+        <div class="hint">price &middot; down % &middot; closing days &middot; county (optional) &middot; address &middot; financing type &amp; inspection days (optional)</div>
+        <div class="hint">You'll get a confirmation to review first &mdash; reply <code>YES</code> to generate the PDF, <code>NO</code> to cancel, or send corrections.</div>
         <div class="hint">Already sent one? Amend it: <code>AMEND 1234 Westheimer Rd price 730k</code> or <code>AMEND 1234 Westheimer Rd close +10</code></div>
       </form>
       {result_html}
@@ -1490,7 +1562,9 @@ DEMO_FORM = """
 
     <div class="cmd-menu">
       <div class="cmd-menu-title">Text these to 1-833-897-0333</div>
-      <div class="cmd-row"><span class="cmd-key">price down% days address</span><span class="cmd-desc">Generate an offer &mdash; e.g. 725k 3% 21day 1740 Grand Ave</span></div>
+      <div class="cmd-row"><span class="cmd-key">price down% days address</span><span class="cmd-desc">Get a confirmation to review &mdash; e.g. 725k 3% 21day 1740 Grand Ave</span></div>
+      <div class="cmd-row"><span class="cmd-key">YES</span><span class="cmd-desc">Confirm the pending offer and generate the PDF</span></div>
+      <div class="cmd-row"><span class="cmd-key">NO</span><span class="cmd-desc">Cancel the pending offer</span></div>
       <div class="cmd-row"><span class="cmd-key">AMEND &lt;address&gt; price &lt;value&gt;</span><span class="cmd-desc">Change the sales price on an offer you sent</span></div>
       <div class="cmd-row"><span class="cmd-key">AMEND &lt;address&gt; close +&lt;days&gt;</span><span class="cmd-desc">Push back the closing date on an offer you sent</span></div>
       <div class="cmd-row"><span class="cmd-key">DASHBOARD</span><span class="cmd-desc">Get a link to your offer history</span></div>
@@ -1568,8 +1642,35 @@ def demo():
                         """
             return DEMO_FORM.format(result_html=result_html, prefill=prefill, date_stamp=date_stamp)
 
-        parsed, pdf_path, error, warnings = process_offer(offer_text, "demo-web")
+        if offer_text.strip().upper() in ("YES", "Y", "CONFIRM", "CREATE"):
+            draft = get_draft("demo-web")
+            if not draft:
+                result_html = '<div class="error">No pending offer to confirm. Enter offer details above first.</div>'
+                return DEMO_FORM.format(result_html=result_html, prefill=prefill, date_stamp=date_stamp)
+            try:
+                pdf_path = fill_offer_pdf(draft, "demo-web")
+            except Exception as e:
+                result_html = f'<div class="error">Couldn\'t generate the PDF: {e}</div>'
+                return DEMO_FORM.format(result_html=result_html, prefill=prefill, date_stamp=date_stamp)
+            clear_draft("demo-web")
+            parsed, error, warnings = draft, None, []
+        elif offer_text.strip().upper() in ("NO", "CANCEL"):
+            if get_draft("demo-web"):
+                clear_draft("demo-web")
+                result_html = '<div class="result"><div class="result-stamp">Cancelled</div><p style="color:var(--text-dim);">Offer cancelled. Enter new details above anytime.</p></div>'
+            else:
+                result_html = '<div class="error">Nothing pending to cancel.</div>'
+            return DEMO_FORM.format(result_html=result_html, prefill=prefill, date_stamp=date_stamp)
+        else:
+            parsed, error, warnings = build_offer_draft(offer_text, "demo-web")
+            if not error:
+                save_draft("demo-web", parsed)
+                summary_html = format_offer_confirmation(parsed).replace("\n", "<br>")
+                result_html = f'<div class="result"><div class="result-stamp">Confirm Offer</div><div style="line-height:1.8;color:var(--text-muted);">{summary_html}</div></div>'
+                return DEMO_FORM.format(result_html=result_html, prefill=prefill, date_stamp=date_stamp)
 
+        # Reached only via the YES-confirm branch above (parsed/pdf_path set,
+        # error=None), or the new-offer-draft branch's error case.
         if error:
             result_html = f'<div class="error">{error}</div>'
         else:
