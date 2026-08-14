@@ -3553,9 +3553,12 @@ def faq():
 
 @app.route("/profile", methods=["GET", "POST"])
 def profile():
-    phone = request.args.get("phone", "").strip()
-    expires = request.args.get("expires", "")
-    sig = request.args.get("sig", "")
+    # request.values (not request.args) so the signature still verifies on
+    # POST -- the form below carries phone/expires/sig forward as hidden
+    # fields rather than a query string, since <form action> drops it.
+    phone = request.values.get("phone", "").strip()
+    expires = request.values.get("expires", "")
+    sig = request.values.get("sig", "")
 
     if not verify_dashboard_signature(phone, expires, sig):
         abort(403)
@@ -3715,6 +3718,8 @@ def profile():
 
   <div class="form-card">
     <form method="POST" action="/profile">
+      <input type="hidden" name="expires" value="{expires}">
+      <input type="hidden" name="sig" value="{sig}">
       <label class="field-label">Phone number (used for SMS offers)</label>
       <input type="text" name="phone" placeholder="+15125551234" value="{phone or existing.get('phone', '')}" required>
 
