@@ -1147,15 +1147,13 @@ def finalize_offer_sms(agent_phone: str, draft: dict):
             payment_url = request.host_url.rstrip("/") + "/pricing"
             status_line = f"\nLast free offer! Subscribe for unlimited:\n{payment_url}"
 
+    includes = "TREC 20-19 + 40-11 Financing Addendum" if draft.get("loan_amount", 0) > 0 else "TREC 20-19"
     reply = (
-        f"Offer created for {draft['address']}\n\n"
-        f"${draft['price']:,}\n"
-        f"Down: ${draft['down_payment_amount']:,} ({draft['down_payment_pct']*100:.0f}%)\n"
-        f"Loan: ${draft['loan_amount']:,}\n"
-        f"Earnest: ${draft['earnest_money']:,}\n"
-        f"Option: ${draft['option_fee']:,}\n"
-        f"Close: {draft['close_days']} days\n"
-        f"Review: {pdf_url}"
+        f"DONE. TREC draft for {draft['address']} ready:\n\n"
+        f"Review & Email: {pdf_url}\n\n"
+        f"Includes: {includes}. DRAFT - Agent must review before signing.\n\n"
+        f"Need to change price/terms? Just text new offer.\n\n"
+        f"Reply DASHBOARD for all offers. STOP to unsubscribe, HELP for help."
         f"{status_line}"
     )
     twilio_send_sms(agent_phone, reply)
