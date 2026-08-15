@@ -853,8 +853,15 @@ _STATE_RE = _re.compile(r"\bTX\b|\btexas\b", _re.IGNORECASE)
 TX_UNVERIFIED_WARNING = "We couldn't verify that this property is in Texas. Please confirm before generating the final contract."
 
 
-def validate_address(address: str) -> dict:
+def validate_address(address: str, raw_text: str = None) -> dict:
     """
+    raw_text: the original, unparsed message text, used only for the TX/state
+    check. The cleaned street address never contains "TX" or a zip code --
+    parser.py's _parse_address() deliberately strips them out to isolate the
+    street portion -- so checking `address` itself for state signal would
+    always fail, flagging every offer as unverified regardless of what the
+    agent actually typed. Falls back to `address` if raw_text isn't given.
+
     Returns:
         {"valid": bool, "reason": str|None, "warnings": list[str], "normalized": str}
     """
@@ -881,7 +888,8 @@ def validate_address(address: str) -> dict:
         )
         return result
 
-    if not _STATE_RE.search(cleaned) and not _TX_ZIP_RE.search(cleaned):
+    state_check_text = raw_text if raw_text is not None else cleaned
+    if not _STATE_RE.search(state_check_text) and not _TX_ZIP_RE.search(state_check_text):
         result["warnings"].append(TX_UNVERIFIED_WARNING)
     if len(cleaned.split()) < 3:
         result["warnings"].append("Address looks short. Please confirm city is included before signing.")
@@ -967,11 +975,12 @@ def build_offer_draft(incoming_msg: str, source_id: str):
     if "error" in parsed:
         return parsed, parsed["error"], []
 
-    addr_check = validate_address(parsed.get("address", ""))
+    addr_check = validate_address(parsed.get("address", ""), raw_text=incoming_msg)
     if not addr_check["valid"]:
         return parsed, addr_check["reason"], []
     parsed["address"] = addr_check["normalized"]
     warnings = addr_check["warnings"]
+    parsed["_tx_needs_confirm"] = TX_UNVERIFIED_WARNING in warnings
 
     # Get MLS data
     mls_data = lookup_mls(parsed["address"])
@@ -1068,7 +1077,7 @@ def format_offer_confirmation(parsed: dict) -> str:
             agent_line += f" - Lic #{agent['license']}"
         lines += ["", agent_line]
 
-    lines.append("Msg rates may apply. Reply STOP to end.")
+    lines.append("Msg rates may apply. Reply STOP to unsubscribe, HELP for help.")
     return "\n".join(lines)
 
 
@@ -1083,7 +1092,8 @@ def format_tx_confirmation(parsed: dict) -> str:
         f"Quick check -- is this in Texas? Reply:\n"
         f"1 = Yes, in Texas{county_hint}\n"
         f"2 = No, different state\n\n"
-        f"If yes, I'll generate the TREC draft."
+        f"If yes, I'll generate the TREC draft.\n\n"
+        f"Reply STOP to unsubscribe, HELP for help."
     )
 
 
@@ -1234,7 +1244,8 @@ def sms_reply():
             change_line = f"Closing extended {amend['value']} days"
         twilio_send_sms(agent_phone,
             f"Amendment (TREC 39-11) for {offer['address']}:\n{change_line}\n\n{pdf_url}\n\n"
-            f"Draft only -- review before signing.")
+            f"Draft only -- review before signing.\n\n"
+            f"Reply STOP to unsubscribe, HELP for help.")
         return "", 200
 
     if keyword == "DASHBOARD":
@@ -1264,15 +1275,13 @@ def sms_reply():
 
     if keyword in ("1", "2"):
         draft = get_draft(agent_phone)
-        if draft:
-            addr_check = validate_address(draft.get("address", ""))
-            if TX_UNVERIFIED_WARNING in addr_check["warnings"]:
-                if keyword == "1":
-                    finalize_offer_sms(agent_phone, draft)
-                else:
-                    clear_draft(agent_phone)
-                    twilio_send_sms(agent_phone, "No problem -- TxtAnOffer currently only handles Texas transactions, so I can't generate a contract for this one. No offer created.")
-                return "", 200
+        if draft and draft.get("_tx_needs_confirm"):
+            if keyword == "1":
+                finalize_offer_sms(agent_phone, draft)
+            else:
+                clear_draft(agent_phone)
+                twilio_send_sms(agent_phone, "No problem -- TxtAnOffer currently only handles Texas transactions, so I can't generate a contract for this one. No offer created.")
+            return "", 200
         # "1"/"2" outside a pending TX-confirmation aren't reserved keywords --
         # fall through to the normal offer/correction parsing below.
 
@@ -1740,8 +1749,9 @@ def demo():
                         """
             return DEMO_FORM.format(result_html=result_html, prefill=prefill, date_stamp=date_stamp)
 
-        if offer_text.strip().upper() in ("1", "2") and get_draft("demo-web") and TX_UNVERIFIED_WARNING in validate_address(get_draft("demo-web").get("address", ""))["warnings"]:
-            draft = get_draft("demo-web")
+        demo_draft_for_1_2 = get_draft("demo-web")
+        if offer_text.strip().upper() in ("1", "2") and demo_draft_for_1_2 and demo_draft_for_1_2.get("_tx_needs_confirm"):
+            draft = demo_draft_for_1_2
             if offer_text.strip() == "1":
                 try:
                     pdf_path = fill_offer_pdf(draft, "demo-web")
@@ -1995,7 +2005,7 @@ def api_parse():
     parsed = parse_offer_sms(text)
     if "error" in parsed:
         return jsonify({"success": False, "error": parsed["error"]}), 400
-    addr_check = validate_address(parsed.get("address", ""))
+    addr_check = validate_address(parsed.get("address", ""), raw_text=text)
     address_issue = addr_check["reason"] if not addr_check["valid"] else (
         addr_check["warnings"][0] if addr_check["warnings"] else None
     )
