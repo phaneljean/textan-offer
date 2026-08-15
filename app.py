@@ -25,7 +25,7 @@ import stripe
 import requests as http_requests
 from twilio.rest import Client as TwilioClient
 
-from parser import parse_offer_sms, parse_amendment_sms
+from parser import parse_offer_sms, parse_amendment_sms, parse_correction_sms
 from pdf_filler import fill_offer_pdf, OUTPUT_DIR
 from amendment import fill_amendment_pdf
 from agent_profiles import get_agent_profile, save_agent_profile
@@ -1015,23 +1015,54 @@ def process_offer(incoming_msg: str, source_id: str):
 FINANCING_LABELS = {"conventional": "Conventional", "fha": "FHA", "va": "VA", "cash": "Cash"}
 
 
+def _fmt_pct(pct: float) -> str:
+    pct100 = pct * 100
+    return f"{pct100:.0f}" if pct100 == int(pct100) else f"{pct100:.1f}"
+
+
 def format_offer_confirmation(parsed: dict) -> str:
     """The AI Offer Builder's structured confirmation, shown before a PDF is
-    generated. Anything the agent didn't specify shows as "Not specified"
-    rather than a guessed default -- never silently assume; let them add it
-    via a correction before confirming."""
+    generated. Financing/inspection lines only appear when the agent actually
+    specified them -- never silently guessed. Agent name/license line is
+    omitted if the agent hasn't set up their profile yet."""
     close_dt = datetime.now() + timedelta(days=parsed["close_days"])
-    financing_label = FINANCING_LABELS.get(parsed.get("financing_type"), "Not specified")
+
+    addr_parts = [parsed["address"]]
+    if parsed.get("city"):
+        addr_parts.append(parsed["city"])
+    if parsed.get("zip"):
+        addr_parts.append(f"TX {parsed['zip']}")
+    elif parsed.get("city"):
+        addr_parts.append("TX")
+    full_addr = ", ".join(addr_parts)
+
     lines = [
-        f"${parsed['price']:,}",
-        f"{parsed['down_payment_pct']*100:.0f}% down",
-        f"{financing_label} financing",
-        f"{close_dt.strftime('%b %d')} closing",
+        "Got it.",
+        "",
+        full_addr,
+        f"Price: ${parsed['price']:,} | Down: {_fmt_pct(parsed['down_payment_pct'])}% (${parsed['down_payment_amount']:,})",
+        f"Loan: ${parsed['loan_amount']:,} | Earnest: ${parsed['earnest_money']:,} | Option: ${parsed['option_fee']:,}",
+        f"Close: {close_dt.strftime('%b %d')} ({parsed['close_days']} days)",
     ]
+    if parsed.get("financing_type"):
+        lines.append(f"Financing: {FINANCING_LABELS.get(parsed['financing_type'], parsed['financing_type'].title())}")
     if parsed.get("inspection_days") is not None:
-        lines.append(f"{parsed['inspection_days']}-day inspection")
-    lines.append(f"\n{parsed['address']}")
-    lines.append("\nEverything look good? Reply YES to create the offer, or send corrections.")
+        lines.append(f"Inspection: {parsed['inspection_days']} days")
+
+    lines += [
+        "",
+        "Reply YES to generate TREC draft.",
+        'Reply with corrections (ex: "make it 820k").',
+    ]
+
+    agent = parsed.get("agent") or {}
+    if agent.get("name"):
+        agent_line = agent["name"]
+        if agent.get("license"):
+            agent_line += f" - Lic #{agent['license']}"
+        lines += ["", agent_line]
+
+    lines.append("Msg rates may apply. Reply STOP to end.")
     return "\n".join(lines)
 
 
@@ -1242,6 +1273,29 @@ def sms_reply():
         parsed, error, warnings = build_offer_draft(incoming_msg, agent_phone)
 
         if error:
+            # A short reply like "make it 820k" won't parse as a full new
+            # offer -- if there's already a pending draft, try merging it in
+            # as a correction instead of treating this as a failed first
+            # attempt.
+            existing_draft = get_draft(agent_phone)
+            if existing_draft:
+                correction = parse_correction_sms(incoming_msg)
+                if correction:
+                    existing_draft.update(correction)
+                    if "price" in correction or "down_payment_pct" in correction:
+                        agent = existing_draft.get("agent") or {}
+                        existing_draft["down_payment_amount"] = int(existing_draft["price"] * existing_draft["down_payment_pct"])
+                        existing_draft["loan_amount"] = existing_draft["price"] - existing_draft["down_payment_amount"]
+                        existing_draft["earnest_money"] = int(existing_draft["price"] * agent.get("default_earnest_pct", 0.01))
+                    save_draft(agent_phone, existing_draft)
+                    twilio_send_sms(agent_phone, format_offer_confirmation(existing_draft))
+                    return "", 200
+                twilio_send_sms(agent_phone,
+                    'Didn\'t catch a change. Try something like "make it 820k" or '
+                    '"close in 25 days", or reply YES to confirm as-is, NO to cancel.'
+                )
+                return "", 200
+
             partial = parse_offer_sms(incoming_msg)
             hints = []
             if partial.get("price"):
@@ -1669,6 +1723,23 @@ def demo():
                 save_draft("demo-web", parsed)
                 summary_html = format_offer_confirmation(parsed).replace("\n", "<br>")
                 result_html = f'<div class="result"><div class="result-stamp">Confirm Offer</div><div style="line-height:1.8;color:var(--text-muted);">{summary_html}</div></div>'
+                return DEMO_FORM.format(result_html=result_html, prefill=prefill, date_stamp=date_stamp)
+
+            existing_draft = get_draft("demo-web")
+            if existing_draft:
+                correction = parse_correction_sms(offer_text)
+                if correction:
+                    existing_draft.update(correction)
+                    if "price" in correction or "down_payment_pct" in correction:
+                        agent = existing_draft.get("agent") or {}
+                        existing_draft["down_payment_amount"] = int(existing_draft["price"] * existing_draft["down_payment_pct"])
+                        existing_draft["loan_amount"] = existing_draft["price"] - existing_draft["down_payment_amount"]
+                        existing_draft["earnest_money"] = int(existing_draft["price"] * agent.get("default_earnest_pct", 0.01))
+                    save_draft("demo-web", existing_draft)
+                    summary_html = format_offer_confirmation(existing_draft).replace("\n", "<br>")
+                    result_html = f'<div class="result"><div class="result-stamp">Confirm Offer</div><div style="line-height:1.8;color:var(--text-muted);">{summary_html}</div></div>'
+                else:
+                    result_html = '<div class="error">Didn\'t catch a change. Try something like "make it 820k" or "close in 25 days", or reply YES / NO.</div>'
                 return DEMO_FORM.format(result_html=result_html, prefill=prefill, date_stamp=date_stamp)
 
         # Reached only via the YES-confirm branch above (parsed/pdf_path set,

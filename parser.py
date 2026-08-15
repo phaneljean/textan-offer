@@ -268,6 +268,35 @@ def parse_offer_sms(text: str) -> dict:
 
     return result
 
+def parse_correction_sms(text: str) -> dict:
+    """
+    Extracts whichever offer fields are actually present in a short
+    correction reply to a pending confirmation, e.g. "make it 820k" or
+    "close in 25 days" or "FHA instead". Unlike parse_offer_sms, does NOT
+    require every field -- the caller merges whatever's returned into the
+    already-pending draft rather than starting one from scratch.
+    Returns a dict with only the keys actually found (possibly empty).
+    """
+    text = text.strip()
+    result = {}
+    price = _parse_price(text)
+    if price is not None:
+        result["price"] = price
+    pct = _parse_pct(text)
+    if pct is not None:
+        result["down_payment_pct"] = pct
+    days = _parse_days(text)
+    if days is not None:
+        result["close_days"] = days
+    financing_type = _parse_financing_type(text)
+    if financing_type:
+        result["financing_type"] = financing_type
+    inspection_days = _parse_inspection_days(text)
+    if inspection_days is not None:
+        result["inspection_days"] = inspection_days
+    return result
+
+
 AMEND_PRICE_RE = re.compile(r'\bprice\s+\$?(\d+(?:\.\d+)?)\s*(k|m|million|mil)?\b', re.IGNORECASE)
 AMEND_CLOSE_RE = re.compile(r'\bclose\s+\+\s*(\d+)\b', re.IGNORECASE)
 
