@@ -846,6 +846,12 @@ _STREET_NUMBER_RE = _re.compile(r"^\s*\d{1,6}\b")
 _TX_ZIP_RE = _re.compile(r"\b7[0-9]{4}\b")
 _STATE_RE = _re.compile(r"\bTX\b|\btexas\b", _re.IGNORECASE)
 
+# Internal detection string only -- matched against validate_address()'s
+# warnings list to decide whether to show the TX-confirmation quick-choice.
+# The actual SMS copy shown to the agent is deliberately softer (see the "1"
+# reply handler below); this text never goes out in a message.
+TX_UNVERIFIED_WARNING = "We couldn't verify that this property is in Texas. Please confirm before generating the final contract."
+
 
 def validate_address(address: str) -> dict:
     """
@@ -876,7 +882,7 @@ def validate_address(address: str) -> dict:
         return result
 
     if not _STATE_RE.search(cleaned) and not _TX_ZIP_RE.search(cleaned):
-        result["warnings"].append("We couldn't verify that this property is in Texas. Please confirm before generating the final contract.")
+        result["warnings"].append(TX_UNVERIFIED_WARNING)
     if len(cleaned.split()) < 3:
         result["warnings"].append("Address looks short. Please confirm city is included before signing.")
 
@@ -1066,6 +1072,21 @@ def format_offer_confirmation(parsed: dict) -> str:
     return "\n".join(lines)
 
 
+def format_tx_confirmation(parsed: dict) -> str:
+    """Shown instead of the normal confirmation when validate_address()
+    couldn't confirm the property is in Texas. Deliberately light, framed as
+    a quick choice rather than a warning -- an unverified-state flag reads as
+    alarming if we say so directly."""
+    county_hint = f" ({parsed['county']} Co)" if parsed.get("county") else ""
+    return (
+        f"Got it for {parsed['address']}.\n\n"
+        f"Quick check -- is this in Texas? Reply:\n"
+        f"1 = Yes, in Texas{county_hint}\n"
+        f"2 = No, different state\n\n"
+        f"If yes, I'll generate the TREC draft."
+    )
+
+
 def twilio_send_sms(to, body):
     """Send an SMS via the Twilio REST API (for out-of-band sends, e.g. login/signup links)."""
     if not TWILIO_ACCOUNT_SID or not TWILIO_AUTH_TOKEN:
@@ -1079,6 +1100,65 @@ def twilio_send_sms(to, body):
         return False
     print(f"[SMS] Twilio sent to {to}: {body[:50]}...")
     return True
+
+
+def finalize_offer_sms(agent_phone: str, draft: dict):
+    """Shared finalize step for both the YES confirmation and the "1" (yes,
+    Texas) TX-verification reply: checks the offer limit, generates the PDF,
+    records it, and texts back the result. Always sends exactly one SMS."""
+    try:
+        can_generate, reason, user = can_generate_offer(agent_phone)
+        if not can_generate:
+            track_event("limit_reached", agent_phone)
+            payment_url = request.host_url.rstrip("/") + "/pricing"
+            twilio_send_sms(agent_phone,
+                f"You've used your {FREE_OFFER_LIMIT} free offers!\n"
+                f"Subscribe for unlimited: {payment_url}\n"
+                f"$29/mo, cancel anytime"
+            )
+            return
+
+        pdf_path = fill_offer_pdf(draft, agent_phone)
+    except Exception as e:
+        print(f"[SMS] Finalize ERROR: {e}")
+        import traceback
+        traceback.print_exc()
+        twilio_send_sms(agent_phone, "Error generating offer. Please try again or contact support.")
+        return
+
+    clear_draft(agent_phone)
+    track_event("offer_generated", agent_phone, {"price": draft.get("price")})
+    new_count = increment_offer_count(agent_phone)
+    if new_count == FREE_OFFER_LIMIT and reason == "free_trial":
+        track_event("trial_completed", agent_phone)
+
+    filename = os.path.basename(pdf_path)
+    pdf_url = sign_pdf_url(filename, request.host_url.rstrip("/"))
+    record_offer(agent_phone, draft, filename)
+    fire_webhook(agent_phone, draft, pdf_url)
+
+    if reason in ("subscribed", "admin"):
+        status_line = ""
+    else:
+        remaining = FREE_OFFER_LIMIT - new_count
+        if remaining > 0:
+            status_line = f"\n{remaining} free offers remaining"
+        else:
+            payment_url = request.host_url.rstrip("/") + "/pricing"
+            status_line = f"\nLast free offer! Subscribe for unlimited:\n{payment_url}"
+
+    reply = (
+        f"Offer created for {draft['address']}\n\n"
+        f"${draft['price']:,}\n"
+        f"Down: ${draft['down_payment_amount']:,} ({draft['down_payment_pct']*100:.0f}%)\n"
+        f"Loan: ${draft['loan_amount']:,}\n"
+        f"Earnest: ${draft['earnest_money']:,}\n"
+        f"Option: ${draft['option_fee']:,}\n"
+        f"Close: {draft['close_days']} days\n"
+        f"Review: {pdf_url}"
+        f"{status_line}"
+    )
+    twilio_send_sms(agent_phone, reply)
 
 
 SMS_HELP_TEXT = (
@@ -1184,65 +1264,26 @@ def sms_reply():
         twilio_send_sms(agent_phone, f"Edit your agent profile:\n{profile_link}\n\nYour name, license, brokerage, and defaults auto-fill into every contract.")
         return "", 200
 
+    if keyword in ("1", "2"):
+        draft = get_draft(agent_phone)
+        if draft:
+            addr_check = validate_address(draft.get("address", ""))
+            if TX_UNVERIFIED_WARNING in addr_check["warnings"]:
+                if keyword == "1":
+                    finalize_offer_sms(agent_phone, draft)
+                else:
+                    clear_draft(agent_phone)
+                    twilio_send_sms(agent_phone, "No problem -- TxtAnOffer currently only handles Texas transactions, so I can't generate a contract for this one. No offer created.")
+                return "", 200
+        # "1"/"2" outside a pending TX-confirmation aren't reserved keywords --
+        # fall through to the normal offer/correction parsing below.
+
     if keyword in ("YES", "Y", "CONFIRM", "CREATE"):
         draft = get_draft(agent_phone)
         if not draft:
             twilio_send_sms(agent_phone, "No pending offer to confirm. Text your offer details to get started.")
             return "", 200
-
-        try:
-            can_generate, reason, user = can_generate_offer(agent_phone)
-            if not can_generate:
-                track_event("limit_reached", agent_phone)
-                payment_url = request.host_url.rstrip("/") + "/pricing"
-                twilio_send_sms(agent_phone,
-                    f"You've used your {FREE_OFFER_LIMIT} free offers!\n"
-                    f"Subscribe for unlimited: {payment_url}\n"
-                    f"$29/mo, cancel anytime"
-                )
-                return "", 200
-
-            pdf_path = fill_offer_pdf(draft, agent_phone)
-        except Exception as e:
-            print(f"[SMS] Finalize ERROR: {e}")
-            import traceback
-            traceback.print_exc()
-            twilio_send_sms(agent_phone, "Error generating offer. Please try again or contact support.")
-            return "", 200
-
-        clear_draft(agent_phone)
-        track_event("offer_generated", agent_phone, {"price": draft.get("price")})
-        new_count = increment_offer_count(agent_phone)
-        if new_count == FREE_OFFER_LIMIT and reason == "free_trial":
-            track_event("trial_completed", agent_phone)
-
-        filename = os.path.basename(pdf_path)
-        pdf_url = sign_pdf_url(filename, request.host_url.rstrip("/"))
-        record_offer(agent_phone, draft, filename)
-        fire_webhook(agent_phone, draft, pdf_url)
-
-        if reason in ("subscribed", "admin"):
-            status_line = ""
-        else:
-            remaining = FREE_OFFER_LIMIT - new_count
-            if remaining > 0:
-                status_line = f"\n{remaining} free offers remaining"
-            else:
-                payment_url = request.host_url.rstrip("/") + "/pricing"
-                status_line = f"\nLast free offer! Subscribe for unlimited:\n{payment_url}"
-
-        reply = (
-            f"Offer created for {draft['address']}\n\n"
-            f"${draft['price']:,}\n"
-            f"Down: ${draft['down_payment_amount']:,} ({draft['down_payment_pct']*100:.0f}%)\n"
-            f"Loan: ${draft['loan_amount']:,}\n"
-            f"Earnest: ${draft['earnest_money']:,}\n"
-            f"Option: ${draft['option_fee']:,}\n"
-            f"Close: {draft['close_days']} days\n"
-            f"Review: {pdf_url}"
-            f"{status_line}"
-        )
-        twilio_send_sms(agent_phone, reply)
+        finalize_offer_sms(agent_phone, draft)
         return "", 200
 
     if keyword in ("NO", "CANCEL"):
@@ -1313,6 +1354,9 @@ def sms_reply():
             return "", 200
 
         save_draft(agent_phone, parsed)
+        if TX_UNVERIFIED_WARNING in warnings:
+            twilio_send_sms(agent_phone, format_tx_confirmation(parsed))
+            return "", 200
         warning_line = f"\n\nNote: {' / '.join(warnings)}" if warnings else ""
         twilio_send_sms(agent_phone, format_offer_confirmation(parsed) + warning_line)
         return "", 200
@@ -1698,7 +1742,21 @@ def demo():
                         """
             return DEMO_FORM.format(result_html=result_html, prefill=prefill, date_stamp=date_stamp)
 
-        if offer_text.strip().upper() in ("YES", "Y", "CONFIRM", "CREATE"):
+        if offer_text.strip().upper() in ("1", "2") and get_draft("demo-web") and TX_UNVERIFIED_WARNING in validate_address(get_draft("demo-web").get("address", ""))["warnings"]:
+            draft = get_draft("demo-web")
+            if offer_text.strip() == "1":
+                try:
+                    pdf_path = fill_offer_pdf(draft, "demo-web")
+                except Exception as e:
+                    result_html = f'<div class="error">Couldn\'t generate the PDF: {e}</div>'
+                    return DEMO_FORM.format(result_html=result_html, prefill=prefill, date_stamp=date_stamp)
+                clear_draft("demo-web")
+                parsed, error, warnings = draft, None, []
+            else:
+                clear_draft("demo-web")
+                result_html = '<div class="result"><div class="result-stamp">Cancelled</div><p style="color:var(--text-dim);">TxtAnOffer currently only handles Texas transactions, so no contract was created.</p></div>'
+                return DEMO_FORM.format(result_html=result_html, prefill=prefill, date_stamp=date_stamp)
+        elif offer_text.strip().upper() in ("YES", "Y", "CONFIRM", "CREATE"):
             draft = get_draft("demo-web")
             if not draft:
                 result_html = '<div class="error">No pending offer to confirm. Enter offer details above first.</div>'
@@ -1721,6 +1779,10 @@ def demo():
             parsed, error, warnings = build_offer_draft(offer_text, "demo-web")
             if not error:
                 save_draft("demo-web", parsed)
+                if TX_UNVERIFIED_WARNING in warnings:
+                    tx_html = format_tx_confirmation(parsed).replace("\n", "<br>")
+                    result_html = f'<div class="result"><div class="result-stamp">Confirm Offer</div><div style="line-height:1.8;color:var(--text-muted);">{tx_html}</div></div>'
+                    return DEMO_FORM.format(result_html=result_html, prefill=prefill, date_stamp=date_stamp)
                 summary_html = format_offer_confirmation(parsed).replace("\n", "<br>")
                 result_html = f'<div class="result"><div class="result-stamp">Confirm Offer</div><div style="line-height:1.8;color:var(--text-muted);">{summary_html}</div></div>'
                 return DEMO_FORM.format(result_html=result_html, prefill=prefill, date_stamp=date_stamp)
