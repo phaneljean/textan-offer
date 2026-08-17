@@ -887,6 +887,34 @@ _STREET_NUMBER_RE = _re.compile(r"^\s*\d{1,6}\b")
 _TX_ZIP_RE = _re.compile(r"\b7[0-9]{4}\b")
 _STATE_RE = _re.compile(r"\bTX\b|\btexas\b", _re.IGNORECASE)
 
+# Explicit non-Texas state signal -- distinct from _STATE_RE above, which only
+# checks whether TX/Texas is present. This checks whether ANOTHER state is
+# named, so an address like "Long Beach, CA" gets hard-blocked instead of
+# falling into the soft TX-unverified quick-choice (where an agent could just
+# reply "1 = yes, Texas" and force a TREC contract onto a non-Texas
+# property -- a real liability issue, not just a data-quality one).
+# Abbreviations are only matched in clear address position (", ST" or "ST
+# 12345") to avoid firing on common words that double as state codes (IN, OR,
+# OK, HI, ME, PA...).
+_OTHER_STATE_ABBRS = (
+    "AL|AK|AZ|AR|CA|CO|CT|DE|FL|GA|HI|ID|IL|IN|IA|KS|KY|LA|ME|MD|MA|MI|MN|"
+    "MS|MO|MT|NE|NV|NH|NJ|NM|NY|NC|ND|OH|OK|OR|PA|RI|SC|SD|TN|UT|VT|VA|WA|"
+    "WV|WI|WY|DC"
+)
+_OTHER_STATE_ABBR_RE = _re.compile(
+    r",\s*(" + _OTHER_STATE_ABBRS + r")\b|\b(" + _OTHER_STATE_ABBRS + r")\s+\d{5}\b"
+)
+_OTHER_STATE_NAMES = (
+    "alabama|alaska|arizona|arkansas|california|colorado|connecticut|delaware|"
+    "florida|georgia|hawaii|idaho|illinois|indiana|iowa|kansas|kentucky|"
+    "louisiana|maine|maryland|massachusetts|michigan|minnesota|mississippi|"
+    "missouri|montana|nebraska|nevada|new hampshire|new jersey|new mexico|"
+    "new york|north carolina|north dakota|ohio|oklahoma|oregon|pennsylvania|"
+    "rhode island|south carolina|south dakota|tennessee|utah|vermont|virginia|"
+    "washington|west virginia|wisconsin|wyoming"
+)
+_OTHER_STATE_NAME_RE = _re.compile(r"\b(" + _OTHER_STATE_NAMES + r")\b", _re.IGNORECASE)
+
 # Internal detection string only -- matched against validate_address()'s
 # warnings list to decide whether to show the TX-confirmation quick-choice.
 # The actual SMS copy shown to the agent is deliberately softer (see the "1"
@@ -930,6 +958,20 @@ def validate_address(address: str, raw_text: str = None) -> dict:
         return result
 
     state_check_text = raw_text if raw_text is not None else cleaned
+
+    other_match = _OTHER_STATE_ABBR_RE.search(state_check_text) or _OTHER_STATE_NAME_RE.search(state_check_text)
+    if other_match and not _STATE_RE.search(state_check_text):
+        other_state = next(g for g in other_match.groups() if g).strip()
+        # 2-letter postal codes read as shouting-then-Title-Case if .title()'d
+        # ("CA" -> "Ca"); only title-case genuine multi-word/full names.
+        other_state_display = other_state.upper() if len(other_state) == 2 else other_state.title()
+        result["reason"] = (
+            f"This address looks like it's in {other_state_display}, not Texas. "
+            f"TxtAnOffer only generates Texas TREC contracts -- we can't produce a "
+            f"legally valid contract for a property outside Texas."
+        )
+        return result
+
     if not _STATE_RE.search(state_check_text) and not _TX_ZIP_RE.search(state_check_text):
         result["warnings"].append(TX_UNVERIFIED_WARNING)
     if len(cleaned.split()) < 3:
