@@ -22,6 +22,7 @@ import hashlib
 import time
 from urllib.parse import quote as _urlquote
 import stripe
+import difflib
 import requests as http_requests
 from twilio.rest import Client as TwilioClient
 
@@ -1233,6 +1234,17 @@ SMS_HELP_TEXT = (
 )
 
 
+def _is_help_keyword(word: str) -> bool:
+    """Exact HELP/MENU match, plus tolerance for one-off typos ("hlp", "menuu")
+    so a mistyped text still reaches the command list instead of silently
+    falling through to the offer parser."""
+    if word in ("HELP", "MENU"):
+        return True
+    if not word.isalpha() or not (2 <= len(word) <= 6):
+        return False
+    return bool(difflib.get_close_matches(word, ("HELP", "MENU"), n=1, cutoff=0.75))
+
+
 @app.route("/sms", methods=["GET", "POST"])
 def sms_reply():
     if request.method == "GET":
@@ -1254,7 +1266,7 @@ def sms_reply():
     # Handle keywords
     keyword = incoming_msg.strip().upper()
 
-    if keyword in ("HELP", "MENU"):
+    if _is_help_keyword(keyword):
         twilio_send_sms(agent_phone, SMS_HELP_TEXT)
         return "", 200
 
@@ -1748,7 +1760,7 @@ def demo():
         offer_text = request.form.get("offer_text", "")
         prefill = offer_text
 
-        if offer_text.strip().upper() in ("HELP", "MENU"):
+        if _is_help_keyword(offer_text.strip().upper()):
             help_html = SMS_HELP_TEXT.replace("<", "&lt;").replace(">", "&gt;").replace("\n", "<br>")
             result_html = f'<div class="result"><div class="result-stamp">Commands</div><div style="line-height:1.8;color:var(--text-muted);">{help_html}</div></div>'
             return DEMO_FORM.format(result_html=result_html, prefill=prefill, date_stamp=date_stamp)
