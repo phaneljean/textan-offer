@@ -1238,11 +1238,15 @@ SMS_HELP_TEXT = (
 )
 
 
+_HELP_SYNONYMS = ("HELP", "MENU", "COMMAND", "COMMANDS", "CMD", "OPTIONS", "INFO")
+
+
 def _is_help_keyword(word: str) -> bool:
-    """Exact HELP/MENU match, plus tolerance for one-off typos ("hlp", "menuu")
-    so a mistyped text still reaches the command list instead of silently
-    falling through to the offer parser."""
-    if word in ("HELP", "MENU"):
+    """Exact match against HELP/MENU and reasonable synonyms ("command",
+    "cmd"), plus typo tolerance ("hlp", "menuu") on HELP/MENU specifically,
+    so a mistyped or differently-worded text still reaches the command list
+    instead of silently falling through to the offer parser."""
+    if word in _HELP_SYNONYMS:
         return True
     if not word.isalpha() or not (2 <= len(word) <= 6):
         return False
