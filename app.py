@@ -319,6 +319,19 @@ def index():
       box-shadow: 0 8px 24px rgba(16,185,129,0.35);
     }
     .input-hint { font-size: 0.75rem; color: #475569; }
+    .hero-phone {
+      margin-top: 0.85rem;
+      padding-top: 0.85rem;
+      border-top: 1px solid var(--border);
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+    .hero-phone a {
+      color: var(--accent-light);
+      font-weight: 600;
+      text-decoration: none;
+    }
+    .hero-phone a:hover { text-decoration: underline; }
 
     /* Demo result */
     .demo-loading{display:none;color:var(--accent-light);font-size:0.85rem;padding:0.5rem 0;}
@@ -617,6 +630,7 @@ def index():
       <a href="/pricing">Pricing</a>
       <a href="/demo">Demo</a>
       <a href="/faq">FAQ</a>
+      <a href="/about">About</a>
       <a href="/login">Log In</a>
     </div>
     <a href="/signup" class="nav-cta">Start Free Trial</a>
@@ -651,6 +665,7 @@ def index():
           <div class="res-row"><span class="k">Closing</span><span class="v" id="res-close"></span></div>
           <a href="#" id="res-pdf" class="res-link" target="_blank">Download PDF &rarr;</a>
         </div>
+        <div class="hero-phone">Prefer texting from your phone? <a href="sms:+18338970333">Text (833) 897-0333</a> to get started.</div>
       </div>
 
       <div class="stats">
@@ -783,6 +798,9 @@ def index():
 
   <footer class="footer">
     <div class="footer-links">
+      <a href="/about">About</a>
+      <a href="/faq">FAQ</a>
+      <a href="/contact">Contact</a>
       <a href="/terms">Terms of Service</a>
       <a href="/privacy">Privacy Policy</a>
       <a href="/pricing">Pricing</a>
@@ -3692,6 +3710,261 @@ def faq():
 </body>
 </html>"""
     return html.replace("__TREC_FORM_DATE__", TREC_FORM_CURRENT_AS_OF)
+
+
+@app.route("/about")
+def about():
+    html = """<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>About — TxtAnOffer</title>
+<meta name="description" content="TxtAnOffer was built by a licensed Texas REALTOR who was tired of losing deals to 45-minute paperwork. Here's why it exists.">
+<link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<style>
+  :root {
+    --bg: #0f172a;
+    --bg-card: rgba(255,255,255,0.03);
+    --border: rgba(255,255,255,0.06);
+    --text: #f8fafc;
+    --text-muted: #94a3b8;
+    --text-dim: #64748b;
+    --accent: #10b981;
+    --accent-light: #34d399;
+    --radius: 1.25rem;
+    --transition: all 0.2s ease;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+    background:var(--bg); color:var(--text); line-height:1.6;
+    -webkit-font-smoothing:antialiased; min-height:100vh;
+  }
+  a { color:inherit; text-decoration:none; }
+  .nav {
+    display:flex;align-items:center;justify-content:space-between;
+    padding:1rem 2rem;position:sticky;top:0;
+    background:rgba(15,23,42,0.9);backdrop-filter:blur(16px);
+    -webkit-backdrop-filter:blur(16px);
+    border-bottom:1px solid var(--border);z-index:100;
+  }
+  .nav-left {display:flex;align-items:center;gap:0.6rem;font-weight:700;font-size:1.1rem;letter-spacing:-0.02em;}
+  .nav-logo {width:34px;height:34px;border-radius:50%;overflow:hidden;}
+  .nav-logo img {width:100%;height:100%;object-fit:cover;}
+  .nav-links {display:flex;gap:2rem;font-size:0.875rem;font-weight:500;color:var(--text-muted);}
+  .nav-links a {transition:var(--transition);}
+  .nav-links a:hover {color:var(--text);}
+  .nav-cta {
+    background:var(--accent);color:#fff;padding:0.55rem 1.35rem;border-radius:9999px;
+    font-size:0.875rem;font-weight:600;text-decoration:none;display:inline-block;
+    transition:var(--transition);
+  }
+  .nav-cta:hover {transform:scale(1.05);box-shadow:0 0 24px rgba(16,185,129,0.4);}
+  .container {max-width:680px;margin:0 auto;padding:3.5rem 2rem 4rem;}
+  .avatar-lg {
+    width:64px;height:64px;border-radius:50%;overflow:hidden;margin-bottom:1.5rem;
+    border:2px solid var(--border);
+  }
+  .avatar-lg img {width:100%;height:100%;object-fit:cover;}
+  h1 {font-size:2.1rem;font-weight:800;letter-spacing:-0.03em;margin-bottom:0.4rem;}
+  .kicker {font-size:0.9rem;color:var(--accent-light);font-weight:600;margin-bottom:1.75rem;}
+  .about-body p {font-size:0.95rem;color:var(--text-muted);margin-bottom:1.1rem;}
+  .about-body strong {color:var(--text);font-weight:600;}
+  h2 {font-size:1.2rem;font-weight:700;margin:2rem 0 0.9rem;color:var(--text);}
+  ul {margin:0 0 1.1rem 1.2rem;color:var(--text-muted);font-size:0.95rem;}
+  li {margin-bottom:0.4rem;}
+  .signoff {
+    margin-top:2.5rem;padding-top:1.75rem;border-top:1px solid var(--border);
+    font-size:0.9rem;color:var(--text-muted);
+  }
+  .signoff strong {display:block;color:var(--text);font-size:1rem;margin-bottom:0.2rem;}
+  .foot {text-align:center;margin-top:3rem;font-size:0.8rem;color:var(--text-dim);}
+  .foot a {color:var(--accent-light);}
+  .foot a:hover {text-decoration:underline;}
+  @media(max-width:600px) {
+    .container {padding:2.5rem 1.25rem 3rem;}
+    .nav-links {display:none;}
+  }
+</style>
+</head>
+<body>
+<nav class="nav">
+  <a href="/" class="nav-left">
+    <div class="nav-logo"><img src="/static/logo.webp" alt="TxtAnOffer"></div>
+    <span>TxtAnOffer</span>
+  </a>
+  <div class="nav-links">
+    <a href="/">Home</a>
+    <a href="/demo">Demo</a>
+    <a href="/faq">FAQ</a>
+    <a href="/contact">Contact</a>
+  </div>
+  <a href="/signup" class="nav-cta">Start Free Trial</a>
+</nav>
+
+<div class="container">
+  <div class="avatar-lg"><img src="/static/logo.webp" alt="Phanel Jean Baptiste"></div>
+  <h1>Built by a Texas Agent, for Texas Agents</h1>
+  <div class="kicker">The story behind TxtAnOffer</div>
+
+  <div class="about-body">
+    <p>Hi, I'm <strong>Phanel Jean Baptiste</strong>, a licensed Texas REALTOR and the founder of TxtAnOffer.</p>
+
+    <p>I built this tool because I was tired of losing deals while sitting in my car filling out TREC forms. In Texas real estate, speed wins &mdash; the agent who gets their offer in first often gets the house. But pulling out a laptop in a parking lot, opening ZipForm, and manually filling 40+ fields on a TREC 20-19 takes 45 minutes.</p>
+
+    <p>That 45 minutes costs deals.</p>
+
+    <p>TxtAnOffer cuts that to 10 seconds. Text the details from your phone. Get a filled PDF. Review and sign. Done.</p>
+
+    <h2>Why I Care</h2>
+    <p>I'm not a Silicon Valley startup. I'm an agent who saw a problem and built the solution. Every feature in TxtAnOffer was designed because I needed it in the field:</p>
+    <ul>
+      <li><strong>SMS-first</strong> because I'm always on my phone</li>
+      <li><strong>Auto-filled TREC forms</strong> because I hate blank fields</li>
+      <li><strong>Email delivery</strong> because the listing agent needs it now</li>
+      <li><strong>Draft warnings</strong> because I never want to send something I haven't reviewed</li>
+    </ul>
+
+    <h2>The Mission</h2>
+    <p>Give every Texas agent the tools to compete with the big teams. You don't need an admin, a laptop, or 45 minutes. You need your phone and 10 seconds.</p>
+  </div>
+
+  <div class="signoff">
+    <strong>Phanel Jean Baptiste</strong>
+    TREC License #000137 &middot; RE/MAX<br>
+    <a href="mailto:pejeanbaptiste@gmail.com" style="color:var(--accent-light);">pejeanbaptiste@gmail.com</a>
+  </div>
+
+  <p class="foot"><a href="/">&larr; Back to home</a> &middot; <a href="/faq">FAQ</a> &middot; <a href="/contact">Contact</a></p>
+</div>
+</body>
+</html>"""
+    return html
+
+
+@app.route("/contact")
+def contact():
+    html = """<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Contact — TxtAnOffer</title>
+<meta name="description" content="Get in touch with TxtAnOffer support by email or text.">
+<link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<style>
+  :root {
+    --bg: #0f172a;
+    --bg-card: rgba(255,255,255,0.03);
+    --border: rgba(255,255,255,0.06);
+    --text: #f8fafc;
+    --text-muted: #94a3b8;
+    --text-dim: #64748b;
+    --accent: #10b981;
+    --accent-light: #34d399;
+    --radius: 1.25rem;
+    --transition: all 0.2s ease;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+    background:var(--bg); color:var(--text); line-height:1.5;
+    -webkit-font-smoothing:antialiased; min-height:100vh;
+  }
+  a { color:inherit; text-decoration:none; }
+  .nav {
+    display:flex;align-items:center;justify-content:space-between;
+    padding:1rem 2rem;position:sticky;top:0;
+    background:rgba(15,23,42,0.9);backdrop-filter:blur(16px);
+    -webkit-backdrop-filter:blur(16px);
+    border-bottom:1px solid var(--border);z-index:100;
+  }
+  .nav-left {display:flex;align-items:center;gap:0.6rem;font-weight:700;font-size:1.1rem;letter-spacing:-0.02em;}
+  .nav-logo {width:34px;height:34px;border-radius:50%;overflow:hidden;}
+  .nav-logo img {width:100%;height:100%;object-fit:cover;}
+  .nav-links {display:flex;gap:2rem;font-size:0.875rem;font-weight:500;color:var(--text-muted);}
+  .nav-links a {transition:var(--transition);}
+  .nav-links a:hover {color:var(--text);}
+  .nav-cta {
+    background:var(--accent);color:#fff;padding:0.55rem 1.35rem;border-radius:9999px;
+    font-size:0.875rem;font-weight:600;text-decoration:none;display:inline-block;
+    transition:var(--transition);
+  }
+  .nav-cta:hover {transform:scale(1.05);box-shadow:0 0 24px rgba(16,185,129,0.4);}
+  .container {max-width:560px;margin:0 auto;padding:3.5rem 2rem 4rem;}
+  .page-header {margin-bottom:2rem;}
+  .page-header h1 {font-size:2rem;font-weight:800;letter-spacing:-0.03em;margin-bottom:0.4rem;}
+  .page-header p {font-size:0.9rem;color:var(--text-muted);}
+  .contact-card {
+    background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
+    padding:1.75rem;margin-bottom:1rem;display:flex;align-items:center;gap:1rem;
+    transition:var(--transition);
+  }
+  a.contact-card:hover {border-color:rgba(16,185,129,0.3);transform:translateY(-1px);}
+  .contact-icon {
+    width:44px;height:44px;border-radius:50%;background:rgba(16,185,129,0.12);
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1.2rem;
+  }
+  .contact-label {font-size:0.75rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:0.15rem;}
+  .contact-value {font-size:1rem;font-weight:600;color:var(--text);}
+  .foot {text-align:center;margin-top:2rem;font-size:0.8rem;color:var(--text-dim);}
+  .foot a {color:var(--accent-light);}
+  .foot a:hover {text-decoration:underline;}
+  @media(max-width:600px) {
+    .container {padding:2.5rem 1.25rem 3rem;}
+    .nav-links {display:none;}
+  }
+</style>
+</head>
+<body>
+<nav class="nav">
+  <a href="/" class="nav-left">
+    <div class="nav-logo"><img src="/static/logo.webp" alt="TxtAnOffer"></div>
+    <span>TxtAnOffer</span>
+  </a>
+  <div class="nav-links">
+    <a href="/">Home</a>
+    <a href="/demo">Demo</a>
+    <a href="/faq">FAQ</a>
+    <a href="/about">About</a>
+  </div>
+  <a href="/signup" class="nav-cta">Start Free Trial</a>
+</nav>
+
+<div class="container">
+  <div class="page-header">
+    <h1>Get in Touch</h1>
+    <p>Questions, feedback, or need a hand? Reach out directly &mdash; a real person reads every message.</p>
+  </div>
+
+  <a class="contact-card" href="mailto:support@txtanoffer.com">
+    <div class="contact-icon">&#9993;</div>
+    <div>
+      <div class="contact-label">Email</div>
+      <div class="contact-value">support@txtanoffer.com</div>
+    </div>
+  </a>
+
+  <a class="contact-card" href="sms:+18338970333">
+    <div class="contact-icon">&#128241;</div>
+    <div>
+      <div class="contact-label">Text</div>
+      <div class="contact-value">+1 (833) 897-0333</div>
+    </div>
+  </a>
+
+  <p class="foot">Looking for answers first? Check the <a href="/faq">FAQ</a>.<br><a href="/">&larr; Back to home</a></p>
+</div>
+</body>
+</html>"""
+    return html
 
 
 @app.route("/profile", methods=["GET", "POST"])
