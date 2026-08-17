@@ -194,4 +194,48 @@ def get_recent_sms_failures(limit: int = 20) -> list:
 
     return results
 
+def get_last_blocked_state(phone: str, hours: int = 72):
+    """Most recent state a phone's offer was blocked for (see
+    other_state_block_message in app.py), so a WAITLIST reply can be
+    attributed to a specific state instead of just a bare signup. Only
+    looks back `hours` so a reply days later after trying a real Texas
+    address isn't mis-attributed to a stale block."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cutoff = (datetime.utcnow() - timedelta(hours=hours)).isoformat()
+    cursor.execute("""
+        SELECT metadata FROM events
+        WHERE event_type = 'blocked_other_state' AND phone = ? AND created_at > ?
+        ORDER BY created_at DESC LIMIT 1
+    """, (phone, cutoff))
+    row = cursor.fetchone()
+    conn.close()
+    if not row or not row[0]:
+        return None
+    import json
+    return json.loads(row[0]).get("state")
+
+def get_waitlist_signups(limit: int = 200) -> list:
+    """All waitlist signups, most recent first -- grouped by state on
+    /analytics so demand for a specific state is visible at a glance."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT phone, metadata, created_at FROM events
+        WHERE event_type = 'waitlist_joined'
+        ORDER BY created_at DESC LIMIT ?
+    """, (limit,))
+    rows = cursor.fetchall()
+    conn.close()
+    import json
+    results = []
+    for row in rows:
+        metadata = json.loads(row[1]) if row[1] else {}
+        results.append({
+            "phone": row[0],
+            "state": metadata.get("state") or "Unknown",
+            "created_at": row[2],
+        })
+    return results
+
 init_analytics_tables()

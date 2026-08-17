@@ -31,7 +31,7 @@ from pdf_filler import fill_offer_pdf, OUTPUT_DIR
 from amendment import fill_amendment_pdf
 from agent_profiles import get_agent_profile, save_agent_profile
 from subscriptions import can_generate_offer, increment_offer_count, activate_subscription, deactivate_subscription, get_user, create_user, FREE_OFFER_LIMIT, is_admin_phone
-from analytics import track_event, get_conversion_metrics, get_revenue_metrics, get_recent_sms, get_recent_sms_failures
+from analytics import track_event, get_conversion_metrics, get_revenue_metrics, get_recent_sms, get_recent_sms_failures, get_last_blocked_state, get_waitlist_signups
 from integrations import send_offer_email, fire_webhook, save_webhook, get_webhook, delete_webhook, send_to_docusign
 from offers_db import record_offer, get_offers_for_phone, get_offer_by_filename, record_amendment, get_amendments_for_phone
 from sms_utils import parse_incoming_sms
@@ -938,9 +938,14 @@ def validate_address(address: str, raw_text: str = None) -> dict:
     agent actually typed. Falls back to `address` if raw_text isn't given.
 
     Returns:
-        {"valid": bool, "reason": str|None, "warnings": list[str], "normalized": str}
+        {"valid": bool, "reason": str|None, "warnings": list[str],
+         "normalized": str, "other_state": str|None}
+        other_state is set only when the block is a confirmed non-Texas
+        state (not the other invalid reasons like a missing street number)
+        -- callers use it to route to the waitlist-invite message/capture
+        instead of a flat refusal.
     """
-    result = {"valid": False, "reason": None, "warnings": [], "normalized": ""}
+    result = {"valid": False, "reason": None, "warnings": [], "normalized": "", "other_state": None}
 
     if not address or not address.strip():
         result["reason"] = "No address found in the message."
@@ -971,6 +976,7 @@ def validate_address(address: str, raw_text: str = None) -> dict:
         # 2-letter postal codes read as shouting-then-Title-Case if .title()'d
         # ("CA" -> "Ca"); only title-case genuine multi-word/full names.
         other_state_display = other_state.upper() if len(other_state) == 2 else other_state.title()
+        result["other_state"] = other_state_display
         result["reason"] = (
             f"This address looks like it's in {other_state_display}, not Texas. "
             f"TxtAnOffer only generates Texas TREC contracts -- we can't produce a "
@@ -1103,6 +1109,21 @@ def find_recent_offer(phone: str, address_query: str):
     return None
 
 
+def other_state_block_message(source_id: str, address: str, other_state: str) -> str:
+    """SMS copy for a confirmed non-Texas address, plus a tracked event so a
+    WAITLIST reply (see the SMS keyword handler) can look up which state
+    this phone was actually asking about. source_id is the agent's phone
+    for real SMS/-- for the /demo and /api/demo bypasses it's a fixed
+    pseudo-id ("demo-web"/"landing-demo"), which is fine: those don't
+    support WAITLIST capture since there's no real phone to notify later."""
+    track_event("blocked_other_state", source_id, {"state": other_state, "address": address})
+    return (
+        f"This looks like it's in {other_state}, not Texas. TxtAnOffer "
+        f"currently only supports Texas. Want to know when we launch in "
+        f"{other_state}? Reply WAITLIST to join the list."
+    )
+
+
 def build_offer_draft(incoming_msg: str, source_id: str):
     """Parse -> validate address -> lookup MLS -> compute money fields, but
     stop short of generating the PDF. Used by the AI Offer Builder
@@ -1115,6 +1136,9 @@ def build_offer_draft(incoming_msg: str, source_id: str):
 
     addr_check = validate_address(parsed.get("address", ""), raw_text=incoming_msg)
     if not addr_check["valid"]:
+        if addr_check.get("other_state"):
+            msg = other_state_block_message(source_id, addr_check["normalized"], addr_check["other_state"])
+            return parsed, msg, []
         return parsed, addr_check["reason"], []
     parsed["address"] = addr_check["normalized"]
     warnings = addr_check["warnings"]
@@ -1128,12 +1152,8 @@ def build_offer_draft(incoming_msg: str, source_id: str):
     if parsed["_tx_needs_confirm"]:
         other_state = geocode_state_signal(parsed["address"])
         if other_state:
-            return parsed, (
-                f"This looks like it's actually in {other_state}, not Texas "
-                f"(checked against real listing data). TxtAnOffer only "
-                f"generates Texas TREC contracts -- we can't produce a "
-                f"legally valid contract for a property outside Texas."
-            ), []
+            msg = other_state_block_message(source_id, parsed["address"], other_state)
+            return parsed, msg, []
 
     # Get MLS data
     mls_data = lookup_mls(parsed["address"])
@@ -1412,6 +1432,19 @@ def sms_reply():
         twilio_send_sms(agent_phone, SMS_HELP_TEXT)
         return "", 200
 
+    if keyword == "WAITLIST":
+        state = get_last_blocked_state(agent_phone)
+        track_event("waitlist_joined", agent_phone, {"state": state})
+        if state:
+            twilio_send_sms(agent_phone,
+                f"You're on the list! We'll text you the moment TxtAnOffer "
+                f"supports {state}. Reply STOP to unsubscribe.")
+        else:
+            twilio_send_sms(agent_phone,
+                "You're on the list! We'll text you when TxtAnOffer expands "
+                "outside Texas. Reply STOP to unsubscribe.")
+        return "", 200
+
     if keyword.startswith("AMEND "):
         amend = parse_amendment_sms(incoming_msg)
         if "error" in amend:
@@ -1536,8 +1569,15 @@ def sms_reply():
                 hints.append(f"{partial['close_days']}day")
             if partial.get("address"):
                 hints.append(partial["address"])
+            # Only show the "Got X / Need Y" nudge when something's still
+            # genuinely missing. Once price/down%/days/address all parsed,
+            # any error past that point (address rejected, blocked for
+            # another state) already explains itself in `error` -- tacking
+            # "Need: price, down%, days, address" underneath a message that
+            # already has all four is just confusing.
+            have_all_core_fields = all(partial.get(k) for k in ("price", "down_payment_pct", "close_days", "address"))
             hint_line = ""
-            if hints:
+            if hints and not have_all_core_fields:
                 hint_line = f"\n\nGot: {' . '.join(hints)}\nNeed: price, down%, days, address"
             twilio_send_sms(agent_phone, f"{error}{hint_line}")
             return "", 200
@@ -2951,6 +2991,7 @@ def analytics_dashboard():
     revenue = get_revenue_metrics()
     recent_sms = get_recent_sms(limit=20)
     recent_failures = get_recent_sms_failures(limit=20)
+    waitlist_signups = get_waitlist_signups(limit=200)
 
     sms_rows = ""
     for sms in recent_sms:
@@ -2969,6 +3010,20 @@ def analytics_dashboard():
             f"<tr><td>{time_str}</td><td>{fail['phone']}</td>"
             f"<td>{fail['error'][:80]}</td><td>{fail['body']}</td></tr>"
         )
+
+    waitlist_by_state = {}
+    for w in waitlist_signups:
+        waitlist_by_state[w["state"]] = waitlist_by_state.get(w["state"], 0) + 1
+    waitlist_summary_rows = "".join(
+        f"<tr><td>{state}</td><td>{count}</td></tr>"
+        for state, count in sorted(waitlist_by_state.items(), key=lambda kv: -kv[1])
+    ) or '<tr><td colspan="2" style="padding:10px;color:#666;">No waitlist signups yet.</td></tr>'
+    waitlist_rows = ""
+    for w in waitlist_signups[:20]:
+        from datetime import datetime
+        dt = datetime.fromisoformat(w['created_at'])
+        time_str = dt.strftime("%m/%d %H:%M")
+        waitlist_rows += f"<tr><td>{time_str}</td><td>{w['phone']}</td><td>{w['state']}</td></tr>"
 
     return f"""
 <!DOCTYPE html>
@@ -3040,6 +3095,22 @@ body{{font-family:system-ui;max-width:800px;margin:40px auto;padding:20px;}}
     <th style="padding:10px;">Message</th>
   </tr>
   {failure_rows or '<tr><td colspan="4" style="padding:10px;color:#666;">None &mdash; outbound sends are working.</td></tr>'}
+</table>
+<h2>Out-of-State Waitlist ({len(waitlist_signups)} total)</h2>
+<table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
+  <tr style="background:#f5f5f5;text-align:left;">
+    <th style="padding:10px;">State</th>
+    <th style="padding:10px;">Signups</th>
+  </tr>
+  {waitlist_summary_rows}
+</table>
+<table style="width:100%;border-collapse:collapse;">
+  <tr style="background:#f5f5f5;text-align:left;">
+    <th style="padding:10px;">Time</th>
+    <th style="padding:10px;">Phone</th>
+    <th style="padding:10px;">State</th>
+  </tr>
+  {waitlist_rows or '<tr><td colspan="3" style="padding:10px;color:#666;">None yet.</td></tr>'}
 </table>
 <p style="color:#666;font-size:12px;margin-top:20px;">
   Check Twilio console for full logs: <a href="https://console.twilio.com/" target="_blank">console.twilio.com</a>
