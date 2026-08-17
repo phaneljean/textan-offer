@@ -204,6 +204,15 @@ def _parse_address(text):
     stripped = re.sub(r'\b(?:TX|Texas)\b', '', stripped, flags=re.IGNORECASE)
     stripped = re.sub(r'\b7\d{4}(?:-\d{4})?\b', '', stripped)
     address = re.sub(r'\s+', ' ', stripped).strip(' ,.-')
+    # Collapse an accidental duplicate street suffix ("Ocean Blvd Ave" ->
+    # "Ocean Blvd") -- two suffix words back-to-back is never a real US
+    # street name, just a stray extra word. Keeps the first: it sits
+    # immediately after the actual street name, so it's the one that
+    # matters if only one can be kept.
+    address = re.sub(
+        r'\b(' + STREET_SUFFIXES + r')\.?\s+' + STREET_SUFFIXES + r'\.?\b',
+        r'\1', address, flags=re.IGNORECASE
+    )
     return _titlecase_address(address) if address else None
 
 def parse_offer_sms(text: str) -> dict:

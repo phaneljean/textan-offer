@@ -38,8 +38,14 @@ from sms_utils import parse_incoming_sms
 from cleanup import run_cleanup_if_due
 from reminders import run_reminders_if_due
 from drafts import save_draft, get_draft, clear_draft
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 app = Flask(__name__)
+# Railway terminates TLS at its edge and forwards plain HTTP internally, so
+# without this, request.host_url (used to build every SMS/PDF/checkout link)
+# reports "http://" even though the site is only ever served over https.
+# Trusts exactly one proxy hop (Railway's own edge) for X-Forwarded-Proto/Host.
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
 # Stripe configuration
 stripe.api_key = os.environ.get("STRIPE_SECRET_KEY", "")
