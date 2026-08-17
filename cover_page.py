@@ -1,6 +1,6 @@
 """
-cover_page.py - Generate dark/emerald cover page for TREC contracts
-Matches the site's design system: #0f172a bg, emerald accents, glass-morphism cards.
+cover_page.py - Generate dark/emerald or light/print cover page for TREC contracts
+Matches the site's design system: emerald accents, glass-morphism cards.
 """
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
@@ -10,37 +10,46 @@ from datetime import datetime, timedelta
 import io
 import re
 
-# Dark palette
-BG_DARK = HexColor("#0f172a")
-BG_ELEVATED = HexColor("#1e293b")
-CARD_BG = Color(1, 1, 1, alpha=0.035)
-CARD_BORDER = Color(1, 1, 1, alpha=0.07)
-ACCENT = HexColor("#10b981")
-ACCENT_LIGHT = HexColor("#34d399")
-TEXT_PRIMARY = HexColor("#f8fafc")
-TEXT_MUTED = HexColor("#94a3b8")
-TEXT_DIM = HexColor("#64748b")
-AMBER = HexColor("#fbbf24")
-AMBER_BG = Color(0.96, 0.62, 0.04, alpha=0.06)
-AMBER_BORDER = Color(0.96, 0.62, 0.04, alpha=0.15)
-DIVIDER = Color(1, 1, 1, alpha=0.05)
+# Fixed accent used in both modes (readable on white and on navy alike).
+ACCENT_RGB = (0.063, 0.725, 0.506)  # ~#10b981
+ON_ACCENT = HexColor("#ffffff")  # text drawn on top of solid accent/avatar shapes
 
-
-def _draw_bg(c, width, height):
-    """Dark gradient background with emerald accent bar."""
-    c.setFillColor(BG_DARK)
-    c.rect(0, 0, width, height, fill=1, stroke=0)
-
-    c.setFillColor(BG_ELEVATED)
-    c.rect(0, 0, width, height * 0.35, fill=1, stroke=0)
-
-    c.setFillColor(ACCENT)
-    c.rect(0, height - 4, width, 4, fill=1, stroke=0)
-
-    c.saveState()
-    c.setFillColor(Color(0.063, 0.725, 0.506, alpha=0.07))
-    c.circle(width - 0.5*inch, height - 0.5*inch, 2*inch, fill=1, stroke=0)
-    c.restoreState()
+PALETTES = {
+    "dark": {
+        "page_bg": HexColor("#0f172a"),
+        "elevated_bg": HexColor("#1e293b"),
+        "accent": HexColor("#10b981"),
+        "accent_light": HexColor("#34d399"),
+        "text_primary": HexColor("#f8fafc"),
+        "text_muted": HexColor("#94a3b8"),
+        "text_dim": HexColor("#64748b"),
+        "text_row_value": HexColor("#e2e8f0"),
+        "amber": HexColor("#fbbf24"),
+        "amber_bg": Color(0.96, 0.62, 0.04, alpha=0.06),
+        "amber_border": Color(0.96, 0.62, 0.04, alpha=0.15),
+        "divider": Color(1, 1, 1, alpha=0.05),
+        "corner_glow_alpha": 0.07,
+        "surface_tint": (1, 1, 1),  # white-tinted glass on a dark page
+        "surface_scale": 1.0,
+    },
+    "light": {
+        "page_bg": HexColor("#ffffff"),
+        "elevated_bg": None,  # no bottom gradient band when printing
+        "accent": HexColor("#10b981"),
+        "accent_light": HexColor("#059669"),
+        "text_primary": HexColor("#111827"),
+        "text_muted": HexColor("#4b5563"),
+        "text_dim": HexColor("#6b7280"),
+        "text_row_value": HexColor("#1f2937"),
+        "amber": HexColor("#92400e"),
+        "amber_bg": HexColor("#fef3c7"),
+        "amber_border": HexColor("#fde68a"),
+        "divider": HexColor("#e5e7eb"),
+        "corner_glow_alpha": 0.05,
+        "surface_tint": (0, 0, 0),  # black-tinted (light gray) card fills on white
+        "surface_scale": 0.6,  # black tints read darker than white ones at equal alpha
+    },
+}
 
 
 def _fmt_pct(pct: float) -> str:
@@ -75,12 +84,51 @@ def _draw_rounded_rect(c, x, y, w, h, r=6, fill_color=None, stroke_color=None):
     c.drawPath(p, fill=1 if fill_color else 0, stroke=1 if stroke_color else 0)
 
 
-def generate_cover_page(parsed: dict, agent: dict) -> bytes:
+def _draw_bg(c, width, height, pal, mode):
+    """Page background with accent bar; dark mode adds a gradient-ish bottom panel."""
+    c.setFillColor(pal["page_bg"])
+    c.rect(0, 0, width, height, fill=1, stroke=0)
+
+    if mode == "dark" and pal["elevated_bg"] is not None:
+        c.setFillColor(pal["elevated_bg"])
+        c.rect(0, 0, width, height * 0.35, fill=1, stroke=0)
+
+    c.setFillColor(pal["accent"])
+    c.rect(0, height - 4, width, 4, fill=1, stroke=0)
+
+    c.saveState()
+    c.setFillColor(Color(*ACCENT_RGB, alpha=pal["corner_glow_alpha"]))
+    c.circle(width - 0.5*inch, height - 0.5*inch, 2*inch, fill=1, stroke=0)
+    c.restoreState()
+
+
+def generate_cover_page(parsed: dict, agent: dict, mode: str = "light") -> bytes:
+    """mode: 'light' (print-friendly, default -- sits next to white TREC forms)
+    or 'dark' (digital/dashboard preview)."""
+    pal = PALETTES.get(mode, PALETTES["light"])
+
+    def surface(alpha):
+        """Semi-transparent card surface: white-tint on dark bg, gray-tint on light bg."""
+        r, g, b = pal["surface_tint"]
+        return Color(r, g, b, alpha=alpha * pal["surface_scale"])
+
+    BG_ELEVATED = pal["elevated_bg"]
+    ACCENT = pal["accent"]
+    ACCENT_LIGHT = pal["accent_light"]
+    TEXT_PRIMARY = pal["text_primary"]
+    TEXT_MUTED = pal["text_muted"]
+    TEXT_DIM = pal["text_dim"]
+    TEXT_ROW_VALUE = pal["text_row_value"]
+    AMBER = pal["amber"]
+    AMBER_BG = pal["amber_bg"]
+    AMBER_BORDER = pal["amber_border"]
+    DIVIDER = pal["divider"]
+
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=letter)
     width, height = letter
 
-    _draw_bg(c, width, height)
+    _draw_bg(c, width, height, pal, mode)
 
     margin = 0.65 * inch
     content_w = width - 2 * margin
@@ -91,9 +139,10 @@ def generate_cover_page(parsed: dict, agent: dict) -> bytes:
     # Brand
     c.setFillColor(ACCENT)
     c.circle(margin + 12, y - 3, 12, fill=1, stroke=0)
-    c.setFillColor(TEXT_PRIMARY)
+    c.setFillColor(ON_ACCENT)
     c.setFont("Helvetica-Bold", 7)
     c.drawCentredString(margin + 12, y - 6, "TX")
+    c.setFillColor(TEXT_PRIMARY)
     c.setFont("Helvetica-Bold", 10)
     c.drawString(margin + 30, y - 7, "TxtAnOffer")
 
@@ -103,9 +152,9 @@ def generate_cover_page(parsed: dict, agent: dict) -> bytes:
     tw = c.stringWidth(badge_text, "Helvetica-Bold", 6.5)
     badge_x = width - margin - tw - 16
     _draw_rounded_rect(c, badge_x - 4, y - 12, tw + 22, 18, r=9,
-                       fill_color=Color(0.063, 0.725, 0.506, alpha=0.1),
-                       stroke_color=Color(0.063, 0.725, 0.506, alpha=0.2))
-    c.setFillColor(ACCENT_LIGHT)
+                       fill_color=Color(*ACCENT_RGB, alpha=0.1),
+                       stroke_color=Color(*ACCENT_RGB, alpha=0.2))
+    c.setFillColor(ACCENT_LIGHT if mode == "dark" else HexColor("#047857"))
     c.drawString(badge_x + 7, y - 7, badge_text)
 
     # === TITLE BLOCK ===
@@ -122,8 +171,8 @@ def generate_cover_page(parsed: dict, agent: dict) -> bytes:
     y -= 0.55 * inch
     card_h = 0.85 * inch
     _draw_rounded_rect(c, margin, y - card_h + 0.15*inch, content_w, card_h, r=8,
-                       fill_color=Color(1, 1, 1, alpha=0.035),
-                       stroke_color=Color(1, 1, 1, alpha=0.07))
+                       fill_color=surface(0.035),
+                       stroke_color=surface(0.07))
 
     address = parsed.get('address', '')
     city = parsed.get('city', '')
@@ -163,8 +212,8 @@ def generate_cover_page(parsed: dict, agent: dict) -> bytes:
     for i, (label, value) in enumerate(stats):
         bx = margin + i * (box_w + 0.1*inch)
         _draw_rounded_rect(c, bx, y - box_h, box_w, box_h, r=6,
-                           fill_color=Color(1, 1, 1, alpha=0.025),
-                           stroke_color=Color(1, 1, 1, alpha=0.05))
+                           fill_color=surface(0.025),
+                           stroke_color=surface(0.05))
         c.setFillColor(TEXT_DIM)
         c.setFont("Helvetica-Bold", 6)
         c.drawCentredString(bx + box_w/2, y - 0.22*inch, label)
@@ -194,8 +243,8 @@ def generate_cover_page(parsed: dict, agent: dict) -> bytes:
 
         detail_h = 0.35 * inch
         _draw_rounded_rect(c, margin, y - detail_h, content_w, detail_h, r=6,
-                           fill_color=Color(1, 1, 1, alpha=0.02),
-                           stroke_color=Color(1, 1, 1, alpha=0.04))
+                           fill_color=surface(0.02),
+                           stroke_color=surface(0.04))
         c.setFillColor(TEXT_MUTED)
         c.setFont("Helvetica", 8.5)
         c.drawCentredString(cx, y - 0.22*inch, detail_text)
@@ -218,8 +267,8 @@ def generate_cover_page(parsed: dict, agent: dict) -> bytes:
 
     table_h = len(rows) * 0.3 * inch + 0.2 * inch
     _draw_rounded_rect(c, margin, y - table_h, content_w, table_h, r=6,
-                       fill_color=Color(1, 1, 1, alpha=0.025),
-                       stroke_color=Color(1, 1, 1, alpha=0.05))
+                       fill_color=surface(0.025),
+                       stroke_color=surface(0.05))
 
     row_y = y - 0.28 * inch
     for i, (label, value) in enumerate(rows):
@@ -227,13 +276,13 @@ def generate_cover_page(parsed: dict, agent: dict) -> bytes:
         c.setFillColor(TEXT_PRIMARY if is_last else TEXT_MUTED)
         c.setFont("Helvetica-Bold" if is_last else "Helvetica", 9)
         c.drawString(margin + 0.2*inch, row_y, label)
-        c.setFillColor(ACCENT_LIGHT if is_last else HexColor("#e2e8f0"))
+        c.setFillColor(ACCENT_LIGHT if is_last else TEXT_ROW_VALUE)
         c.setFont("Helvetica-Bold", 10 if is_last else 9)
         c.drawRightString(width - margin - 0.2*inch, row_y, value)
 
         if not is_last:
             row_y -= 0.05 * inch
-            c.setStrokeColor(Color(1, 1, 1, alpha=0.035))
+            c.setStrokeColor(DIVIDER)
             c.setLineWidth(0.3)
             c.line(margin + 0.15*inch, row_y, width - margin - 0.15*inch, row_y)
             row_y -= 0.25 * inch
@@ -251,8 +300,8 @@ def generate_cover_page(parsed: dict, agent: dict) -> bytes:
     if agent_name:
         agent_card_h = 0.6 * inch
         _draw_rounded_rect(c, margin, y - agent_card_h, content_w, agent_card_h, r=6,
-                           fill_color=Color(1, 1, 1, alpha=0.025),
-                           stroke_color=Color(1, 1, 1, alpha=0.05))
+                           fill_color=surface(0.025),
+                           stroke_color=surface(0.05))
 
         # Avatar circle
         initials = "".join(w[0].upper() for w in agent_name.split()[:2]) if agent_name else "AG"
@@ -260,7 +309,7 @@ def generate_cover_page(parsed: dict, agent: dict) -> bytes:
         av_y = y - agent_card_h/2
         c.setFillColor(HexColor("#3b82f6"))
         c.circle(av_x, av_y, 14, fill=1, stroke=0)
-        c.setFillColor(TEXT_PRIMARY)
+        c.setFillColor(ON_ACCENT)
         c.setFont("Helvetica-Bold", 8)
         c.drawCentredString(av_x, av_y - 3, initials)
 
@@ -318,7 +367,7 @@ def generate_cover_page(parsed: dict, agent: dict) -> bytes:
     y -= disc_h + 0.2 * inch
 
     # === FOOTER ===
-    c.setStrokeColor(Color(1, 1, 1, alpha=0.05))
+    c.setStrokeColor(DIVIDER)
     c.setLineWidth(0.5)
     c.line(margin, y, width - margin, y)
     y -= 0.25 * inch
@@ -335,8 +384,8 @@ def generate_cover_page(parsed: dict, agent: dict) -> bytes:
     # Draft badge (right side)
     badge_y = y + 0.25 * inch
     _draw_rounded_rect(c, width - margin - 1.3*inch, badge_y, 1.3*inch, 0.22*inch, r=9,
-                       fill_color=Color(0.96, 0.62, 0.04, alpha=0.1),
-                       stroke_color=Color(0.96, 0.62, 0.04, alpha=0.2))
+                       fill_color=AMBER_BG,
+                       stroke_color=AMBER_BORDER)
     c.setFillColor(AMBER)
     c.setFont("Helvetica-Bold", 6.5)
     c.drawCentredString(width - margin - 0.65*inch, badge_y + 0.06*inch, "DRAFT — REVIEW REQUIRED")

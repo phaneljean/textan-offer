@@ -215,8 +215,9 @@ def fill_offer_pdf(parsed: dict, agent_phone: str) -> str:
     writer.write(trec_buf)
     trec_buf.seek(0)
 
-    # Generate premium cover page
-    cover_pdf_bytes = generate_cover_page(parsed, parsed.get('agent', {}))
+    # Generate premium cover page (light/print mode: these sit next to white
+    # TREC forms and get printed for sellers, brokers, and title companies)
+    cover_pdf_bytes = generate_cover_page(parsed, parsed.get('agent', {}), mode="light")
 
     # Generate financing addendum if there's a loan
     financing_pdf_bytes = None
