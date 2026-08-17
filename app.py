@@ -31,7 +31,7 @@ from pdf_filler import fill_offer_pdf, OUTPUT_DIR
 from amendment import fill_amendment_pdf
 from agent_profiles import get_agent_profile, save_agent_profile
 from subscriptions import can_generate_offer, increment_offer_count, activate_subscription, deactivate_subscription, get_user, create_user, FREE_OFFER_LIMIT, is_admin_phone
-from analytics import track_event, get_conversion_metrics, get_revenue_metrics, get_recent_sms
+from analytics import track_event, get_conversion_metrics, get_revenue_metrics, get_recent_sms, get_recent_sms_failures
 from integrations import send_offer_email, fire_webhook, save_webhook, get_webhook, delete_webhook, send_to_docusign
 from offers_db import record_offer, get_offers_for_phone, get_offer_by_filename, record_amendment, get_amendments_for_phone
 from sms_utils import parse_incoming_sms
@@ -1148,6 +1148,10 @@ def twilio_send_sms(to, body):
         client.messages.create(to=to, from_=TWILIO_PHONE_NUMBER, body=body)
     except Exception as e:
         print(f"[SMS] Twilio send failed: {e}")
+        # Surfaced on /analytics under "Recent Send Failures" -- without this,
+        # a blocked send (e.g. A2P 10DLC error 30034) looks identical to a
+        # working reply from the agent's side and only shows up in Railway logs.
+        track_event("sms_send_failed", to, {"error": str(e), "body": body[:80]})
         return False
     print(f"[SMS] Twilio sent to {to}: {body[:50]}...")
     return True
@@ -2828,6 +2832,7 @@ def analytics_dashboard():
     metrics = get_conversion_metrics(days=30)
     revenue = get_revenue_metrics()
     recent_sms = get_recent_sms(limit=20)
+    recent_failures = get_recent_sms_failures(limit=20)
 
     sms_rows = ""
     for sms in recent_sms:
@@ -2836,6 +2841,16 @@ def analytics_dashboard():
         dt = datetime.fromisoformat(sms['created_at'])
         time_str = dt.strftime("%m/%d %H:%M")
         sms_rows += f"<tr><td>{time_str}</td><td>{sms['phone']}</td><td>{sms['body'][:50]}</td></tr>"
+
+    failure_rows = ""
+    for fail in recent_failures:
+        from datetime import datetime
+        dt = datetime.fromisoformat(fail['created_at'])
+        time_str = dt.strftime("%m/%d %H:%M")
+        failure_rows += (
+            f"<tr><td>{time_str}</td><td>{fail['phone']}</td>"
+            f"<td>{fail['error'][:80]}</td><td>{fail['body']}</td></tr>"
+        )
 
     return f"""
 <!DOCTYPE html>
@@ -2897,6 +2912,16 @@ body{{font-family:system-ui;max-width:800px;margin:40px auto;padding:20px;}}
     <th style="padding:10px;">Message</th>
   </tr>
   {sms_rows}
+</table>
+<h2 style="color:{'#c0392b' if failure_rows else '#333'};">Recent Send Failures{' &#9888;' if failure_rows else ''}</h2>
+<table style="width:100%;border-collapse:collapse;">
+  <tr style="background:#f5f5f5;text-align:left;">
+    <th style="padding:10px;">Time</th>
+    <th style="padding:10px;">Phone</th>
+    <th style="padding:10px;">Error</th>
+    <th style="padding:10px;">Message</th>
+  </tr>
+  {failure_rows or '<tr><td colspan="4" style="padding:10px;color:#666;">None &mdash; outbound sends are working.</td></tr>'}
 </table>
 <p style="color:#666;font-size:12px;margin-top:20px;">
   Check Twilio console for full logs: <a href="https://console.twilio.com/" target="_blank">console.twilio.com</a>

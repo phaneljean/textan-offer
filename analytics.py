@@ -165,4 +165,33 @@ def get_recent_sms(limit: int = 50) -> list:
 
     return results
 
+def get_recent_sms_failures(limit: int = 20) -> list:
+    """Get recent outbound SMS send failures (e.g. Twilio A2P 10DLC blocks)."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT phone, metadata, created_at
+        FROM events
+        WHERE event_type = 'sms_send_failed'
+        ORDER BY created_at DESC
+        LIMIT ?
+    """, (limit,))
+
+    rows = cursor.fetchall()
+    conn.close()
+
+    import json
+    results = []
+    for row in rows:
+        metadata = json.loads(row[1]) if row[1] else {}
+        results.append({
+            "phone": row[0],
+            "error": metadata.get("error", ""),
+            "body": metadata.get("body", ""),
+            "created_at": row[2]
+        })
+
+    return results
+
 init_analytics_tables()
