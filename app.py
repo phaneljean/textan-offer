@@ -1031,6 +1031,55 @@ def lookup_mls(address: str) -> dict:
         return {}
 
 
+def geocode_state_signal(address: str):
+    """Best-effort real-world state check for an address with NO explicit
+    state in the text (e.g. bare "Long Beach"), using the same Apify/
+    Realtor.com actor as MLS enrichment -- but searched exactly as typed,
+    not lookup_mls()'s forced ", TX" suffix, since that would hide the very
+    signal we're looking for. Only called for addresses validate_address()
+    already flagged as ambiguous (_tx_needs_confirm), not on every message.
+
+    Scans every string/int value in the result for a state signal rather
+    than depending on one specific field name -- Apify actors change their
+    schema without notice, and a missed field name would silently defeat
+    this check. Returns the detected other-state text if the real listing
+    data disagrees with Texas, else None (no result, API unavailable, or
+    agrees with Texas -- meaning: not blocked)."""
+    if not APIFY_API_TOKEN:
+        return None
+    try:
+        resp = http_requests.post(
+            "https://api.apify.com/v2/acts/kawsar~Realtor-Property-Details-Cheap/run-sync-get-dataset-items",
+            params={"token": APIFY_API_TOKEN},
+            json={"searchQueries": [address]},
+            timeout=15,
+        )
+        if resp.status_code not in (200, 201):
+            return None
+        results = resp.json()
+        if not results:
+            return None
+        prop = results[0]
+        # Check each field VALUE independently rather than joining them into
+        # one string -- structured fields like {"state": "CA"} won't satisfy
+        # the SMS-text regexes above, which expect state codes in address
+        # position (", CA" or "CA 90802"), not standing alone.
+        str_values = [v.strip() for v in prop.values() if isinstance(v, str) and v.strip()]
+        other_abbrs = set(_OTHER_STATE_ABBRS.split("|"))
+        if any(_STATE_RE.search(v) for v in str_values):
+            return None  # real listing data agrees with Texas
+        for v in str_values:
+            if v.upper() in other_abbrs:
+                return v.upper()
+            other = _OTHER_STATE_ABBR_RE.search(v) or _OTHER_STATE_NAME_RE.search(v)
+            if other:
+                return next(g for g in other.groups() if g)
+        return None
+    except Exception as e:
+        print(f"[GEOCODE] state check failed: {e}")
+        return None
+
+
 def _normalize_addr(s):
     import re as _re
     return _re.sub(r'[^a-z0-9]', '', (s or "").lower())
@@ -1064,6 +1113,21 @@ def build_offer_draft(incoming_msg: str, source_id: str):
     parsed["address"] = addr_check["normalized"]
     warnings = addr_check["warnings"]
     parsed["_tx_needs_confirm"] = TX_UNVERIFIED_WARNING in warnings
+
+    # No state was mentioned at all (e.g. bare "Long Beach") -- before
+    # falling back to the soft "quick check, reply 1/2" flow, try a real
+    # geocode lookup that can actually discover the property is out of
+    # state. Only fires for the ambiguous case; an explicit state was
+    # already handled (hard block or pass) by validate_address() above.
+    if parsed["_tx_needs_confirm"]:
+        other_state = geocode_state_signal(parsed["address"])
+        if other_state:
+            return parsed, (
+                f"This looks like it's actually in {other_state}, not Texas "
+                f"(checked against real listing data). TxtAnOffer only "
+                f"generates Texas TREC contracts -- we can't produce a "
+                f"legally valid contract for a property outside Texas."
+            ), []
 
     # Get MLS data
     mls_data = lookup_mls(parsed["address"])
