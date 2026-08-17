@@ -35,9 +35,14 @@ FIELD_MAP = {
     "first_rate_years": "per annum for the first",
     "first_origination": "shown on Buyers Loan Estimate for the loan not to exceed",
 
-    # Section 2A: Buyer Approval
-    "buyer_approval": "This contract is subject to Buyer obtaining Buyer Approval If Buyer cannot obtain Buyer",
-    "buyer_approval_days": "Check Box2",
+    # Section 2A: Buyer Approval -- another case of the mis-mapped-field pattern
+    # above. The field literally named "This contract is subject to Buyer
+    # obtaining Buyer Approval..." sits, by /Rect position, over the SECOND
+    # checkbox on the page ("This contract is NOT subject to Buyer obtaining
+    # Buyer Approval"). "Check Box2" is the generically-named field that's
+    # actually positioned over the FIRST checkbox (IS subject to Buyer
+    # Approval) -- confirmed by extracting the page text at each field's rect.
+    "buyer_approval": "Check Box2",
 }
 
 
