@@ -1166,6 +1166,14 @@ def process_offer(incoming_msg: str, source_id: str):
     if error:
         return parsed, None, error, warnings
 
+    # This path has no confirmation step at all -- it must never generate a
+    # PDF for an address we couldn't confirm is in Texas (validate_address()
+    # already hard-blocks an explicit other-state signal; this catches the
+    # remaining "no state mentioned, geocode inconclusive" case instead of
+    # silently proceeding).
+    if parsed.get("_tx_needs_confirm"):
+        return parsed, None, TX_NEEDS_STATE_MESSAGE, warnings
+
     try:
         pdf_path = fill_offer_pdf(parsed, source_id)
     except Exception as e:
@@ -1228,18 +1236,24 @@ def format_offer_confirmation(parsed: dict) -> str:
     return "\n".join(lines)
 
 
+TX_NEEDS_STATE_MESSAGE = (
+    "Can't confirm this address is in Texas -- TxtAnOffer only generates "
+    "Texas TREC contracts. Resend your offer with the city and state "
+    'included, e.g. "725k 3% 21day 1740 Grand Ave, Austin, TX".'
+)
+
+
 def format_tx_confirmation(parsed: dict) -> str:
     """Shown instead of the normal confirmation when validate_address()
-    couldn't confirm the property is in Texas. Deliberately light, framed as
-    a quick choice rather than a warning -- an unverified-state flag reads as
-    alarming if we say so directly."""
-    county_hint = f" ({parsed['county']} Co)" if parsed.get("county") else ""
+    couldn't confirm the property is in Texas (and a real geocode lookup
+    either wasn't available or didn't resolve it either). Deliberately asks
+    for a full resend rather than a one-keystroke "reply 1 for yes, Texas"
+    choice -- a single lazy tap on a wrong-state address is exactly how this
+    generated a California TREC contract before; see git history around
+    "geocode_state_signal" / TX_NEEDS_STATE_MESSAGE for the incident."""
     return (
         f"Got it for {parsed['address']}.\n\n"
-        f"Quick check -- is this in Texas? Reply:\n"
-        f"1 = Yes, in Texas{county_hint}\n"
-        f"2 = No, different state\n\n"
-        f"If yes, I'll generate the TREC draft.\n\n"
+        f"{TX_NEEDS_STATE_MESSAGE}\n\n"
         f"Reply STOP to unsubscribe, HELP for help."
     )
 
@@ -1264,9 +1278,17 @@ def twilio_send_sms(to, body):
 
 
 def finalize_offer_sms(agent_phone: str, draft: dict):
-    """Shared finalize step for both the YES confirmation and the "1" (yes,
-    Texas) TX-verification reply: checks the offer limit, generates the PDF,
-    records it, and texts back the result. Always sends exactly one SMS."""
+    """Shared finalize step for the YES confirmation: checks the offer
+    limit, generates the PDF, records it, and texts back the result.
+    Always sends exactly one SMS.
+
+    Single choke point for every path that can generate a PDF from SMS, so
+    it's also where the Texas-state guard lives: a draft that still needs
+    state confirmation must never reach fill_offer_pdf, regardless of which
+    keyword (YES/CREATE/CONFIRM) got it here."""
+    if draft.get("_tx_needs_confirm"):
+        twilio_send_sms(agent_phone, TX_NEEDS_STATE_MESSAGE)
+        return
     try:
         can_generate, reason, user = can_generate_offer(agent_phone)
         if not can_generate:
@@ -1438,18 +1460,6 @@ def sms_reply():
         profile_link = sign_dashboard_url(agent_phone, request.host_url.rstrip("/")).replace("/dashboard?", "/profile?")
         twilio_send_sms(agent_phone, f"Edit your agent profile:\n{profile_link}\n\nYour name, license, brokerage, and defaults auto-fill into every contract.")
         return "", 200
-
-    if keyword in ("1", "2"):
-        draft = get_draft(agent_phone)
-        if draft and draft.get("_tx_needs_confirm"):
-            if keyword == "1":
-                finalize_offer_sms(agent_phone, draft)
-            else:
-                clear_draft(agent_phone)
-                twilio_send_sms(agent_phone, "No problem -- TxtAnOffer currently only handles Texas transactions, so I can't generate a contract for this one. No offer created.")
-            return "", 200
-        # "1"/"2" outside a pending TX-confirmation aren't reserved keywords --
-        # fall through to the normal offer/correction parsing below.
 
     if keyword in ("YES", "Y", "CONFIRM", "CREATE"):
         draft = get_draft(agent_phone)
@@ -1915,25 +1925,17 @@ def demo():
                         """
             return DEMO_FORM.format(result_html=result_html, prefill=prefill, date_stamp=date_stamp)
 
-        demo_draft_for_1_2 = get_draft("demo-web")
-        if offer_text.strip().upper() in ("1", "2") and demo_draft_for_1_2 and demo_draft_for_1_2.get("_tx_needs_confirm"):
-            draft = demo_draft_for_1_2
-            if offer_text.strip() == "1":
-                try:
-                    pdf_path = fill_offer_pdf(draft, "demo-web")
-                except Exception as e:
-                    result_html = f'<div class="error">Couldn\'t generate the PDF: {e}</div>'
-                    return DEMO_FORM.format(result_html=result_html, prefill=prefill, date_stamp=date_stamp)
-                clear_draft("demo-web")
-                parsed, error, warnings = draft, None, []
-            else:
-                clear_draft("demo-web")
-                result_html = '<div class="result"><div class="result-stamp">Cancelled</div><p style="color:var(--text-dim);">TxtAnOffer currently only handles Texas transactions, so no contract was created.</p></div>'
-                return DEMO_FORM.format(result_html=result_html, prefill=prefill, date_stamp=date_stamp)
-        elif offer_text.strip().upper() in ("YES", "Y", "CONFIRM", "CREATE"):
+        if offer_text.strip().upper() in ("YES", "Y", "CONFIRM", "CREATE"):
             draft = get_draft("demo-web")
             if not draft:
                 result_html = '<div class="error">No pending offer to confirm. Enter offer details above first.</div>'
+                return DEMO_FORM.format(result_html=result_html, prefill=prefill, date_stamp=date_stamp)
+            # Same guard as finalize_offer_sms -- this route calls
+            # fill_offer_pdf directly and doesn't go through that choke
+            # point, so it needs its own check against generating a PDF for
+            # a still-unconfirmed-state draft.
+            if draft.get("_tx_needs_confirm"):
+                result_html = f'<div class="error">{TX_NEEDS_STATE_MESSAGE}</div>'
                 return DEMO_FORM.format(result_html=result_html, prefill=prefill, date_stamp=date_stamp)
             try:
                 pdf_path = fill_offer_pdf(draft, "demo-web")
