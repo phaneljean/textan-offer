@@ -597,6 +597,23 @@ def index():
     }
     .footer-links a { color: var(--text-dim); font-size: 0.85rem; font-weight: 500; transition: var(--transition); }
     .footer-links a:hover { color: var(--text); }
+    .trust-badges {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 1.5rem;
+      margin-bottom: 1.25rem;
+      flex-wrap: wrap;
+    }
+    .trust-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+    .trust-badge .trust-icon { font-size: 0.9rem; }
     .footer-copy { color: #475569; font-size: 0.8rem; }
 
     @media (max-width: 960px) {
@@ -797,6 +814,11 @@ def index():
   </section>
 
   <footer class="footer">
+    <div class="trust-badges">
+      <span class="trust-badge"><span class="trust-icon">&#128274;</span>AES-256 Encrypted</span>
+      <span class="trust-badge"><span class="trust-icon">&#9729;</span>SOC 2 Type II Infrastructure</span>
+      <span class="trust-badge"><span class="trust-icon">&#128179;</span>Billing by Stripe</span>
+    </div>
     <div class="footer-links">
       <a href="/about">About</a>
       <a href="/faq">FAQ</a>
@@ -4413,6 +4435,15 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
         pdf_link = sign_pdf_url(o["filename"], request.host_url.rstrip("/"))
         created = o["created_at"][:10]
 
+        # No send/accept tracking exists yet -- status is derived purely from
+        # the closing date vs. today until that workflow gets built.
+        try:
+            created_dt = datetime.fromisoformat(o["created_at"])
+        except ValueError:
+            created_dt = datetime.utcnow()
+        close_dt = created_dt + timedelta(days=o.get("close_days") or 0)
+        status = "expired" if close_dt < datetime.utcnow() else "draft"
+
         amend_html = ""
         for a in amendments_by_offer.get(o["id"], []):
             a_pdf_link = sign_pdf_url(a["filename"], request.host_url.rstrip("/"))
@@ -4427,10 +4458,13 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
 
         offer_cards += f"""
         <div class="offer-card">
-          <div class="offer-card-bar"></div>
+          <div class="offer-card-bar status-{status}"></div>
           <div class="offer-card-body">
             <div class="offer-top">
-              <div class="offer-addr">{o['address']}</div>
+              <div class="offer-addr-wrap">
+                <div class="offer-addr">{o['address']}</div>
+                <span class="status-badge status-{status}">{status}</span>
+              </div>
               <div class="offer-date">{created}</div>
             </div>
             <div class="pills">
@@ -4621,10 +4655,23 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
   .offer-card:hover {{border-color:var(--border-hover);}}
   .offer-card:active {{transform:scale(0.99);}}
   .offer-card-bar {{width:4px;flex-shrink:0;background:linear-gradient(180deg, var(--accent), var(--accent-light));}}
+  .offer-card-bar.status-draft {{background:linear-gradient(180deg, #10b981, #34d399);}}
+  .offer-card-bar.status-sent {{background:linear-gradient(180deg, #f59e0b, #fbbf24);}}
+  .offer-card-bar.status-expired {{background:linear-gradient(180deg, #6b7280, #9ca3af);}}
+  .offer-card-bar.status-accepted {{background:linear-gradient(180deg, #3b82f6, #60a5fa);}}
   .offer-card-body {{padding:1.25rem 1.5rem;flex:1;min-width:0;}}
-  .offer-top {{display:flex;align-items:baseline;justify-content:space-between;gap:1rem;margin-bottom:0.9rem;}}
-  .offer-addr {{font-weight:700;font-size:0.98rem;}}
+  .offer-top {{display:flex;align-items:baseline;justify-content:space-between;gap:0.75rem;margin-bottom:0.9rem;}}
+  .offer-addr-wrap {{display:flex;align-items:center;gap:0.6rem;min-width:0;}}
+  .offer-addr {{font-weight:700;font-size:0.98rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}}
   .offer-date {{font-size:0.75rem;color:var(--text-dim);flex-shrink:0;}}
+  .status-badge {{
+    font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;
+    padding:0.2rem 0.55rem;border-radius:9999px;flex-shrink:0;
+  }}
+  .status-badge.status-draft {{background:rgba(16,185,129,0.12);color:#10b981;}}
+  .status-badge.status-sent {{background:rgba(245,158,11,0.12);color:#f59e0b;}}
+  .status-badge.status-expired {{background:rgba(107,114,128,0.12);color:#9ca3af;}}
+  .status-badge.status-accepted {{background:rgba(59,130,246,0.12);color:#3b82f6;}}
 
   .pills {{display:flex;gap:0.6rem;margin-bottom:1rem;flex-wrap:wrap;}}
   .pill {{
