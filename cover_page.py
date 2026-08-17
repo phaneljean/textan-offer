@@ -8,6 +8,7 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.colors import HexColor, Color
 from datetime import datetime, timedelta
 import io
+import re
 
 # Dark palette
 BG_DARK = HexColor("#0f172a")
@@ -40,6 +41,25 @@ def _draw_bg(c, width, height):
     c.setFillColor(Color(0.063, 0.725, 0.506, alpha=0.07))
     c.circle(width - 0.5*inch, height - 0.5*inch, 2*inch, fill=1, stroke=0)
     c.restoreState()
+
+
+def _fmt_pct(pct: float) -> str:
+    """0.03 -> '3%', 0.0606 -> '6.06%' -- never silently rounds off real precision."""
+    pct100 = pct * 100
+    if pct100 == int(pct100):
+        return f"{int(pct100)}%"
+    return f"{pct100:.2f}".rstrip('0').rstrip('.') + "%"
+
+
+def _fmt_phone(phone: str) -> str:
+    """'+15622570392' -> '+1 (562) 257-0392'; falls back to the raw string
+    for anything that isn't a clean 10/11-digit US number."""
+    digits = re.sub(r'\D', '', phone or '')
+    if len(digits) == 11 and digits.startswith('1'):
+        digits = digits[1:]
+    if len(digits) == 10:
+        return f"+1 ({digits[0:3]}) {digits[3:6]}-{digits[6:10]}"
+    return phone
 
 
 def _draw_rounded_rect(c, x, y, w, h, r=6, fill_color=None, stroke_color=None):
@@ -108,12 +128,13 @@ def generate_cover_page(parsed: dict, agent: dict) -> bytes:
     address = parsed.get('address', '')
     city = parsed.get('city', '')
     county = parsed.get('county', '')
+    zip_code = parsed.get('zip', '')
     location_parts = []
     if city:
         location_parts.append(city)
     if county:
         location_parts.append(f"{county} County")
-    location_parts.append("TX")
+    location_parts.append(f"TX {zip_code}" if zip_code else "TX")
     city_state = ", ".join(location_parts)
 
     c.setFillColor(TEXT_PRIMARY)
@@ -135,7 +156,7 @@ def generate_cover_page(parsed: dict, agent: dict) -> bytes:
     box_h = 0.7 * inch
     stats = [
         ("SALES PRICE", f"${price:,}"),
-        ("DOWN PAYMENT", f"{down_pct*100:.0f}% (${down_amt:,})"),
+        ("DOWN PAYMENT", f"{_fmt_pct(down_pct)} (${down_amt:,})"),
         ("LOAN AMOUNT", f"${loan_amt:,}"),
     ]
 
@@ -188,7 +209,7 @@ def generate_cover_page(parsed: dict, agent: dict) -> bytes:
 
     rows = [
         ("Sales Price", f"${price:,}"),
-        (f"Down Payment ({down_pct*100:.0f}%)", f"${down_amt:,}"),
+        (f"Down Payment ({_fmt_pct(down_pct)})", f"${down_amt:,}"),
         ("Loan Amount", f"${loan_amt:,}"),
         ("Earnest Money", f"${earnest:,}"),
         ("Option Fee", f"${option:,}"),
@@ -254,7 +275,7 @@ def generate_cover_page(parsed: dict, agent: dict) -> bytes:
         if brokerage:
             meta_parts.append(brokerage)
         if agent_phone:
-            meta_parts.append(agent_phone)
+            meta_parts.append(_fmt_phone(agent_phone))
         c.setFillColor(TEXT_DIM)
         c.setFont("Helvetica", 7.5)
         c.drawString(info_x, y - 0.42*inch, " · ".join(meta_parts))

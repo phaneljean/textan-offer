@@ -3715,7 +3715,7 @@ def profile():
             error = "Phone number is required."
         else:
             save_agent_profile(phone, {
-                "name": request.form.get("name", "").strip(),
+                "name": request.form.get("name", "").strip().title(),
                 "license": request.form.get("license", "").strip(),
                 "phone": phone,
                 "email": request.form.get("email", "").strip(),

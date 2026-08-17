@@ -144,6 +144,39 @@ def _parse_city(text):
 
 STREET_SUFFIXES = r'(?:st|street|ave|avenue|blvd|boulevard|dr|drive|ln|lane|ct|court|rd|road|way|pkwy|parkway|pl|place|cir|circle|trl|trail|loop|pass|run|cv|cove|hwy|highway)'
 
+# Words that get a fixed capitalization instead of generic title-case, keyed
+# lowercase -> display form (street suffixes + directionals + state abbrev).
+_ADDRESS_FIXED_CASE = {
+    'st': 'St', 'street': 'Street', 'ave': 'Ave', 'avenue': 'Avenue',
+    'blvd': 'Blvd', 'boulevard': 'Boulevard', 'dr': 'Dr', 'drive': 'Drive',
+    'ln': 'Ln', 'lane': 'Lane', 'ct': 'Ct', 'court': 'Court', 'rd': 'Rd',
+    'road': 'Road', 'way': 'Way', 'pkwy': 'Pkwy', 'parkway': 'Parkway',
+    'pl': 'Pl', 'place': 'Place', 'cir': 'Cir', 'circle': 'Circle',
+    'trl': 'Trl', 'trail': 'Trail', 'loop': 'Loop', 'pass': 'Pass',
+    'run': 'Run', 'cv': 'Cv', 'cove': 'Cove', 'hwy': 'Hwy', 'highway': 'Highway',
+    'tx': 'TX', 'texas': 'Texas',
+    'n': 'N', 's': 'S', 'e': 'E', 'w': 'W', 'ne': 'NE', 'nw': 'NW', 'se': 'SE', 'sw': 'SW',
+}
+
+
+def _titlecase_address(addr: str) -> str:
+    """Title-case a street address, keeping suffixes/directionals in their
+    conventional form (e.g. "atlantic ave" -> "Atlantic Ave", not "Atlantic
+    Ave." or "ATLANTIC AVE"). Preserves trailing punctuation on each word."""
+    words = addr.split()
+    out = []
+    for w in words:
+        core = w.strip('.,')
+        trail = w[len(core):]
+        key = core.lower()
+        if key in _ADDRESS_FIXED_CASE:
+            out.append(_ADDRESS_FIXED_CASE[key] + trail)
+        elif core.isdigit():
+            out.append(w)
+        else:
+            out.append((core[:1].upper() + core[1:].lower() if core else core) + trail)
+    return " ".join(out)
+
 def _parse_address(text):
     # Strip out the price/pct/day tokens, what's left is the street address
     # Only strip number+unit combos (not bare "million" in street names like "100 Million Dr")
@@ -171,7 +204,7 @@ def _parse_address(text):
     stripped = re.sub(r'\b(?:TX|Texas)\b', '', stripped, flags=re.IGNORECASE)
     stripped = re.sub(r'\b7\d{4}(?:-\d{4})?\b', '', stripped)
     address = re.sub(r'\s+', ' ', stripped).strip(' ,.-')
-    return address if address else None
+    return _titlecase_address(address) if address else None
 
 def parse_offer_sms(text: str) -> dict:
     """
