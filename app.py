@@ -4134,34 +4134,55 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
     amendments_by_offer = get_amendments_for_phone(phone)
     from datetime import timedelta
 
-    # Build offer rows, with each offer's amendments nested as indented sub-rows
-    offer_rows = ""
+    # Build offer cards, with each offer's amendments nested inside the same card
+    offer_cards = ""
     for o in offers:
         pdf_link = sign_pdf_url(o["filename"], request.host_url.rstrip("/"))
         created = o["created_at"][:10]
-        offer_rows += f"""
-        <tr>
-          <td>{o['address']}</td>
-          <td>${o['price']:,}</td>
-          <td>{o['down_pct']*100:.0f}%</td>
-          <td>{o['close_days']}d</td>
-          <td>{created}</td>
-          <td><a href="{pdf_link}" target="_blank">PDF</a></td>
-        </tr>"""
+
+        amend_html = ""
         for a in amendments_by_offer.get(o["id"], []):
             a_pdf_link = sign_pdf_url(a["filename"], request.host_url.rstrip("/"))
             a_created = a["created_at"][:10]
             a_desc = f"New price ${a['value']:,}" if a["field"] == "price" else f"Closing +{a['value']}d"
-            offer_rows += f"""
-        <tr style="font-size:0.8rem;color:var(--text-dim);">
-          <td>&#8618; Amendment</td>
-          <td colspan="3">{a_desc}</td>
-          <td>{a_created}</td>
-          <td><a href="{a_pdf_link}" target="_blank">PDF</a></td>
-        </tr>"""
+            amend_html += f"""
+            <div class="amend-row">
+              <span class="amend-desc">&#8618; {a_desc}</span>
+              <span class="amend-date">{a_created}</span>
+              <a href="{a_pdf_link}" target="_blank" class="amend-pdf">PDF</a>
+            </div>"""
 
-    if not offer_rows:
-        offer_rows = '<tr><td colspan="6" style="text-align:center;color:var(--text-dim);padding:1.5rem;">No offers yet. Text your first offer to get started.</td></tr>'
+        offer_cards += f"""
+        <div class="offer-card">
+          <div class="offer-card-bar"></div>
+          <div class="offer-card-body">
+            <div class="offer-top">
+              <div class="offer-addr">{o['address']}</div>
+              <div class="offer-date">{created}</div>
+            </div>
+            <div class="pills">
+              <div class="pill"><span class="pill-val">${o['price']:,}</span><span class="pill-label">Price</span></div>
+              <div class="pill"><span class="pill-val">{o['down_pct']*100:.0f}%</span><span class="pill-label">Down</span></div>
+              <div class="pill"><span class="pill-val">{o['close_days']}d</span><span class="pill-label">Close</span></div>
+            </div>
+            {f'<div class="amend-list">{amend_html}</div>' if amend_html else ''}
+            <a href="{pdf_link}" target="_blank" class="btn-primary">View PDF</a>
+          </div>
+        </div>"""
+
+    if not offer_cards:
+        offer_cards = '<div class="empty-state">No offers yet.<br>Text your first offer to get started.</div>'
+
+    def _fmt_time_saved(minutes: int) -> str:
+        if minutes < 60:
+            return f"{minutes}m"
+        h, m = divmod(minutes, 60)
+        return f"{h}h {m}m" if m else f"{h}h"
+
+    time_saved = _fmt_time_saved(user["offer_count"] * 45)
+    avg_close = f"{round(sum(o['close_days'] for o in offers) / len(offers))}d" if offers else "—"
+
+    initials = "".join(part[0] for part in agent.get("name", "").split()[:2]).upper() if agent.get("name") else "?"
 
     if is_admin_phone(phone):
         sub_status = "Admin (Unlimited)"
@@ -4185,11 +4206,17 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
 
     has_profile = any(agent.get(k) for k in ("name", "license", "brokerage", "email", "title_company"))
     if has_profile:
+        id_card = f"""
+        <div class="id-card">
+          <div class="avatar">{initials}</div>
+          <div class="id-card-info">
+            <div class="id-name">{agent.get("name") or "Not set"}</div>
+            <div class="id-meta">{f'TREC #{agent["license"]}' if agent.get("license") else ""}{' &middot; ' if agent.get("license") and agent.get("brokerage") else ""}{agent.get("brokerage") or ""}</div>
+          </div>
+        </div>"""
         profile_body = f"""
+        {id_card}
         <div class="profile-grid">
-          {_pf("Name", agent.get("name"))}
-          {_pf("TREC License", agent.get("license"))}
-          {_pf("Brokerage", agent.get("brokerage"))}
           {_pf("Email", agent.get("email"))}
           {_pf("Title Company", agent.get("title_company"))}
           {_pf("Default Earnest %", f"{agent['default_earnest_pct']*100:.1f}%" if agent.get("default_earnest_pct") else None)}
@@ -4260,17 +4287,25 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
 
   .stats {{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1rem;margin:2rem 0;}}
   .stat {{
-    background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
+    background:linear-gradient(180deg, var(--bg-elevated), #131c2e);
+    border:1px solid var(--border);border-radius:var(--radius);
     padding:1.5rem;transition:var(--transition);
+    box-shadow:0 4px 20px rgba(0,0,0,0.25);
   }}
-  .stat:hover {{border-color:var(--border-hover);}}
-  .stat-val {{font-size:1.75rem;font-weight:800;color:var(--accent-light);}}
+  .stat:hover {{border-color:var(--border-hover);transform:translateY(-1px);}}
+  .stat-val {{
+    font-size:1.75rem;font-weight:800;
+    background:linear-gradient(135deg, var(--accent), var(--accent-light));
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  }}
   .stat-label {{font-size:0.7rem;font-weight:600;color:var(--text-dim);margin-top:0.25rem;
     text-transform:uppercase;letter-spacing:0.06em;}}
 
   .profile-card {{
-    background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
+    background:linear-gradient(180deg, var(--bg-elevated), #131c2e);
+    border:1px solid var(--border);border-radius:var(--radius);
     padding:1.5rem 1.75rem;margin-top:0.5rem;
+    box-shadow:0 4px 20px rgba(0,0,0,0.25);
   }}
   .profile-card-head {{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;}}
   .profile-card-head h2 {{margin:0;}}
@@ -4280,6 +4315,18 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
     transition:var(--transition);
   }}
   .profile-edit-link:hover {{border-color:var(--accent);}}
+
+  .id-card {{display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem;padding-bottom:1.5rem;
+    border-bottom:1px solid var(--border);}}
+  .avatar {{
+    width:52px;height:52px;border-radius:50%;flex-shrink:0;
+    background:linear-gradient(135deg, var(--accent), var(--accent-light));
+    display:flex;align-items:center;justify-content:center;
+    font-weight:800;font-size:1.1rem;color:#06281d;
+  }}
+  .id-name {{font-weight:700;font-size:1.05rem;}}
+  .id-meta {{font-size:0.8rem;color:var(--text-muted);margin-top:0.2rem;}}
+
   .profile-grid {{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1.1rem;}}
   .profile-field-label {{font-size:0.7rem;font-weight:600;color:var(--text-dim);
     text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem;}}
@@ -4289,38 +4336,72 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
   .profile-empty a {{color:var(--accent-light);font-weight:600;}}
 
   h2 {{font-size:1.1rem;font-weight:700;margin:2.5rem 0 1rem;}}
-  .table-wrap {{
-    background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
-    overflow:hidden;
-  }}
-  table {{width:100%;border-collapse:collapse;font-size:0.85rem;}}
-  th {{
-    text-align:left;padding:0.85rem 1rem;
-    background:rgba(255,255,255,0.02);
-    border-bottom:1px solid var(--border);
-    color:var(--text-dim);font-weight:600;font-size:0.7rem;
-    text-transform:uppercase;letter-spacing:0.06em;
-  }}
-  td {{padding:0.85rem 1rem;border-bottom:1px solid var(--border);color:var(--text-muted);}}
-  tr:last-child td {{border-bottom:none;}}
-  td a {{color:var(--accent-light);font-weight:600;}}
-  td a:hover {{text-decoration:underline;}}
 
-  .actions {{display:flex;gap:0.75rem;margin-top:2rem;flex-wrap:wrap;}}
-  .actions a {{
-    background:var(--bg-card);color:var(--text-muted);padding:0.7rem 1.25rem;
-    border-radius:var(--radius-sm);font-size:0.85rem;font-weight:600;
-    border:1px solid var(--border);transition:var(--transition);
+  .offer-feed {{display:flex;flex-direction:column;gap:0.9rem;}}
+  .offer-card {{
+    display:flex;border-radius:var(--radius);overflow:hidden;
+    background:linear-gradient(180deg, var(--bg-elevated), #131c2e);
+    border:1px solid var(--border);
+    box-shadow:0 4px 20px rgba(0,0,0,0.25);
+    transition:var(--transition);
   }}
-  .actions a:hover {{border-color:var(--accent);color:var(--accent-light);}}
+  .offer-card:hover {{border-color:var(--border-hover);}}
+  .offer-card:active {{transform:scale(0.99);}}
+  .offer-card-bar {{width:4px;flex-shrink:0;background:linear-gradient(180deg, var(--accent), var(--accent-light));}}
+  .offer-card-body {{padding:1.25rem 1.5rem;flex:1;min-width:0;}}
+  .offer-top {{display:flex;align-items:baseline;justify-content:space-between;gap:1rem;margin-bottom:0.9rem;}}
+  .offer-addr {{font-weight:700;font-size:0.98rem;}}
+  .offer-date {{font-size:0.75rem;color:var(--text-dim);flex-shrink:0;}}
+
+  .pills {{display:flex;gap:0.6rem;margin-bottom:1rem;flex-wrap:wrap;}}
+  .pill {{
+    background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:var(--radius-sm);
+    padding:0.5rem 0.85rem;display:flex;flex-direction:column;gap:0.1rem;min-width:72px;
+  }}
+  .pill-val {{font-size:0.9rem;font-weight:700;color:var(--text);}}
+  .pill-label {{font-size:0.65rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.05em;}}
+
+  .amend-list {{margin:0 0 1rem;padding:0.75rem 0.9rem;background:rgba(255,255,255,0.02);
+    border:1px solid var(--border);border-radius:var(--radius-sm);}}
+  .amend-row {{display:flex;align-items:center;justify-content:space-between;gap:0.75rem;
+    font-size:0.78rem;color:var(--text-dim);padding:0.25rem 0;}}
+  .amend-desc {{color:var(--text-muted);}}
+  .amend-pdf {{color:var(--accent-light);font-weight:600;flex-shrink:0;}}
+  .amend-pdf:hover {{text-decoration:underline;}}
+
+  .btn-primary {{
+    display:inline-block;background:var(--accent);color:#06281d;font-weight:700;
+    padding:0.6rem 1.1rem;border-radius:var(--radius-sm);font-size:0.85rem;
+    box-shadow:0 2px 10px rgba(16,185,129,0.3);transition:var(--transition);
+  }}
+  .btn-primary:hover {{background:var(--accent-light);}}
+  .btn-primary:active {{transform:scale(0.97);}}
+
+  .empty-state {{
+    text-align:center;color:var(--text-dim);padding:3rem 1.5rem;
+    background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
+    line-height:1.7;
+  }}
+
+  .bottom-nav {{
+    position:sticky;bottom:0;display:flex;justify-content:space-around;
+    background:rgba(15,23,42,0.92);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+    border-top:1px solid var(--border);padding:0.7rem 0 calc(0.7rem + env(safe-area-inset-bottom));
+    margin-top:2.5rem;
+  }}
+  .nav-item {{
+    display:flex;flex-direction:column;align-items:center;gap:0.2rem;
+    font-size:0.65rem;font-weight:600;color:var(--text-dim);transition:var(--transition);
+  }}
+  .nav-item span.icon {{font-size:1.2rem;}}
+  .nav-item:hover, .nav-item.active {{color:var(--accent-light);}}
 
   @media(max-width:600px){{
-    .container {{padding:1.5rem 1rem 3rem;}}
-    .stats {{grid-template-columns:1fr 1fr;}}
+    .container {{padding:1.5rem 1rem 1rem;}}
+    .stats {{grid-template-columns:1fr 1fr 1fr;}}
     .greeting {{font-size:1.35rem;}}
     .nav-links {{display:none;}}
-    .table-wrap {{font-size:0.8rem;}}
-    th, td {{padding:0.6rem 0.5rem;}}
+    .offer-top {{flex-direction:column;align-items:flex-start;gap:0.15rem;}}
   }}
 </style>
 </head>
@@ -4342,8 +4423,8 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
 
   <div class="stats">
     <div class="stat"><div class="stat-val">{user['offer_count']}</div><div class="stat-label">Total offers</div></div>
-    <div class="stat"><div class="stat-val">{len(offers)}</div><div class="stat-label">In history</div></div>
-    <div class="stat"><div class="stat-val">{user['offer_count'] * 45}m</div><div class="stat-label">Time saved</div></div>
+    <div class="stat"><div class="stat-val">{time_saved}</div><div class="stat-label">Time saved</div></div>
+    <div class="stat"><div class="stat-val">{avg_close}</div><div class="stat-label">Avg close</div></div>
   </div>
 
   <div class="profile-card">
@@ -4355,18 +4436,16 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
   </div>
 
   <h2>Offer History</h2>
-  <div class="table-wrap">
-  <table>
-    <tr><th>Address</th><th>Price</th><th>Down</th><th>Close</th><th>Date</th><th>PDF</th></tr>
-    {offer_rows}
-  </table>
-  </div>
-
-  <div class="actions">
-    <a href="{profile_url}">Agent Profile</a>
-    <a href="/pricing">{'Manage Subscription' if user['is_subscribed'] else 'Upgrade Plan'}</a>
+  <div class="offer-feed">
+    {offer_cards}
   </div>
 </div>
+
+<nav class="bottom-nav">
+  <a href="/dashboard?phone={_urlquote(phone, safe='')}&expires={expires}&sig={sig}" class="nav-item active"><span class="icon">&#8962;</span>Dashboard</a>
+  <a href="{profile_url}" class="nav-item"><span class="icon">&#128100;</span>Profile</a>
+  <a href="/pricing" class="nav-item"><span class="icon">&#128179;</span>{'Billing' if user['is_subscribed'] else 'Upgrade'}</a>
+</nav>
 </body>
 </html>"""
 
