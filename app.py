@@ -4241,6 +4241,7 @@ def profile():
                 "phone": phone,
                 "email": request.form.get("email", "").strip(),
                 "brokerage": request.form.get("brokerage", "").strip(),
+                "business_address": request.form.get("business_address", "").strip(),
                 "title_company": request.form.get("title_company", "").strip(),
                 "default_earnest_pct": float(request.form.get("earnest_pct", "1") or "1") / 100,
                 "default_option_fee": int(float(request.form.get("option_fee", "250") or "250")),
@@ -4398,6 +4399,9 @@ def profile():
 
       <label class="field-label">Brokerage</label>
       <input type="text" name="brokerage" placeholder="Keller Williams" value="{existing.get('brokerage', '')}">
+
+      <label class="field-label">Business address</label>
+      <input type="text" name="business_address" placeholder="123 Main St, Austin, TX 78701" value="{existing.get('business_address', '')}">
 
       <label class="field-label">Title company</label>
       <input type="text" name="title_company" placeholder="Texas Title Co." value="{existing.get('title_company', '')}">
@@ -4751,6 +4755,7 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
         {id_card}
         <div class="profile-grid">
           {_pf("Email", agent.get("email"))}
+          {_pf("Business Address", agent.get("business_address"))}
           {_pf("Title Company", agent.get("title_company"))}
           {_pf("Default Earnest %", f"{agent['default_earnest_pct']*100:.1f}%" if agent.get("default_earnest_pct") else None)}
           {_pf("Default Option Fee", f"${agent['default_option_fee']:,}" if agent.get("default_option_fee") else None)}

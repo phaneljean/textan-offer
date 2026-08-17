@@ -86,9 +86,18 @@ FIELD_MAP = {
     "agent_license": "Phone_2",                                # true: Buyer associate's license no.
     "agent_phone": "Other Brokers Address",                    # true: Buyer associate's phone no.
     "agent_email": "License No_6",                              # true: Buyer associate's email
+    "agent_address_broker_contact": "Listing Associates Email Address",  # true: Buyer broker's business Address (page 11)
 
     # Earnest money delivery (Paragraph 5A continuation)
     "earnest_to_escrow_2": "as earnest money to 2",
+
+    # Paragraph 21 NOTICES, "To Buyer's agent at:" block (page 8) -- verified by
+    # rendering distinct test values into each field and rect-matching against
+    # the printed "Address:"/"Phone:"/"Email:" labels (see git history).
+    "agent_address_p21": "when mailed to handdelivered at or transmitted by fax or electronic transmission as follows",
+    "agent_address_p21_line2": "at",
+    "agent_phone_p21": "Phone 52",
+    "agent_email_p21": "undefined_20",
 }
 
 def fill_offer_pdf(parsed: dict, agent_phone: str) -> str:
@@ -175,6 +184,19 @@ def fill_offer_pdf(parsed: dict, agent_phone: str) -> str:
         values[FIELD_MAP["agent_phone"]] = agent["phone"]
     if agent.get("email"):
         values[FIELD_MAP["agent_email"]] = agent["email"]
+    if agent.get("business_address"):
+        values[FIELD_MAP["agent_address_broker_contact"]] = agent["business_address"]
+
+    # Paragraph 21 NOTICES, "To Buyer's agent at:" block -- same agent info,
+    # reused here since TREC repeats the contact block a second time.
+    if agent.get("business_address"):
+        addr_line1, _, addr_line2 = agent["business_address"].partition(",")
+        values[FIELD_MAP["agent_address_p21"]] = addr_line1.strip()
+        values[FIELD_MAP["agent_address_p21_line2"]] = addr_line2.strip()
+    if agent.get("phone"):
+        values[FIELD_MAP["agent_phone_p21"]] = agent["phone"]
+    if agent.get("email"):
+        values[FIELD_MAP["agent_email_p21"]] = agent["email"]
 
     # Title company → title policy issuer + escrow agent + earnest money delivery
     if agent.get("title_company"):
