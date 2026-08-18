@@ -52,6 +52,45 @@ def _money_to_int(text: str):
     return int(digits) if digits else None
 
 
+def _checkbox_appearance_mismatches(pdf_path: str) -> list:
+    """Finds checkboxes where /AS (the state we set to "check" the box) is
+    NOT actually a key in the widget's own /AP/N appearance dictionary.
+
+    Found 2026-08-18: this app's checkbox-filling code used to hardcode
+    /AS to "/On" for every checkbox, but the 40-11's Buyer Approval
+    checkbox's real on-state is "/Yes" -- so /AS="/On" doesn't match
+    anything in /AP/N, and no appearance gets painted. /V still reads
+    "/On" (so a naive presence check like the rest of this module thinks
+    it's fine), but the box renders as unchecked in any spec-strict
+    viewer (confirmed via Safari; PyMuPDF's renderer is lenient enough to
+    paper over this, which is why it wasn't caught by this app's own
+    rendered-output testing). pdf_filler.py and financing_addendum.py are
+    now fixed to read each checkbox's real on-state instead of assuming
+    "/On" -- this is the permanent regression guard for that bug class,
+    covering any future checkbox this app didn't get to manually audit."""
+    reader = PdfReader(pdf_path)
+    mismatches = []
+    for page in reader.pages:
+        if "/Annots" not in page:
+            continue
+        for annot_ref in page["/Annots"]:
+            annot = annot_ref.get_object()
+            if annot.get("/FT") != "/Btn":
+                continue
+            state = annot.get("/AS")
+            if state in (None, "/Off"):
+                continue  # unchecked -- nothing to verify
+            ap = annot.get("/AP")
+            n_obj = ap["/N"].get_object() if ap and "/N" in ap else None
+            valid_states = list(n_obj.keys()) if hasattr(n_obj, "keys") else []
+            if state not in valid_states:
+                name = annot.get("/T") or (
+                    annot["/Parent"].get_object().get("/T") if "/Parent" in annot else "?"
+                )
+                mismatches.append(f'{name!r} set to {state!r}, but /AP only has {valid_states!r}')
+    return mismatches
+
+
 def validate_offer_pdf(pdf_path: str, parsed: dict) -> dict:
     """Returns {"ok": bool, "blocking": [str], "warnings": [str]}.
     "ok" reflects `blocking` only -- warnings never block sending."""
@@ -59,6 +98,9 @@ def validate_offer_pdf(pdf_path: str, parsed: dict) -> dict:
     text = _read_text(pdf_path)
     blocking = []
     warnings = []
+
+    for mismatch in _checkbox_appearance_mismatches(pdf_path):
+        blocking.append(f"Checkbox appearance mismatch (will render unchecked in strict viewers like Safari): {mismatch}")
 
     def require(key, label):
         val = values.get(TREC_FIELDS[key], "").strip()

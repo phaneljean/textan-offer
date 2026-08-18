@@ -47,6 +47,21 @@ FIELD_MAP = {
 }
 
 
+def _checkbox_on_state(annot) -> str:
+    """The real 'checked' appearance-state name for this checkbox widget,
+    read from its own /AP/N dictionary rather than assumed. Duplicated from
+    pdf_filler.py (not imported) to avoid a circular import -- pdf_filler.py
+    imports this module."""
+    ap = annot.get("/AP")
+    if ap and "/N" in ap:
+        n_obj = ap["/N"].get_object()
+        if hasattr(n_obj, "keys"):
+            states = [k for k in n_obj.keys() if k != "/Off"]
+            if states:
+                return states[0]
+    return "/On"
+
+
 def fill_financing_addendum(parsed: dict) -> bytes:
     if not os.path.exists(TEMPLATE_PATH):
         raise FileNotFoundError(f"TREC 40-11 template not found at {TEMPLATE_PATH}")
@@ -101,7 +116,13 @@ def fill_financing_addendum(parsed: dict) -> bytes:
     for page in writer.pages:
         writer.update_page_form_field_values(page, values)
 
-    # Check checkboxes
+    # Check checkboxes by setting /V and /AS to the box's OWN real on-state
+    # name, not a hardcoded "/On" -- this form's Buyer Approval checkbox
+    # ("Check Box2") uses "/Yes" instead, found 2026-08-18 via Safari (which
+    # correctly refuses to paint an appearance for an /AS that isn't
+    # actually a key in the widget's /AP/N dict, unlike more lenient
+    # renderers such as PyMuPDF, which is why every render done during this
+    # app's own testing looked checked when it wasn't).
     for page in writer.pages:
         if "/Annots" not in page:
             continue
@@ -109,8 +130,9 @@ def fill_financing_addendum(parsed: dict) -> bytes:
             annot = annot_ref.get_object()
             name = str(annot.get("/T", ""))
             if name in checkboxes:
-                annot[NameObject("/V")] = NameObject("/On")
-                annot[NameObject("/AS")] = NameObject("/On")
+                on_state = _checkbox_on_state(annot)
+                annot[NameObject("/V")] = NameObject(on_state)
+                annot[NameObject("/AS")] = NameObject(on_state)
 
     # Force appearance regeneration
     acroform = writer._root_object.get("/AcroForm")
