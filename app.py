@@ -1371,11 +1371,12 @@ def finalize_offer_sms(agent_phone: str, draft: dict):
 
 SMS_HELP_TEXT = (
     "TxtAnOffer Commands:\n\n"
-    "HELP - This menu\n"
+    "Text your offer terms anytime -- TxtAnOffer turns them into a "
+    "signed-ready PDF in seconds.\n\n"
+    "HELP or MENU - This menu\n"
     "DASHBOARD - Your offer history\n"
     "STATUS - Plan & usage\n"
-    "PROFILE - Edit agent info\n"
-    "STOP - Unsubscribe\n\n"
+    "PROFILE - Edit agent info\n\n"
     "To generate an offer, text:\n"
     "price down% days address\n"
     "(optionally add financing type and inspection days)\n\n"
@@ -1389,7 +1390,8 @@ SMS_HELP_TEXT = (
     "AMEND <address> close +<days>\n\n"
     "Examples:\n"
     "AMEND 123 Main St price 730k\n"
-    "AMEND 123 Main St close +10"
+    "AMEND 123 Main St close +10\n\n"
+    "Reply STOP to unsubscribe."
 )
 
 
