@@ -5,7 +5,7 @@ Auto-generates alongside the main contract when loan_amount > 0.
 import os
 import io
 from pypdf import PdfReader, PdfWriter
-from pypdf.generic import NameObject, BooleanObject
+from pypdf.generic import NameObject, BooleanObject, TextStringObject
 
 TEMPLATE_PATH = os.environ.get("FINANCING_TEMPLATE_PATH", "40-11.pdf")
 
@@ -117,6 +117,31 @@ def fill_financing_addendum(parsed: dict) -> bytes:
         acroform = acroform.get_object()
     if acroform is not None:
         acroform[NameObject("/NeedAppearances")] = BooleanObject(True)
+
+    # Namespace every field name before this gets merged into the main
+    # contract in pdf_filler.py. TREC's PDF export reuses the same generic
+    # auto-names ("undefined_3", "Check Box2", "Text1", etc.) independently
+    # across ALL of its promulgated forms -- 20-19_2.pdf and 40-11.pdf share
+    # 10 identical field names. PdfWriter.append() doesn't namespace by
+    # source document, so two unrelated same-named fields from different
+    # source PDFs become one shared logical field in the merged AcroForm:
+    # filling one bleeds its value into the other's widget. Confirmed in
+    # production: the down payment amount (20-19's "undefined_3") was
+    # leaking onto this form's Seller-initials line (also "undefined_3"),
+    # and this form's Buyer Approval checkbox ("Check Box2") collided with
+    # an unrelated, unfilled Leases checkbox on 20-19 with a different
+    # on/off-state name, leaving both unchecked. Prefixing every field here
+    # guarantees no name can ever collide with 20-19_2.pdf again.
+    def _namespace_fields(field_refs):
+        for field_ref in field_refs:
+            field = field_ref.get_object()
+            if "/T" in field:
+                field[NameObject("/T")] = TextStringObject("FA_" + str(field["/T"]))
+            if "/Kids" in field:
+                _namespace_fields(field["/Kids"])
+
+    if acroform is not None and "/Fields" in acroform:
+        _namespace_fields(acroform["/Fields"])
 
     buf = io.BytesIO()
     writer.write(buf)
