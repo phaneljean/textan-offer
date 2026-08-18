@@ -97,8 +97,21 @@ def validate_offer_pdf(pdf_path: str, parsed: dict) -> dict:
 
     # Section 9: Closing Date -- drawn via reportlab overlay, not an AcroForm
     # field, so check by the same formatted text pdf_filler.py stamps.
+    # Anchored to the offer's actual creation time when available (passed as
+    # parsed["created_at"]), NOT datetime.now() -- the closing date is fixed
+    # at generation time, so re-deriving it from "now" at validation time
+    # drifts a day later for every day that passes before this check runs,
+    # producing a false mismatch against a PDF that was generated correctly.
     if parsed.get("close_days") is not None:
-        close_dt = datetime.now() + timedelta(days=parsed["close_days"])
+        reference = parsed.get("created_at")
+        if isinstance(reference, str):
+            try:
+                reference = datetime.fromisoformat(reference)
+            except ValueError:
+                reference = None
+        if not isinstance(reference, datetime):
+            reference = datetime.now()
+        close_dt = reference + timedelta(days=parsed["close_days"])
         expected = close_dt.strftime("%B %d,")
         if expected not in text:
             blocking.append("Section 9: Closing Date")

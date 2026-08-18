@@ -2481,6 +2481,7 @@ def api_send_email():
         validation_parsed = {
             "price": offer_row["price"], "down_payment_amount": down_amt,
             "loan_amount": offer_row["price"] - down_amt, "close_days": offer_row["close_days"],
+            "created_at": offer_row.get("created_at"),
         }
     else:
         validation_parsed = parsed
@@ -4476,13 +4477,22 @@ def review_offer(filename):
     pdf_path_on_disk = os.path.join(OUTPUT_DIR, filename)
     validation = validate_offer_pdf(pdf_path_on_disk, {
         "price": price, "down_payment_amount": down_amt, "loan_amount": loan_amt,
-        "close_days": close_days,
+        "close_days": close_days, "created_at": offer.get("created_at"),
     }) if os.path.exists(pdf_path_on_disk) else {"ok": False, "blocking": ["PDF file not found on server"], "warnings": []}
 
     pdf_url = f"/offers/{filename}?expires={expires}&sig={sig}"
 
     from datetime import timedelta
-    close_date = (datetime.now() + timedelta(days=close_days)).strftime("%B %d, %Y") if close_days else ""
+    # Anchor to the offer's actual creation time, not "now" -- this page can
+    # be opened any time after generation, and the closing date is fixed at
+    # generation time (baked into the PDF then). Recomputing from "now" here
+    # made the summary card silently drift a day later for every day that
+    # passes before the agent opens this link, disagreeing with the PDF.
+    try:
+        created_dt = datetime.fromisoformat(offer["created_at"])
+    except (KeyError, TypeError, ValueError):
+        created_dt = datetime.now()
+    close_date = (created_dt + timedelta(days=close_days)).strftime("%B %d, %Y") if close_days else ""
 
     return f"""<!DOCTYPE html>
 <html lang="en">
