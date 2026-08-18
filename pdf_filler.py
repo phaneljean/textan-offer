@@ -54,14 +54,26 @@ FIELD_MAP = {
     "loan_amount": "undefined_4",   # 3B: Sum of all financing
     "sales_price": "undefined_5",   # 3C: Sales Price (total)
 
-    # Earnest Money & Option Fee (Paragraph 5A)
-    "earnest_money": "earnest money of",
-    "option_fee": "Option Fee in the form of",
-    "earnest_to_escrow": "as earnest money to",  # 5A: deliver to (Escrow Agent)
+    # Earnest Money, Option Fee & Escrow Agent name (Paragraph 5A).
+    # NOTE: another instance of TREC's field names lying about their on-page
+    # position -- verified by rendering distinct test values into every
+    # candidate field on this section and rect-matching against the printed
+    # "deliver to ___ (Escrow Agent) at"/"$___ as earnest money"/"$___ as the
+    # option fee" text (see git history). The field literally named "earnest
+    # money of" is actually 5A(1)'s ADDITIONAL earnest money blank (a later,
+    # separately-negotiated amount this app doesn't collect) -- NOT the main
+    # earnest money amount. "Option Fee in the form of" isn't even on this
+    # page: it's the OPTION FEE RECEIPT block's payment-method blank on the
+    # final page, meant to be filled by the escrow agent once funds actually
+    # arrive. And the field named "Escrow Agent" is that same receipts page's
+    # signature-name blank -- pre-filling it would misrepresent funds as
+    # already received before the contract is even sent.
+    "earnest_money_amount": "as earnest money to",   # true: 5A "$___ as earnest money"
+    "option_fee_amount": "as earnest money to 2",     # true: 5A "$___ as the option fee"
+    "escrow_agent_name": "undefined_6",                # true: 5A "deliver to ___ (Escrow Agent) at"
 
-    # Title company / Escrow (Paragraph 6)
+    # Title company (Paragraph 6A) -- separate from escrow agent above.
     "title_company": "insurance Title Policy issued by",
-    "escrow_agent": "Escrow Agent",
 
     # Checkboxes
     # NOTE: like financing_addendum.py's Section 1 checkboxes, several of TREC's
@@ -87,9 +99,6 @@ FIELD_MAP = {
     "agent_phone": "Other Brokers Address",                    # true: Buyer associate's phone no.
     "agent_email": "License No_6",                              # true: Buyer associate's email
     "agent_address_broker_contact": "Listing Associates Email Address",  # true: Buyer broker's business Address (page 11)
-
-    # Earnest money delivery (Paragraph 5A continuation)
-    "earnest_to_escrow_2": "as earnest money to 2",
 
     # Paragraph 21 NOTICES, "To Buyer's agent at:" block (page 8) -- verified by
     # rendering distinct test values into each field and rect-matching against
@@ -165,9 +174,9 @@ def fill_offer_pdf(parsed: dict, agent_phone: str) -> str:
 
     # Earnest Money & Option Fee (Paragraph 5A)
     if parsed.get("earnest_money") is not None:
-        values[FIELD_MAP["earnest_money"]] = f"${parsed['earnest_money']:,}"
+        values[FIELD_MAP["earnest_money_amount"]] = f"${parsed['earnest_money']:,}"
     if parsed.get("option_fee") is not None:
-        values[FIELD_MAP["option_fee"]] = f"${parsed['option_fee']:,}"
+        values[FIELD_MAP["option_fee_amount"]] = f"${parsed['option_fee']:,}"
 
     # Closing date (Paragraph 9A) — handled via reportlab overlay after merge
     # (form field is a parent/kid that doesn't render reliably)
@@ -198,12 +207,13 @@ def fill_offer_pdf(parsed: dict, agent_phone: str) -> str:
     if agent.get("email"):
         values[FIELD_MAP["agent_email_p21"]] = agent["email"]
 
-    # Title company → title policy issuer + escrow agent + earnest money delivery
+    # Title company → title policy issuer (Para 6A) + escrow agent name (Para 5A).
+    # Does NOT touch the final RECEIPTS page -- those are the escrow agent's
+    # own signature blocks acknowledging funds actually received, not
+    # something to pre-fill before the contract is even sent.
     if agent.get("title_company"):
         values[FIELD_MAP["title_company"]] = agent["title_company"]
-        values[FIELD_MAP["earnest_to_escrow"]] = agent["title_company"]
-        values[FIELD_MAP["earnest_to_escrow_2"]] = agent["title_company"]
-        values[FIELD_MAP["escrow_agent"]] = agent["title_company"]
+        values[FIELD_MAP["escrow_agent_name"]] = agent["title_company"]
     
     from pypdf.generic import NameObject, TextStringObject, BooleanObject
 
