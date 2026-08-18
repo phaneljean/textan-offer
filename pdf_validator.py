@@ -52,6 +52,41 @@ def _money_to_int(text: str):
     return int(digits) if digits else None
 
 
+# Where each section referenced in the messages below actually sits in the
+# physical document -- TREC's own printed page numbers (as they appear on
+# each page's footer), not the merged-PDF's internal page index (which
+# also includes the cover page and shifts depending on whether a 40-11 got
+# attached). Built from this session's page-by-page rect-verification work
+# (see pdf_filler.py / financing_addendum.py FIELD_MAP comments for the
+# underlying field-position evidence). Lets the review page tell an agent
+# where to look for a problem, not just what the problem is.
+SECTION_PAGES = {
+    "Section 1": "Page 1 of 12",
+    "Section 2A": "Page 1 of 12",
+    "Section 3": "Page 1 of 12",
+    "Section 5A": "Page 2 of 12",
+    "Section 6A": "Page 2 of 12",
+    "Section 9": "Page 6 of 12",
+    "Section 21": "Page 8 of 12",
+    "Section 22": "Page 9 of 12",
+    "40-11 Section 1": "Page 1 of 2 of the 40-11 addendum",
+    "40-11 Section 2A": "Page 2 of 2 of the 40-11 addendum",
+    "40-11": "the 40-11 addendum",  # fallback for 40-11 messages with no section number
+}
+
+
+def _with_page(message: str) -> str:
+    """Appends a page reference to a message that starts with a known
+    section prefix. Longest prefix wins (checked first) so "40-11 Section 1"
+    matches before the bare "40-11" fallback. Messages that don't start with
+    a recognized prefix (stray-value / checkbox-appearance messages, whose
+    page varies) pass through unchanged."""
+    for prefix in sorted(SECTION_PAGES, key=len, reverse=True):
+        if message.startswith(prefix):
+            return f"{message} ({SECTION_PAGES[prefix]})"
+    return message
+
+
 def _checkbox_appearance_mismatches(pdf_path: str) -> list:
     """Finds checkboxes where /AS (the state we set to "check" the box) is
     NOT actually a key in the widget's own /AP/N appearance dictionary.
@@ -269,4 +304,6 @@ def validate_offer_pdf(pdf_path: str, parsed: dict) -> dict:
         if "initial" in name.lower() and val.strip():
             blocking.append(f'Stray value "{val.strip()}" found on an initials line (field: {name!r})')
 
+    blocking = [_with_page(m) for m in blocking]
+    warnings = [_with_page(w) for w in warnings]
     return {"ok": len(blocking) == 0, "blocking": blocking, "warnings": warnings}

@@ -379,7 +379,7 @@ def generate_cover_page(parsed: dict, agent: dict, mode: str = "light") -> bytes
     c.setFont("Helvetica", 7)
     c.drawString(margin, y, "Third Party Financing Addendum (40-11) attached")
     y -= 0.16 * inch
-    c.drawString(margin, y, "Not affiliated with TREC · Operated by Phanel")
+    c.drawString(margin, y, "Not affiliated with TREC")
 
     # Draft badge (right side)
     badge_y = y + 0.25 * inch
