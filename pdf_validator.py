@@ -99,6 +99,11 @@ def validate_offer_pdf(pdf_path: str, parsed: dict) -> dict:
     blocking = []
     warnings = []
 
+    # All-cash offer: loan_amount is explicitly 0 (not just absent/unknown).
+    # Computed up front since several sections below check in the opposite
+    # direction for a cash deal (must be blank/unchecked, not required).
+    is_cash = parsed.get("loan_amount") == 0
+
     for mismatch in _checkbox_appearance_mismatches(pdf_path):
         blocking.append(f"Checkbox appearance mismatch (will render unchecked in strict viewers like Safari): {mismatch}")
 
@@ -120,9 +125,16 @@ def validate_offer_pdf(pdf_path: str, parsed: dict) -> dict:
     require("city", "Section 2A: City")
     require("county", "Section 2A: County")
 
-    # Section 3: Sales Price A/B/C
+    # Section 3: Sales Price A/B/C. 3B is required for a financed offer,
+    # but must be genuinely blank for an all-cash one (pdf_filler.py
+    # deliberately skips filling it rather than printing "$0").
     down_val = require("down_payment", "Section 3A: Cash portion of Sales Price")
-    loan_val = require("loan_amount", "Section 3B: Sum of financing")
+    loan_val = values.get(TREC_FIELDS["loan_amount"], "").strip()
+    if is_cash:
+        if loan_val:
+            blocking.append(f"Section 3B: offer is all-cash but financing amount ({loan_val}) is filled in")
+    elif not loan_val:
+        blocking.append("Section 3B: Sum of financing")
     price_val = require("sales_price", "Section 3C: Sales Price total")
 
     # Section 5: Earnest Money & Escrow Agent name (address is a warning --
@@ -164,7 +176,9 @@ def validate_offer_pdf(pdf_path: str, parsed: dict) -> dict:
     require("agent_phone_p21", "Section 21: Buyer's agent phone")
     require("agent_email_p21", "Section 21: Buyer's agent email")
 
-    # 40-11 Section 1: financing type checkbox + principal amount
+    # 40-11: for an all-cash offer no addendum should exist at all. Checks
+    # run in the opposite direction from a financed offer: verify nothing
+    # financing-related leaked in, rather than requiring it.
     financing_type_labels = {
         "conventional": "Conventional", "texas_veterans": "Texas Veterans",
         "fha": "FHA", "usda": "USDA", "va": "VA Guaranteed", "reverse_mortgage": "Reverse Mortgage",
@@ -172,25 +186,36 @@ def validate_offer_pdf(pdf_path: str, parsed: dict) -> dict:
     checked_type = next(
         (k for k in financing_type_labels if _is_checked(values, _fa(k))), None
     )
-    if not checked_type:
-        blocking.append("40-11 Section 1: Financing type checkbox")
-    elif checked_type == "conventional":
-        if not values.get(_fa("first_loan_amount"), "").strip():
-            blocking.append("40-11 Section 1(A)(1): First mortgage principal amount")
-    else:
-        # FHA/VA/USDA/Texas Veterans/Reverse Mortgage principal amounts
-        # aren't wired to a verified field yet (see financing_addendum.py) --
-        # warn instead of blocking non-conventional offers entirely.
-        warnings.append(
-            f"40-11 Section 1: {financing_type_labels[checked_type]} selected -- "
-            "principal amount isn't auto-filled for this financing type yet, add it by hand."
-        )
 
-    # 40-11 Section 2A: Buyer Approval -- exactly one of the pair checked
-    subject = _is_checked(values, _fa("buyer_approval"))
-    not_subject = _is_checked(values, _fa("buyer_approval_not_subject"))
-    if subject == not_subject:  # both checked or neither checked
-        blocking.append("40-11 Section 2A: Buyer Approval (exactly one box must be checked)")
+    if is_cash:
+        if checked_type:
+            blocking.append(
+                f"40-11: offer is all-cash but {financing_type_labels[checked_type]} financing is checked"
+            )
+        if any(k.startswith(FA_PREFIX) for k in values):
+            blocking.append("40-11: offer is all-cash but financing addendum pages were attached")
+    else:
+        if not checked_type:
+            blocking.append("40-11 Section 1: Financing type checkbox")
+        elif checked_type == "conventional":
+            if not values.get(_fa("first_loan_amount"), "").strip():
+                blocking.append("40-11 Section 1(A)(1): First mortgage principal amount")
+        else:
+            # FHA/VA/USDA/Texas Veterans/Reverse Mortgage principal amounts
+            # aren't wired to a verified field yet (see financing_addendum.py) --
+            # warn instead of blocking non-conventional offers entirely.
+            warnings.append(
+                f"40-11 Section 1: {financing_type_labels[checked_type]} selected -- "
+                "principal amount isn't auto-filled for this financing type yet, add it by hand."
+            )
+
+        # 40-11 Section 2A: Buyer Approval -- exactly one of the pair checked.
+        # Only applies when there's actually an addendum to have a Buyer
+        # Approval section on.
+        subject = _is_checked(values, _fa("buyer_approval"))
+        not_subject = _is_checked(values, _fa("buyer_approval_not_subject"))
+        if subject == not_subject:  # both checked or neither checked
+            blocking.append("40-11 Section 2A: Buyer Approval (exactly one box must be checked)")
 
     # --- Consistency checks ---
 
@@ -222,13 +247,19 @@ def validate_offer_pdf(pdf_path: str, parsed: dict) -> dict:
             blocking.append("Section 5A option fee doesn't match the offer's option fee amount")
 
     # Financing checkbox consistency: 3B row + Section 22 addenda list must
-    # both be checked whenever a financing addendum is actually attached.
+    # both be checked whenever a financing addendum is actually attached,
+    # and both must be UNCHECKED for a confirmed all-cash offer.
     has_loan = bool(parsed.get("loan_amount") and parsed["loan_amount"] > 0)
     if has_loan:
         if not _is_checked(values, TREC_FIELDS["third_party_financing_3b"]):
             blocking.append("Section 3B: Third Party Financing Addendum checkbox not checked")
         if not _is_checked(values, TREC_FIELDS["third_party_financing"]):
             blocking.append("Section 22: Third Party Financing Addendum checkbox not checked")
+    elif is_cash:
+        if _is_checked(values, TREC_FIELDS["third_party_financing_3b"]):
+            blocking.append("Section 3B: offer is all-cash but Third Party Financing checkbox is checked")
+        if _is_checked(values, TREC_FIELDS["third_party_financing"]):
+            blocking.append("Section 22: offer is all-cash but Third Party Financing Addendum checkbox is checked")
 
     # No stray values on any "Initialed by Buyer/Seller" line, anywhere in
     # either merged document -- this is the generalized, permanent guard

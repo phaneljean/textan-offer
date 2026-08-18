@@ -77,6 +77,24 @@ TEST_CASES = {
         },
         "phone": "+15622570392",
     },
+    "all_cash_offer": {
+        # loan_amount == 0 (explicitly, not just absent) -- must NOT get a
+        # 40-11 addendum or any financing checkbox checked. See the
+        # is_cash branch in pdf_validator.py.
+        "parsed": {
+            "address": "900 Cash Buyer Ln", "city": "Dallas", "county": "Dallas",
+            "price": 450000, "down_payment_amount": 450000, "loan_amount": 0,
+            "earnest_money": 5000, "option_fee": 250, "close_days": 14,
+            "financing_type": "cash",
+            "agent": {
+                "name": "Jane Smith", "license": "0654321", "brokerage": "Keller Williams",
+                "phone": "(512) 555-0147", "email": "jane@realty.com",
+                "business_address": "100 Congress Ave, Austin, TX 78701",
+                "title_company": "Independence Title",
+            },
+        },
+        "phone": "+15125550100",
+    },
 }
 
 # Overlay text isn't an AcroForm field -- these substrings must appear

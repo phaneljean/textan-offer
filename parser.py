@@ -230,12 +230,19 @@ def parse_offer_sms(text: str) -> dict:
     """
     text = text.strip()
     price = _parse_price(text)
+    financing_type = _parse_financing_type(text)  # optional
     pct = _parse_pct(text)
+    # "cash" with no explicit percent means 100% down / no financing -- an
+    # all-cash offer never has a separate down-payment figure to state.
+    # An explicit percent alongside "cash" (unusual, but not this parser's
+    # place to reject as a typo) still wins; only fill the gap when nothing
+    # else specified a percentage.
+    if pct is None and financing_type == "cash":
+        pct = 1.0
     days = _parse_days(text)
     county = _parse_county(text)  # optional
     city = _parse_city(text)  # optional
     address = _parse_address(text)
-    financing_type = _parse_financing_type(text)  # optional
     inspection_days = _parse_inspection_days(text)  # optional
 
     missing = [name for name, val in
@@ -267,7 +274,7 @@ def parse_offer_sms(text: str) -> dict:
             "error": f"Down payment must be greater than 0% (got {pct*100:.1f}%)",
             "raw_text": text
         }
-    if pct > 0.5:
+    if pct > 0.5 and financing_type != "cash":
         return {
             "error": f"Down payment {pct*100:.1f}% seems too high. Max 50% for typical offers.",
             "raw_text": text
@@ -324,13 +331,15 @@ def parse_correction_sms(text: str) -> dict:
     price = _parse_price(text)
     if price is not None:
         result["price"] = price
+    financing_type = _parse_financing_type(text)
     pct = _parse_pct(text)
+    if pct is None and financing_type == "cash":
+        pct = 1.0  # see parse_offer_sms -- "cash instead" implies 100% down
     if pct is not None:
         result["down_payment_pct"] = pct
     days = _parse_days(text)
     if days is not None:
         result["close_days"] = days
-    financing_type = _parse_financing_type(text)
     if financing_type:
         result["financing_type"] = financing_type
     inspection_days = _parse_inspection_days(text)
@@ -404,6 +413,8 @@ if __name__ == "__main__":
         ("1740 Grand Ave Austin, 725k, 3%, 21 days", 725000, 0.03, 21),
         ("725k 10% 30day 1740 Grand Ave", 725000, 0.10, 30),
         ("725000 3 percent 21 days 1740 Grand Ave, Austin TX 78701", 725000, 0.03, 21),
+        # All-cash offer -- "cash" with no explicit percent implies 100% down
+        ("725k cash 21day 1740 Grand Ave", 725000, 1.0, 21),
     ]
     passed = 0
     failed = 0
