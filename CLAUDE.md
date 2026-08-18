@@ -115,3 +115,34 @@ Use `/demo` for end-to-end testing without SMS:
 3. Submit to see parsed data and generated PDF link
 
 This bypasses Twilio entirely while exercising the same parse → validate → fill → serve logic.
+
+## PDF Generation QA (read `QA_SPEC.md` first)
+
+`QA_SPEC.md` is the permanent spec for what "correct" means for a generated
+contract — required fields, consistency checks, and the known-fixed bug
+classes to never regress. It exists because every real bug found in this
+generator (Section 21, Paragraph 5A, cross-document field-name collisions)
+looked correct in the code and only showed up on rendering the actual
+output — TREC's auto-generated field `/T` names frequently lie about their
+on-page position. **Never trust a `FIELD_MAP` entry without rendering the
+actual output and checking it against the printed label**, even one that
+"looks right" from the name alone.
+
+Two permanent guardrails, both required after touching `pdf_filler.py`,
+`financing_addendum.py`, `cover_page.py`, or the PDF templates themselves:
+
+- **`pdf_validator.py`** (`validate_offer_pdf`) reads the AcroForm values
+  back out of a *finished* PDF and checks completeness + cross-field
+  consistency (dollar amounts matching, no stray values on "Initialed by
+  Buyer/Seller" lines, etc.). It gates the "Email to Listing Agent" button
+  in `app.py`'s `/review/<filename>` route and `/api/send-email` endpoint
+  (server-side, not just a disabled button — that endpoint is re-checked
+  independently). Buyer/Seller legal names and the Escrow Agent's mailing
+  address are warnings, not blocks — this app never collects them anywhere,
+  so hard-blocking on them would make the send button permanently unusable.
+- **`regression_test.py`** regenerates fixed test cases and diffs every
+  field value (plus overlay-only text like the closing date) against
+  `regression_golden/*.json`. Run `python regression_test.py` after any
+  generator change — before committing, not after. Only run
+  `python regression_test.py --update` once you've reviewed the diff and
+  confirmed the change is intentional.

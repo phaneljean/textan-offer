@@ -26,16 +26,23 @@ def init_offers_table():
         )
     """)
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_offers_phone ON offers(phone)")
-    # Add mls_json column if table already exists without it
-    try:
-        cursor.execute("ALTER TABLE offers ADD COLUMN mls_json TEXT DEFAULT ''")
-    except sqlite3.OperationalError:
-        pass
+    # Columns added after the table's initial creation -- ALTER for
+    # existing rows since CREATE TABLE IF NOT EXISTS won't add them.
+    for ddl in (
+        "ALTER TABLE offers ADD COLUMN mls_json TEXT DEFAULT ''",
+        "ALTER TABLE offers ADD COLUMN generator_version TEXT DEFAULT ''",
+    ):
+        try:
+            cursor.execute(ddl)
+        except sqlite3.OperationalError:
+            pass
     conn.commit()
     conn.close()
 
 
 def record_offer(phone: str, parsed: dict, filename: str):
+    from pdf_filler import GENERATOR_VERSION
+
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     now = datetime.utcnow().isoformat()
@@ -47,14 +54,14 @@ def record_offer(phone: str, parsed: dict, filename: str):
     existing = cursor.execute("SELECT id, price FROM offers WHERE filename = ?", (filename,)).fetchone()
     if existing and not existing[1]:
         cursor.execute("""
-            UPDATE offers SET phone=?, address=?, price=?, down_pct=?, close_days=?, mls_json=?, created_at=?
+            UPDATE offers SET phone=?, address=?, price=?, down_pct=?, close_days=?, mls_json=?, generator_version=?, created_at=?
             WHERE id=?
-        """, (phone, address, price, down_pct, close_days, mls, now, existing[0]))
+        """, (phone, address, price, down_pct, close_days, mls, GENERATOR_VERSION, now, existing[0]))
     elif not existing:
         cursor.execute("""
-            INSERT INTO offers (phone, address, price, down_pct, close_days, filename, mls_json, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """, (phone, address, price, down_pct, close_days, filename, mls, now))
+            INSERT INTO offers (phone, address, price, down_pct, close_days, filename, mls_json, generator_version, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (phone, address, price, down_pct, close_days, filename, mls, GENERATOR_VERSION, now))
     conn.commit()
     conn.close()
 
@@ -64,7 +71,7 @@ def get_offer_by_filename(filename: str) -> dict:
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT id, phone, address, price, down_pct, close_days, filename, mls_json, created_at
+        SELECT id, phone, address, price, down_pct, close_days, filename, mls_json, generator_version, created_at
         FROM offers WHERE filename = ?
     """, (filename,))
     row = cursor.fetchone()

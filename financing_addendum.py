@@ -43,6 +43,7 @@ FIELD_MAP = {
     # actually positioned over the FIRST checkbox (IS subject to Buyer
     # Approval) -- confirmed by extracting the page text at each field's rect.
     "buyer_approval": "Check Box2",
+    "buyer_approval_not_subject": "This contract is subject to Buyer obtaining Buyer Approval If Buyer cannot obtain Buyer",  # true: the NOT-subject-to checkbox -- never checked by this app (protective default), kept here so validators can confirm exactly one of the pair is set
 }
 
 

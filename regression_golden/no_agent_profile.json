@@ -1,0 +1,43 @@
+{
+  "field_values": {
+    "1 Buyer accepts the Property As Is": "/On",
+    "Addendum for Reservation of Oil Gas": "/On",
+    "Addition City of": "San Antonio",
+    "Addr of Prop": "500 Ocean Blvd, San Antonio, TX",
+    "Address of Property": "500 Ocean Blvd, San Antonio, TX",
+    "Address of Property_26": "500 Ocean Blvd, San Antonio, TX",
+    "B Sum of all financing described in the attached": "/On",
+    "Contract Concerning": "500 Ocean Blvd, San Antonio, TX",
+    "Contract Concerning_2": "500 Ocean Blvd, San Antonio, TX",
+    "Contract Concerning_3": "500 Ocean Blvd, San Antonio, TX",
+    "Contract Concerning_4": "500 Ocean Blvd, San Antonio, TX",
+    "County of": "Bexar",
+    "FA_1 Conventional Financing": "/On",
+    "FA_Address of Property": "500 Ocean Blvd, San Antonio, TX",
+    "FA_Check Box2": "/On",
+    "FA_Street Address and City": "500 Ocean Blvd, San Antonio, TX",
+    "FA_a A first mortgage loan in the principal amount of": "/On",
+    "FA_years with interest not to exceed": "$1,080,000",
+    "Page 2 of 10": "500 Ocean Blvd, San Antonio, TX",
+    "Page 3 of 10": "500 Ocean Blvd, San Antonio, TX",
+    "Page 7 of 10": "500 Ocean Blvd, San Antonio, TX",
+    "Texas known as": "500 Ocean Blvd",
+    "undefined_3": "$120,000",
+    "undefined_4": "$1,080,000",
+    "undefined_5": "$1,200,000",
+    "upon": "/On"
+  },
+  "overlay_present": {
+    "October 01,": true
+  },
+  "page_count": 15,
+  "validation_blocking": [
+    "Section 5A: Escrow Agent name",
+    "Section 5A: Earnest money amount",
+    "Section 5A: Option fee amount",
+    "Section 6A: Title Company",
+    "Section 21: Buyer's agent address",
+    "Section 21: Buyer's agent phone",
+    "Section 21: Buyer's agent email"
+  ]
+}

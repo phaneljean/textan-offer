@@ -28,6 +28,7 @@ from twilio.rest import Client as TwilioClient
 
 from parser import parse_offer_sms, parse_amendment_sms, parse_correction_sms
 from pdf_filler import fill_offer_pdf, OUTPUT_DIR
+from pdf_validator import validate_offer_pdf
 from amendment import fill_amendment_pdf
 from agent_profiles import get_agent_profile, save_agent_profile
 from subscriptions import can_generate_offer, increment_offer_count, activate_subscription, deactivate_subscription, get_user, create_user, FREE_OFFER_LIMIT, is_admin_phone
@@ -2468,6 +2469,29 @@ def api_send_email():
     if not os.path.exists(pdf_path):
         return jsonify({"success": False, "error": "PDF not found"}), 404
 
+    # Server-side re-check: the review page disables the Email button when
+    # this fails, but that's only a UI convenience -- don't trust it, since
+    # this endpoint can be hit directly. Rebuild a fuller parsed dict from
+    # the stored offer (the client only sends address/price) so consistency
+    # checks (Section 3 vs. offer total, etc.) actually have something to
+    # compare against.
+    offer_row = get_offer_by_filename(pdf_filename)
+    if offer_row and offer_row.get("price"):
+        down_amt = int(offer_row["price"] * offer_row["down_pct"])
+        validation_parsed = {
+            "price": offer_row["price"], "down_payment_amount": down_amt,
+            "loan_amount": offer_row["price"] - down_amt, "close_days": offer_row["close_days"],
+        }
+    else:
+        validation_parsed = parsed
+    validation = validate_offer_pdf(pdf_path, validation_parsed)
+    if validation["blocking"]:
+        return jsonify({
+            "success": False,
+            "error": "This contract is missing required fields and can't be sent: " + "; ".join(validation["blocking"]),
+            "missing_fields": validation["blocking"],
+        }), 422
+
     result = send_offer_email(to_email, pdf_path, parsed)
     track_event("email_sent" if result["success"] else "email_failed", to_email, result)
     return jsonify(result), 200 if result["success"] else 500
@@ -4449,6 +4473,12 @@ def review_offer(filename):
     loan_amt = price - down_amt if price else 0
     mls = offer.get("mls", {})
 
+    pdf_path_on_disk = os.path.join(OUTPUT_DIR, filename)
+    validation = validate_offer_pdf(pdf_path_on_disk, {
+        "price": price, "down_payment_amount": down_amt, "loan_amount": loan_amt,
+        "close_days": close_days,
+    }) if os.path.exists(pdf_path_on_disk) else {"ok": False, "blocking": ["PDF file not found on server"], "warnings": []}
+
     pdf_url = f"/offers/{filename}?expires={expires}&sig={sig}"
 
     from datetime import timedelta
@@ -4508,6 +4538,14 @@ margin-bottom:0.75rem;}}
 .email-status.error{{display:block;background:rgba(239,68,68,0.1);color:#fca5a5;}}
 .disclaimer{{font-size:0.75rem;color:var(--text-dim);text-align:center;padding:1rem;
 border-top:1px solid var(--border);margin-top:1rem;}}
+.btn:disabled{{opacity:0.45;cursor:not-allowed;}}
+.btn:disabled:hover{{transform:none;box-shadow:none;}}
+.qa-blocking, .qa-warnings{{border-radius:var(--radius-sm);padding:0.85rem 1rem;margin-bottom:0.85rem;font-size:0.85rem;}}
+.qa-blocking{{background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);color:#fca5a5;}}
+.qa-warnings{{background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.25);color:#fbbf24;}}
+.qa-blocking strong, .qa-warnings strong{{display:block;margin-bottom:0.4rem;color:var(--text);}}
+.qa-blocking ul, .qa-warnings ul{{margin:0;padding-left:1.1rem;}}
+.qa-blocking li, .qa-warnings li{{margin-bottom:0.2rem;}}
 @media(max-width:400px){{
 .stats{{grid-template-columns:1fr 1fr;}}
 .stat:last-child{{grid-column:span 2;}}
@@ -4530,8 +4568,11 @@ border-top:1px solid var(--border);margin-top:1rem;}}
 
 {'<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:0.6rem;text-align:center;margin-bottom:1rem;color:var(--text-muted);font-size:0.8rem;">' + ' &middot; '.join([x for x in [f"{mls.get('bed')} Bed" if mls.get('bed') else '', f"{mls.get('bath')} Bath" if mls.get('bath') else '', f"{mls.get('sqft'):,} Sqft" if mls.get('sqft') else '', f"Built {mls.get('year_built')}" if mls.get('year_built') else ''] if x]) + '</div>' if any(mls.get(k) for k in ('bed','bath','sqft')) else ''}
 
+{'<div class="qa-blocking"><strong>Can&rsquo;t send yet &mdash; fix before emailing:</strong><ul>' + ''.join(f'<li>{b}</li>' for b in validation['blocking']) + '</ul></div>' if validation['blocking'] else ''}
+{'<div class="qa-warnings"><strong>Heads up before sending:</strong><ul>' + ''.join(f'<li>{w}</li>' for w in validation['warnings']) + '</ul></div>' if validation['warnings'] else ''}
+
 <div class="actions">
-<button class="btn btn-primary" id="email-toggle">Email to Listing Agent</button>
+<button class="btn btn-primary" id="email-toggle"{' disabled' if validation['blocking'] else ''}>Email to Listing Agent</button>
 <a href="{pdf_url}" class="btn btn-secondary" target="_blank">Open PDF</a>
 <a href="{pdf_url}" class="btn btn-outline" download="{filename}">Download PDF</a>
 </div>
