@@ -1,6 +1,6 @@
 """
 parser.py — turns a freeform SMS like:
- "725k 3% 21day 1740 Grand Ave"
+ "725k 3% 21day 123 Main St"
 into structured offer data.
 No LLM call needed for the common patterns. Falls back to
 returning an 'error' key with a hint message if it can't parse.
@@ -245,15 +245,25 @@ def parse_offer_sms(text: str) -> dict:
     address = _parse_address(text)
     inspection_days = _parse_inspection_days(text)  # optional
 
-    missing = [name for name, val in
-        [("price", price), ("down_payment_pct", pct),
-         ("close_days", days), ("address", address)]
-        if val is None]
+    # Field-specific error message ("Variant B") instead of a raw list of
+    # missing field names -- names one concrete thing to fix rather than
+    # making the agent cross-reference a list against their own text, which
+    # is a meaningfully lower cognitive load when someone's texting
+    # one-handed. Priority order below matches the natural reading order of
+    # the format template itself (price, then %, then days, then address),
+    # so when multiple fields are missing the earliest one in that order is
+    # the one called out.
+    FIELD_HINTS = [
+        ("price", price, "Couldn't find a price. Try a number like 725k."),
+        ("down_payment_pct", pct, "Couldn't find a down payment %. Try something like 3%."),
+        ("close_days", days, "Couldn't find a closing timeframe. Try something like 21day."),
+        ("address", address, "Couldn't find an address. Include street number, name, and type."),
+    ]
+    first_missing = next((hint for _, val, hint in FIELD_HINTS if val is None), None)
 
-    if missing:
+    if first_missing:
         return {
-            "error": f"Missing: {', '.join(missing)}. "
-                     f"Try format: 725k 3% 21day Travis 1740 Grand Ave",
+            "error": f"{first_missing} Full format: 725k 3% 21day Travis 123 Main St",
             "raw_text": text
         }
 
@@ -294,7 +304,7 @@ def parse_offer_sms(text: str) -> dict:
     # Validate address has meaningful content (more than just 1-2 characters)
     if len(address.strip()) < 5:
         return {
-            "error": f'Address "{address}" is too short. Include street number, name, and type (e.g., 1740 Grand Ave)',
+            "error": f'Address "{address}" is too short. Include street number, name, and type (e.g., 123 Main St)',
             "raw_text": text
         }
 
@@ -369,7 +379,7 @@ def parse_amendment_sms(text: str) -> dict:
 
     if not price_m and not close_m:
         return {"error": "Amend format: AMEND <address> price <value>  OR  AMEND <address> close +<days>\n"
-                          "Example: AMEND 1740 Grand Ave price 730k"}
+                          "Example: AMEND 123 Main St price 730k"}
 
     if price_m:
         num = float(price_m.group(1))
@@ -400,21 +410,21 @@ def parse_amendment_sms(text: str) -> dict:
 if __name__ == "__main__":
     tests = [
         # Original format
-        ("725k 3% 21day 1740 Grand Ave", 725000, 0.03, 21),
-        ("725k 3% 21day Travis 1740 Grand Ave", 725000, 0.03, 21),
+        ("725k 3% 21day 123 Main St", 725000, 0.03, 21),
+        ("725k 3% 21day Travis 123 Main St", 725000, 0.03, 21),
         ("650k 3% 30day Harris 123 Main St Houston", 650000, 0.03, 30),
         ("1.2m 10% 45days Bexar 500 Ocean Blvd San Antonio", 1200000, 0.10, 45),
         # Messy real-world inputs
-        ("725000 3% 21day 1740 Grand Ave", 725000, 0.03, 21),
-        ("Offer 725k, 3 percent down, close in 21 days, 1740 Grand Ave Austin", 725000, 0.03, 21),
-        ("725k 3 down 21day 1740 Grand Ave", 725000, 0.03, 21),
-        ("725,000 3% 21day 1740 Grand Ave", 725000, 0.03, 21),
-        ("725k 3% 21 day close 1740 Grand Ave", 725000, 0.03, 21),
-        ("1740 Grand Ave Austin, 725k, 3%, 21 days", 725000, 0.03, 21),
-        ("725k 10% 30day 1740 Grand Ave", 725000, 0.10, 30),
-        ("725000 3 percent 21 days 1740 Grand Ave, Austin TX 78701", 725000, 0.03, 21),
+        ("725000 3% 21day 123 Main St", 725000, 0.03, 21),
+        ("Offer 725k, 3 percent down, close in 21 days, 123 Main St Austin", 725000, 0.03, 21),
+        ("725k 3 down 21day 123 Main St", 725000, 0.03, 21),
+        ("725,000 3% 21day 123 Main St", 725000, 0.03, 21),
+        ("725k 3% 21 day close 123 Main St", 725000, 0.03, 21),
+        ("123 Main St Austin, 725k, 3%, 21 days", 725000, 0.03, 21),
+        ("725k 10% 30day 123 Main St", 725000, 0.10, 30),
+        ("725000 3 percent 21 days 123 Main St, Austin TX 78701", 725000, 0.03, 21),
         # All-cash offer -- "cash" with no explicit percent implies 100% down
-        ("725k cash 21day 1740 Grand Ave", 725000, 1.0, 21),
+        ("725k cash 21day 123 Main St", 725000, 1.0, 21),
     ]
     passed = 0
     failed = 0

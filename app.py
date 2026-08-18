@@ -3,7 +3,7 @@ app.py — Twilio SMS webhook for TxtAnOffer, plus a /demo web form that
 bypasses SMS entirely (for testing while A2P 10DLC registration is pending).
 
 Flow (SMS):
-  Agent texts "725k 3% 21day 1740 Grand Ave"
+  Agent texts "725k 3% 21day 123 Main St"
     -> parse_offer_sms() extracts structured data
     -> (stub) pull real bed/bath/sqft from MLS -- replace with real API call
     -> fill_offer_pdf() writes values into 20-19_2.pdf
@@ -716,7 +716,7 @@ def index():
         <div class="phone-notch"></div>
         <div class="phone-screen">
           <div class="msg-time">Today 9:41 AM</div>
-          <div class="msg-bubble msg-user">725k 3% 21day 1740 Grand Ave, Austin TX 78701</div>
+          <div class="msg-bubble msg-user">725k 3% 21day 123 Main St, Austin TX 78701</div>
           <div class="msg-bubble msg-bot">
             Your TREC contract is ready!<br><br>
             <strong style="color:#fff;">$725,000</strong><br>
@@ -811,7 +811,7 @@ def index():
         <li><strong>Message frequency:</strong> Most messages are sent in direct response to user-initiated texts. We also send a one-time reminder a few days before the closing date of an offer you generated. We do not send marketing or promotional messages.</li>
         <li><strong>Message content:</strong> Replies contain contract confirmation details and a download link to the generated PDF; reminders reference the closing date of an offer already on file.</li>
         <li><strong>Sample message:</strong> <em>"Got it — $725,000, 3% down, closing Aug 13 2026. Your TREC contract is ready: txtanoffer.com/review/1740-grand-ave.pdf — Reply STOP to unsubscribe, HELP for help. Msg&amp;data rates may apply."</em></li>
-        <li><strong>Sample reminder message:</strong> <em>"Reminder: 1740 Grand Ave is scheduled to close on August 13, 2026 (3 days from now). Text DASHBOARD to review. Reply STOP to unsubscribe, HELP for help."</em></li>
+        <li><strong>Sample reminder message:</strong> <em>"Reminder: 123 Main St is scheduled to close on August 13, 2026 (3 days from now). Text DASHBOARD to review. Reply STOP to unsubscribe, HELP for help."</em></li>
         <li><strong>Opt-out:</strong> Reply STOP at any time to unsubscribe from all messages. Reply HELP for support.</li>
         <li><strong>Standard message and data rates may apply.</strong></li>
       </ul>
@@ -958,7 +958,7 @@ def validate_address(address: str, raw_text: str = None) -> dict:
     if not _STREET_NUMBER_RE.search(cleaned):
         result["reason"] = (
             f'"{cleaned}" doesn\'t start with a street number. '
-            f"Include the full address, e.g. 1740 Grand Ave."
+            f"Include the full address, e.g. 123 Main St."
         )
         return result
 
@@ -1266,7 +1266,7 @@ def format_offer_confirmation(parsed: dict) -> str:
 TX_NEEDS_STATE_MESSAGE = (
     "Can't confirm this address is in Texas -- TxtAnOffer only generates "
     "Texas TREC contracts. Resend your offer with the city and state "
-    'included, e.g. "725k 3% 21day 1740 Grand Ave, Austin, TX".'
+    'included, e.g. "725k 3% 21day 123 Main St, Austin, TX".'
 )
 
 
@@ -1380,16 +1380,16 @@ SMS_HELP_TEXT = (
     "price down% days address\n"
     "(optionally add financing type and inspection days)\n\n"
     "Examples:\n"
-    "725k 3% 21day 1740 Grand Ave\n"
-    "725k 10% down conventional close Sept 15 10-day inspection 1740 Grand Ave\n\n"
+    "725k 3% 21day 123 Main St\n"
+    "725k 10% down conventional close Sept 15 10-day inspection 123 Main St\n\n"
     "You'll get a confirmation to review -- reply YES to create the PDF, "
     "NO to cancel, or send corrections.\n\n"
     "To amend an existing offer:\n"
     "AMEND <address> price <value>\n"
     "AMEND <address> close +<days>\n\n"
     "Examples:\n"
-    "AMEND 1740 Grand Ave price 730k\n"
-    "AMEND 1740 Grand Ave close +10"
+    "AMEND 123 Main St price 730k\n"
+    "AMEND 123 Main St close +10"
 )
 
 
@@ -1485,7 +1485,7 @@ def sms_reply():
         user = get_user(agent_phone)
         if not user:
             create_user(agent_phone)
-            twilio_send_sms(agent_phone, f"Welcome! You have {FREE_OFFER_LIMIT} free offers.\n\nJust text your offer:\n725k 3% 21day 1740 Grand Ave\n\nReply HELP for all commands.")
+            twilio_send_sms(agent_phone, f"Welcome! You have {FREE_OFFER_LIMIT} free offers.\n\nJust text your offer:\n725k 3% 21day 123 Main St\n\nReply HELP for all commands.")
             return "", 200
         elif is_admin_phone(agent_phone):
             twilio_send_sms(agent_phone, f"Plan: Admin (Unlimited)\nOffers generated: {user['offer_count']}\n\nText HELP for commands.")
@@ -1892,7 +1892,7 @@ DEMO_FORM = """
 
     <div class="cmd-menu">
       <div class="cmd-menu-title">Text these to 1-833-897-0333</div>
-      <div class="cmd-row"><span class="cmd-key">price down% days address</span><span class="cmd-desc">Get a confirmation to review &mdash; e.g. 725k 3% 21day 1740 Grand Ave</span></div>
+      <div class="cmd-row"><span class="cmd-key">price down% days address</span><span class="cmd-desc">Get a confirmation to review &mdash; e.g. 725k 3% 21day 123 Main St</span></div>
       <div class="cmd-row"><span class="cmd-key">YES</span><span class="cmd-desc">Confirm the pending offer and generate the PDF</span></div>
       <div class="cmd-row"><span class="cmd-key">NO</span><span class="cmd-desc">Cancel the pending offer</span></div>
       <div class="cmd-row"><span class="cmd-key">AMEND &lt;address&gt; price &lt;value&gt;</span><span class="cmd-desc">Change the sales price on an offer you sent</span></div>
@@ -2053,7 +2053,7 @@ def demo():
             parsed_json = _json.dumps(_parsed_safe)
 
             # Social share URLs
-            share_text = "Just generated a TREC 20-19 contract in 3 seconds by texting an address 🤯 TxtAnOffer turns '725k 3% 21day 1740 Grand Ave' into a filled PDF instantly."
+            share_text = "Just generated a TREC 20-19 contract in 3 seconds by texting an address 🤯 TxtAnOffer turns '725k 3% 21day 123 Main St' into a filled PDF instantly."
             share_url = "https://txtanoffer.com/demo"
             twitter_share = f"https://twitter.com/intent/tweet?text={share_text.replace(' ', '%20')}&url={share_url}"
             linkedin_share = f"https://www.linkedin.com/sharing/share-offsite/?url={share_url}"
@@ -2343,7 +2343,7 @@ padding:0.4rem 0.85rem;font-size:0.8rem;color:var(--text-muted);cursor:pointer;t
 <div class="playground-card">
 <div class="input-area">
 <label>Your offer text</label>
-<textarea id="offer-input" rows="3" placeholder="725k 3% 21day 1740 Grand Ave, Austin"></textarea>
+<textarea id="offer-input" rows="3" placeholder="725k 3% 21day 123 Main St, Austin"></textarea>
 </div>
 <button class="parse-btn" id="parse-btn">Parse &rarr;</button>
 
@@ -2364,7 +2364,7 @@ padding:0.4rem 0.85rem;font-size:0.8rem;color:var(--text-muted);cursor:pointer;t
 <div class="examples">
 <h3>Try these (click to load):</h3>
 <div class="example-chips">
-<span class="chip">725k 3% 21day 1740 Grand Ave</span>
+<span class="chip">725k 3% 21day 123 Main St</span>
 <span class="chip">Offer 650000 3 percent close in 30 days 456 Oak St Austin</span>
 <span class="chip">500k 5 down 14days 200 Preston Rd Plano</span>
 <span class="chip">1.2m 10% 45day Travis 789 Pine Blvd</span>
@@ -3949,7 +3949,7 @@ def faq():
 
   <div class="faq-item">
     <h2>Can I amend an offer after I've already sent it?</h2>
-    <p>Yes &mdash; text <strong>AMEND &lt;address&gt; price &lt;value&gt;</strong> or <strong>AMEND &lt;address&gt; close +&lt;days&gt;</strong> (e.g. <em>"AMEND 1740 Grand Ave price 730k"</em> or <em>"AMEND 1740 Grand Ave close +10"</em>) and you'll get back a filled TREC 39-11 Amendment for that contract. It's included on every plan, works the same way in the <a href="/demo" style="color:var(--accent-light);">web demo</a>, and shows up nested under the original offer on your <strong>Dashboard</strong>. Only the price or closing-date field you asked to change is filled &mdash; everything else on the form is left blank for you to complete, same as the main contract.</p>
+    <p>Yes &mdash; text <strong>AMEND &lt;address&gt; price &lt;value&gt;</strong> or <strong>AMEND &lt;address&gt; close +&lt;days&gt;</strong> (e.g. <em>"AMEND 123 Main St price 730k"</em> or <em>"AMEND 123 Main St close +10"</em>) and you'll get back a filled TREC 39-11 Amendment for that contract. It's included on every plan, works the same way in the <a href="/demo" style="color:var(--accent-light);">web demo</a>, and shows up nested under the original offer on your <strong>Dashboard</strong>. Only the price or closing-date field you asked to change is filled &mdash; everything else on the form is left blank for you to complete, same as the main contract.</p>
   </div>
 
   <div class="faq-item">

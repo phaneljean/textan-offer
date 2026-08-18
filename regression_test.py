@@ -38,7 +38,7 @@ GOLDEN_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "regressio
 TEST_CASES = {
     "conventional_full": {
         "parsed": {
-            "address": "1740 Grand Ave", "city": "Austin", "county": "Travis",
+            "address": "123 Main St", "city": "Austin", "county": "Travis",
             "price": 725000, "down_payment_amount": 21750, "loan_amount": 703250,
             "earnest_money": 5000, "option_fee": 250, "close_days": 21,
             "inspection_days": 10,
@@ -99,15 +99,25 @@ TEST_CASES = {
 
 # Overlay text isn't an AcroForm field -- these substrings must appear
 # somewhere in the extracted page text, derived per-case from `parsed`.
-def _expected_overlay_snippets(parsed: dict) -> list:
+# Keyed by a STABLE name (not the literal date string) -- the closing date
+# is computed from datetime.now() at generation time, so the actual text
+# changes every single day regardless of any code change. Storing the
+# literal string as a golden dict key (an earlier version of this function
+# did exactly that) means the snapshot goes stale and fails the day after
+# it's created, every time, for a reason that has nothing to do with a
+# regression. Keying by stable name and storing only the boolean result
+# avoids that -- both the golden run and the comparison run recompute
+# "what should today's date look like" fresh, and only the presence
+# boolean is diffed, not the date text itself.
+def _expected_overlay_checks(parsed: dict) -> dict:
     from datetime import datetime, timedelta
-    snippets = []
+    checks = {}
     if parsed.get("close_days") is not None:
         close_dt = datetime.now() + timedelta(days=parsed["close_days"])
-        snippets.append(close_dt.strftime("%B %d,"))
+        checks["closing_date"] = close_dt.strftime("%B %d,")
     if parsed.get("inspection_days") is not None:
-        snippets.append(str(parsed["inspection_days"]))
-    return snippets
+        checks["inspection_days"] = str(parsed["inspection_days"])
+    return checks
 
 
 def _snapshot(pdf_path: str, parsed: dict) -> dict:
@@ -120,7 +130,7 @@ def _snapshot(pdf_path: str, parsed: dict) -> dict:
 
     text = "\n".join(page.extract_text() or "" for page in reader.pages)
     overlay_present = {
-        snippet: (snippet in text) for snippet in _expected_overlay_snippets(parsed)
+        name: (snippet in text) for name, snippet in _expected_overlay_checks(parsed).items()
     }
 
     validation = validate_offer_pdf(pdf_path, parsed)
@@ -141,10 +151,10 @@ def _diff(name: str, golden: dict, current: dict) -> list:
         if gfv.get(k) != cfv.get(k):
             problems.append(f"  field {k!r}: was {gfv.get(k)!r} -> now {cfv.get(k)!r}")
 
-    for snippet, was_present in golden.get("overlay_present", {}).items():
-        now_present = current.get("overlay_present", {}).get(snippet)
+    for check_name, was_present in golden.get("overlay_present", {}).items():
+        now_present = current.get("overlay_present", {}).get(check_name)
         if was_present and not now_present:
-            problems.append(f"  overlay text {snippet!r} was present, now MISSING")
+            problems.append(f"  overlay check {check_name!r} was present, now MISSING")
 
     if golden.get("page_count") != current.get("page_count"):
         problems.append(f"  page count: was {golden.get('page_count')} -> now {current.get('page_count')}")

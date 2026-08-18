@@ -464,7 +464,7 @@ if __name__ == "__main__":
         "price": 725000,
         "down_payment_pct": 0.03,
         "close_days": 21,
-        "address": "1740 Grand Ave, Austin, TX",
+        "address": "123 Main St, Austin, TX",
     }
     path = fill_offer_pdf(sample, "+15125550100")
     print("Wrote:", path)
