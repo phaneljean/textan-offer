@@ -398,3 +398,237 @@ def generate_cover_page(parsed: dict, agent: dict, mode: str = "light") -> bytes
     c.save()
     buffer.seek(0)
     return buffer.getvalue()
+
+
+# Blue accent for the certification page only -- spec calls for a distinct
+# color from the cover page's teal so agents can tell the two apart at a
+# glance when flipping through a printed packet.
+BLUE_RGB = (0.231, 0.510, 0.965)  # #3b82f6
+CERT_BLUE = {
+    "dark": {"accent": HexColor("#3b82f6"), "accent_light": HexColor("#60a5fa")},
+    "light": {"accent": HexColor("#3b82f6"), "accent_light": HexColor("#2563eb")},
+}
+
+REVIEW_CHECKLIST = [
+    ("Property Address Verified",
+     "I have confirmed the legal description and address match the intended property."),
+    ("Sales Price & Financial Terms",
+     "I have verified the sales price, down payment, loan amount, earnest money, and option fee."),
+    ("Dates & Deadlines",
+     "I have confirmed the closing date and all contractual deadlines."),
+    ("Buyer & Seller Information",
+     "I have filled in or verified all party names and contact information."),
+    ("Special Provisions Reviewed",
+     "I have read all special provisions and additional clauses, if any."),
+]
+
+
+def _wrap_text(c, text, font, size, max_width):
+    """Greedy word-wrap: returns a list of lines that each fit max_width."""
+    words = text.split()
+    lines = []
+    line = ""
+    for word in words:
+        test = line + " " + word if line else word
+        if c.stringWidth(test, font, size) < max_width:
+            line = test
+        else:
+            if line:
+                lines.append(line)
+            line = word
+    if line:
+        lines.append(line)
+    return lines
+
+
+def generate_certification_page(parsed: dict, agent: dict, mode: str = "light") -> bytes:
+    """Final-page agent certification + review checklist (spec Part 3).
+    Blue accent distinguishes it from the teal cover page. Checkboxes and the
+    signature line are drawn empty -- this is a printed page the agent signs
+    by hand, not something this app fills in on their behalf."""
+    pal = PALETTES.get(mode, PALETTES["light"])
+    blue = CERT_BLUE.get(mode, CERT_BLUE["light"])
+
+    def surface(alpha):
+        r, g, b = pal["surface_tint"]
+        return Color(r, g, b, alpha=alpha * pal["surface_scale"])
+
+    ACCENT = blue["accent"]
+    ACCENT_LIGHT = blue["accent_light"]
+    TEXT_PRIMARY = pal["text_primary"]
+    TEXT_MUTED = pal["text_muted"]
+    TEXT_DIM = pal["text_dim"]
+    DIVIDER = pal["divider"]
+
+    buffer = io.BytesIO()
+    c = canvas.Canvas(buffer, pagesize=letter)
+    width, height = letter
+
+    # Background + top accent bar (blue, not the shared teal _draw_bg helper)
+    c.setFillColor(pal["page_bg"])
+    c.rect(0, 0, width, height, fill=1, stroke=0)
+    if mode == "dark" and pal["elevated_bg"] is not None:
+        c.setFillColor(pal["elevated_bg"])
+        c.rect(0, 0, width, height * 0.35, fill=1, stroke=0)
+    c.setFillColor(ACCENT)
+    c.rect(0, height - 4, width, 4, fill=1, stroke=0)
+    c.saveState()
+    c.setFillColor(Color(*BLUE_RGB, alpha=pal["corner_glow_alpha"]))
+    c.circle(width - 0.5*inch, height - 0.5*inch, 2*inch, fill=1, stroke=0)
+    c.restoreState()
+
+    margin = 0.65 * inch
+    content_w = width - 2 * margin
+    cx = width / 2
+
+    # === HEADER (brand) ===
+    y = height - 0.6 * inch
+    c.setFillColor(ACCENT)
+    c.circle(margin + 12, y - 3, 12, fill=1, stroke=0)
+    c.setFillColor(ON_ACCENT)
+    c.setFont("Helvetica-Bold", 7)
+    c.drawCentredString(margin + 12, y - 6, "TX")
+    c.setFillColor(TEXT_PRIMARY)
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(margin + 30, y - 7, "TxtAnOffer")
+
+    # === TITLE BLOCK ===
+    y -= 0.7 * inch
+    c.setFillColor(TEXT_PRIMARY)
+    c.setFont("Helvetica-Bold", 17)
+    c.drawCentredString(cx, y, "Agent Certification")
+
+    full_addr = parsed.get("full_address") or ", ".join(
+        p for p in [parsed.get("address", ""),
+                    parsed.get("city", ""),
+                    f"TX {parsed.get('zip', '')}".strip()] if p
+    )
+    y -= 0.28 * inch
+    c.setFillColor(TEXT_MUTED)
+    c.setFont("Helvetica", 9)
+    c.drawCentredString(cx, y, full_addr)
+
+    # === CERTIFICATION STATEMENT ===
+    y -= 0.45 * inch
+    stmt_text = (
+        "By signing below, I confirm that I have personally reviewed all fields "
+        "in the attached TREC 20-19 and 40-11 forms, and that they accurately "
+        "reflect the terms of this offer as communicated by the buyer."
+    )
+    stmt_lines = _wrap_text(c, stmt_text, "Helvetica", 9, content_w - 0.4*inch)
+    stmt_h = len(stmt_lines) * 0.19 * inch + 0.25 * inch
+    _draw_rounded_rect(c, margin, y - stmt_h, content_w, stmt_h, r=6,
+                       fill_color=surface(0.03), stroke_color=surface(0.06))
+    text_obj = c.beginText(margin + 0.2*inch, y - 0.24*inch)
+    text_obj.setFont("Helvetica", 9)
+    text_obj.setFillColor(TEXT_PRIMARY)
+    text_obj.setLeading(0.19 * inch)
+    for line in stmt_lines:
+        text_obj.textLine(line)
+    c.drawText(text_obj)
+    y -= stmt_h + 0.3 * inch
+
+    # === REVIEW CHECKLIST ===
+    c.setFillColor(TEXT_DIM)
+    c.setFont("Helvetica-Bold", 9)
+    c.drawString(margin, y, "REVIEW CHECKLIST")
+    y -= 0.06 * inch
+    c.setStrokeColor(DIVIDER)
+    c.setLineWidth(0.5)
+    c.line(margin, y, width - margin, y)
+    y -= 0.28 * inch
+
+    box_size = 12
+    for title, desc in REVIEW_CHECKLIST:
+        desc_lines = _wrap_text(c, desc, "Helvetica", 8, content_w - 0.5*inch)
+
+        # Empty checkbox square
+        c.setStrokeColor(HexColor("#d1d5db"))
+        c.setLineWidth(1)
+        c.rect(margin, y - box_size + 2, box_size, box_size, fill=0, stroke=1)
+
+        c.setFillColor(TEXT_PRIMARY)
+        c.setFont("Helvetica-Bold", 9.5)
+        c.drawString(margin + 0.28*inch, y, title)
+
+        desc_y = y - 0.16 * inch
+        c.setFillColor(TEXT_MUTED)
+        c.setFont("Helvetica", 8)
+        for line in desc_lines:
+            c.drawString(margin + 0.28*inch, desc_y, line)
+            desc_y -= 0.14 * inch
+
+        y = desc_y - 0.12 * inch
+
+    y -= 0.1 * inch
+    c.setStrokeColor(DIVIDER)
+    c.setLineWidth(0.5)
+    c.line(margin, y, width - margin, y)
+    y -= 0.35 * inch
+
+    # === AGENT ACKNOWLEDGMENT ===
+    c.setFillColor(TEXT_DIM)
+    c.setFont("Helvetica-Bold", 9)
+    c.drawString(margin, y, "AGENT ACKNOWLEDGMENT")
+    y -= 0.06 * inch
+    c.setStrokeColor(DIVIDER)
+    c.setLineWidth(0.5)
+    c.line(margin, y, width - margin, y)
+    y -= 0.32 * inch
+
+    agent_name = agent.get("name", "")
+    license_num = agent.get("license", "")
+
+    c.setFillColor(TEXT_MUTED)
+    c.setFont("Helvetica", 8)
+    c.drawString(margin, y, "Agent Name")
+    c.drawString(cx + 0.2*inch, y, "TREC #")
+    y -= 0.2 * inch
+    c.setFillColor(TEXT_PRIMARY)
+    c.setFont("Helvetica-Bold", 11)
+    c.drawString(margin, y, agent_name or "_" * 30)
+    c.drawString(cx + 0.2*inch, y, license_num or "_" * 12)
+    y -= 0.45 * inch
+
+    sig_line_color = HexColor("#111827") if mode == "light" else HexColor("#f9fafb")
+    c.setStrokeColor(sig_line_color)
+    c.setLineWidth(0.75)
+    sig_w = content_w * 0.6
+    c.line(margin, y, margin + sig_w, y)
+    date_x = margin + sig_w + 0.3 * inch
+    c.line(date_x, y, width - margin, y)
+
+    y -= 0.16 * inch
+    c.setFillColor(TEXT_DIM)
+    c.setFont("Helvetica", 7.5)
+    c.drawString(margin, y, "Signature")
+    c.drawString(date_x, y, "Date")
+
+    y -= 0.5 * inch
+
+    # === DISCLAIMER ===
+    disc_text = (
+        "This certification is generated by TxtAnOffer as a review aid for the "
+        "agent. It is not a substitute for the agent's independent professional "
+        "judgment and does not modify or replace any provision of the attached "
+        "TREC contract."
+    )
+    disc_lines = _wrap_text(c, disc_text, "Helvetica", 7.5, content_w * 0.85)
+    c.setFillColor(TEXT_DIM)
+    c.setFont("Helvetica", 7.5)
+    for line in disc_lines:
+        c.drawCentredString(cx, y, line)
+        y -= 0.14 * inch
+
+    # === FOOTER ===
+    footer_y = 0.55 * inch
+    c.setStrokeColor(DIVIDER)
+    c.setLineWidth(0.5)
+    c.line(margin, footer_y + 0.15*inch, width - margin, footer_y + 0.15*inch)
+    c.setFillColor(TEXT_DIM)
+    c.setFont("Helvetica", 7)
+    c.drawCentredString(cx, footer_y, "Generated by TxtAnOffer · txtanoffer.com · Not affiliated with TREC")
+
+    c.save()
+    buffer.seek(0)
+    return buffer.getvalue()

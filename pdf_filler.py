@@ -17,7 +17,7 @@ import os
 import io
 from datetime import datetime, timedelta
 from pypdf import PdfReader, PdfWriter
-from cover_page import generate_cover_page
+from cover_page import generate_cover_page, generate_certification_page
 from financing_addendum import fill_financing_addendum
 
 TEMPLATE_PATH = os.environ.get("TREC_TEMPLATE_PATH", "20-19_2.pdf")
@@ -406,6 +406,12 @@ def fill_offer_pdf(parsed: dict, agent_phone: str) -> str:
 
         overlay_page = PdfReader(overlay_buf).pages[0]
         option_page.merge_page(overlay_page)
+
+    # Certification page (final page): light/print mode, same as the cover
+    # page, appended last so it doesn't shift any of the fixed page-index
+    # overlays above (closing date, page-11 header, option period).
+    cert_pdf_bytes = generate_certification_page(parsed, parsed.get('agent', {}), mode="light")
+    final_writer.append(PdfReader(io.BytesIO(cert_pdf_bytes)))
 
     # No footer, page-number stamp, or any other added mark on the actual
     # TREC contract/addendum pages (indices 1+) -- those are promulgated
