@@ -716,7 +716,7 @@ def index():
         <div class="phone-notch"></div>
         <div class="phone-screen">
           <div class="msg-time">Today 9:41 AM</div>
-          <div class="msg-bubble msg-user">725k 3% 21day 123 Main St, Austin TX 78701</div>
+          <div class="msg-bubble msg-user">725k 3% 21day 1740 Grand Ave, Austin TX 78701</div>
           <div class="msg-bubble msg-bot">
             Your TREC contract is ready!<br><br>
             <strong style="color:#fff;">$725,000</strong><br>
