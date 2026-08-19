@@ -2372,6 +2372,7 @@ padding:0.4rem 0.85rem;font-size:0.8rem;color:var(--text-muted);cursor:pointer;t
 <span class="chip">1.2m 10% 45day Travis 789 Pine Blvd</span>
 <span class="chip">825k 3% close in 14 1900 Exposition Blvd</span>
 <span class="chip">375,000 3% 30days 2100 South Congress Ave</span>
+<span class="chip">725k cash 21day 123 Main St</span>
 </div>
 </div>
 
