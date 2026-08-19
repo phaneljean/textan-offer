@@ -716,17 +716,17 @@ def index():
         <div class="phone-notch"></div>
         <div class="phone-screen">
           <div class="msg-time">Today 9:41 AM</div>
-          <div class="msg-bubble msg-user">725k 3% 21day 1740 Grand Ave, Austin TX 78701</div>
+          <div class="msg-bubble msg-user">725k 3% 21day 123 Main St, Austin TX 78701</div>
           <div class="msg-bubble msg-bot">
             Your TREC contract is ready!<br><br>
             <strong style="color:#fff;">$725,000</strong><br>
             Close: <strong style="color:#fff;">Aug 12, 2026</strong><br><br>
-            <a>txtanoffer.com/review/1740-grand-ave.pdf</a>
+            <a>txtanoffer.com/review/123-main-st.pdf</a>
           </div>
           <div class="pdf-preview">
             <div class="pdf-icon">PDF</div>
             <div style="min-width:0;overflow:hidden;">
-              <div class="pdf-name">TREC_1740_Grand_Ave.pdf</div>
+              <div class="pdf-name">TREC_123_Main_St.pdf</div>
               <div class="pdf-meta">142 KB &middot; TREC 20-19 + 40-11</div>
             </div>
           </div>
