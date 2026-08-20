@@ -215,6 +215,32 @@ def get_last_blocked_state(phone: str, hours: int = 72):
     import json
     return json.loads(row[0]).get("state")
 
+def get_signups_by_source(days: int = 30) -> list:
+    """Signup counts grouped by ?src= attribution (Direct Reach, BiggerPockets,
+    LinkedIn, etc.), most recent-heavy channels first. 'direct' covers anyone
+    who signed up without an src param (e.g. typed the URL directly)."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cutoff = (datetime.utcnow() - timedelta(days=days)).isoformat()
+    cursor.execute("""
+        SELECT metadata FROM events
+        WHERE event_type = 'signup' AND created_at > ?
+    """, (cutoff,))
+    rows = cursor.fetchall()
+    conn.close()
+
+    import json
+    counts = {}
+    for row in rows:
+        metadata = json.loads(row[0]) if row[0] else {}
+        source = metadata.get("source") or "direct"
+        counts[source] = counts.get(source, 0) + 1
+
+    return sorted(
+        [{"source": source, "count": count} for source, count in counts.items()],
+        key=lambda r: -r["count"]
+    )
+
 def get_waitlist_signups(limit: int = 200) -> list:
     """All waitlist signups, most recent first -- grouped by state on
     /analytics so demand for a specific state is visible at a glance."""

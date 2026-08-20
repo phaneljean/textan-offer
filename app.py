@@ -32,7 +32,7 @@ from pdf_validator import validate_offer_pdf
 from amendment import fill_amendment_pdf
 from agent_profiles import get_agent_profile, save_agent_profile
 from subscriptions import can_generate_offer, increment_offer_count, activate_subscription, deactivate_subscription, get_user, create_user, FREE_OFFER_LIMIT, is_admin_phone
-from analytics import track_event, get_conversion_metrics, get_revenue_metrics, get_recent_sms, get_recent_sms_failures, get_last_blocked_state, get_waitlist_signups
+from analytics import track_event, get_conversion_metrics, get_revenue_metrics, get_recent_sms, get_recent_sms_failures, get_last_blocked_state, get_waitlist_signups, get_signups_by_source
 from integrations import send_offer_email, fire_webhook, save_webhook, get_webhook, delete_webhook, send_to_docusign
 from offers_db import record_offer, get_offers_for_phone, get_offer_by_filename, record_amendment, get_amendments_for_phone
 from sms_utils import parse_incoming_sms
@@ -2972,6 +2972,7 @@ def analytics_dashboard():
     recent_sms = get_recent_sms(limit=20)
     recent_failures = get_recent_sms_failures(limit=20)
     waitlist_signups = get_waitlist_signups(limit=200)
+    signups_by_source = get_signups_by_source(days=30)
 
     sms_rows = ""
     for sms in recent_sms:
@@ -2998,6 +2999,9 @@ def analytics_dashboard():
         f"<tr><td>{state}</td><td>{count}</td></tr>"
         for state, count in sorted(waitlist_by_state.items(), key=lambda kv: -kv[1])
     ) or '<tr><td colspan="2" style="padding:10px;color:#666;">No waitlist signups yet.</td></tr>'
+    source_rows = "".join(
+        f"<tr><td>{s['source']}</td><td>{s['count']}</td></tr>" for s in signups_by_source
+    ) or '<tr><td colspan="2" style="padding:10px;color:#666;">No signups yet.</td></tr>'
     waitlist_rows = ""
     for w in waitlist_signups[:20]:
         from datetime import datetime
@@ -3022,6 +3026,17 @@ body{{font-family:system-ui;max-width:800px;margin:40px auto;padding:20px;}}
   <div class="value">{metrics['overall_conversion_rate']}%</div>
   <div class="label">Free → Paid Conversion Rate</div>
   <p>{metrics['signups']} signups → {metrics['conversions']} paid</p>
+</div>
+<div class="metric">
+  <h3>Signups by Source (30 days)</h3>
+  <table style="width:100%;border-collapse:collapse;margin-top:10px;">
+    <tr style="background:#eee;text-align:left;">
+      <th style="padding:8px;">Source</th>
+      <th style="padding:8px;">Signups</th>
+    </tr>
+    {source_rows}
+  </table>
+  <p class="label" style="margin-top:8px;">Tag outreach links with <code>?src=name</code> (e.g. <code>txtanoffer.com/signup?src=direct_reach</code>) to attribute signups here.</p>
 </div>
 <div class="metric">
   <h3>Trial Activation</h3>
@@ -3102,6 +3117,11 @@ body{{font-family:system-ui;max-width:800px;margin:40px auto;padding:20px;}}
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
     success_msg = ""
+    # Attribution: ?src=direct_reach on the link (GET) is carried through the
+    # form as a hidden field so the POST can record which channel drove the
+    # signup -- see get_signups_by_source() on /analytics.
+    import re as _re
+    src = _re.sub(r"[^a-zA-Z0-9_-]", "", request.values.get("src", ""))[:60]
     if request.method == "POST":
         phone = request.form.get("phone", "")
         name = request.form.get("name", "")
@@ -3122,7 +3142,7 @@ def signup():
                 )
             else:
                 try:
-                    track_event("signup", phone, {"name": name, "email": email})
+                    track_event("signup", phone, {"name": name, "email": email, "source": src or "direct"})
                 except Exception:
                     pass
                 sms_sent = twilio_send_sms(phone,
@@ -3218,6 +3238,7 @@ def signup():
     <p class="sub">Enter your phone number to receive offer drafts via SMS at +1 (833) 897-0333.</p>
     <div class="card">
       <form method="POST" action="/signup" id="signup-form">
+        <input type="hidden" name="src" value="{src}">
         <label class="field-label">Phone number</label>
         <input type="tel" name="phone" placeholder="+1 (555) 123-4567" required>
         <label class="field-label">Name</label>
