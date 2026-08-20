@@ -50,6 +50,10 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
 # Stripe configuration
 stripe.api_key = os.environ.get("STRIPE_SECRET_KEY", "")
+# Pinned above the stripe==10.12.0 library default (2024-06-20) -- the
+# account has Managed Payments enabled, which that older API version
+# doesn't support and rejects Checkout Session creation outright.
+stripe.api_version = "2025-03-31.basil"
 STRIPE_PRICE_ID = os.environ.get("STRIPE_PRICE_ID", "")
 STRIPE_PRICE_ID_PRO = os.environ.get("STRIPE_PRICE_ID_PRO", "")
 STRIPE_PRICE_ID_BROKERAGE = os.environ.get("STRIPE_PRICE_ID_BROKERAGE", "")
