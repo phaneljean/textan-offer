@@ -130,7 +130,7 @@ def verify_pdf_signature(filename, expires_str, sig):
 
 @app.route("/")
 def index():
-    return """
+    html = """
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -827,6 +827,19 @@ def index():
 </body>
 </html>
 """
+    # Carry ?src=name (e.g. from a Direct Reach email) through the "Start
+    # Free Trial" CTA to /signup, so the eventual signup still attributes
+    # correctly even though the link lands on the homepage first -- see
+    # get_signups_by_source() on /analytics.
+    import re as _re
+    src = _re.sub(r"[^a-zA-Z0-9_-]", "", request.args.get("src", ""))[:60]
+    if src:
+        html = html.replace(
+            '<a href="/signup" class="nav-cta">Start Free Trial</a>',
+            f'<a href="/signup?src={src}" class="nav-cta">Start Free Trial</a>',
+            1,
+        )
+    return html
 
 
 # --- address validation --------------------------------------------------
