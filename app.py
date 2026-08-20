@@ -1309,7 +1309,7 @@ def finalize_offer_sms(agent_phone: str, draft: dict):
             payment_url = request.host_url.rstrip("/") + "/pricing"
             status_line = f"\nLast free offer! Subscribe for unlimited:\n{payment_url}"
 
-    includes = "TREC 20-19 + 40-11 Financing Addendum" if draft.get("loan_amount", 0) > 0 else "TREC 20-19"
+    includes = "TREC 20-19 + 40-11 Financing Addendum + 61-0 Water Disclosure" if draft.get("loan_amount", 0) > 0 else "TREC 20-19 + 61-0 Water Disclosure"
     reply = (
         f"DONE. TREC draft for {draft['address']} ready:\n\n"
         f"Review & Email: {pdf_url}\n\n"

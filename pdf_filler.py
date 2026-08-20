@@ -18,6 +18,7 @@ import io
 from datetime import datetime, timedelta
 from pypdf import PdfReader, PdfWriter
 from cover_page import generate_cover_page, generate_certification_page
+from water_disclosure import fill_water_disclosure
 from financing_addendum import fill_financing_addendum
 
 TEMPLATE_PATH = os.environ.get("TREC_TEMPLATE_PATH", "20-19_2.pdf")
@@ -406,6 +407,17 @@ def fill_offer_pdf(parsed: dict, agent_phone: str) -> str:
 
         overlay_page = PdfReader(overlay_buf).pages[0]
         option_page.merge_page(overlay_page)
+
+    # TREC 61-0 (Seller's Disclosure About Groundwater and Surface Water
+    # Rights) -- new mandatory form referenced by Paragraph 7(I) of the
+    # 07-2026 20-19 template above. Always attached (not conditional on a
+    # known well/pond, since the parser has no way to detect that from an
+    # SMS offer string) with only the address filled in; every substantive
+    # question is left blank for the agent/seller, same reasoning as the
+    # 40-11 addendum's blank loan terms. Appended here (after the fixed-index
+    # overlays, before the cert page) so it doesn't shift any of them.
+    water_pdf_bytes = fill_water_disclosure(parsed)
+    final_writer.append(PdfReader(io.BytesIO(water_pdf_bytes)))
 
     # Certification page (final page): light/print mode, same as the cover
     # page, appended last so it doesn't shift any of the fixed page-index
