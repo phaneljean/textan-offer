@@ -703,15 +703,6 @@ def index():
         <div><div class="stat-num">Free</div><div class="stat-label">No card required</div></div>
       </div>
 
-      <div class="social-proof">
-        <div class="avatars">
-          <div class="avatar" style="background:#3b82f6;">EJ</div>
-          <div class="avatar" style="background:#8b5cf6;">MK</div>
-          <div class="avatar" style="background:#f59e0b;">SR</div>
-          <div class="avatar" style="background:var(--accent);">+</div>
-        </div>
-        <div class="social-text"><strong>200+ Texas agents</strong> already using TxtAnOffer</div>
-      </div>
     </div>
 
     <div class="phone-wrap">
@@ -763,49 +754,6 @@ def index():
     </div>
   </section>
 
-  <section class="testimonials">
-    <h2>Trusted by Texas agents</h2>
-    <p class="testimonials-sub">Join hundreds of agents saving hours every week.</p>
-    <div class="testimonial-grid">
-      <div class="testimonial-card">
-        <div class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
-        <p class="quote">"I submitted an offer from the showing parking lot before the listing agent even got back to her desk. We got accepted same day."</p>
-        <div class="testimonial-author">
-          <div class="avatar" style="background:#3b82f6;">EJ</div>
-          <div><strong>Eric J.</strong><div class="author-meta">Agent, Keller Williams &middot; Austin</div></div>
-        </div>
-      </div>
-      <div class="testimonial-card">
-        <div class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
-        <p class="quote">"Used to spend 45 min filling out 20-19s manually. Now I text from my car and it's done. $29/month is nothing for that time back."</p>
-        <div class="testimonial-author">
-          <div class="avatar" style="background:#8b5cf6;">MK</div>
-          <div><strong>Maria K.</strong><div class="author-meta">Broker Associate, eXp Realty &middot; Dallas</div></div>
-        </div>
-      </div>
-      <div class="testimonial-card">
-        <div class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
-        <p class="quote">"My team of 6 agents all use it now. The brokerage plan paid for itself the first week. Fastest offer tool we've tried."</p>
-        <div class="testimonial-author">
-          <div class="avatar" style="background:#f59e0b;">SR</div>
-          <div><strong>Steven R.</strong><div class="author-meta">Team Lead, Compass &middot; San Antonio</div></div>
-        </div>
-      </div>
-    </div>
-    <div class="trust-logos">
-      <span class="trust-logo-label">Agents from</span>
-      <span class="trust-logo-name">Keller Williams</span>
-      <span class="trust-logo-sep">&middot;</span>
-      <span class="trust-logo-name">eXp Realty</span>
-      <span class="trust-logo-sep">&middot;</span>
-      <span class="trust-logo-name">Compass</span>
-      <span class="trust-logo-sep">&middot;</span>
-      <span class="trust-logo-name">RE/MAX</span>
-      <span class="trust-logo-sep">&middot;</span>
-      <span class="trust-logo-name">Century 21</span>
-    </div>
-  </section>
-
   <section class="sms-section">
     <h2>SMS Messaging Details</h2>
     <div class="sms-card">
@@ -814,7 +762,7 @@ def index():
         <li><strong>Opt-in:</strong> Users sign up at txtanoffer.com/signup by providing their phone number and explicitly consenting to receive SMS messages.</li>
         <li><strong>Message frequency:</strong> Most messages are sent in direct response to user-initiated texts. We also send a one-time reminder a few days before the closing date of an offer you generated. We do not send marketing or promotional messages.</li>
         <li><strong>Message content:</strong> Replies contain contract confirmation details and a download link to the generated PDF; reminders reference the closing date of an offer already on file.</li>
-        <li><strong>Sample message:</strong> <em>"Got it — $725,000, 3% down, closing Aug 13 2026. Your TREC contract is ready: txtanoffer.com/review/1740-grand-ave.pdf — Reply STOP to unsubscribe, HELP for help. Msg&amp;data rates may apply."</em></li>
+        <li><strong>Sample message:</strong> <em>"Got it — $725,000, 3% down, closing Aug 13 2026. Your TREC contract is ready: txtanoffer.com/review/123-main-st.pdf — Reply STOP to unsubscribe, HELP for help. Msg&amp;data rates may apply."</em></li>
         <li><strong>Sample reminder message:</strong> <em>"Reminder: 123 Main St is scheduled to close on August 13, 2026 (3 days from now). Text DASHBOARD to review. Reply STOP to unsubscribe, HELP for help."</em></li>
         <li><strong>Opt-out:</strong> Reply STOP at any time to unsubscribe from all messages. Reply HELP for support.</li>
         <li><strong>Standard message and data rates may apply.</strong></li>
