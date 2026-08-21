@@ -2740,31 +2740,14 @@ def pricing():
   </div>
 
   <div class="pricing-card">
-    <h2 class="plan-name">Brokerage</h2>
-    <p class="plan-desc">Equip your entire team with instant offer generation.</p>
-    <div class="price-row">
-      <span class="price-current">$199</span>
-      <span class="price-period">/month</span>
-    </div>
-    <ul class="features">
-      <li><span class="check">&#10003;</span> Everything in Professional</li>
-      <li><span class="check">&#10003;</span> Dedicated onboarding call</li>
-    </ul>
-    <form action="/create-checkout-session" method="POST">
-      <input type="hidden" name="plan" value="brokerage">
-      <button type="submit" class="cta-btn">Start Free Trial</button>
-    </form>
-    <p style="text-align:center;font-size:0.75rem;color:var(--text-dim);margin-top:0.75rem;">3 free offers, then $199/mo. Cancel anytime.</p>
-  </div>
-
-  <div class="pricing-card">
     <h2 class="plan-name">Enterprise</h2>
     <p class="plan-desc">For large brokerages and franchises.</p>
     <div class="price-row">
       <span class="price-current">Custom</span>
     </div>
     <ul class="features">
-      <li><span class="check">&#10003;</span> Everything in Brokerage</li>
+      <li><span class="check">&#10003;</span> Everything in Professional</li>
+      <li><span class="check">&#10003;</span> Dedicated onboarding call</li>
       <li><span class="check">&#10003;</span> SLA &amp; dedicated support</li>
     </ul>
     <a href="mailto:hello@txtanoffer.com?subject=Enterprise%20Plan" class="cta-btn outline">Contact Us</a>
