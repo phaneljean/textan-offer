@@ -198,12 +198,12 @@ def index():
     }
     .nav-logo {
       width: 34px; height: 34px;
-      border-radius: 50%;
+      border-radius: 22%;
       overflow: hidden;
     }
     .nav-logo img {
       width: 100%; height: 100%;
-      object-fit: cover;
+      object-fit: contain;
     }
     .nav-links {
       display: flex;
@@ -651,7 +651,7 @@ def index():
 
   <nav class="nav">
     <div class="nav-left">
-      <div class="nav-logo"><img src="/static/logo.webp" alt="TxtAnOffer"></div>
+      <div class="nav-logo"><img src="/static/logo.svg" alt="TxtAnOffer"></div>
       <span>TxtAnOffer</span>
     </div>
     <div class="nav-links">
@@ -1615,8 +1615,8 @@ DEMO_FORM = """
     border-bottom:1px solid var(--border);z-index:100;
   }}
   .nav-left {{display:flex;align-items:center;gap:0.6rem;font-weight:700;font-size:1.1rem;letter-spacing:-0.02em;}}
-  .nav-logo {{width:34px;height:34px;border-radius:50%;overflow:hidden;}}
-  .nav-logo img {{width:100%;height:100%;object-fit:cover;}}
+  .nav-logo {{width:34px;height:34px;border-radius:22%;overflow:hidden;}}
+  .nav-logo img {{width:100%;height:100%;object-fit:contain;}}
   .nav-links {{display:flex;gap:2rem;font-size:0.875rem;font-weight:500;color:var(--text-muted);}}
   .nav-links a {{transition:var(--transition);}}
   .nav-links a:hover {{color:var(--text);}}
@@ -1820,7 +1820,7 @@ DEMO_FORM = """
 <body>
   <nav class="nav">
     <div class="nav-left">
-      <div class="nav-logo"><img src="/static/logo.webp" alt="TxtAnOffer"></div>
+      <div class="nav-logo"><img src="/static/logo.svg" alt="TxtAnOffer"></div>
       <span>TxtAnOffer</span>
     </div>
     <div class="nav-links">
@@ -2234,8 +2234,8 @@ a{color:inherit;text-decoration:none;}
 background:rgba(15,23,42,0.9);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);
 position:sticky;top:0;z-index:100;}
 .nav-left{display:flex;align-items:center;gap:0.6rem;font-weight:700;font-size:1.1rem;}
-.nav-logo{width:34px;height:34px;border-radius:50%;overflow:hidden;}
-.nav-logo img{width:100%;height:100%;object-fit:cover;}
+.nav-logo{width:34px;height:34px;border-radius:22%;overflow:hidden;}
+.nav-logo img{width:100%;height:100%;object-fit:contain;}
 .nav-links{display:flex;gap:2rem;font-size:0.875rem;font-weight:500;color:var(--text-muted);}
 .nav-links a:hover{color:var(--text);}
 .nav-cta{background:var(--accent);color:#fff;padding:0.55rem 1.35rem;border-radius:9999px;
@@ -2291,7 +2291,7 @@ padding:0.4rem 0.85rem;font-size:0.8rem;color:var(--text-muted);cursor:pointer;t
 <body>
 <nav class="nav">
 <a href="/" class="nav-left">
-<div class="nav-logo"><img src="/static/logo.webp" alt="TxtAnOffer"></div>
+<div class="nav-logo"><img src="/static/logo.svg" alt="TxtAnOffer"></div>
 <span>TxtAnOffer</span>
 </a>
 <div class="nav-links">
@@ -2581,8 +2581,8 @@ def pricing():
     border-bottom:1px solid var(--border);z-index:100;
   }
   .nav-left {display:flex;align-items:center;gap:0.6rem;font-weight:700;font-size:1.1rem;letter-spacing:-0.02em;}
-  .nav-logo {width:34px;height:34px;border-radius:50%;overflow:hidden;}
-  .nav-logo img {width:100%;height:100%;object-fit:cover;}
+  .nav-logo {width:34px;height:34px;border-radius:22%;overflow:hidden;}
+  .nav-logo img {width:100%;height:100%;object-fit:contain;}
   .nav-links {display:flex;gap:2rem;font-size:0.875rem;font-weight:500;color:var(--text-muted);}
   .nav-links a {transition:var(--transition);}
   .nav-links a:hover {color:var(--text);}
@@ -2675,7 +2675,7 @@ def pricing():
 
 <nav class="nav">
   <a href="/" class="nav-left">
-    <div class="nav-logo"><img src="/static/logo.webp" alt="TxtAnOffer"></div>
+    <div class="nav-logo"><img src="/static/logo.svg" alt="TxtAnOffer"></div>
     <span>TxtAnOffer</span>
   </a>
   <div class="nav-links">
@@ -2897,12 +2897,12 @@ def success():
     transition:all 0.2s ease;}}
   .btn:hover{{transform:translateY(-2px);box-shadow:0 8px 24px rgba(16,185,129,0.35);}}
   .logo{{margin-bottom:1.5rem;}}
-  .logo img{{width:48px;height:48px;border-radius:50%;}}
+  .logo img{{width:48px;height:48px;border-radius:22%;object-fit:contain;}}
 </style>
 </head>
 <body>
   <div class="card">
-    <div class="logo"><a href="/"><img src="/static/logo.webp" alt="TxtAnOffer"></a></div>
+    <div class="logo"><a href="/"><img src="/static/logo.svg" alt="TxtAnOffer"></a></div>
     <h1>Welcome aboard!</h1>
     <p class="sub">Your subscription is active. You're all set with <strong>unlimited offers</strong>.</p>
 
@@ -3199,7 +3199,7 @@ def signup():
   a{{color:inherit;text-decoration:none;}}
   .wrap{{width:100%;max-width:460px;}}
   .nav-back{{display:flex;align-items:center;gap:0.5rem;margin-bottom:1.5rem;}}
-  .nav-back img{{width:28px;height:28px;border-radius:50%;}}
+  .nav-back img{{width:28px;height:28px;border-radius:22%;object-fit:contain;}}
   .nav-back span{{font-size:0.85rem;color:var(--text-muted);}}
   .nav-back:hover span{{color:var(--text);}}
   h1{{font-size:1.75rem;font-weight:800;letter-spacing:-0.02em;margin-bottom:0.5rem;}}
@@ -3246,7 +3246,7 @@ def signup():
 </head>
 <body>
   <div class="wrap">
-    <a href="/" class="nav-back"><img src="/static/logo.webp" alt=""><span>&larr; TxtAnOffer</span></a>
+    <a href="/" class="nav-back"><img src="/static/logo.svg" alt=""><span>&larr; TxtAnOffer</span></a>
     <h1>Get started with TxtAnOffer</h1>
     <p class="sub">Enter your phone number to receive offer drafts via SMS at +1 (833) 897-0333.</p>
     <div class="card">
@@ -3326,7 +3326,7 @@ def login():
   a{{color:inherit;text-decoration:none;}}
   .wrap{{width:100%;max-width:400px;}}
   .nav-back{{display:flex;align-items:center;gap:0.5rem;margin-bottom:1.5rem;}}
-  .nav-back img{{width:28px;height:28px;border-radius:50%;}}
+  .nav-back img{{width:28px;height:28px;border-radius:22%;object-fit:contain;}}
   .nav-back span{{font-size:0.85rem;color:var(--text-muted);}}
   .nav-back:hover span{{color:var(--text);}}
   h1{{font-size:1.75rem;font-weight:800;letter-spacing:-0.02em;margin-bottom:0.5rem;}}
@@ -3360,7 +3360,7 @@ def login():
 </head>
 <body>
 <div class="wrap">
-  <a href="/" class="nav-back"><img src="/static/logo.webp" alt=""><span>&larr; TxtAnOffer</span></a>
+  <a href="/" class="nav-back"><img src="/static/logo.svg" alt=""><span>&larr; TxtAnOffer</span></a>
   <h1>Log In</h1>
   <p class="sub">Enter your phone number and we'll text you a link to your dashboard.</p>
   <div class="card">
@@ -3425,8 +3425,8 @@ def terms():
     border-bottom:1px solid var(--border);z-index:100;
   }
   .nav-left {display:flex;align-items:center;gap:0.6rem;font-weight:700;font-size:1.1rem;letter-spacing:-0.02em;}
-  .nav-logo {width:34px;height:34px;border-radius:50%;overflow:hidden;}
-  .nav-logo img {width:100%;height:100%;object-fit:cover;}
+  .nav-logo {width:34px;height:34px;border-radius:22%;overflow:hidden;}
+  .nav-logo img {width:100%;height:100%;object-fit:contain;}
   .nav-links {display:flex;gap:2rem;font-size:0.875rem;font-weight:500;color:var(--text-muted);}
   .nav-links a {transition:var(--transition);}
   .nav-links a:hover {color:var(--text);}
@@ -3478,7 +3478,7 @@ def terms():
 <body>
 <nav class="nav">
   <a href="/" class="nav-left">
-    <div class="nav-logo"><img src="/static/logo.webp" alt="TxtAnOffer"></div>
+    <div class="nav-logo"><img src="/static/logo.svg" alt="TxtAnOffer"></div>
     <span>TxtAnOffer</span>
   </a>
   <div class="nav-links">
@@ -3672,8 +3672,8 @@ def privacy():
     border-bottom:1px solid var(--border);z-index:100;
   }
   .nav-left {display:flex;align-items:center;gap:0.6rem;font-weight:700;font-size:1.1rem;letter-spacing:-0.02em;}
-  .nav-logo {width:34px;height:34px;border-radius:50%;overflow:hidden;}
-  .nav-logo img {width:100%;height:100%;object-fit:cover;}
+  .nav-logo {width:34px;height:34px;border-radius:22%;overflow:hidden;}
+  .nav-logo img {width:100%;height:100%;object-fit:contain;}
   .nav-links {display:flex;gap:2rem;font-size:0.875rem;font-weight:500;color:var(--text-muted);}
   .nav-links a {transition:var(--transition);}
   .nav-links a:hover {color:var(--text);}
@@ -3719,7 +3719,7 @@ def privacy():
 <body>
 <nav class="nav">
   <a href="/" class="nav-left">
-    <div class="nav-logo"><img src="/static/logo.webp" alt="TxtAnOffer"></div>
+    <div class="nav-logo"><img src="/static/logo.svg" alt="TxtAnOffer"></div>
     <span>TxtAnOffer</span>
   </a>
   <div class="nav-links">
@@ -3873,8 +3873,8 @@ def faq():
     border-bottom:1px solid var(--border);z-index:100;
   }
   .nav-left {display:flex;align-items:center;gap:0.6rem;font-weight:700;font-size:1.1rem;letter-spacing:-0.02em;}
-  .nav-logo {width:34px;height:34px;border-radius:50%;overflow:hidden;}
-  .nav-logo img {width:100%;height:100%;object-fit:cover;}
+  .nav-logo {width:34px;height:34px;border-radius:22%;overflow:hidden;}
+  .nav-logo img {width:100%;height:100%;object-fit:contain;}
   .nav-links {display:flex;gap:2rem;font-size:0.875rem;font-weight:500;color:var(--text-muted);}
   .nav-links a {transition:var(--transition);}
   .nav-links a:hover {color:var(--text);}
@@ -3909,7 +3909,7 @@ def faq():
 <body>
 <nav class="nav">
   <a href="/" class="nav-left">
-    <div class="nav-logo"><img src="/static/logo.webp" alt="TxtAnOffer"></div>
+    <div class="nav-logo"><img src="/static/logo.svg" alt="TxtAnOffer"></div>
     <span>TxtAnOffer</span>
   </a>
   <div class="nav-links">
@@ -4015,8 +4015,8 @@ def about():
     border-bottom:1px solid var(--border);z-index:100;
   }
   .nav-left {display:flex;align-items:center;gap:0.6rem;font-weight:700;font-size:1.1rem;letter-spacing:-0.02em;}
-  .nav-logo {width:34px;height:34px;border-radius:50%;overflow:hidden;}
-  .nav-logo img {width:100%;height:100%;object-fit:cover;}
+  .nav-logo {width:34px;height:34px;border-radius:22%;overflow:hidden;}
+  .nav-logo img {width:100%;height:100%;object-fit:contain;}
   .nav-links {display:flex;gap:2rem;font-size:0.875rem;font-weight:500;color:var(--text-muted);}
   .nav-links a {transition:var(--transition);}
   .nav-links a:hover {color:var(--text);}
@@ -4056,7 +4056,7 @@ def about():
 <body>
 <nav class="nav">
   <a href="/" class="nav-left">
-    <div class="nav-logo"><img src="/static/logo.webp" alt="TxtAnOffer"></div>
+    <div class="nav-logo"><img src="/static/logo.svg" alt="TxtAnOffer"></div>
     <span>TxtAnOffer</span>
   </a>
   <div class="nav-links">
@@ -4069,7 +4069,7 @@ def about():
 </nav>
 
 <div class="container">
-  <div class="avatar-lg"><img src="/static/logo.webp" alt="Phanel Jean Baptiste"></div>
+  <div class="avatar-lg"><img src="/static/logo.svg" alt="Phanel Jean Baptiste"></div>
   <h1>Built by a Texas Agent, for Texas Agents</h1>
   <div class="kicker">The story behind TxtAnOffer</div>
 
@@ -4149,8 +4149,8 @@ def contact():
     border-bottom:1px solid var(--border);z-index:100;
   }
   .nav-left {display:flex;align-items:center;gap:0.6rem;font-weight:700;font-size:1.1rem;letter-spacing:-0.02em;}
-  .nav-logo {width:34px;height:34px;border-radius:50%;overflow:hidden;}
-  .nav-logo img {width:100%;height:100%;object-fit:cover;}
+  .nav-logo {width:34px;height:34px;border-radius:22%;overflow:hidden;}
+  .nav-logo img {width:100%;height:100%;object-fit:contain;}
   .nav-links {display:flex;gap:2rem;font-size:0.875rem;font-weight:500;color:var(--text-muted);}
   .nav-links a {transition:var(--transition);}
   .nav-links a:hover {color:var(--text);}
@@ -4188,7 +4188,7 @@ def contact():
 <body>
 <nav class="nav">
   <a href="/" class="nav-left">
-    <div class="nav-logo"><img src="/static/logo.webp" alt="TxtAnOffer"></div>
+    <div class="nav-logo"><img src="/static/logo.svg" alt="TxtAnOffer"></div>
     <span>TxtAnOffer</span>
   </a>
   <div class="nav-links">
@@ -4310,8 +4310,8 @@ def profile():
     border-bottom:1px solid var(--border);z-index:100;
   }}
   .nav-left {{display:flex;align-items:center;gap:0.6rem;font-weight:700;font-size:1.1rem;letter-spacing:-0.02em;}}
-  .nav-logo {{width:34px;height:34px;border-radius:50%;overflow:hidden;}}
-  .nav-logo img {{width:100%;height:100%;object-fit:cover;}}
+  .nav-logo {{width:34px;height:34px;border-radius:22%;overflow:hidden;}}
+  .nav-logo img {{width:100%;height:100%;object-fit:contain;}}
   .nav-links {{display:flex;gap:2rem;font-size:0.875rem;font-weight:500;color:var(--text-muted);}}
   .nav-links a {{transition:var(--transition);}}
   .nav-links a:hover {{color:var(--text);}}
@@ -4378,7 +4378,7 @@ def profile():
 <body>
 <nav class="nav">
   <a href="/" class="nav-left">
-    <div class="nav-logo"><img src="/static/logo.webp" alt="TxtAnOffer"></div>
+    <div class="nav-logo"><img src="/static/logo.svg" alt="TxtAnOffer"></div>
     <span>TxtAnOffer</span>
   </a>
   <div class="nav-links">
@@ -4849,8 +4849,8 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
     border-bottom:1px solid var(--border);z-index:100;
   }}
   .nav-left {{display:flex;align-items:center;gap:0.6rem;font-weight:700;font-size:1.1rem;letter-spacing:-0.02em;}}
-  .nav-logo {{width:34px;height:34px;border-radius:50%;overflow:hidden;}}
-  .nav-logo img {{width:100%;height:100%;object-fit:cover;}}
+  .nav-logo {{width:34px;height:34px;border-radius:22%;overflow:hidden;}}
+  .nav-logo img {{width:100%;height:100%;object-fit:contain;}}
   .nav-links {{display:flex;gap:2rem;font-size:0.875rem;font-weight:500;color:var(--text-muted);}}
   .nav-links a {{transition:var(--transition);}}
   .nav-links a:hover {{color:var(--text);}}
@@ -4999,7 +4999,7 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
 <body>
 <nav class="nav">
   <a href="/" class="nav-left">
-    <div class="nav-logo"><img src="/static/logo.webp" alt="TxtAnOffer"></div>
+    <div class="nav-logo"><img src="/static/logo.svg" alt="TxtAnOffer"></div>
     <span>TxtAnOffer</span>
   </a>
   <div class="nav-links">
