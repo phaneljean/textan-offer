@@ -1748,8 +1748,12 @@ DEMO_FORM = """
     font-family:inherit;font-size:0.9rem;font-weight:600;border-radius:var(--radius-sm);cursor:pointer;
   }}
   .modal-submit:hover {{background:#059669;}}
-  .modal-close {{position:absolute;top:0.75rem;right:1rem;background:none;border:none;font-size:1.5rem;
-    color:var(--text-dim);cursor:pointer;}}
+  .modal-box .modal-close {{
+    position:absolute;top:0.75rem;right:1rem;width:auto;margin-top:0;
+    background:none;border:none;border-radius:0;padding:0;
+    font-size:1.5rem;font-weight:400;line-height:1;color:var(--text-dim);cursor:pointer;
+  }}
+  .modal-box .modal-close:hover {{transform:none;box-shadow:none;color:var(--text);}}
   .modal-status {{margin-top:0.6rem;font-size:0.8rem;color:var(--text-dim);}}
   .modal-status.success {{color:var(--accent-light);}}
   .modal-status.fail {{color:#f87171;}}
