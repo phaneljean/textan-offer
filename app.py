@@ -2729,8 +2729,7 @@ def pricing():
     <ul class="features">
       <li><span class="check">&#10003;</span> Everything in Starter</li>
       <li><span class="check">&#10003;</span> One-click DocuSign send</li>
-      <li><span class="check">&#10003;</span> Webhook / CRM auto-sync</li>
-      <li><span class="check">&#10003;</span> Branded cover page</li>
+      <li><span class="check">&#10003;</span> Webhook automation (Zapier-compatible)</li>
       <li><span class="check">&#10003;</span> Priority support</li>
     </ul>
     <form action="/create-checkout-session" method="POST">
@@ -2749,9 +2748,6 @@ def pricing():
     </div>
     <ul class="features">
       <li><span class="check">&#10003;</span> Everything in Professional</li>
-      <li><span class="check">&#10003;</span> Up to 10 agent seats</li>
-      <li><span class="check">&#10003;</span> Brokerage branding on PDFs</li>
-      <li><span class="check">&#10003;</span> Team analytics dashboard</li>
       <li><span class="check">&#10003;</span> Dedicated onboarding call</li>
     </ul>
     <form action="/create-checkout-session" method="POST">
@@ -2769,9 +2765,6 @@ def pricing():
     </div>
     <ul class="features">
       <li><span class="check">&#10003;</span> Everything in Brokerage</li>
-      <li><span class="check">&#10003;</span> Unlimited seats</li>
-      <li><span class="check">&#10003;</span> MLS integration</li>
-      <li><span class="check">&#10003;</span> White-label option</li>
       <li><span class="check">&#10003;</span> SLA &amp; dedicated support</li>
     </ul>
     <a href="mailto:hello@txtanoffer.com?subject=Enterprise%20Plan" class="cta-btn outline">Contact Us</a>
