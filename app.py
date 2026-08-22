@@ -137,7 +137,7 @@ def index():
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TxtAnOffer — Generate TREC Contracts by Text Message</title>
-  <meta name="description" content="Texas real estate agents: text your offer details and receive a filled TREC 1-4 contract PDF in under 10 seconds. No app required.">
+  <meta name="description" content="Texas real estate agents: text your offer details and receive a filled TREC 1-4 contract PDF in under 10 seconds, with every required field verified before it reaches you. No app required.">
   <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -656,6 +656,7 @@ def index():
     </div>
     <div class="nav-links">
       <a href="#how">How it works</a>
+      <a href="#trust">Accuracy</a>
       <a href="/pricing">Pricing</a>
       <a href="/demo">Demo</a>
       <a href="/faq">FAQ</a>
@@ -701,6 +702,7 @@ def index():
         <div><div class="stat-num">&lt;10s</div><div class="stat-label">Generation time</div></div>
         <div><div class="stat-num">45 min</div><div class="stat-label">Saved per offer</div></div>
         <div><div class="stat-num">Free</div><div class="stat-label">No card required</div></div>
+        <div><div class="stat-num">100%</div><div class="stat-label">Required fields checked</div></div>
       </div>
 
     </div>
@@ -750,6 +752,30 @@ def index():
         <div class="step-num">03</div>
         <h3>Get Your PDF</h3>
         <p>Receive a link to your filled TREC contract + financing addendum in seconds, ready for DocuSign.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="steps" id="trust">
+    <div class="steps-header">
+      <h2>Built so nothing slips through.</h2>
+      <p>The anxiety isn't "I wish this were faster" &mdash; it's "did I miss a checkbox." Here's how we handle that.</p>
+    </div>
+    <div class="steps-grid">
+      <div class="step-card">
+        <div class="step-num">&check;</div>
+        <h3>Every field checked, not just assumed</h3>
+        <p>We re-read the finished PDF itself &mdash; not just the code that filled it &mdash; and flag exactly which required field, checkbox, or dollar amount is missing right on your review screen, before you send it to anyone. Emailing straight to the listing agent is blocked outright until everything required is filled in.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-num">&check;</div>
+        <h3>Built on TREC's current form</h3>
+        <p>Generated from TREC's actual published 20-19 form &mdash; current Paragraph 12B commission language and the mandatory Water Disclosure included &mdash; not a stale template someone forgot to update.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-num">&check;</div>
+        <h3>You review it. You send it.</h3>
+        <p>TxtAnOffer drafts the contract; nothing goes to a buyer, seller, or listing agent until you look it over and decide it's ready.</p>
       </div>
     </div>
   </section>
