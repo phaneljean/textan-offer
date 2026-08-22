@@ -2480,6 +2480,7 @@ def api_send_email():
             "price": offer_row["price"], "down_payment_amount": down_amt,
             "loan_amount": offer_row["price"] - down_amt, "close_days": offer_row["close_days"],
             "created_at": offer_row.get("created_at"),
+            "financing_type_specified": bool(offer_row.get("financing_type")),
         }
     else:
         validation_parsed = parsed
@@ -4473,6 +4474,7 @@ def review_offer(filename):
     validation = validate_offer_pdf(pdf_path_on_disk, {
         "price": price, "down_payment_amount": down_amt, "loan_amount": loan_amt,
         "close_days": close_days, "created_at": offer.get("created_at"),
+        "financing_type_specified": bool(offer.get("financing_type")),
     }) if os.path.exists(pdf_path_on_disk) else {"ok": False, "blocking": ["PDF file not found on server"], "warnings": []}
 
     pdf_url = f"/offers/{filename}?expires={expires}&sig={sig}"

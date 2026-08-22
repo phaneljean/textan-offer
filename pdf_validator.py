@@ -233,6 +233,19 @@ def validate_offer_pdf(pdf_path: str, parsed: dict) -> dict:
         if not checked_type:
             blocking.append("40-11 Section 1: Financing type checkbox")
         elif checked_type == "conventional":
+            # financing_addendum.py defaults an unspecified financing_type to
+            # "conventional" so the addendum always has *something* checked --
+            # that default is silent unless we surface it here. Only fires
+            # when the caller explicitly tells us (via financing_type_specified
+            # = False, set from the real parsed/stored offer) that the agent
+            # never actually said "conventional" -- absent the key entirely
+            # (e.g. regression_test.py calling this directly), this stays
+            # quiet rather than guessing.
+            if parsed.get("financing_type_specified") is False:
+                warnings.append(
+                    "40-11 Section 1: Financing type wasn't in your text -- defaulted to Conventional. "
+                    "Confirm this matches the buyer's actual financing before sending."
+                )
             if not values.get(_fa("first_loan_amount"), "").strip():
                 blocking.append("40-11 Section 1(A)(1): First mortgage principal amount")
         else:
