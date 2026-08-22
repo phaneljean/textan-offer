@@ -2477,6 +2477,7 @@ def api_send_email():
     if offer_row and offer_row.get("price"):
         down_amt = int(offer_row["price"] * offer_row["down_pct"])
         validation_parsed = {
+            "address": offer_row.get("address") or parsed.get("address", ""),
             "price": offer_row["price"], "down_payment_amount": down_amt,
             "loan_amount": offer_row["price"] - down_amt, "close_days": offer_row["close_days"],
             "created_at": offer_row.get("created_at"),
@@ -2492,7 +2493,13 @@ def api_send_email():
             "missing_fields": validation["blocking"],
         }), 422
 
-    result = send_offer_email(to_email, pdf_path, parsed)
+    # Use the same reconstructed dict for the email body as for validation --
+    # the raw client-submitted `parsed` only has address/price (see comment
+    # above), so passing it here silently rendered "Close: N/A days" in every
+    # listing-agent email regardless of the offer's real closing date. Caught
+    # 2026-08-22 auditing the "nothing slips through" claim: found via a real
+    # email that had actually gone out with a mismatched closing date.
+    result = send_offer_email(to_email, pdf_path, validation_parsed)
     track_event("email_sent" if result["success"] else "email_failed", to_email, result)
     return jsonify(result), 200 if result["success"] else 500
 
