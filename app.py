@@ -14,7 +14,7 @@ Flow (demo, no SMS/Twilio needed):
   parse/fill logic runs -> result + PDF link shown directly on the page.
 """
 
-from flask import Flask, request, send_from_directory, Response, redirect, jsonify, abort
+from flask import Flask, request, send_from_directory, Response, redirect, jsonify, abort, make_response
 from datetime import datetime, timedelta
 import os
 import hmac
@@ -865,7 +865,18 @@ def index():
             f'<a href="/signup?src={src}" class="nav-cta">Start Free Trial</a>',
             1,
         )
-    return html
+    resp = make_response(html)
+    # First-touch attribution cookie: the query-param rewrite above only
+    # survives if the visitor clicks "Start Free Trial" in this exact page
+    # load. Cold-outreach signups routinely happen on a later visit (a
+    # different page, a different day) with no ?src on that later click,
+    # which silently misattributes real Direct Reach conversions as
+    # "direct". A 30-day first-touch cookie, read as a fallback in
+    # signup(), fixes that -- set only once so a later plain "/" visit
+    # can't overwrite genuine attribution with "direct".
+    if src and not request.cookies.get("ta_src"):
+        resp.set_cookie("ta_src", src, max_age=30 * 24 * 3600, httponly=True, samesite="Lax")
+    return resp
 
 
 # --- address validation --------------------------------------------------
@@ -3146,9 +3157,11 @@ def signup():
     success_msg = ""
     # Attribution: ?src=direct_reach on the link (GET) is carried through the
     # form as a hidden field so the POST can record which channel drove the
-    # signup -- see get_signups_by_source() on /analytics.
+    # signup -- see get_signups_by_source() on /analytics. Falls back to the
+    # ta_src first-touch cookie (set on homepage landing) for signups that
+    # happen on a later visit/page with no ?src on the actual signup click.
     import re as _re
-    src = _re.sub(r"[^a-zA-Z0-9_-]", "", request.values.get("src", ""))[:60]
+    src = _re.sub(r"[^a-zA-Z0-9_-]", "", request.values.get("src", "") or request.cookies.get("ta_src", ""))[:60]
     if request.method == "POST":
         phone = request.form.get("phone", "")
         name = request.form.get("name", "")
