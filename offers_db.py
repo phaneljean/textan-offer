@@ -34,6 +34,8 @@ def init_offers_table():
         "ALTER TABLE offers ADD COLUMN financing_type TEXT DEFAULT ''",
         "ALTER TABLE offers ADD COLUMN thread_status TEXT DEFAULT 'pending'",
         "ALTER TABLE offers ADD COLUMN thread_responded_at TEXT DEFAULT ''",
+        "ALTER TABLE offers ADD COLUMN email_sent_at TEXT DEFAULT ''",
+        "ALTER TABLE offers ADD COLUMN email_sent_to TEXT DEFAULT ''",
     ):
         try:
             cursor.execute(ddl)
@@ -75,7 +77,7 @@ def get_offer_by_filename(filename: str) -> dict:
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT id, phone, address, price, down_pct, close_days, filename, mls_json, generator_version, financing_type, thread_status, thread_responded_at, created_at
+        SELECT id, phone, address, price, down_pct, close_days, filename, mls_json, generator_version, financing_type, thread_status, thread_responded_at, email_sent_at, email_sent_to, created_at
         FROM offers WHERE filename = ?
     """, (filename,))
     row = cursor.fetchone()
@@ -106,6 +108,21 @@ def record_thread_response(filename: str, action: str) -> bool:
     conn.commit()
     conn.close()
     return updated
+
+
+def record_email_sent(filename: str, to_email: str):
+    """Latest-send-wins (unlike record_thread_response) -- an agent may
+    legitimately resend to a corrected address, and there's no
+    duplicate-notification side effect to guard against here like there is
+    for thread responses, so just record the most recent send."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    now = datetime.utcnow().isoformat()
+    cursor.execute("""
+        UPDATE offers SET email_sent_at=?, email_sent_to=? WHERE filename=?
+    """, (now, to_email, filename))
+    conn.commit()
+    conn.close()
 
 
 def get_offers_for_phone(phone: str, limit: int = 50) -> list:

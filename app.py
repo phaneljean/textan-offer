@@ -34,7 +34,7 @@ from agent_profiles import get_agent_profile, save_agent_profile
 from subscriptions import can_generate_offer, increment_offer_count, activate_subscription, deactivate_subscription, get_user, create_user, FREE_OFFER_LIMIT, is_admin_phone
 from analytics import track_event, get_conversion_metrics, get_revenue_metrics, get_recent_sms, get_recent_sms_failures, get_last_blocked_state, get_waitlist_signups, get_signups_by_source
 from integrations import send_offer_email, fire_webhook, save_webhook, get_webhook, delete_webhook, send_to_docusign
-from offers_db import record_offer, get_offers_for_phone, get_offer_by_filename, record_amendment, get_amendments_for_phone, record_thread_response
+from offers_db import record_offer, get_offers_for_phone, get_offer_by_filename, record_amendment, get_amendments_for_phone, record_thread_response, record_email_sent
 from sms_utils import parse_incoming_sms
 from cleanup import run_cleanup_if_due
 from reminders import run_reminders_if_due
@@ -2577,6 +2577,8 @@ def api_send_email():
     thread_url = sign_thread_url(pdf_filename, request.host_url.rstrip("/"))
     result = send_offer_email(to_email, pdf_path, validation_parsed, thread_url=thread_url)
     track_event("email_sent" if result["success"] else "email_failed", to_email, result)
+    if result["success"]:
+        record_email_sent(pdf_filename, to_email)
     return jsonify(result), 200 if result["success"] else 500
 
 
@@ -4554,6 +4556,8 @@ def review_offer(filename):
     down_amt = int(price * down_pct) if price else 0
     loan_amt = price - down_amt if price else 0
     mls = offer.get("mls", {})
+    email_sent_at = offer.get("email_sent_at") or ""
+    email_sent_to = offer.get("email_sent_to") or ""
 
     pdf_path_on_disk = os.path.join(OUTPUT_DIR, filename)
     validation = validate_offer_pdf(pdf_path_on_disk, {
@@ -4575,6 +4579,13 @@ def review_offer(filename):
     except (KeyError, TypeError, ValueError):
         created_dt = datetime.now()
     close_date = (created_dt + timedelta(days=close_days)).strftime("%B %d, %Y") if close_days else ""
+
+    sent_date = ""
+    if email_sent_at:
+        try:
+            sent_date = datetime.fromisoformat(email_sent_at).strftime("%B %d, %Y at %I:%M %p")
+        except ValueError:
+            sent_date = ""
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -4628,6 +4639,9 @@ margin-bottom:0.75rem;}}
 .email-status{{font-size:0.85rem;padding:0.5rem;border-radius:var(--radius-sm);margin-top:0.5rem;display:none;}}
 .email-status.success{{display:block;background:rgba(16,185,129,0.1);color:var(--accent-light);}}
 .email-status.error{{display:block;background:rgba(239,68,68,0.1);color:#fca5a5;}}
+.sent-banner{{background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.25);color:var(--accent-light);
+border-radius:var(--radius-sm);padding:0.75rem 1rem;text-align:center;font-size:0.85rem;margin-bottom:1rem;}}
+.sent-banner strong{{color:var(--text);}}
 .disclaimer{{font-size:0.75rem;color:var(--text-dim);text-align:center;padding:1rem;
 border-top:1px solid var(--border);margin-top:1rem;}}
 .btn:disabled{{opacity:0.45;cursor:not-allowed;}}
@@ -4663,15 +4677,17 @@ border-top:1px solid var(--border);margin-top:1rem;}}
 {'<div class="qa-blocking"><strong>Can&rsquo;t send yet &mdash; fix before emailing:</strong><ul>' + ''.join(f'<li>{b}</li>' for b in validation['blocking']) + '</ul></div>' if validation['blocking'] else ''}
 {'<div class="qa-warnings"><strong>Heads up before sending:</strong><ul>' + ''.join(f'<li>{w}</li>' for w in validation['warnings']) + '</ul></div>' if validation['warnings'] else ''}
 
+{'<div class="sent-banner" id="sent-banner">&#9989; Sent to <strong>' + email_sent_to + '</strong> on ' + sent_date + '</div>' if email_sent_at else ''}
+
 <div class="actions">
-<button class="btn btn-primary" id="email-toggle"{' disabled' if validation['blocking'] else ''}>Email to Listing Agent</button>
+<button class="btn btn-primary" id="email-toggle"{' disabled' if validation['blocking'] else ''}>{'Resend to Listing Agent' if email_sent_at else 'Email to Listing Agent'}</button>
 <a href="{pdf_url}" class="btn btn-secondary" target="_blank">Open PDF</a>
 <a href="{pdf_url}" class="btn btn-outline" download="{filename}">Download PDF</a>
 </div>
 
 <div class="email-form" id="email-form">
 <label>Listing agent's email</label>
-<input type="email" id="email-to" placeholder="agent@example.com">
+<input type="email" id="email-to" placeholder="agent@example.com" value="{email_sent_to}">
 <button class="btn btn-primary" id="send-email-btn" style="width:100%;">Send Offer PDF</button>
 <div class="email-status" id="email-status"></div>
 </div>
@@ -4705,9 +4721,24 @@ sendBtn.addEventListener('click',function(){{
   fetch('/api/send-email',{{method:'POST',headers:{{'Content-Type':'application/json'}},
     body:JSON.stringify({{to_email:email,pdf_filename:'{filename}',parsed:{{address:'{address}',price:{price}}},expires:'{expires}',sig:'{sig}'}})
   }}).then(function(r){{return r.json();}}).then(function(d){{
-    if(d.success){{statusEl.textContent='Sent! The listing agent will receive the PDF.';statusEl.className='email-status success';}}
-    else{{statusEl.textContent=d.error||'Failed to send.';statusEl.className='email-status error';}}
-    sendBtn.textContent='Send Offer PDF';sendBtn.disabled=false;
+    if(d.success){{
+      statusEl.textContent='Sent! The listing agent will receive the PDF.';statusEl.className='email-status success';
+      sendBtn.textContent='✓ Sent';sendBtn.disabled=true;
+      toggle.textContent='Resend to Listing Agent';
+      var banner=document.getElementById('sent-banner');
+      var bannerHtml='&#9989; Sent to <strong>'+email+'</strong> just now';
+      if(banner){{banner.innerHTML=bannerHtml;}}
+      else{{
+        banner=document.createElement('div');banner.className='sent-banner';banner.id='sent-banner';
+        banner.innerHTML=bannerHtml;
+        var actionsDiv=document.querySelector('.actions');
+        actionsDiv.parentNode.insertBefore(banner,actionsDiv);
+      }}
+      setTimeout(function(){{sendBtn.textContent='Send Offer PDF';sendBtn.disabled=false;}},2500);
+    }}else{{
+      statusEl.textContent=d.error||'Failed to send.';statusEl.className='email-status error';
+      sendBtn.textContent='Send Offer PDF';sendBtn.disabled=false;
+    }}
   }}).catch(function(){{
     statusEl.textContent='Network error. Try again.';statusEl.className='email-status error';
     sendBtn.textContent='Send Offer PDF';sendBtn.disabled=false;
