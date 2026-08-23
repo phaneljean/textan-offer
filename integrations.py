@@ -49,6 +49,15 @@ def send_offer_email(to_email: str, pdf_path: str, parsed: dict, thread_url: str
             "type": "application/pdf",
             "disposition": "attachment",
         }],
+        # SendGrid's account-level Click Tracking rewrites every URL in the
+        # body -- including plain-text ones -- into an opaque
+        # ct.sendgrid.net redirect link. Turned off here so the thread link
+        # (and the plain "txtanoffer.com" signature line) reach the listing
+        # agent as the actual, readable txtanoffer.com URL instead of
+        # tracking-gibberish that reads as spam.
+        "tracking_settings": {
+            "click_tracking": {"enable": False, "enable_text": False}
+        },
     }
 
     data = json.dumps(payload).encode("utf-8")
