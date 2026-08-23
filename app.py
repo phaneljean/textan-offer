@@ -503,6 +503,7 @@ def index():
       border-bottom-left-radius: 0.3rem;
     }
     .msg-bot a { color: var(--accent-light); text-decoration: underline; text-underline-offset: 2px; }
+    .msg-accepted { background: rgba(16,185,129,0.1); border-color: rgba(16,185,129,0.25); color: #d1fae5; }
     .pdf-preview {
       background: rgba(255,255,255,0.03);
       border: 1px solid rgba(255,255,255,0.06);
@@ -538,6 +539,9 @@ def index():
     .steps-header h2 { font-size: 2.25rem; font-weight: 700; margin: 0 0 0.5rem; letter-spacing: -0.02em; }
     .steps-header p { color: var(--text-dim); font-size: 1.05rem; }
     .steps-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
+    @media (min-width: 961px) {
+      #how .steps-grid { grid-template-columns: repeat(4, 1fr); }
+    }
     .step-card {
       background: var(--bg-card);
       border: 1px solid var(--border);
@@ -780,6 +784,8 @@ def index():
               <div class="pdf-meta">142 KB &middot; TREC 20-19 + 40-11</div>
             </div>
           </div>
+          <div class="msg-time">2:15 PM</div>
+          <div class="msg-bubble msg-bot msg-accepted">Listing agent accepted your offer on 123 Main St. &#9989;</div>
         </div>
       </div>
     </div>
@@ -787,7 +793,7 @@ def index():
 
   <section class="steps" id="how">
     <div class="steps-header">
-      <h2>Three steps. No app required.</h2>
+      <h2>Four steps. No app required.</h2>
       <p>Works with any phone that can send a text message.</p>
     </div>
     <div class="steps-grid">
@@ -805,6 +811,11 @@ def index():
         <div class="step-num">03</div>
         <h3>Get Your PDF</h3>
         <p>Receive a link to your filled TREC contract + financing addendum in seconds, ready for DocuSign.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-num">04</div>
+        <h3>Get Their Answer</h3>
+        <p>Emailing the listing agent sends them a link with the same PDF, plus Accept and Decline buttons. The moment they respond, you get a text &mdash; no more wondering if your offer even got read.</p>
       </div>
     </div>
   </section>
