@@ -20,6 +20,7 @@ from pypdf import PdfReader, PdfWriter
 from cover_page import generate_cover_page, generate_certification_page
 from water_disclosure import fill_water_disclosure
 from financing_addendum import fill_financing_addendum
+from iabs import fill_iabs
 
 TEMPLATE_PATH = os.environ.get("TREC_TEMPLATE_PATH", "20-19_2.pdf")
 OUTPUT_DIR = os.environ.get("OFFER_OUTPUT_DIR", "generated_offers")
@@ -418,6 +419,13 @@ def fill_offer_pdf(parsed: dict, agent_phone: str) -> str:
     # overlays, before the cert page) so it doesn't shift any of them.
     water_pdf_bytes = fill_water_disclosure(parsed)
     final_writer.append(PdfReader(io.BytesIO(water_pdf_bytes)))
+
+    # TREC IABS 1-2 (Information About Brokerage Services) -- required
+    # disclosure, always attached. Only the agent's own Sales Agent/Associate
+    # row and the brokerage name are auto-filled from their saved profile;
+    # everything else on the form is left blank. See iabs.py for why.
+    iabs_pdf_bytes = fill_iabs(parsed.get('agent', {}))
+    final_writer.append(PdfReader(io.BytesIO(iabs_pdf_bytes)))
 
     # Certification page (final page): light/print mode, same as the cover
     # page, appended last so it doesn't shift any of the fixed page-index
