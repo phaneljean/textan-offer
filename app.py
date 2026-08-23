@@ -686,11 +686,9 @@ def index():
     .footer-copy { color: #475569; font-size: 0.8rem; }
 
     @media (max-width: 960px) {
-      .hero { grid-template-columns: 1fr; padding: 3rem 1.5rem; gap: 2.5rem; }
+      .hero { grid-template-columns: 1fr; padding: 3rem 1.5rem; gap: 2rem; }
       .hero h1 { font-size: 2.5rem; }
-      .phone { width: 220px; }
-      .phone-screen { padding: 0.85rem; gap: 0.55rem; min-height: 0; }
-      .msg-bubble { font-size: 0.72rem; padding: 0.5rem 0.75rem; }
+      .phone-wrap { display: none; }
       .steps-grid { grid-template-columns: 1fr; }
       .testimonial-grid { grid-template-columns: 1fr; }
       .nav-links { display: none; }
@@ -700,8 +698,6 @@ def index():
       .hero h1 { font-size: 2rem; }
       .input-row { flex-direction: column; }
       .input-btn { width: 100%; }
-      .phone { width: 200px; padding: 0.75rem; }
-      .phone-notch { width: 70px; height: 16px; margin-bottom: 0.5rem; }
       .nav { padding: 1rem; }
     }
   </style>
