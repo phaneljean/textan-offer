@@ -770,7 +770,7 @@ def index():
       <div class="step-card">
         <div class="step-num">&check;</div>
         <h3>Built on TREC's current form</h3>
-        <p>Generated from TREC's actual published 20-19 form &mdash; current Paragraph 12B commission language and the mandatory Water Disclosure included &mdash; not a stale template someone forgot to update.</p>
+        <p>Generated from TREC's actual published 20-19 form &mdash; current Paragraph 12B commission language, the mandatory Water Disclosure, and the required IABS brokerage-services notice all included &mdash; not a stale template someone forgot to update.</p>
       </div>
       <div class="step-card">
         <div class="step-num">&check;</div>
