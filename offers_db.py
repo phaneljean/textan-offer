@@ -32,6 +32,8 @@ def init_offers_table():
         "ALTER TABLE offers ADD COLUMN mls_json TEXT DEFAULT ''",
         "ALTER TABLE offers ADD COLUMN generator_version TEXT DEFAULT ''",
         "ALTER TABLE offers ADD COLUMN financing_type TEXT DEFAULT ''",
+        "ALTER TABLE offers ADD COLUMN thread_status TEXT DEFAULT 'pending'",
+        "ALTER TABLE offers ADD COLUMN thread_responded_at TEXT DEFAULT ''",
     ):
         try:
             cursor.execute(ddl)
@@ -73,7 +75,7 @@ def get_offer_by_filename(filename: str) -> dict:
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT id, phone, address, price, down_pct, close_days, filename, mls_json, generator_version, financing_type, created_at
+        SELECT id, phone, address, price, down_pct, close_days, filename, mls_json, generator_version, financing_type, thread_status, thread_responded_at, created_at
         FROM offers WHERE filename = ?
     """, (filename,))
     row = cursor.fetchone()
@@ -88,12 +90,30 @@ def get_offer_by_filename(filename: str) -> dict:
     return result
 
 
+def record_thread_response(filename: str, action: str) -> bool:
+    """First-response-wins: only transitions 'pending' -> action. Returns
+    True if this call recorded it, False if the offer had already been
+    responded to (caller uses this to suppress a duplicate SMS notification
+    on re-clicks / stale tabs)."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    now = datetime.utcnow().isoformat()
+    cursor.execute("""
+        UPDATE offers SET thread_status=?, thread_responded_at=?
+        WHERE filename=? AND thread_status='pending'
+    """, (action, now, filename))
+    updated = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return updated
+
+
 def get_offers_for_phone(phone: str, limit: int = 50) -> list:
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT id, address, price, down_pct, close_days, filename, created_at
+        SELECT id, address, price, down_pct, close_days, filename, created_at, thread_status, thread_responded_at
         FROM offers
         WHERE phone = ?
         ORDER BY created_at DESC

@@ -34,7 +34,7 @@ from agent_profiles import get_agent_profile, save_agent_profile
 from subscriptions import can_generate_offer, increment_offer_count, activate_subscription, deactivate_subscription, get_user, create_user, FREE_OFFER_LIMIT, is_admin_phone
 from analytics import track_event, get_conversion_metrics, get_revenue_metrics, get_recent_sms, get_recent_sms_failures, get_last_blocked_state, get_waitlist_signups, get_signups_by_source
 from integrations import send_offer_email, fire_webhook, save_webhook, get_webhook, delete_webhook, send_to_docusign
-from offers_db import record_offer, get_offers_for_phone, get_offer_by_filename, record_amendment, get_amendments_for_phone
+from offers_db import record_offer, get_offers_for_phone, get_offer_by_filename, record_amendment, get_amendments_for_phone, record_thread_response
 from sms_utils import parse_incoming_sms
 from cleanup import run_cleanup_if_due
 from reminders import run_reminders_if_due
@@ -111,9 +111,14 @@ def _is_safe_webhook_url(url):
     return True
 
 
-def sign_pdf_url(filename, base_url=""):
+def sign_pdf_view_params(filename):
     expires = int(time.time()) + PDF_LINK_TTL
     sig = hmac.new(PDF_LINK_SECRET.encode(), f"{filename}:{expires}".encode(), hashlib.sha256).hexdigest()[:16]
+    return expires, sig
+
+
+def sign_pdf_url(filename, base_url=""):
+    expires, sig = sign_pdf_view_params(filename)
     return f"{base_url}/review/{filename}?expires={expires}&sig={sig}"
 
 
@@ -126,6 +131,54 @@ def verify_pdf_signature(filename, expires_str, sig):
         return False
     expected = hmac.new(PDF_LINK_SECRET.encode(), f"{filename}:{expires}".encode(), hashlib.sha256).hexdigest()[:16]
     return hmac.compare_digest(sig or "", expected)
+
+
+# --- Offer Thread (listing-agent Accept/Decline) signing ---------------
+#
+# Purpose-scoped, same precedent as sign_dashboard_url below: the payload
+# is prefixed ("thread:"/"respond:") so this signature space can't be
+# replayed against /review, /offers, or /dashboard's own schemes, which
+# each sign a differently-shaped (or unprefixed) payload with the same
+# PDF_LINK_SECRET. The respond action is signed separately from the view
+# link (with `action` itself bound into the signature) so a forwarded/
+# rewritten POST can't flip an accept into a decline without invalidating
+# the signature -- the view signature alone wouldn't cover which button
+# was actually pressed.
+
+THREAD_LINK_TTL = int(os.environ.get("THREAD_LINK_TTL", 604800))  # 7 days -- a listing
+# agent responding plausibly takes days, unlike the 24h PDF_LINK_TTL meant for a
+# buyer's agent reviewing their own just-generated PDF.
+
+
+def sign_thread_url(filename, base_url=""):
+    expires = int(time.time()) + THREAD_LINK_TTL
+    sig = hmac.new(PDF_LINK_SECRET.encode(), f"thread:{filename}:{expires}".encode(), hashlib.sha256).hexdigest()[:16]
+    return f"{base_url}/thread/{filename}?expires={expires}&sig={sig}"
+
+
+def verify_thread_signature(filename, expires_str, sig):
+    try:
+        expires = int(expires_str)
+    except (ValueError, TypeError):
+        return False
+    if time.time() > expires:
+        return False
+    expected = hmac.new(PDF_LINK_SECRET.encode(), f"thread:{filename}:{expires}".encode(), hashlib.sha256).hexdigest()[:16]
+    return hmac.compare_digest(sig or "", expected)
+
+
+def sign_thread_action(filename, action, expires):
+    return hmac.new(PDF_LINK_SECRET.encode(), f"respond:{filename}:{action}:{expires}".encode(), hashlib.sha256).hexdigest()[:16]
+
+
+def verify_thread_action(filename, action, expires_str, sig):
+    try:
+        expires = int(expires_str)
+    except (ValueError, TypeError):
+        return False
+    if time.time() > expires or action not in ("accept", "decline"):
+        return False
+    return hmac.compare_digest(sig or "", sign_thread_action(filename, action, expires))
 
 
 @app.route("/")
@@ -2510,7 +2563,8 @@ def api_send_email():
     # listing-agent email regardless of the offer's real closing date. Caught
     # 2026-08-22 auditing the "nothing slips through" claim: found via a real
     # email that had actually gone out with a mismatched closing date.
-    result = send_offer_email(to_email, pdf_path, validation_parsed)
+    thread_url = sign_thread_url(pdf_filename, request.host_url.rstrip("/"))
+    result = send_offer_email(to_email, pdf_path, validation_parsed, thread_url=thread_url)
     track_event("email_sent" if result["success"] else "email_failed", to_email, result)
     return jsonify(result), 200 if result["success"] else 500
 
@@ -4656,6 +4710,199 @@ emailInput.addEventListener('keydown',function(e){{if(e.key==='Enter')sendBtn.cl
 </html>"""
 
 
+THREAD_EXPIRED_HTML = """
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Offer Thread - TxtAnOffer</title>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"></noscript>
+<style>
+body{font-family:'Inter',sans-serif;background:#0f172a;color:#f8fafc;display:flex;
+align-items:center;justify-content:center;min-height:100vh;margin:0;padding:20px;}
+.box{background:rgba(255,255,255,0.03);border-radius:1.25rem;padding:2.5rem;max-width:400px;text-align:center;
+border:1px solid rgba(255,255,255,0.06);}
+h2{margin:0 0 0.75rem;font-size:1.35rem;font-weight:700;}
+p{color:#94a3b8;font-size:0.9rem;line-height:1.6;}
+a{color:#34d399;text-decoration:none;}
+a:hover{text-decoration:underline;}
+</style></head><body><div class="box">
+<h2>Link Expired</h2>
+<p>This offer link has expired or is invalid.<br>
+Ask the sending agent to resend the offer email.</p>
+<p style="margin-top:1rem;"><a href="/">Back to home</a></p></div></body></html>"""
+
+
+@app.route("/thread/<path:filename>", methods=["GET", "POST"])
+def offer_thread(filename):
+    if ".." in filename or filename.startswith("/"):
+        abort(400)
+    expires = request.values.get("expires")
+    sig = request.values.get("sig")
+    if not verify_thread_signature(filename, expires, sig):
+        return THREAD_EXPIRED_HTML, 403
+
+    offer = get_offer_by_filename(filename)
+    if not offer or not offer["price"]:
+        abort(404)
+
+    if request.method == "POST":
+        action = request.form.get("action", "")
+        action_sig = request.form.get("action_sig", "")
+        action_expires = request.form.get("action_expires", "")
+        if not verify_thread_action(filename, action, action_expires, action_sig):
+            abort(403)
+        if record_thread_response(filename, action):
+            track_event(f"thread_{action}ed", offer["phone"], {"filename": filename, "address": offer["address"]})
+            verb = "accepted" if action == "accept" else "declined"
+            twilio_send_sms(
+                offer["phone"],
+                f"Listing agent {verb} your offer on {offer['address']}. View: "
+                + sign_thread_url(filename, request.host_url.rstrip("/")),
+            )
+        return redirect(f"/thread/{filename}?expires={expires}&sig={sig}")
+
+    track_event("thread_viewed", offer["phone"], {"filename": filename})
+
+    address = offer["address"]
+    price = offer["price"]
+    down_pct = offer["down_pct"]
+    close_days = offer["close_days"]
+    down_amt = int(price * down_pct) if price else 0
+    loan_amt = price - down_amt if price else 0
+    thread_status = offer.get("thread_status") or "pending"
+
+    pdf_expires, pdf_sig = sign_pdf_view_params(filename)
+    pdf_url = f"/offers/{filename}?expires={pdf_expires}&sig={pdf_sig}"
+
+    pdf_path_on_disk = os.path.join(OUTPUT_DIR, filename)
+    validation = validate_offer_pdf(pdf_path_on_disk, {
+        "price": price, "down_payment_amount": down_amt, "loan_amount": loan_amt,
+        "close_days": close_days, "created_at": offer.get("created_at"),
+        "financing_type_specified": bool(offer.get("financing_type")),
+    }) if os.path.exists(pdf_path_on_disk) else {"ok": False, "blocking": [], "warnings": []}
+
+    from datetime import timedelta
+    try:
+        created_dt = datetime.fromisoformat(offer["created_at"])
+    except (KeyError, TypeError, ValueError):
+        created_dt = datetime.now()
+    close_date = (created_dt + timedelta(days=close_days)).strftime("%B %d, %Y") if close_days else ""
+
+    action_expires = int(time.time()) + THREAD_LINK_TTL
+    accept_sig = sign_thread_action(filename, "accept", action_expires)
+    decline_sig = sign_thread_action(filename, "decline", action_expires)
+
+    if thread_status == "pending":
+        response_block = f"""
+<div class="actions">
+<form method="post" style="margin:0;">
+<input type="hidden" name="action" value="accept">
+<input type="hidden" name="action_sig" value="{accept_sig}">
+<input type="hidden" name="action_expires" value="{action_expires}">
+<input type="hidden" name="expires" value="{expires}">
+<input type="hidden" name="sig" value="{sig}">
+<button type="submit" class="btn btn-primary" style="width:100%;">Accept</button>
+</form>
+<form method="post" style="margin:0;">
+<input type="hidden" name="action" value="decline">
+<input type="hidden" name="action_sig" value="{decline_sig}">
+<input type="hidden" name="action_expires" value="{action_expires}">
+<input type="hidden" name="expires" value="{expires}">
+<input type="hidden" name="sig" value="{sig}">
+<button type="submit" class="btn btn-outline" style="width:100%;">Decline</button>
+</form>
+</div>"""
+    else:
+        responded_label = "Accepted" if thread_status == "accept" or thread_status == "accepted" else "Declined"
+        response_block = f"""
+<div class="status-panel">You marked this <strong>{responded_label}</strong> on {offer.get('thread_responded_at', '')[:10]}.</div>"""
+
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Offer Thread — {address}</title>
+<link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<style>
+:root{{--bg:#0f172a;--bg-card:rgba(255,255,255,0.03);--border:rgba(255,255,255,0.06);
+--text:#f8fafc;--text-muted:#94a3b8;--text-dim:#64748b;--accent:#10b981;--accent-light:#34d399;
+--radius:1.25rem;--radius-sm:0.75rem;}}
+*{{margin:0;padding:0;box-sizing:border-box;}}
+body{{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;
+-webkit-font-smoothing:antialiased;}}
+.top-bar{{background:rgba(16,185,129,0.1);border-bottom:1px solid rgba(16,185,129,0.2);
+padding:0.6rem 1.5rem;text-align:center;font-size:0.8rem;color:var(--accent-light);font-weight:600;}}
+.container{{max-width:600px;margin:0 auto;padding:1.5rem 1rem;}}
+.address-card{{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
+padding:1.5rem;text-align:center;margin-bottom:1rem;}}
+.address-card h1{{font-size:1.25rem;font-weight:700;margin-bottom:0.25rem;}}
+.address-card .meta{{color:var(--text-dim);font-size:0.8rem;}}
+.stats{{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.5rem;margin-bottom:1rem;}}
+.stat{{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);
+padding:0.85rem 0.5rem;text-align:center;}}
+.stat-label{{font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;
+color:var(--text-dim);margin-bottom:0.2rem;}}
+.stat-value{{font-size:1rem;font-weight:700;}}
+.stat-value.accent{{color:var(--accent-light);}}
+.actions{{display:flex;flex-direction:column;gap:0.6rem;margin-bottom:1.25rem;}}
+.btn{{display:flex;align-items:center;justify-content:center;gap:0.5rem;padding:0.9rem 1rem;
+border-radius:var(--radius-sm);font-family:inherit;font-size:0.9rem;font-weight:600;
+text-decoration:none;border:none;cursor:pointer;transition:all 0.2s;}}
+.btn-primary{{background:linear-gradient(135deg,var(--accent),#059669);color:#fff;}}
+.btn-primary:hover{{transform:translateY(-1px);box-shadow:0 6px 20px rgba(16,185,129,0.3);}}
+.btn-outline{{background:transparent;color:var(--text-muted);border:1px solid var(--border);}}
+.btn-outline:hover{{border-color:var(--accent);color:var(--accent-light);}}
+.pdf-frame{{width:100%;height:70vh;border:1px solid var(--border);border-radius:var(--radius-sm);
+background:#1e293b;}}
+.disclaimer{{font-size:0.75rem;color:var(--text-dim);text-align:center;padding:1rem;
+border-top:1px solid var(--border);margin-top:1rem;}}
+.notbinding{{font-size:0.78rem;color:var(--text-muted);background:var(--bg-card);border:1px solid var(--border);
+border-radius:var(--radius-sm);padding:0.75rem 1rem;margin-bottom:1.25rem;line-height:1.5;}}
+.status-panel{{background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);color:var(--accent-light);
+border-radius:var(--radius-sm);padding:0.9rem 1rem;text-align:center;font-size:0.9rem;margin-bottom:1.25rem;}}
+.qa-blocking, .qa-warnings{{border-radius:var(--radius-sm);padding:0.85rem 1rem;margin-bottom:0.85rem;font-size:0.85rem;}}
+.qa-blocking{{background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);color:#fca5a5;}}
+.qa-warnings{{background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.25);color:#fbbf24;}}
+.qa-blocking strong, .qa-warnings strong{{display:block;margin-bottom:0.4rem;color:var(--text);}}
+.qa-blocking ul, .qa-warnings ul{{margin:0;padding-left:1.1rem;}}
+.qa-blocking li, .qa-warnings li{{margin-bottom:0.2rem;}}
+@media(max-width:400px){{
+.stats{{grid-template-columns:1fr 1fr;}}
+.stat:last-child{{grid-column:span 2;}}
+}}
+</style>
+</head>
+<body>
+<div class="top-bar">TREC 20-19 (mandatory as of {TREC_FORM_CURRENT_AS_OF}) — Offer sent to you via TxtAnOffer</div>
+<div class="container">
+<div class="address-card">
+<h1>{address}</h1>
+<div class="meta">TREC One to Four Family Residential Contract</div>
+</div>
+
+<div class="stats">
+<div class="stat"><div class="stat-label">Price</div><div class="stat-value accent">${price:,}</div></div>
+<div class="stat"><div class="stat-label">Down</div><div class="stat-value">{down_pct*100:.0f}% (${down_amt:,})</div></div>
+<div class="stat"><div class="stat-label">Close</div><div class="stat-value">{close_date}</div></div>
+</div>
+
+{'<div class="qa-blocking"><strong>Heads up &mdash; this draft is missing required fields:</strong><ul>' + ''.join(f'<li>{b}</li>' for b in validation['blocking']) + '</ul></div>' if validation['blocking'] else ''}
+{'<div class="qa-warnings"><strong>Heads up:</strong><ul>' + ''.join(f'<li>{w}</li>' for w in validation['warnings']) + '</ul></div>' if validation['warnings'] else ''}
+
+<div class="notbinding">Clicking Accept or Decline sends a quick notification to the buyer's agent. This is not a binding acceptance of the contract and is not an electronic signature &mdash; legal execution of the TREC 20-19 still requires normal signing.</div>
+
+{response_block}
+
+<iframe src="{pdf_url}" class="pdf-frame" title="Offer PDF"></iframe>
+
+<div class="disclaimer">
+This is a draft generated by TxtAnOffer. Not affiliated with TREC. &middot; <a href="/" style="color:var(--accent-light);">txtanoffer.com</a>
+</div>
+</div>
+</body>
+</html>"""
+
+
 @app.route("/offers/<path:filename>")
 def serve_offer(filename):
     if ".." in filename or filename.startswith("/"):
@@ -4733,14 +4980,17 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
         pdf_link = sign_pdf_url(o["filename"], request.host_url.rstrip("/"))
         created = o["created_at"][:10]
 
-        # No send/accept tracking exists yet -- status is derived purely from
-        # the closing date vs. today until that workflow gets built.
+        # Listing-agent response (via the Offer Thread link) takes priority
+        # over the closing-date-derived fallback below, once one exists.
         try:
             created_dt = datetime.fromisoformat(o["created_at"])
         except ValueError:
             created_dt = datetime.utcnow()
         close_dt = created_dt + timedelta(days=o.get("close_days") or 0)
-        status = "expired" if close_dt < datetime.utcnow() else "draft"
+        if o.get("thread_status") in ("accept", "decline"):
+            status = "accepted" if o["thread_status"] == "accept" else "declined"
+        else:
+            status = "expired" if close_dt < datetime.utcnow() else "draft"
 
         amend_html = ""
         for a in amendments_by_offer.get(o["id"], []):
@@ -4958,6 +5208,7 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
   .offer-card-bar.status-sent {{background:linear-gradient(180deg, #f59e0b, #fbbf24);}}
   .offer-card-bar.status-expired {{background:linear-gradient(180deg, #6b7280, #9ca3af);}}
   .offer-card-bar.status-accepted {{background:linear-gradient(180deg, #3b82f6, #60a5fa);}}
+  .offer-card-bar.status-declined {{background:linear-gradient(180deg, #f43f5e, #fb7185);}}
   .offer-card-body {{padding:1.25rem 1.5rem;flex:1;min-width:0;}}
   .offer-top {{display:flex;align-items:baseline;justify-content:space-between;gap:0.75rem;margin-bottom:0.9rem;}}
   .offer-addr-wrap {{display:flex;align-items:center;gap:0.6rem;min-width:0;}}
@@ -4971,6 +5222,7 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
   .status-badge.status-sent {{background:rgba(245,158,11,0.12);color:#f59e0b;}}
   .status-badge.status-expired {{background:rgba(107,114,128,0.12);color:#9ca3af;}}
   .status-badge.status-accepted {{background:rgba(59,130,246,0.12);color:#3b82f6;}}
+  .status-badge.status-declined {{background:rgba(244,63,94,0.12);color:#f43f5e;}}
 
   .pills {{display:flex;gap:0.6rem;margin-bottom:1rem;flex-wrap:wrap;}}
   .pill {{
