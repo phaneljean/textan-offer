@@ -197,21 +197,23 @@ def index():
   <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
   <style>
     :root {
-      --bg: #0f172a;
-      --bg-elevated: #1e293b;
-      --bg-card: rgba(255,255,255,0.03);
-      --border: rgba(255,255,255,0.06);
-      --border-hover: rgba(16,185,129,0.3);
-      --text: #f8fafc;
-      --text-muted: #94a3b8;
-      --text-dim: #64748b;
+      --bg: #FCFCFB;
+      --card-dark: #0f1f2f;
+      --card-dark-2: #152a3a;
+      --card-dark-3: #112333;
+      --bg-card: #fff;
+      --border: rgba(15,31,47,0.08);
+      --border-hover: rgba(16,185,129,0.35);
+      --text: #0f1f2f;
+      --text-muted: #5a6b7a;
+      --text-dim: #8a9aa9;
       --accent: #10b981;
       --accent-light: #34d399;
-      --accent-glow: rgba(16,185,129,0.25);
+      --accent-tint: #E7F7F1;
+      --accent-glow: rgba(16,185,129,0.18);
       --radius: 1.25rem;
-      --radius-sm: 0.75rem;
-      --shadow: 0 25px 60px rgba(0,0,0,0.5);
-      --shadow-sm: 0 4px 12px rgba(0,0,0,0.15);
+      --radius-sm: 0.85rem;
+      --shadow: 0 40px 80px -20px rgba(15,31,47,0.35);
       --transition: all 0.2s ease;
     }
 
@@ -235,9 +237,9 @@ def index():
       padding: 1rem 2rem;
       position: sticky;
       top: 0;
-      background: rgba(15, 23, 42, 0.9);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
+      background: rgba(252,252,251,0.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
       border-bottom: 1px solid var(--border);
       z-index: 100;
     }
@@ -253,6 +255,7 @@ def index():
       width: 34px; height: 34px;
       border-radius: 22%;
       overflow: hidden;
+      background: var(--card-dark);
     }
     .nav-logo img {
       width: 100%; height: 100%;
@@ -268,7 +271,7 @@ def index():
     .nav-links a { transition: var(--transition); }
     .nav-links a:hover { color: var(--text); }
     .nav-cta {
-      background: var(--accent);
+      background: linear-gradient(135deg, var(--accent), #059669);
       color: #fff;
       padding: 0.55rem 1.35rem;
       border-radius: 9999px;
@@ -282,27 +285,28 @@ def index():
     }
     .nav-cta:hover {
       transform: scale(1.05);
-      box-shadow: 0 0 24px rgba(16,185,129,0.4);
+      box-shadow: 0 8px 24px rgba(16,185,129,0.3);
     }
 
+    /* Main column */
+    .main { max-width: 840px; margin: 0 auto; padding: 0 2rem; }
+    .section { padding-top: 4.5rem; }
+
     /* Hero */
-    .hero {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 4rem;
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 5rem 2rem 6rem;
-      align-items: center;
+    .hero { padding-top: 4rem; padding-bottom: 1rem; }
+    .icon-circle {
+      width: 52px; height: 52px; border-radius: 999px;
+      background: var(--accent-tint); border: 1px solid rgba(16,185,129,0.18);
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 1.5rem; color: var(--card-dark);
     }
-    .hero-left { display: flex; flex-direction: column; gap: 1.75rem; }
     .badge {
       display: inline-flex;
       align-items: center;
       gap: 0.4rem;
-      background: rgba(16,185,129,0.1);
+      background: var(--accent-tint);
       border: 1px solid rgba(16,185,129,0.2);
-      color: var(--accent-light);
+      color: #0a7a6f;
       font-size: 0.7rem;
       font-weight: 700;
       padding: 0.35rem 0.85rem;
@@ -310,12 +314,14 @@ def index():
       width: fit-content;
       text-transform: uppercase;
       letter-spacing: 0.06em;
+      margin-bottom: 1.25rem;
     }
     .hero h1 {
-      font-size: 3.5rem;
+      font-size: 3rem;
       font-weight: 800;
-      line-height: 1.05;
+      line-height: 1.02;
       letter-spacing: -0.03em;
+      max-width: 620px;
     }
     .hero h1 .gradient {
       background: linear-gradient(135deg, var(--accent-light) 0%, var(--accent) 100%);
@@ -324,22 +330,25 @@ def index():
       background-clip: text;
     }
     .hero-sub {
-      font-size: 1.125rem;
+      margin-top: 1.1rem;
+      font-size: 1.1rem;
       color: var(--text-muted);
-      line-height: 1.65;
-      max-width: 480px;
+      line-height: 1.6;
+      max-width: 540px;
     }
 
-    /* Input Card */
+    /* Input Card (real, functional) */
     .input-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
+      margin-top: 2rem;
+      background: #fff;
+      border: 1px solid var(--border-strong, rgba(15,31,47,0.12));
       border-radius: var(--radius);
       padding: 1.25rem;
       display: flex;
       flex-direction: column;
       gap: 0.75rem;
-      backdrop-filter: blur(4px);
+      box-shadow: 0 1px 2px rgba(15,31,47,0.04);
+      max-width: 540px;
     }
     .input-label {
       font-size: 0.7rem;
@@ -351,8 +360,8 @@ def index():
     .input-row { display: flex; gap: 0.5rem; }
     .input-row input {
       flex: 1;
-      background: rgba(0,0,0,0.35);
-      border: 1px solid rgba(255,255,255,0.1);
+      background: #F5F7F6;
+      border: 1px solid var(--border);
       border-radius: var(--radius-sm);
       padding: 0.8rem 1rem;
       color: var(--text);
@@ -363,9 +372,10 @@ def index():
     }
     .input-row input:focus {
       border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(16,185,129,0.15);
+      box-shadow: 0 0 0 3px rgba(16,185,129,0.12);
+      background: #fff;
     }
-    .input-row input::placeholder { color: #475569; }
+    .input-row input::placeholder { color: #a8b4bd; }
     .input-btn {
       background: linear-gradient(135deg, var(--accent), #059669);
       color: #fff;
@@ -381,9 +391,9 @@ def index():
     }
     .input-btn:hover {
       transform: translateY(-2px);
-      box-shadow: 0 8px 24px rgba(16,185,129,0.35);
+      box-shadow: 0 8px 24px rgba(16,185,129,0.3);
     }
-    .input-hint { font-size: 0.75rem; color: #475569; }
+    .input-hint { font-size: 0.75rem; color: var(--text-dim); }
     .hero-phone {
       margin-top: 0.85rem;
       padding-top: 0.85rem;
@@ -391,311 +401,184 @@ def index():
       font-size: 0.8rem;
       color: var(--text-muted);
     }
-    .hero-phone a {
-      color: var(--accent-light);
-      font-weight: 600;
-      text-decoration: none;
-    }
+    .hero-phone a { color: #0a7a6f; font-weight: 600; text-decoration: none; }
     .hero-phone a:hover { text-decoration: underline; }
 
-    /* Demo result */
-    .demo-loading{display:none;color:var(--accent-light);font-size:0.85rem;padding:0.5rem 0;}
-    .demo-error{display:none;color:#f87171;font-size:0.85rem;padding:0.5rem 0;}
-    .demo-result{
-      display:none;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);
-      border-radius:var(--radius-sm);padding:1rem;margin-top:0.5rem;
-    }
-    .demo-result.show{display:block;}
-    .demo-result .res-row{display:flex;justify-content:space-between;padding:4px 0;font-size:0.85rem;}
-    .demo-result .res-row .k{color:var(--text-dim);}
-    .demo-result .res-row .v{color:#e2e8f0;font-weight:500;}
-    .demo-result .res-link{
-      display:inline-block;margin-top:8px;color:var(--accent-light);font-size:0.85rem;font-weight:600;text-decoration:none;
-    }
-    .demo-result .res-link:hover{text-decoration:underline;}
-
     /* Stats */
-    .stats { display: flex; gap: 2.5rem; margin-top: 0.25rem; }
-    .stat-num { font-size: 1.5rem; font-weight: 800; color: var(--text); line-height: 1; }
-    .stat-label { font-size: 0.75rem; color: var(--text-dim); margin-top: 0.25rem; font-weight: 500; }
+    .stats { display: flex; gap: 2.25rem; margin-top: 1.75rem; flex-wrap: wrap; }
+    .stat-num { font-size: 1.4rem; font-weight: 800; color: var(--text); line-height: 1; }
+    .stat-label { font-size: 0.72rem; color: var(--text-dim); margin-top: 0.25rem; font-weight: 500; }
 
-    /* Social Proof */
-    .social-proof { display: flex; align-items: center; gap: 1rem; margin-top: 0.25rem; }
-    .avatars { display: flex; }
-    .avatar {
-      width: 34px; height: 34px;
-      border-radius: 50%;
-      border: 2.5px solid var(--bg);
-      margin-left: -12px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 10px; font-weight: 700; color: #fff;
-    }
-    .avatar:first-child { margin-left: 0; }
-    .social-text { font-size: 0.8rem; color: var(--text-muted); }
-    .social-text strong { color: #e2e8f0; }
-
-    /* Phone Mockup */
-    .phone-wrap { display: flex; justify-content: center; align-items: center; position: relative; }
-    .phone-glow {
-      position: absolute;
-      width: 320px; height: 320px;
-      background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
-      border-radius: 50%;
-      filter: blur(50px);
-      z-index: 0;
-      animation: pulse 4s ease-in-out infinite;
-    }
-    @keyframes pulse {
-      0%, 100% { opacity: 0.6; transform: scale(1); }
-      50% { opacity: 1; transform: scale(1.1); }
-    }
-    .phone {
-      width: 300px;
-      background: var(--bg-elevated);
-      border-radius: 2.5rem;
-      border: 5px solid #334155;
-      padding: 1rem;
+    /* Dark card wrap (SMS demo + dashboard preview) */
+    .dark-card-wrap {
+      margin-top: 2.75rem;
       position: relative;
-      z-index: 1;
-      box-shadow: var(--shadow);
+      border-radius: 2.25rem;
+      background: var(--card-dark);
+      padding: 10px;
+      box-shadow: var(--shadow), inset 0 0 0 1px rgba(255,255,255,0.08);
+      overflow: hidden;
     }
-    .phone-notch {
-      width: 90px; height: 22px;
-      background: var(--bg);
-      border-radius: 0 0 14px 14px;
-      margin: 0 auto 0.75rem;
-    }
-    .phone-screen {
-      background: var(--bg);
+    .dark-card-inner {
+      position: relative;
       border-radius: 1.75rem;
-      padding: 1.1rem;
-      min-height: 400px;
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
+      background: linear-gradient(180deg, var(--card-dark-2) 0%, var(--card-dark-3) 50%, var(--card-dark) 100%);
+      padding: 1.5rem;
       overflow: hidden;
     }
-    .msg-time { text-align: center; font-size: 0.65rem; color: #475569; margin-bottom: 0.25rem; }
-    .msg-bubble {
-      max-width: 88%;
-      padding: 0.65rem 0.95rem;
-      border-radius: 1.1rem;
-      font-size: 0.82rem;
-      line-height: 1.45;
-      word-break: break-word;
-      animation: slideUp 0.4s ease-out;
+    .notch {
+      position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+      width: 88px; height: 20px;
+      background: var(--card-dark);
+      border-radius: 0 0 12px 12px;
     }
-    @keyframes slideUp {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
+    .orb { position: absolute; border-radius: 999px; pointer-events: none; }
+    .orb-1 { top: 0; right: 0; width: 70%; height: 50%; background: rgba(16,185,129,0.18); filter: blur(60px); }
+
+    .sms-bubble {
+      display: inline-flex; align-items: center; gap: 8px;
+      border-radius: 999px; background: #fff; color: var(--text);
+      padding: 0.6rem 1rem; font-size: 0.85rem; font-weight: 500;
+      box-shadow: 0 8px 20px -8px rgba(0,0,0,0.35);
+      margin: 0.5rem auto 0; max-width: 100%;
     }
-    .msg-user {
-      align-self: flex-end;
-      background: var(--accent);
-      color: #fff;
-      border-bottom-right-radius: 0.3rem;
+    .flow-arrow { text-align: center; color: rgba(255,255,255,0.35); font-size: 1.1rem; padding: 0.35rem 0; }
+    .demo-wrap { max-width: 420px; margin: 0.5rem auto 0; }
+
+    .demo-loading{display:none;color:var(--accent-light);font-size:0.85rem;padding:0.5rem 0;text-align:center;}
+    .demo-error{display:none;color:#fca5a5;font-size:0.85rem;padding:0.5rem 0;text-align:center;}
+    .white-card {
+      background: #fff; border-radius: 1.1rem; padding: 1rem;
+      box-shadow: 0 12px 24px -12px rgba(0,0,0,0.25), 0 2px 8px rgba(0,0,0,0.06);
     }
-    .msg-bot {
-      align-self: flex-start;
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.06);
-      color: #e2e8f0;
-      border-bottom-left-radius: 0.3rem;
+    .demo-result { display: none; }
+    .demo-result.show { display: block; animation: cardPop 0.5s cubic-bezier(0.16,1,0.3,1) both; }
+    @keyframes cardPop { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .demo-result .res-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 0.6rem 0.8rem; border-radius: 0.7rem; background: rgba(15,31,47,0.04);
     }
-    .msg-bot a { color: var(--accent-light); text-decoration: underline; text-underline-offset: 2px; }
-    .msg-accepted { background: rgba(16,185,129,0.1); border-color: rgba(16,185,129,0.25); color: #d1fae5; }
-    .pdf-preview {
-      background: rgba(255,255,255,0.03);
-      border: 1px solid rgba(255,255,255,0.06);
-      border-radius: var(--radius-sm);
-      padding: 0.75rem;
-      display: flex;
-      align-items: center;
-      gap: 0.6rem;
-      margin-top: 0.25rem;
-      overflow: hidden;
-      min-width: 0;
+    .demo-result .res-row + .res-row { margin-top: 0.4rem; }
+    .demo-result .res-row .k { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-dim); }
+    .demo-result .res-row .v { font-size: 0.85rem; font-weight: 600; color: var(--text); }
+    .demo-result .res-link {
+      display: block; text-align: center; margin-top: 0.75rem;
+      background: var(--card-dark); color: #fff; border-radius: 999px;
+      padding: 0.65rem; font-size: 0.82rem; font-weight: 600; text-decoration: none;
     }
-    .pdf-icon {
-      width: 36px; height: 36px;
-      background: rgba(239,68,68,0.12);
-      border-radius: 0.5rem;
-      display: flex; align-items: center; justify-content: center;
-      color: #f87171;
-      font-size: 0.65rem; font-weight: 800;
-      flex-shrink: 0;
-    }
-    .pdf-name { font-size: 0.78rem; color: #e2e8f0; font-weight: 500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .pdf-meta { font-size: 0.68rem; color: #475569; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .demo-result .res-link:hover { background: #000; }
 
     /* Steps */
-    .steps {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 5rem 2rem;
-      border-top: 1px solid var(--border);
-    }
-    .steps-header { text-align: center; margin-bottom: 3.5rem; }
-    .steps-header h2 { font-size: 2.25rem; font-weight: 700; margin: 0 0 0.5rem; letter-spacing: -0.02em; }
-    .steps-header p { color: var(--text-dim); font-size: 1.05rem; }
-    .steps-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
+    .steps { max-width: 1000px; margin: 0 auto; padding: 4.5rem 2rem; border-top: 1px solid var(--border); }
+    .steps-header { text-align: center; margin-bottom: 3rem; }
+    .steps-header h2 { font-size: 2rem; font-weight: 800; margin: 0 0 0.5rem; letter-spacing: -0.02em; }
+    .steps-header p { color: var(--text-dim); font-size: 1rem; }
+    .steps-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; }
     @media (min-width: 961px) {
       #how .steps-grid { grid-template-columns: repeat(4, 1fr); }
     }
     .step-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 2.25rem;
-      transition: var(--transition);
-    }
-    .step-card:hover {
-      transform: translateY(-6px);
-      border-color: var(--border-hover);
-      box-shadow: 0 12px 32px rgba(0,0,0,0.25);
-    }
-    .step-num {
-      width: 42px; height: 42px;
-      background: rgba(16,185,129,0.1);
-      color: var(--accent-light);
-      border-radius: var(--radius-sm);
-      display: flex; align-items: center; justify-content: center;
-      font-weight: 700;
-      font-size: 0.9rem;
-      margin-bottom: 1.25rem;
-    }
-    .step-card h3 { font-size: 1.15rem; font-weight: 600; margin: 0 0 0.5rem; }
-    .step-card p { font-size: 0.9rem; color: var(--text-muted); line-height: 1.55; margin: 0; }
-
-    /* Testimonials */
-    .testimonials {
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 4rem 2rem;
-      border-top: 1px solid var(--border);
-      text-align: center;
-    }
-    .testimonials h2 { font-size: 1.75rem; font-weight: 700; margin-bottom: 0.5rem; }
-    .testimonials-sub { color: var(--text-muted); font-size: 1rem; margin-bottom: 2.5rem; }
-    .testimonial-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 1.25rem;
-      text-align: left;
-    }
-    .testimonial-card {
-      background: var(--bg-card);
+      background: #fff;
       border: 1px solid var(--border);
       border-radius: var(--radius);
       padding: 1.75rem;
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
       transition: var(--transition);
     }
-    .testimonial-card:hover { border-color: var(--border-hover); transform: translateY(-2px); }
-    .stars { color: #fbbf24; font-size: 1rem; letter-spacing: 2px; }
-    .quote { font-size: 0.9rem; color: var(--text-muted); line-height: 1.7; flex: 1; font-style: italic; }
-    .testimonial-author { display: flex; align-items: center; gap: 0.75rem; }
-    .testimonial-author .avatar {
-      width: 36px; height: 36px; border-radius: 50%;
+    .step-card:hover {
+      transform: translateY(-4px);
+      border-color: var(--border-hover);
+      box-shadow: 0 16px 32px -16px rgba(15,31,47,0.18);
+    }
+    .step-num {
+      width: 38px; height: 38px;
+      background: var(--accent-tint);
+      color: #0a7a6f;
+      border-radius: var(--radius-sm);
       display: flex; align-items: center; justify-content: center;
-      font-size: 0.7rem; font-weight: 700; color: #fff; flex-shrink: 0;
+      font-weight: 700;
+      font-size: 0.85rem;
+      margin-bottom: 1.1rem;
     }
-    .testimonial-author strong { font-size: 0.85rem; color: var(--text); }
-    .author-meta { font-size: 0.75rem; color: var(--text-dim); margin-top: 2px; }
-    .trust-logos {
-      margin-top: 2.5rem;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.5rem;
-      flex-wrap: wrap;
+    .step-card h3 { font-size: 1.05rem; font-weight: 700; margin: 0 0 0.5rem; letter-spacing: -0.01em; }
+    .step-card p { font-size: 0.87rem; color: var(--text-muted); line-height: 1.55; margin: 0; }
+
+    /* Dashboard preview (Connected Apps + review-screen mockup) */
+    .dash-grid { display: grid; grid-template-columns: 1fr; gap: 0.85rem; padding: 0.5rem; }
+    @media (min-width: 700px) { .dash-grid { grid-template-columns: 260px 1fr; } }
+    .dash-panel { background: #fff; border-radius: 1.1rem; padding: 1.1rem; }
+    .dash-panel-label {
+      font-size: 0.68rem; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase;
+      color: var(--text-dim); display: flex; align-items: center; justify-content: space-between;
     }
-    .trust-logo-label { font-size: 0.8rem; color: var(--text-dim); margin-right: 0.25rem; }
-    .trust-logo-name { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); }
-    .trust-logo-sep { color: var(--text-dim); font-size: 0.7rem; }
+    .soon-tag {
+      font-size: 0.6rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+      background: rgba(15,31,47,0.06); color: var(--text-dim); padding: 0.15rem 0.5rem; border-radius: 999px;
+    }
+    .integration-row { display: flex; align-items: center; gap: 0.65rem; padding: 0.6rem 0; opacity: 0.55; }
+    .integration-row:not(:last-of-type) { border-bottom: 1px solid var(--border); }
+    .integration-icon {
+      width: 28px; height: 28px; border-radius: 8px; background: #eef1f0;
+      display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 700; color: var(--text-dim); flex-shrink: 0;
+    }
+    .integration-name { font-size: 0.82rem; font-weight: 500; color: var(--text-muted); }
+    .integration-note { font-size: 0.75rem; color: var(--text-dim); line-height: 1.5; margin-top: 0.75rem; }
+    .chrome-bar {
+      display: flex; align-items: center; gap: 6px;
+      padding-bottom: 0.85rem; margin-bottom: 0.9rem; border-bottom: 1px solid var(--border);
+    }
+    .chrome-dot { width: 9px; height: 9px; border-radius: 999px; background: #e2e6e5; }
+    .chrome-title { font-size: 0.72rem; color: var(--text-dim); font-weight: 500; margin-left: 0.4rem; }
+    .review-address { font-size: 1rem; font-weight: 700; }
+    .review-sub { font-size: 0.72rem; color: var(--text-dim); margin-top: 0.1rem; }
+    .review-stats { display: flex; gap: 0.6rem; margin: 0.85rem 0; flex-wrap: wrap; }
+    .review-stat { background: rgba(15,31,47,0.04); border-radius: 0.7rem; padding: 0.5rem 0.75rem; flex: 1; min-width: 100px; }
+    .review-stat .k { font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim); }
+    .review-stat .v { font-size: 0.85rem; font-weight: 700; margin-top: 0.1rem; }
+    .review-warning {
+      background: #FFF8EC; border: 1px solid #FBE7BE; color: #92660A;
+      border-radius: 0.7rem; padding: 0.65rem 0.85rem; font-size: 0.78rem; line-height: 1.45; margin-bottom: 0.85rem;
+    }
+    .review-actions { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+    .review-btn {
+      flex: 1; min-width: 140px; text-align: center; padding: 0.65rem; border-radius: 999px;
+      font-size: 0.8rem; font-weight: 600;
+    }
+    .review-btn.primary { background: var(--card-dark); color: #fff; }
+    .review-btn.ghost { background: rgba(15,31,47,0.05); color: var(--text-muted); }
+    .review-caption { font-size: 0.72rem; color: var(--text-dim); margin-top: 0.75rem; text-align: center; }
 
     /* SMS Section */
-    .sms-section {
-      max-width: 800px;
-      margin: 0 auto;
-      padding: 4rem 2rem;
-      border-top: 1px solid var(--border);
-    }
-    .sms-section h2 { font-size: 1.75rem; font-weight: 700; margin-bottom: 1.5rem; text-align: center; }
-    .sms-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 2rem;
-    }
-    .sms-card h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem; color: var(--accent-light); }
-    .sms-card ul { list-style: none; display: flex; flex-direction: column; gap: 0.75rem; }
-    .sms-card li {
-      font-size: 0.9rem;
-      color: var(--text-muted);
-      line-height: 1.5;
-      padding-left: 1.25rem;
-      position: relative;
-    }
+    .sms-section { max-width: 760px; margin: 0 auto; padding: 4.5rem 2rem; border-top: 1px solid var(--border); }
+    .sms-section h2 { font-size: 1.6rem; font-weight: 800; margin-bottom: 1.5rem; text-align: center; letter-spacing: -0.02em; }
+    .sms-card { background: #fff; border: 1px solid var(--border); border-radius: var(--radius); padding: 1.75rem; }
+    .sms-card h3 { font-size: 1.02rem; font-weight: 700; margin-bottom: 1rem; color: #0a7a6f; }
+    .sms-card ul { list-style: none; display: flex; flex-direction: column; gap: 0.7rem; }
+    .sms-card li { font-size: 0.87rem; color: var(--text-muted); line-height: 1.55; padding-left: 1.15rem; position: relative; }
     .sms-card li::before { content: "\\2022"; position: absolute; left: 0; color: var(--accent); font-weight: 700; }
-    .sms-card li strong { color: #e2e8f0; }
-    .sms-contact {
-      margin-top: 1.5rem;
-      padding-top: 1.5rem;
-      border-top: 1px solid var(--border);
-      font-size: 0.9rem;
-      color: var(--text-muted);
-    }
-    .sms-contact a { color: var(--accent-light); }
+    .sms-card li strong { color: var(--text); }
+    .sms-contact { margin-top: 1.4rem; padding-top: 1.4rem; border-top: 1px solid var(--border); font-size: 0.87rem; color: var(--text-muted); }
+    .sms-contact a { color: #0a7a6f; }
     .sms-contact a:hover { text-decoration: underline; }
 
     /* Footer */
-    .footer {
-      border-top: 1px solid var(--border);
-      padding: 3rem 2rem;
-      text-align: center;
-    }
-    .footer-links {
-      display: flex;
-      justify-content: center;
-      gap: 1.5rem;
-      margin-bottom: 1rem;
-      flex-wrap: wrap;
-    }
+    .footer { border-top: 1px solid var(--border); padding: 3rem 2rem; text-align: center; }
+    .footer-links { display: flex; justify-content: center; gap: 1.5rem; margin-bottom: 1rem; flex-wrap: wrap; }
     .footer-links a { color: var(--text-dim); font-size: 0.85rem; font-weight: 500; transition: var(--transition); }
     .footer-links a:hover { color: var(--text); }
-    .trust-badges {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 1.5rem;
-      margin-bottom: 1.25rem;
-      flex-wrap: wrap;
-    }
-    .trust-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.4rem;
-      font-size: 0.78rem;
-      font-weight: 600;
-      color: var(--text-muted);
-    }
+    .trust-badges { display: flex; justify-content: center; align-items: center; gap: 1.5rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .trust-badge { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.76rem; font-weight: 600; color: var(--text-dim); }
     .trust-badge .trust-icon { font-size: 0.9rem; }
-    .footer-copy { color: #475569; font-size: 0.8rem; }
+    .footer-copy { color: var(--text-dim); font-size: 0.8rem; }
 
-    @media (max-width: 960px) {
-      .hero { grid-template-columns: 1fr; padding: 3rem 1.5rem; gap: 2rem; }
-      .hero h1 { font-size: 2.5rem; }
-      .phone-wrap { display: none; }
+    @media (max-width: 700px) {
+      .main { padding: 0 1.25rem; }
+      .hero h1 { font-size: 2.25rem; }
       .steps-grid { grid-template-columns: 1fr; }
-      .testimonial-grid { grid-template-columns: 1fr; }
       .nav-links { display: none; }
       .stats { gap: 1.5rem; }
     }
     @media (max-width: 480px) {
-      .hero h1 { font-size: 2rem; }
+      .hero h1 { font-size: 1.9rem; }
       .input-row { flex-direction: column; }
       .input-btn { width: 100%; }
       .nav { padding: 1rem; }
@@ -721,73 +604,107 @@ def index():
     <a href="/signup" class="nav-cta">Start Free Trial</a>
   </nav>
 
-  <section class="hero">
-    <div class="hero-left">
-      <div class="badge">Built for Texas REALTORS</div>
-      <h1>
-        Generate TREC contracts<br>
-        <span class="gradient">by text message.</span>
-      </h1>
-      <p class="hero-sub">
-        Text your offer from the parking lot. Get a filled <strong>TREC 20-19</strong> + <strong>Third Party Financing Addendum</strong> PDF in 10 seconds. No app download. No form filling. Just text and go.
-      </p>
+  <div class="main">
+  <section class="hero section">
+    <div class="badge">Built for Texas REALTORS</div>
+    <h1>
+      Generate TREC contracts<br>
+      <span class="gradient">by text message.</span>
+    </h1>
+    <p class="hero-sub">
+      Text your offer from the parking lot. Get a filled <strong>TREC 20-19</strong> + <strong>Third Party Financing Addendum</strong> PDF in 10 seconds. No app download. No form filling. Just text and go.
+    </p>
 
-      <div class="input-card">
-        <div class="input-label">Try it now &mdash; no signup required</div>
-        <form id="live-demo-form">
-          <div class="input-row">
-            <input type="text" id="demo-input" placeholder="725k 3% 21day Harris 1234 Westheimer Rd" autocomplete="off">
-            <button type="submit" class="input-btn">Generate &rarr;</button>
-          </div>
-        </form>
-        <div class="input-hint">Type however feels natural — we handle messy texts. Just get the numbers in there.</div>
-        <div class="demo-loading" id="demo-loading">Generating your contract...</div>
-        <div class="demo-error" id="demo-error"></div>
-        <div class="demo-result" id="demo-result">
-          <div class="res-row"><span class="k">Address</span><span class="v" id="res-addr"></span></div>
-          <div class="res-row"><span class="k">Price</span><span class="v" id="res-price"></span></div>
-          <div class="res-row"><span class="k">Down payment</span><span class="v" id="res-down"></span></div>
-          <div class="res-row"><span class="k">Closing</span><span class="v" id="res-close"></span></div>
-          <a href="#" id="res-pdf" class="res-link" target="_blank">Download PDF &rarr;</a>
+    <div class="input-card">
+      <div class="input-label">Try it now &mdash; no signup required</div>
+      <form id="live-demo-form">
+        <div class="input-row">
+          <input type="text" id="demo-input" placeholder="725k 3% 21day Harris 1234 Westheimer Rd" autocomplete="off">
+          <button type="submit" class="input-btn">Generate &rarr;</button>
         </div>
-        <div class="hero-phone">Prefer texting from your phone? <a href="sms:+18338970333">Text (833) 897-0333</a> to get started.</div>
-      </div>
-
-      <div class="stats">
-        <div><div class="stat-num">&lt;10s</div><div class="stat-label">Generation time</div></div>
-        <div><div class="stat-num">45 min</div><div class="stat-label">Saved per offer</div></div>
-        <div><div class="stat-num">Free</div><div class="stat-label">No card required</div></div>
-        <div><div class="stat-num">100%</div><div class="stat-label">Required fields checked</div></div>
-      </div>
-
+      </form>
+      <div class="input-hint">Type however feels natural — we handle messy texts. Just get the numbers in there.</div>
+      <div class="hero-phone">Prefer texting from your phone? <a href="sms:+18338970333">Text (833) 897-0333</a> to get started.</div>
     </div>
 
-    <div class="phone-wrap">
-      <div class="phone-glow"></div>
-      <div class="phone">
-        <div class="phone-notch"></div>
-        <div class="phone-screen">
-          <div class="msg-time">Today 9:41 AM</div>
-          <div class="msg-bubble msg-user">725k 3% 21day 123 Main St, Austin TX 78701</div>
-          <div class="msg-bubble msg-bot">
-            Your TREC contract is ready!<br><br>
-            <strong style="color:#fff;">$725,000</strong><br>
-            Close: <strong style="color:#fff;">Aug 12, 2026</strong><br><br>
-            <a>txtanoffer.com/review/123-main-st.pdf</a>
-          </div>
-          <div class="pdf-preview">
-            <div class="pdf-icon">PDF</div>
-            <div style="min-width:0;overflow:hidden;">
-              <div class="pdf-name">TREC_123_Main_St.pdf</div>
-              <div class="pdf-meta">142 KB &middot; TREC 20-19 + 40-11</div>
+    <div class="stats">
+      <div><div class="stat-num">&lt;10s</div><div class="stat-label">Generation time</div></div>
+      <div><div class="stat-num">45 min</div><div class="stat-label">Saved per offer</div></div>
+      <div><div class="stat-num">Free</div><div class="stat-label">No card required</div></div>
+      <div><div class="stat-num">100%</div><div class="stat-label">Required fields checked</div></div>
+    </div>
+
+    <div class="dark-card-wrap">
+      <div class="orb orb-1"></div>
+      <div class="dark-card-inner">
+        <div class="notch"></div>
+        <div class="demo-wrap">
+          <div class="sms-bubble" style="display:flex;">725k 3% 21day 123 Main St</div>
+          <div class="flow-arrow">&darr;</div>
+          <div class="demo-loading" id="demo-loading">Generating your contract...</div>
+          <div class="demo-error" id="demo-error"></div>
+          <div class="demo-result" id="demo-result">
+            <div class="white-card">
+              <div class="res-row"><span class="k">Address</span><span class="v" id="res-addr"></span></div>
+              <div class="res-row"><span class="k">Price</span><span class="v" id="res-price"></span></div>
+              <div class="res-row"><span class="k">Down payment</span><span class="v" id="res-down"></span></div>
+              <div class="res-row"><span class="k">Closing</span><span class="v" id="res-close"></span></div>
+              <a href="#" id="res-pdf" class="res-link" target="_blank">Download PDF &rarr;</a>
             </div>
           </div>
-          <div class="msg-time">2:15 PM</div>
-          <div class="msg-bubble msg-bot msg-accepted">Listing agent accepted your offer on 123 Main St. &#9989;</div>
         </div>
       </div>
     </div>
   </section>
+
+  <section class="hero section" style="padding-top:1rem;">
+    <div class="icon-circle">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+    </div>
+    <h1 style="font-size:2.1rem;">See exactly what you'll get</h1>
+    <p class="hero-sub">The same review screen every offer goes through before it can be sent &mdash; and where integrations will plug in as they're built.</p>
+
+    <div class="dark-card-wrap">
+      <div class="dark-card-inner" style="padding:0.6rem;">
+        <div class="dash-grid">
+          <div class="dash-panel">
+            <div class="dash-panel-label">Integrations <span class="soon-tag">Coming soon</span></div>
+            <div style="margin-top:0.85rem;">
+              <div class="integration-row">
+                <div class="integration-icon">D</div>
+                <span class="integration-name">DocuSign</span>
+              </div>
+              <div class="integration-row">
+                <div class="integration-icon">Z</div>
+                <span class="integration-name">Zapier / Webhooks</span>
+              </div>
+            </div>
+            <div class="integration-note">Not connected yet &mdash; the groundwork exists, a real toggle for these is on the roadmap.</div>
+          </div>
+          <div class="dash-panel">
+            <div class="chrome-bar">
+              <div class="chrome-dot"></div><div class="chrome-dot"></div><div class="chrome-dot"></div>
+              <span class="chrome-title">txtanoffer.com/review</span>
+            </div>
+            <div class="review-address">123 Main St</div>
+            <div class="review-sub">TREC One to Four Family Residential Contract</div>
+            <div class="review-stats">
+              <div class="review-stat"><div class="k">Price</div><div class="v">$725,000</div></div>
+              <div class="review-stat"><div class="k">Down</div><div class="v">3% ($21,750)</div></div>
+              <div class="review-stat"><div class="k">Close</div><div class="v">21 days</div></div>
+            </div>
+            <div class="review-warning">Heads up: Section 1 &mdash; Buyer and/or Seller legal name is blank. Fill in by hand before sending.</div>
+            <div class="review-actions">
+              <div class="review-btn primary">Email to Listing Agent</div>
+              <div class="review-btn ghost">Open PDF</div>
+            </div>
+            <div class="review-caption">Nothing sends until every required field is filled in.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  </div>
 
   <section class="steps" id="how">
     <div class="steps-header">
