@@ -451,8 +451,8 @@ def index():
       background: #fff; border-radius: 1.1rem; padding: 1rem;
       box-shadow: 0 12px 24px -12px rgba(0,0,0,0.25), 0 2px 8px rgba(0,0,0,0.06);
     }
-    .demo-result { display: none; }
-    .demo-result.show { display: block; animation: cardPop 0.5s cubic-bezier(0.16,1,0.3,1) both; }
+    .demo-result { display: block; }
+    .demo-result.show { animation: cardPop 0.5s cubic-bezier(0.16,1,0.3,1) both; }
     @keyframes cardPop { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     .demo-result .res-row {
       display: flex; justify-content: space-between; align-items: center;
@@ -461,12 +461,19 @@ def index():
     .demo-result .res-row + .res-row { margin-top: 0.4rem; }
     .demo-result .res-row .k { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-dim); }
     .demo-result .res-row .v { font-size: 0.85rem; font-weight: 600; color: var(--text); }
-    .demo-result .res-link {
-      display: block; text-align: center; margin-top: 0.75rem;
-      background: var(--card-dark); color: #fff; border-radius: 999px;
-      padding: 0.65rem; font-size: 0.82rem; font-weight: 600; text-decoration: none;
+    .pdf-card {
+      display: flex; align-items: center; gap: 0.75rem;
+      margin-top: 0.6rem; padding: 0.85rem; border-radius: 1rem;
+      background: #fff; box-shadow: 0 12px 24px -12px rgba(0,0,0,0.25), 0 2px 8px rgba(0,0,0,0.06);
+      text-decoration: none;
     }
-    .demo-result .res-link:hover { background: #000; }
+    .pdf-icon {
+      width: 40px; height: 40px; border-radius: 0.7rem; flex-shrink: 0;
+      background: var(--accent-tint); display: flex; align-items: center; justify-content: center;
+    }
+    .pdf-meta { min-width: 0; }
+    .pdf-title { font-size: 0.83rem; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .pdf-sub { font-size: 0.72rem; color: var(--text-dim); margin-top: 0.1rem; }
 
     /* Steps */
     .steps { max-width: 1000px; margin: 0 auto; padding: 4.5rem 2rem; border-top: 1px solid var(--border); }
@@ -645,12 +652,21 @@ def index():
           <div class="demo-error" id="demo-error"></div>
           <div class="demo-result" id="demo-result">
             <div class="white-card">
-              <div class="res-row"><span class="k">Address</span><span class="v" id="res-addr"></span></div>
-              <div class="res-row"><span class="k">Price</span><span class="v" id="res-price"></span></div>
-              <div class="res-row"><span class="k">Down payment</span><span class="v" id="res-down"></span></div>
-              <div class="res-row"><span class="k">Closing</span><span class="v" id="res-close"></span></div>
-              <a href="#" id="res-pdf" class="res-link" target="_blank">Download PDF &rarr;</a>
+              <div class="res-row"><span class="k">Address</span><span class="v" id="res-addr">123 Main St</span></div>
+              <div class="res-row"><span class="k">Price</span><span class="v" id="res-price">$725,000</span></div>
+              <div class="res-row"><span class="k">Down payment</span><span class="v" id="res-down">3%</span></div>
+              <div class="res-row"><span class="k">Closing</span><span class="v" id="res-close">21 days</span></div>
             </div>
+            <div class="flow-arrow">&darr;</div>
+            <a href="#" id="res-pdf" class="pdf-card" target="_blank">
+              <div class="pdf-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0a7a6f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+              </div>
+              <div class="pdf-meta">
+                <div class="pdf-title">TREC 20-19 Purchase Agreement.pdf</div>
+                <div class="pdf-sub">AES-256 encrypted &middot; Ready to sign</div>
+              </div>
+            </a>
           </div>
         </div>
       </div>
