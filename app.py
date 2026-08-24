@@ -4318,18 +4318,19 @@ def profile():
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <style>
   :root{{
-    --bg: #0f172a;
-    --bg-elevated: #1e293b;
-    --bg-card: rgba(255,255,255,0.03);
-    --border: rgba(255,255,255,0.06);
-    --border-hover: rgba(16,185,129,0.3);
-    --text: #f8fafc;
-    --text-muted: #94a3b8;
-    --text-dim: #64748b;
+    --bg: #FCFCFB;
+    --bg-card: #fff;
+    --border: rgba(15,31,47,0.08);
+    --border-hover: rgba(16,185,129,0.35);
+    --text: #0f1f2f;
+    --text-muted: #5a6b7a;
+    --text-dim: #8a9aa9;
     --accent: #10b981;
     --accent-light: #34d399;
+    --accent-dark: #0a7a6f;
+    --accent-tint: #E7F7F1;
     --radius: 1.25rem;
-    --radius-sm: 0.75rem;
+    --radius-sm: 0.85rem;
     --transition: all 0.2s ease;
   }}
   * {{ margin:0; padding:0; box-sizing:border-box; }}
@@ -4346,11 +4347,11 @@ def profile():
   .nav {{
     display:flex;align-items:center;justify-content:space-between;
     padding:1rem 2rem;position:sticky;top:0;
-    background:rgba(15,23,42,0.9);backdrop-filter:blur(16px);
-    -webkit-backdrop-filter:blur(16px);
+    background:rgba(252,252,251,0.85);backdrop-filter:blur(20px);
+    -webkit-backdrop-filter:blur(20px);
     border-bottom:1px solid var(--border);z-index:100;
   }}
-  .nav-left {{display:flex;align-items:center;gap:0.6rem;font-weight:700;font-size:1.1rem;letter-spacing:-0.02em;}}
+  .nav-left {{display:flex;align-items:center;gap:0.6rem;font-weight:700;font-size:1.1rem;letter-spacing:-0.02em;color:var(--text);}}
   .nav-logo {{width:34px;height:34px;border-radius:22%;overflow:hidden;}}
   .nav-logo img {{width:100%;height:100%;object-fit:contain;}}
   .nav-links {{display:flex;gap:2rem;font-size:0.875rem;font-weight:500;color:var(--text-muted);}}
@@ -4361,16 +4362,16 @@ def profile():
     font-size:0.875rem;font-weight:600;text-decoration:none;display:inline-block;
     transition:var(--transition);
   }}
-  .nav-cta:hover {{transform:scale(1.05);box-shadow:0 0 24px rgba(16,185,129,0.4);}}
+  .nav-cta:hover {{transform:scale(1.05);box-shadow:0 0 24px rgba(16,185,129,0.3);}}
 
   .container {{max-width:520px;margin:0 auto;padding:3rem 1.5rem 4rem;}}
   .page-header {{margin-bottom:2rem;}}
-  .page-header h1 {{font-size:1.75rem;font-weight:800;letter-spacing:-0.03em;margin-bottom:0.25rem;}}
+  .page-header h1 {{font-size:1.75rem;font-weight:800;letter-spacing:-0.03em;margin-bottom:0.25rem;color:var(--text);}}
   .page-header p {{color:var(--text-muted);font-size:0.9rem;}}
 
   .form-card {{
     background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
-    padding:2rem;
+    padding:2rem;box-shadow:0 1px 3px rgba(15,31,47,0.05);
   }}
   .field-label {{
     font-size:0.7rem;font-weight:700;color:var(--text-dim);
@@ -4379,12 +4380,12 @@ def profile():
   }}
   .field-label:first-child {{margin-top:0;}}
   .form-card input {{
-    width:100%;background:rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.1);
+    width:100%;background:#fff;border:1px solid rgba(15,31,47,0.14);
     border-radius:var(--radius-sm);padding:0.75rem 1rem;color:var(--text);
     font-size:0.9rem;font-family:inherit;outline:none;transition:var(--transition);
   }}
   .form-card input:focus {{border-color:var(--accent);box-shadow:0 0 0 3px rgba(16,185,129,0.15);}}
-  .form-card input::placeholder {{color:#475569;}}
+  .form-card input::placeholder {{color:#b8c2ca;}}
   .row {{display:flex;gap:0.75rem;}}
   .row > div {{flex:1;}}
   .form-card button {{
@@ -4393,19 +4394,19 @@ def profile():
     border-radius:var(--radius-sm);padding:0.85rem;font-weight:600;font-size:0.95rem;
     font-family:inherit;cursor:pointer;transition:var(--transition);
   }}
-  .form-card button:hover {{transform:translateY(-2px);box-shadow:0 8px 24px rgba(16,185,129,0.35);}}
+  .form-card button:hover {{transform:translateY(-2px);box-shadow:0 8px 24px rgba(16,185,129,0.25);}}
   .success {{
     margin-top:1rem;padding:0.85rem 1rem;
-    background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);
-    border-radius:var(--radius-sm);font-size:0.85rem;color:var(--accent-light);text-align:center;
+    background:var(--accent-tint);border:1px solid rgba(16,185,129,0.25);
+    border-radius:var(--radius-sm);font-size:0.85rem;color:var(--accent-dark);text-align:center;
   }}
   .error {{
     margin-top:1rem;padding:0.85rem 1rem;
-    background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.2);
-    border-radius:var(--radius-sm);font-size:0.85rem;color:#f87171;text-align:center;
+    background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);
+    border-radius:var(--radius-sm);font-size:0.85rem;color:#dc2626;text-align:center;
   }}
   .foot {{text-align:center;margin-top:1.5rem;font-size:0.8rem;color:var(--text-dim);}}
-  .foot a {{color:var(--accent-light);}}
+  .foot a {{color:var(--accent-dark);}}
   .foot a:hover {{text-decoration:underline;}}
 
   @media(max-width:600px){{
