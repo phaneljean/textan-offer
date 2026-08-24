@@ -4939,13 +4939,13 @@ def dashboard():
 <title>Dashboard - TxtAnOffer</title>
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"></noscript>
 <style>
-body{font-family:'Inter',sans-serif;background:#0f172a;color:#f8fafc;display:flex;
+body{font-family:'Inter',sans-serif;background:#FCFCFB;color:#0f1f2f;display:flex;
 align-items:center;justify-content:center;min-height:100vh;margin:0;padding:20px;}
-.box{background:rgba(255,255,255,0.03);border-radius:1.25rem;padding:2.5rem;max-width:400px;text-align:center;
-border:1px solid rgba(255,255,255,0.06);}
+.box{background:#fff;border-radius:1.25rem;padding:2.5rem;max-width:400px;text-align:center;
+border:1px solid rgba(15,31,47,0.08);box-shadow:0 1px 2px rgba(15,31,47,0.04);}
 h2{margin:0 0 0.75rem;font-size:1.35rem;font-weight:700;}
-p{color:#94a3b8;font-size:0.9rem;line-height:1.6;}
-a{color:#34d399;text-decoration:none;}
+p{color:#5a6b7a;font-size:0.9rem;line-height:1.6;}
+a{color:#0a7a6f;text-decoration:none;}
 a:hover{text-decoration:underline;}
 </style></head><body><div class="box">
 <h2>Access Expired</h2>
@@ -5030,16 +5030,16 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
 
     if is_admin_phone(phone):
         sub_status = "Admin (Unlimited)"
-        sub_badge_color = "rgba(157,148,255,0.15)"
-        sub_badge_text = "#9d94ff"
+        sub_badge_color = "rgba(124,58,237,0.10)"
+        sub_badge_text = "#7c3aed"
     elif user["is_subscribed"]:
         sub_status = "Active"
-        sub_badge_color = "rgba(16,185,129,0.15)"
-        sub_badge_text = "var(--accent-light)"
+        sub_badge_color = "var(--accent-tint)"
+        sub_badge_text = "#0a7a6f"
     else:
         sub_status = f"Free ({user['offer_count']}/{FREE_OFFER_LIMIT} used)"
-        sub_badge_color = "rgba(251,191,36,0.15)"
-        sub_badge_text = "#fbbf24"
+        sub_badge_color = "rgba(245,158,11,0.12)"
+        sub_badge_text = "#b45309"
 
     profile_url = f"/profile?phone={_urlquote(phone, safe='')}&expires={expires}&sig={sig}"
 
@@ -5083,18 +5083,19 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <style>
   :root{{
-    --bg: #0f172a;
-    --bg-elevated: #1e293b;
-    --bg-card: rgba(255,255,255,0.03);
-    --border: rgba(255,255,255,0.06);
-    --border-hover: rgba(16,185,129,0.3);
-    --text: #f8fafc;
-    --text-muted: #94a3b8;
-    --text-dim: #64748b;
+    --bg: #FCFCFB;
+    --bg-card: #fff;
+    --border: rgba(15,31,47,0.08);
+    --border-hover: rgba(16,185,129,0.35);
+    --text: #0f1f2f;
+    --text-muted: #5a6b7a;
+    --text-dim: #8a9aa9;
     --accent: #10b981;
     --accent-light: #34d399;
+    --accent-dark: #0a7a6f;
+    --accent-tint: #E7F7F1;
     --radius: 1.25rem;
-    --radius-sm: 0.75rem;
+    --radius-sm: 0.85rem;
     --transition: all 0.2s ease;
   }}
   * {{ margin:0; padding:0; box-sizing:border-box; }}
@@ -5111,11 +5112,11 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
   .nav {{
     display:flex;align-items:center;justify-content:space-between;
     padding:1rem 2rem;position:sticky;top:0;
-    background:rgba(15,23,42,0.9);backdrop-filter:blur(16px);
-    -webkit-backdrop-filter:blur(16px);
+    background:rgba(252,252,251,0.85);backdrop-filter:blur(20px);
+    -webkit-backdrop-filter:blur(20px);
     border-bottom:1px solid var(--border);z-index:100;
   }}
-  .nav-left {{display:flex;align-items:center;gap:0.6rem;font-weight:700;font-size:1.1rem;letter-spacing:-0.02em;}}
+  .nav-left {{display:flex;align-items:center;gap:0.6rem;font-weight:700;font-size:1.1rem;letter-spacing:-0.02em;color:var(--text);}}
   .nav-logo {{width:34px;height:34px;border-radius:22%;overflow:hidden;}}
   .nav-logo img {{width:100%;height:100%;object-fit:contain;}}
   .nav-links {{display:flex;gap:2rem;font-size:0.875rem;font-weight:500;color:var(--text-muted);}}
@@ -5123,7 +5124,7 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
   .nav-links a:hover {{color:var(--text);}}
 
   .container {{max-width:1000px;margin:0 auto;padding:2.5rem 2rem 4rem;}}
-  .greeting {{font-size:1.75rem;font-weight:800;letter-spacing:-0.03em;margin-bottom:0.5rem;}}
+  .greeting {{font-size:1.75rem;font-weight:800;letter-spacing:-0.03em;margin-bottom:0.5rem;color:var(--text);}}
   .sub-badge {{
     display:inline-block;background:{sub_badge_color};color:{sub_badge_text};
     padding:0.3rem 0.85rem;border-radius:9999px;font-size:0.75rem;font-weight:700;
@@ -5132,10 +5133,10 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
 
   .stats {{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1rem;margin:2rem 0;}}
   .stat {{
-    background:linear-gradient(180deg, var(--bg-elevated), #131c2e);
+    background:var(--bg-card);
     border:1px solid var(--border);border-radius:var(--radius);
     padding:1.5rem;transition:var(--transition);
-    box-shadow:0 4px 20px rgba(0,0,0,0.25);
+    box-shadow:0 1px 3px rgba(15,31,47,0.05);
   }}
   .stat:hover {{border-color:var(--border-hover);transform:translateY(-1px);}}
   .stat-val {{
@@ -5147,15 +5148,15 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
     text-transform:uppercase;letter-spacing:0.06em;}}
 
   .profile-card {{
-    background:linear-gradient(180deg, var(--bg-elevated), #131c2e);
+    background:var(--bg-card);
     border:1px solid var(--border);border-radius:var(--radius);
     padding:1.5rem 1.75rem;margin-top:0.5rem;
-    box-shadow:0 4px 20px rgba(0,0,0,0.25);
+    box-shadow:0 1px 3px rgba(15,31,47,0.05);
   }}
   .profile-card-head {{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;}}
   .profile-card-head h2 {{margin:0;}}
   .profile-edit-link {{
-    font-size:0.8rem;font-weight:600;color:var(--accent-light);
+    font-size:0.8rem;font-weight:600;color:var(--accent-dark);
     border:1px solid var(--border);border-radius:var(--radius-sm);padding:0.4rem 0.85rem;
     transition:var(--transition);
   }}
@@ -5169,7 +5170,7 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
     display:flex;align-items:center;justify-content:center;
     font-weight:800;font-size:1.1rem;color:#06281d;
   }}
-  .id-name {{font-weight:700;font-size:1.05rem;}}
+  .id-name {{font-weight:700;font-size:1.05rem;color:var(--text);}}
   .id-meta {{font-size:0.8rem;color:var(--text-muted);margin-top:0.2rem;}}
 
   .profile-grid {{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1.1rem;}}
@@ -5178,63 +5179,63 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
   .profile-field-val {{font-size:0.9rem;color:var(--text);}}
   .profile-field-val.unset {{color:var(--text-dim);font-style:italic;}}
   .profile-empty {{color:var(--text-muted);font-size:0.9rem;line-height:1.6;}}
-  .profile-empty a {{color:var(--accent-light);font-weight:600;}}
+  .profile-empty a {{color:var(--accent-dark);font-weight:600;}}
 
-  h2 {{font-size:1.1rem;font-weight:700;margin:2.5rem 0 1rem;}}
+  h2 {{font-size:1.1rem;font-weight:700;margin:2.5rem 0 1rem;color:var(--text);}}
 
   .offer-feed {{display:flex;flex-direction:column;gap:0.9rem;}}
   .offer-card {{
     display:flex;border-radius:var(--radius);overflow:hidden;
-    background:linear-gradient(180deg, var(--bg-elevated), #131c2e);
+    background:var(--bg-card);
     border:1px solid var(--border);
-    box-shadow:0 4px 20px rgba(0,0,0,0.25);
+    box-shadow:0 1px 3px rgba(15,31,47,0.05);
     transition:var(--transition);
   }}
-  .offer-card:hover {{border-color:var(--border-hover);}}
+  .offer-card:hover {{border-color:var(--border-hover);box-shadow:0 4px 16px rgba(15,31,47,0.08);}}
   .offer-card:active {{transform:scale(0.99);}}
   .offer-card-bar {{width:4px;flex-shrink:0;background:linear-gradient(180deg, var(--accent), var(--accent-light));}}
   .offer-card-bar.status-draft {{background:linear-gradient(180deg, #10b981, #34d399);}}
   .offer-card-bar.status-sent {{background:linear-gradient(180deg, #f59e0b, #fbbf24);}}
-  .offer-card-bar.status-expired {{background:linear-gradient(180deg, #6b7280, #9ca3af);}}
+  .offer-card-bar.status-expired {{background:linear-gradient(180deg, #9ca3af, #cbd5e1);}}
   .offer-card-bar.status-accepted {{background:linear-gradient(180deg, #3b82f6, #60a5fa);}}
   .offer-card-bar.status-declined {{background:linear-gradient(180deg, #f43f5e, #fb7185);}}
   .offer-card-body {{padding:1.25rem 1.5rem;flex:1;min-width:0;}}
   .offer-top {{display:flex;align-items:baseline;justify-content:space-between;gap:0.75rem;margin-bottom:0.9rem;}}
   .offer-addr-wrap {{display:flex;align-items:center;gap:0.6rem;min-width:0;}}
-  .offer-addr {{font-weight:700;font-size:0.98rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}}
+  .offer-addr {{font-weight:700;font-size:0.98rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text);}}
   .offer-date {{font-size:0.75rem;color:var(--text-dim);flex-shrink:0;}}
   .status-badge {{
     font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;
     padding:0.2rem 0.55rem;border-radius:9999px;flex-shrink:0;
   }}
-  .status-badge.status-draft {{background:rgba(16,185,129,0.12);color:#10b981;}}
-  .status-badge.status-sent {{background:rgba(245,158,11,0.12);color:#f59e0b;}}
-  .status-badge.status-expired {{background:rgba(107,114,128,0.12);color:#9ca3af;}}
-  .status-badge.status-accepted {{background:rgba(59,130,246,0.12);color:#3b82f6;}}
-  .status-badge.status-declined {{background:rgba(244,63,94,0.12);color:#f43f5e;}}
+  .status-badge.status-draft {{background:rgba(16,185,129,0.12);color:#059669;}}
+  .status-badge.status-sent {{background:rgba(245,158,11,0.14);color:#b45309;}}
+  .status-badge.status-expired {{background:rgba(148,163,184,0.18);color:#64748b;}}
+  .status-badge.status-accepted {{background:rgba(59,130,246,0.12);color:#2563eb;}}
+  .status-badge.status-declined {{background:rgba(244,63,94,0.12);color:#e11d48;}}
 
   .pills {{display:flex;gap:0.6rem;margin-bottom:1rem;flex-wrap:wrap;}}
   .pill {{
-    background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:var(--radius-sm);
+    background:rgba(15,31,47,0.03);border:1px solid var(--border);border-radius:var(--radius-sm);
     padding:0.5rem 0.85rem;display:flex;flex-direction:column;gap:0.1rem;min-width:72px;
   }}
   .pill-val {{font-size:0.9rem;font-weight:700;color:var(--text);}}
   .pill-label {{font-size:0.65rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.05em;}}
 
-  .amend-list {{margin:0 0 1rem;padding:0.75rem 0.9rem;background:rgba(255,255,255,0.02);
+  .amend-list {{margin:0 0 1rem;padding:0.75rem 0.9rem;background:rgba(15,31,47,0.02);
     border:1px solid var(--border);border-radius:var(--radius-sm);}}
   .amend-row {{display:flex;align-items:center;justify-content:space-between;gap:0.75rem;
     font-size:0.78rem;color:var(--text-dim);padding:0.25rem 0;}}
   .amend-desc {{color:var(--text-muted);}}
-  .amend-pdf {{color:var(--accent-light);font-weight:600;flex-shrink:0;}}
+  .amend-pdf {{color:var(--accent-dark);font-weight:600;flex-shrink:0;}}
   .amend-pdf:hover {{text-decoration:underline;}}
 
   .btn-primary {{
-    display:inline-block;background:var(--accent);color:#06281d;font-weight:700;
+    display:inline-block;background:var(--accent);color:#fff;font-weight:700;
     padding:0.6rem 1.1rem;border-radius:var(--radius-sm);font-size:0.85rem;
-    box-shadow:0 2px 10px rgba(16,185,129,0.3);transition:var(--transition);
+    box-shadow:0 2px 10px rgba(16,185,129,0.25);transition:var(--transition);
   }}
-  .btn-primary:hover {{background:var(--accent-light);}}
+  .btn-primary:hover {{background:var(--accent-dark);}}
   .btn-primary:active {{transform:scale(0.97);}}
 
   .empty-state {{
@@ -5245,7 +5246,7 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
 
   .bottom-nav {{
     position:sticky;bottom:0;display:flex;justify-content:space-around;
-    background:rgba(15,23,42,0.92);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+    background:rgba(252,252,251,0.9);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
     border-top:1px solid var(--border);padding:0.7rem 0 calc(0.7rem + env(safe-area-inset-bottom));
     margin-top:2.5rem;
   }}
@@ -5254,7 +5255,7 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
     font-size:0.65rem;font-weight:600;color:var(--text-dim);transition:var(--transition);
   }}
   .nav-item span.icon {{font-size:1.2rem;}}
-  .nav-item:hover, .nav-item.active {{color:var(--accent-light);}}
+  .nav-item:hover, .nav-item.active {{color:var(--accent-dark);}}
 
   @media(max-width:600px){{
     .container {{padding:1.5rem 1rem 1rem;}}
