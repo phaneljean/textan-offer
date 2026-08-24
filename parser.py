@@ -20,6 +20,7 @@ CLOSE_PHRASE_RE = re.compile(r'close\s+(?:in\s+)?(\d+)\s*(?:day|days)?', re.IGNO
 INSPECTION_RE = re.compile(r'(\d+)[\s-]*day\s*(?:inspection|option)', re.IGNORECASE)
 
 FINANCING_RE = re.compile(r'\b(conventional|fha|va|cash)\b', re.IGNORECASE)
+HOA_RE = re.compile(r'\bhoa\b', re.IGNORECASE)
 
 MONTH_NAMES = {
     'jan': 1, 'january': 1, 'feb': 2, 'february': 2, 'mar': 3, 'march': 3,
@@ -122,6 +123,15 @@ def _parse_financing_type(text):
     # this parser doesn't have explicit evidence for.
     m = FINANCING_RE.search(text)
     return m.group(1).lower() if m else None
+
+def _parse_has_hoa(text):
+    # "hoa" mentioned anywhere in the text -- deliberate, explicit signal
+    # only. Not every property has a mandatory HOA, so unlike financing
+    # type/inspection days (which just stay unset if absent), this one
+    # controls whether an entire addendum gets attached -- no attempt to
+    # infer it from MLS/property data, only the agent's own words.
+    return bool(HOA_RE.search(text))
+
 
 def _parse_county(text):
     # Look for county name in the text
@@ -324,6 +334,8 @@ def parse_offer_sms(text: str) -> dict:
         result["financing_type"] = financing_type
     if inspection_days is not None:
         result["inspection_days"] = inspection_days
+    if _parse_has_hoa(text):
+        result["has_hoa"] = True
 
     return result
 
@@ -355,6 +367,8 @@ def parse_correction_sms(text: str) -> dict:
     inspection_days = _parse_inspection_days(text)
     if inspection_days is not None:
         result["inspection_days"] = inspection_days
+    if _parse_has_hoa(text):
+        result["has_hoa"] = True
     return result
 
 
