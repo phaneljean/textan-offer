@@ -3440,18 +3440,19 @@ def terms():
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <style>
   :root {
-    --bg: #0f172a;
-    --bg-elevated: #1e293b;
-    --bg-card: rgba(255,255,255,0.03);
-    --border: rgba(255,255,255,0.06);
-    --border-hover: rgba(16,185,129,0.3);
-    --text: #f8fafc;
-    --text-muted: #94a3b8;
-    --text-dim: #64748b;
-    --accent: #10b981;
-    --accent-light: #34d399;
+    --bg: #FCFCFB;
+    --bg-card: #fff;
+    --border: rgba(15,31,47,0.08);
+    --border-hover: rgba(0,0,0,0.35);
+    --text: #0f1f2f;
+    --text-muted: #5a6b7a;
+    --text-dim: #8a9aa9;
+    --accent: #171717;
+    --accent-light: #525252;
+    --accent-dark: #000000;
+    --accent-tint: #F0F0EE;
     --radius: 1.25rem;
-    --radius-sm: 0.75rem;
+    --radius-sm: 0.85rem;
     --transition: all 0.2s ease;
   }
   * { margin:0; padding:0; box-sizing:border-box; }
@@ -3468,11 +3469,11 @@ def terms():
   .nav {
     display:flex;align-items:center;justify-content:space-between;
     padding:1rem 2rem;position:sticky;top:0;
-    background:rgba(15,23,42,0.9);backdrop-filter:blur(16px);
-    -webkit-backdrop-filter:blur(16px);
+    background:rgba(252,252,251,0.85);backdrop-filter:blur(20px);
+    -webkit-backdrop-filter:blur(20px);
     border-bottom:1px solid var(--border);z-index:100;
   }
-  .nav-left {display:flex;align-items:center;gap:0.6rem;font-weight:700;font-size:1.1rem;letter-spacing:-0.02em;}
+  .nav-left {display:flex;align-items:center;gap:0.6rem;font-weight:700;font-size:1.1rem;letter-spacing:-0.02em;color:var(--text);}
   .nav-logo {width:34px;height:34px;border-radius:22%;overflow:hidden;}
   .nav-logo img {width:100%;height:100%;object-fit:contain;}
   .nav-links {display:flex;gap:2rem;font-size:0.875rem;font-weight:500;color:var(--text-muted);}
@@ -3483,16 +3484,16 @@ def terms():
     font-size:0.875rem;font-weight:600;text-decoration:none;display:inline-block;
     transition:var(--transition);
   }
-  .nav-cta:hover {transform:scale(1.05);box-shadow:0 0 24px rgba(16,185,129,0.4);}
+  .nav-cta:hover {transform:scale(1.05);box-shadow:0 0 24px rgba(0,0,0,0.25);}
 
   .container {max-width:720px;margin:0 auto;padding:3rem 2rem 4rem;}
   .page-header {margin-bottom:2.5rem;}
-  .page-header h1 {font-size:2rem;font-weight:800;letter-spacing:-0.03em;margin-bottom:0.25rem;}
+  .page-header h1 {font-size:2rem;font-weight:800;letter-spacing:-0.03em;margin-bottom:0.25rem;color:var(--text);}
   .page-header .updated {font-size:0.8rem;color:var(--text-dim);}
 
   .legal-card {
     background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
-    padding:2.5rem 2rem;
+    padding:2.5rem 2rem;box-shadow:0 1px 3px rgba(15,31,47,0.05);
   }
   .legal-card h2 {
     font-size:0.95rem;font-weight:700;color:var(--text);
@@ -3507,13 +3508,13 @@ def terms():
   .legal-card ul li {list-style:disc;margin-bottom:0.35rem;}
   .legal-card strong {color:var(--text);font-weight:600;}
   .legal-card .emphasis {
-    background:rgba(16,185,129,0.05);border-left:3px solid var(--accent);
+    background:var(--accent-tint);border-left:3px solid var(--accent);
     padding:1rem 1.25rem;margin:1rem 0;border-radius:0 var(--radius-sm) var(--radius-sm) 0;
     font-size:0.85rem;color:var(--text);line-height:1.7;
   }
-  .section-num {color:var(--accent-light);font-weight:700;margin-right:0.25rem;}
+  .section-num {color:var(--accent-dark);font-weight:700;margin-right:0.25rem;}
   .foot {text-align:center;margin-top:2rem;font-size:0.8rem;color:var(--text-dim);}
-  .foot a {color:var(--accent-light);}
+  .foot a {color:var(--accent-dark);}
   .foot a:hover {text-decoration:underline;}
 
   @media(max-width:600px) {
@@ -3687,18 +3688,19 @@ def privacy():
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <style>
   :root {
-    --bg: #0f172a;
-    --bg-elevated: #1e293b;
-    --bg-card: rgba(255,255,255,0.03);
-    --border: rgba(255,255,255,0.06);
-    --border-hover: rgba(16,185,129,0.3);
-    --text: #f8fafc;
-    --text-muted: #94a3b8;
-    --text-dim: #64748b;
-    --accent: #10b981;
-    --accent-light: #34d399;
+    --bg: #FCFCFB;
+    --bg-card: #fff;
+    --border: rgba(15,31,47,0.08);
+    --border-hover: rgba(0,0,0,0.35);
+    --text: #0f1f2f;
+    --text-muted: #5a6b7a;
+    --text-dim: #8a9aa9;
+    --accent: #171717;
+    --accent-light: #525252;
+    --accent-dark: #000000;
+    --accent-tint: #F0F0EE;
     --radius: 1.25rem;
-    --radius-sm: 0.75rem;
+    --radius-sm: 0.85rem;
     --transition: all 0.2s ease;
   }
   * { margin:0; padding:0; box-sizing:border-box; }
@@ -3715,11 +3717,11 @@ def privacy():
   .nav {
     display:flex;align-items:center;justify-content:space-between;
     padding:1rem 2rem;position:sticky;top:0;
-    background:rgba(15,23,42,0.9);backdrop-filter:blur(16px);
-    -webkit-backdrop-filter:blur(16px);
+    background:rgba(252,252,251,0.85);backdrop-filter:blur(20px);
+    -webkit-backdrop-filter:blur(20px);
     border-bottom:1px solid var(--border);z-index:100;
   }
-  .nav-left {display:flex;align-items:center;gap:0.6rem;font-weight:700;font-size:1.1rem;letter-spacing:-0.02em;}
+  .nav-left {display:flex;align-items:center;gap:0.6rem;font-weight:700;font-size:1.1rem;letter-spacing:-0.02em;color:var(--text);}
   .nav-logo {width:34px;height:34px;border-radius:22%;overflow:hidden;}
   .nav-logo img {width:100%;height:100%;object-fit:contain;}
   .nav-links {display:flex;gap:2rem;font-size:0.875rem;font-weight:500;color:var(--text-muted);}
@@ -3730,16 +3732,16 @@ def privacy():
     font-size:0.875rem;font-weight:600;text-decoration:none;display:inline-block;
     transition:var(--transition);
   }
-  .nav-cta:hover {transform:scale(1.05);box-shadow:0 0 24px rgba(16,185,129,0.4);}
+  .nav-cta:hover {transform:scale(1.05);box-shadow:0 0 24px rgba(0,0,0,0.25);}
 
   .container {max-width:720px;margin:0 auto;padding:3rem 2rem 4rem;}
   .page-header {margin-bottom:2.5rem;}
-  .page-header h1 {font-size:2rem;font-weight:800;letter-spacing:-0.03em;margin-bottom:0.25rem;}
+  .page-header h1 {font-size:2rem;font-weight:800;letter-spacing:-0.03em;margin-bottom:0.25rem;color:var(--text);}
   .page-header .updated {font-size:0.8rem;color:var(--text-dim);}
 
   .legal-card {
     background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
-    padding:2.5rem 2rem;
+    padding:2.5rem 2rem;box-shadow:0 1px 3px rgba(15,31,47,0.05);
   }
   .legal-card h2 {
     font-size:0.95rem;font-weight:700;color:var(--text);
@@ -3754,7 +3756,7 @@ def privacy():
   .legal-card ul li {list-style:disc;margin-bottom:0.35rem;}
   .legal-card strong {color:var(--text);font-weight:600;}
   .foot {text-align:center;margin-top:2rem;font-size:0.8rem;color:var(--text-dim);}
-  .foot a {color:var(--accent-light);}
+  .foot a {color:var(--accent-dark);}
   .foot a:hover {text-decoration:underline;}
 
   @media(max-width:600px) {
@@ -3894,16 +3896,18 @@ def faq():
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <style>
   :root {
-    --bg: #0f172a;
-    --bg-card: rgba(255,255,255,0.03);
-    --border: rgba(255,255,255,0.06);
-    --text: #f8fafc;
-    --text-muted: #94a3b8;
-    --text-dim: #64748b;
-    --accent: #10b981;
-    --accent-light: #34d399;
+    --bg: #FCFCFB;
+    --bg-card: #fff;
+    --border: rgba(15,31,47,0.08);
+    --text: #0f1f2f;
+    --text-muted: #5a6b7a;
+    --text-dim: #8a9aa9;
+    --accent: #171717;
+    --accent-light: #525252;
+    --accent-dark: #000000;
+    --accent-tint: #F0F0EE;
     --radius: 1.25rem;
-    --radius-sm: 0.75rem;
+    --radius-sm: 0.85rem;
     --transition: all 0.2s ease;
   }
   * { margin:0; padding:0; box-sizing:border-box; }
@@ -3916,11 +3920,11 @@ def faq():
   .nav {
     display:flex;align-items:center;justify-content:space-between;
     padding:1rem 2rem;position:sticky;top:0;
-    background:rgba(15,23,42,0.9);backdrop-filter:blur(16px);
-    -webkit-backdrop-filter:blur(16px);
+    background:rgba(252,252,251,0.85);backdrop-filter:blur(20px);
+    -webkit-backdrop-filter:blur(20px);
     border-bottom:1px solid var(--border);z-index:100;
   }
-  .nav-left {display:flex;align-items:center;gap:0.6rem;font-weight:700;font-size:1.1rem;letter-spacing:-0.02em;}
+  .nav-left {display:flex;align-items:center;gap:0.6rem;font-weight:700;font-size:1.1rem;letter-spacing:-0.02em;color:var(--text);}
   .nav-logo {width:34px;height:34px;border-radius:22%;overflow:hidden;}
   .nav-logo img {width:100%;height:100%;object-fit:contain;}
   .nav-links {display:flex;gap:2rem;font-size:0.875rem;font-weight:500;color:var(--text-muted);}
@@ -3931,21 +3935,21 @@ def faq():
     font-size:0.875rem;font-weight:600;text-decoration:none;display:inline-block;
     transition:var(--transition);
   }
-  .nav-cta:hover {transform:scale(1.05);box-shadow:0 0 24px rgba(16,185,129,0.4);}
+  .nav-cta:hover {transform:scale(1.05);box-shadow:0 0 24px rgba(0,0,0,0.25);}
   .container {max-width:720px;margin:0 auto;padding:3rem 2rem 4rem;}
   .page-header {margin-bottom:2.5rem;}
-  .page-header h1 {font-size:2rem;font-weight:800;letter-spacing:-0.03em;margin-bottom:0.25rem;}
+  .page-header h1 {font-size:2rem;font-weight:800;letter-spacing:-0.03em;margin-bottom:0.25rem;color:var(--text);}
   .page-header p {font-size:0.9rem;color:var(--text-muted);}
   .faq-item {
     background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
-    padding:1.5rem 1.75rem;margin-bottom:1rem;
+    padding:1.5rem 1.75rem;margin-bottom:1rem;box-shadow:0 1px 3px rgba(15,31,47,0.05);
   }
-  .faq-item h2 {font-size:1rem;font-weight:700;margin-bottom:0.6rem;}
+  .faq-item h2 {font-size:1rem;font-weight:700;margin-bottom:0.6rem;color:var(--text);}
   .faq-item p {font-size:0.85rem;line-height:1.75;color:var(--text-muted);}
   .faq-item p + p {margin-top:0.5rem;}
   .faq-item strong {color:var(--text);font-weight:600;}
   .foot {text-align:center;margin-top:2rem;font-size:0.8rem;color:var(--text-dim);}
-  .foot a {color:var(--accent-light);}
+  .foot a {color:var(--accent-dark);}
   .foot a:hover {text-decoration:underline;}
   @media(max-width:600px) {
     .container {padding:2rem 1rem 3rem;}
@@ -3986,12 +3990,12 @@ def faq():
 
   <div class="faq-item">
     <h2>Can I amend an offer after I've already sent it?</h2>
-    <p>Yes &mdash; text <strong>AMEND &lt;address&gt; price &lt;value&gt;</strong> or <strong>AMEND &lt;address&gt; close +&lt;days&gt;</strong> (e.g. <em>"AMEND 123 Main St price 730k"</em> or <em>"AMEND 123 Main St close +10"</em>) and you'll get back a filled TREC 39-11 Amendment for that contract. It's included on every plan, works the same way in the <a href="/demo" style="color:var(--accent-light);">web demo</a>, and shows up nested under the original offer on your <strong>Dashboard</strong>. Only the price or closing-date field you asked to change is filled &mdash; everything else on the form is left blank for you to complete, same as the main contract.</p>
+    <p>Yes &mdash; text <strong>AMEND &lt;address&gt; price &lt;value&gt;</strong> or <strong>AMEND &lt;address&gt; close +&lt;days&gt;</strong> (e.g. <em>"AMEND 123 Main St price 730k"</em> or <em>"AMEND 123 Main St close +10"</em>) and you'll get back a filled TREC 39-11 Amendment for that contract. It's included on every plan, works the same way in the <a href="/demo" style="color:var(--accent-dark);">web demo</a>, and shows up nested under the original offer on your <strong>Dashboard</strong>. Only the price or closing-date field you asked to change is filled &mdash; everything else on the form is left blank for you to complete, same as the main contract.</p>
   </div>
 
   <div class="faq-item">
     <h2>Do you store my texts or offers?</h2>
-    <p>Generated PDFs are stored temporarily for download and deleted after 30 days. SMS logs are retained for 90 days for support and debugging. We do not sell or share your data. See our <a href="/privacy" style="color:var(--accent-light);">Privacy Policy</a> for the full breakdown.</p>
+    <p>Generated PDFs are stored temporarily for download and deleted after 30 days. SMS logs are retained for 90 days for support and debugging. We do not sell or share your data. See our <a href="/privacy" style="color:var(--accent-dark);">Privacy Policy</a> for the full breakdown.</p>
     <p><strong>Important:</strong> TREC Rule &sect;535.2 requires brokers to independently retain records of offers, contracts, and related addenda for at least 4 years from closing or termination of the transaction. Our 30-day retention does not satisfy that requirement &mdash; download and save your own copy of every offer and amendment PDF.</p>
   </div>
 
@@ -4007,12 +4011,12 @@ def faq():
 
   <div class="faq-item">
     <h2>What happens if my text doesn't go through?</h2>
-    <p>You'll receive a confirmation reply for every offer received, generally within seconds. If you don't get one within 30 seconds, try again or use the <a href="/demo" style="color:var(--accent-light);">web interface</a> at txtanoffer.com/demo.</p>
+    <p>You'll receive a confirmation reply for every offer received, generally within seconds. If you don't get one within 30 seconds, try again or use the <a href="/demo" style="color:var(--accent-dark);">web interface</a> at txtanoffer.com/demo.</p>
   </div>
 
   <div class="faq-item">
     <h2>Do I need E&amp;O insurance to use TxtAnOffer?</h2>
-    <p>TxtAnOffer does not carry Errors &amp; Omissions insurance. Any E&amp;O coverage applicable to a transaction is your own policy as a licensed agent &mdash; it's your responsibility to review and stand behind every document you present or sign. See <a href="/terms" style="color:var(--accent-light);">Terms of Service</a> for details.</p>
+    <p>TxtAnOffer does not carry Errors &amp; Omissions insurance. Any E&amp;O coverage applicable to a transaction is your own policy as a licensed agent &mdash; it's your responsibility to review and stand behind every document you present or sign. See <a href="/terms" style="color:var(--accent-dark);">Terms of Service</a> for details.</p>
   </div>
 
   <p class="foot">Still have a question? Email <a href="mailto:support@txtanoffer.com">support@txtanoffer.com</a>.<br><a href="/">&larr; Back to home</a> &middot; <a href="/terms">Terms</a> &middot; <a href="/privacy">Privacy Policy</a></p>
@@ -4037,14 +4041,16 @@ def about():
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <style>
   :root {
-    --bg: #0f172a;
-    --bg-card: rgba(255,255,255,0.03);
-    --border: rgba(255,255,255,0.06);
-    --text: #f8fafc;
-    --text-muted: #94a3b8;
-    --text-dim: #64748b;
-    --accent: #10b981;
-    --accent-light: #34d399;
+    --bg: #FCFCFB;
+    --bg-card: #fff;
+    --border: rgba(15,31,47,0.08);
+    --text: #0f1f2f;
+    --text-muted: #5a6b7a;
+    --text-dim: #8a9aa9;
+    --accent: #171717;
+    --accent-light: #525252;
+    --accent-dark: #000000;
+    --accent-tint: #F0F0EE;
     --radius: 1.25rem;
     --transition: all 0.2s ease;
   }
@@ -4058,11 +4064,11 @@ def about():
   .nav {
     display:flex;align-items:center;justify-content:space-between;
     padding:1rem 2rem;position:sticky;top:0;
-    background:rgba(15,23,42,0.9);backdrop-filter:blur(16px);
-    -webkit-backdrop-filter:blur(16px);
+    background:rgba(252,252,251,0.85);backdrop-filter:blur(20px);
+    -webkit-backdrop-filter:blur(20px);
     border-bottom:1px solid var(--border);z-index:100;
   }
-  .nav-left {display:flex;align-items:center;gap:0.6rem;font-weight:700;font-size:1.1rem;letter-spacing:-0.02em;}
+  .nav-left {display:flex;align-items:center;gap:0.6rem;font-weight:700;font-size:1.1rem;letter-spacing:-0.02em;color:var(--text);}
   .nav-logo {width:34px;height:34px;border-radius:22%;overflow:hidden;}
   .nav-logo img {width:100%;height:100%;object-fit:contain;}
   .nav-links {display:flex;gap:2rem;font-size:0.875rem;font-weight:500;color:var(--text-muted);}
@@ -4073,15 +4079,15 @@ def about():
     font-size:0.875rem;font-weight:600;text-decoration:none;display:inline-block;
     transition:var(--transition);
   }
-  .nav-cta:hover {transform:scale(1.05);box-shadow:0 0 24px rgba(16,185,129,0.4);}
+  .nav-cta:hover {transform:scale(1.05);box-shadow:0 0 24px rgba(0,0,0,0.25);}
   .container {max-width:680px;margin:0 auto;padding:3.5rem 2rem 4rem;}
   .avatar-lg {
     width:64px;height:64px;border-radius:50%;overflow:hidden;margin-bottom:1.5rem;
     border:2px solid var(--border);
   }
   .avatar-lg img {width:100%;height:100%;object-fit:cover;}
-  h1 {font-size:2.1rem;font-weight:800;letter-spacing:-0.03em;margin-bottom:0.4rem;}
-  .kicker {font-size:0.9rem;color:var(--accent-light);font-weight:600;margin-bottom:1.75rem;}
+  h1 {font-size:2.1rem;font-weight:800;letter-spacing:-0.03em;margin-bottom:0.4rem;color:var(--text);}
+  .kicker {font-size:0.9rem;color:var(--accent-dark);font-weight:600;margin-bottom:1.75rem;}
   .about-body p {font-size:0.95rem;color:var(--text-muted);margin-bottom:1.1rem;}
   .about-body strong {color:var(--text);font-weight:600;}
   h2 {font-size:1.2rem;font-weight:700;margin:2rem 0 0.9rem;color:var(--text);}
@@ -4093,7 +4099,7 @@ def about():
   }
   .signoff strong {display:block;color:var(--text);font-size:1rem;margin-bottom:0.2rem;}
   .foot {text-align:center;margin-top:3rem;font-size:0.8rem;color:var(--text-dim);}
-  .foot a {color:var(--accent-light);}
+  .foot a {color:var(--accent-dark);}
   .foot a:hover {text-decoration:underline;}
   @media(max-width:600px) {
     .container {padding:2.5rem 1.25rem 3rem;}
@@ -4146,7 +4152,7 @@ def about():
   <div class="signoff">
     <strong>Phanel Jean Baptiste</strong>
     TREC License #000137 &middot; RE/MAX<br>
-    <a href="mailto:pejeanbaptiste@gmail.com" style="color:var(--accent-light);">pejeanbaptiste@gmail.com</a>
+    <a href="mailto:pejeanbaptiste@gmail.com" style="color:var(--accent-dark);">pejeanbaptiste@gmail.com</a>
   </div>
 
   <p class="foot"><a href="/">&larr; Back to home</a> &middot; <a href="/faq">FAQ</a> &middot; <a href="/contact">Contact</a></p>
@@ -4171,14 +4177,16 @@ def contact():
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <style>
   :root {
-    --bg: #0f172a;
-    --bg-card: rgba(255,255,255,0.03);
-    --border: rgba(255,255,255,0.06);
-    --text: #f8fafc;
-    --text-muted: #94a3b8;
-    --text-dim: #64748b;
-    --accent: #10b981;
-    --accent-light: #34d399;
+    --bg: #FCFCFB;
+    --bg-card: #fff;
+    --border: rgba(15,31,47,0.08);
+    --text: #0f1f2f;
+    --text-muted: #5a6b7a;
+    --text-dim: #8a9aa9;
+    --accent: #171717;
+    --accent-light: #525252;
+    --accent-dark: #000000;
+    --accent-tint: #F0F0EE;
     --radius: 1.25rem;
     --transition: all 0.2s ease;
   }
@@ -4192,11 +4200,11 @@ def contact():
   .nav {
     display:flex;align-items:center;justify-content:space-between;
     padding:1rem 2rem;position:sticky;top:0;
-    background:rgba(15,23,42,0.9);backdrop-filter:blur(16px);
-    -webkit-backdrop-filter:blur(16px);
+    background:rgba(252,252,251,0.85);backdrop-filter:blur(20px);
+    -webkit-backdrop-filter:blur(20px);
     border-bottom:1px solid var(--border);z-index:100;
   }
-  .nav-left {display:flex;align-items:center;gap:0.6rem;font-weight:700;font-size:1.1rem;letter-spacing:-0.02em;}
+  .nav-left {display:flex;align-items:center;gap:0.6rem;font-weight:700;font-size:1.1rem;letter-spacing:-0.02em;color:var(--text);}
   .nav-logo {width:34px;height:34px;border-radius:22%;overflow:hidden;}
   .nav-logo img {width:100%;height:100%;object-fit:contain;}
   .nav-links {display:flex;gap:2rem;font-size:0.875rem;font-weight:500;color:var(--text-muted);}
@@ -4207,25 +4215,25 @@ def contact():
     font-size:0.875rem;font-weight:600;text-decoration:none;display:inline-block;
     transition:var(--transition);
   }
-  .nav-cta:hover {transform:scale(1.05);box-shadow:0 0 24px rgba(16,185,129,0.4);}
+  .nav-cta:hover {transform:scale(1.05);box-shadow:0 0 24px rgba(0,0,0,0.25);}
   .container {max-width:560px;margin:0 auto;padding:3.5rem 2rem 4rem;}
   .page-header {margin-bottom:2rem;}
-  .page-header h1 {font-size:2rem;font-weight:800;letter-spacing:-0.03em;margin-bottom:0.4rem;}
+  .page-header h1 {font-size:2rem;font-weight:800;letter-spacing:-0.03em;margin-bottom:0.4rem;color:var(--text);}
   .page-header p {font-size:0.9rem;color:var(--text-muted);}
   .contact-card {
     background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
     padding:1.75rem;margin-bottom:1rem;display:flex;align-items:center;gap:1rem;
-    transition:var(--transition);
+    transition:var(--transition);box-shadow:0 1px 3px rgba(15,31,47,0.05);
   }
-  a.contact-card:hover {border-color:rgba(16,185,129,0.3);transform:translateY(-1px);}
+  a.contact-card:hover {border-color:rgba(0,0,0,0.3);transform:translateY(-1px);}
   .contact-icon {
-    width:44px;height:44px;border-radius:50%;background:rgba(16,185,129,0.12);
+    width:44px;height:44px;border-radius:50%;background:var(--accent-tint);
     display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1.2rem;
   }
   .contact-label {font-size:0.75rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:0.15rem;}
   .contact-value {font-size:1rem;font-weight:600;color:var(--text);}
   .foot {text-align:center;margin-top:2rem;font-size:0.8rem;color:var(--text-dim);}
-  .foot a {color:var(--accent-light);}
+  .foot a {color:var(--accent-dark);}
   .foot a:hover {text-decoration:underline;}
   @media(max-width:600px) {
     .container {padding:2.5rem 1.25rem 3rem;}
