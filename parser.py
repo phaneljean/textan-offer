@@ -198,7 +198,7 @@ def _parse_address(text):
     stripped = re.sub(r'\d+[\s-]*day\w*', '', stripped, flags=re.IGNORECASE)
     stripped = re.sub(r'\bclose\s+(?:in\s+)?\d+\s*(?:day|days)?\b', '', stripped, flags=re.IGNORECASE)
     stripped = CLOSE_DATE_RE.sub('', stripped)
-    stripped = re.sub(r'\b(?:offer|down|closing|percent|pct|inspection|option|conventional|fha|va|cash)\b', '', stripped, flags=re.IGNORECASE)
+    stripped = re.sub(r'\b(?:offer|down|closing|percent|pct|inspection|option|conventional|fha|va|cash|hoa)\b', '', stripped, flags=re.IGNORECASE)
     # Remove county/city names only when NOT followed by a street suffix
     # (protects addresses like "123 Dallas Pkwy" or "456 El Paso Dr")
     all_place_names = list(TX_COUNTIES) + [

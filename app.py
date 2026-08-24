@@ -2317,6 +2317,9 @@ def api_parse():
         "city": parsed.get("city", ""),
         "address_valid": addr_check["valid"],
         "address_issue": address_issue,
+        "financing_type": parsed.get("financing_type"),
+        "inspection_days": parsed.get("inspection_days"),
+        "has_hoa": parsed.get("has_hoa", False),
     })
 
 
@@ -2434,6 +2437,7 @@ padding:0.4rem 0.85rem;font-size:0.8rem;color:var(--text-muted);cursor:pointer;t
 <div class="result-item"><div class="result-label">Loan Amount</div><div class="result-value" id="r-loan"></div></div>
 <div class="result-item"><div class="result-label">Closing Date</div><div class="result-value" id="r-close"></div></div>
 <div class="result-item"><div class="result-label">Location</div><div class="result-value" id="r-location"></div></div>
+<div class="result-item" style="grid-column:1 / -1;"><div class="result-label">Extras Detected</div><div class="result-value" id="r-extras"></div></div>
 </div>
 </div>
 
@@ -2447,6 +2451,7 @@ padding:0.4rem 0.85rem;font-size:0.8rem;color:var(--text-muted);cursor:pointer;t
 <span class="chip">825k 3% close in 14 1900 Exposition Blvd</span>
 <span class="chip">375,000 3% 30days 2100 South Congress Ave</span>
 <span class="chip">725k cash 21day 123 Main St</span>
+<span class="chip">725k 3% 21day 123 Main St HOA</span>
 </div>
 </div>
 
@@ -2495,6 +2500,11 @@ btn.addEventListener('click',function(){
     document.getElementById('r-close').textContent=d.close_date+' ('+d.close_days+' days)';
     var loc=[];if(d.city)loc.push(d.city);if(d.county)loc.push(d.county+' County');loc.push('TX');
     document.getElementById('r-location').textContent=loc.join(', ');
+    var extras=[];
+    if(d.financing_type)extras.push(d.financing_type.toUpperCase()+' financing');
+    if(d.inspection_days)extras.push(d.inspection_days+'-day option period');
+    if(d.has_hoa)extras.push('HOA Addendum (TREC 36-10)');
+    document.getElementById('r-extras').textContent=extras.length?extras.join(' · '):'None detected';
     if(d.address_issue){
       warnEl.textContent=(d.address_valid?'Heads up: ':'This address would be rejected when sent for real: ')+d.address_issue;
       warnEl.classList.add('show');
