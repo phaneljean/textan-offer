@@ -3230,10 +3230,10 @@ def signup():
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <style>
-  :root{{--bg:#0f172a;--bg-card:rgba(255,255,255,0.03);--border:rgba(255,255,255,0.06);
-    --text:#f8fafc;--text-muted:#94a3b8;--text-dim:#64748b;
-    --accent:#10b981;--accent-light:#34d399;--radius:1.25rem;--radius-sm:0.75rem;
-    --transition:all 0.2s ease;}}
+  :root{{--bg:#FCFCFB;--bg-card:#fff;--border:rgba(15,31,47,0.08);
+    --text:#0f1f2f;--text-muted:#5a6b7a;--text-dim:#8a9aa9;
+    --accent:#10b981;--accent-light:#34d399;--accent-dark:#0a7a6f;--accent-tint:#E7F7F1;
+    --radius:1.25rem;--radius-sm:0.85rem;--transition:all 0.2s ease;}}
   *{{margin:0;padding:0;box-sizing:border-box;}}
   body{{background:var(--bg);min-height:100vh;margin:0;display:flex;align-items:center;
     justify-content:center;padding:2rem;font-family:'Inter',-apple-system,sans-serif;color:var(--text);}}
@@ -3243,45 +3243,46 @@ def signup():
   .nav-back img{{width:28px;height:28px;border-radius:22%;object-fit:contain;}}
   .nav-back span{{font-size:0.85rem;color:var(--text-muted);}}
   .nav-back:hover span{{color:var(--text);}}
-  h1{{font-size:1.75rem;font-weight:800;letter-spacing:-0.02em;margin-bottom:0.5rem;}}
+  h1{{font-size:1.75rem;font-weight:800;letter-spacing:-0.02em;margin-bottom:0.5rem;color:var(--text);}}
   .sub{{color:var(--text-muted);font-size:0.95rem;line-height:1.6;margin-bottom:1.5rem;}}
-  .card{{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:1.75rem;}}
+  .card{{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:1.75rem;
+    box-shadow:0 1px 3px rgba(15,31,47,0.05);}}
   .field-label{{font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;
     color:var(--text-dim);margin-bottom:0.4rem;display:block;}}
   input[type=text],input[type=tel],input[type=email]{{
-    width:100%;background:rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.1);
+    width:100%;background:#fff;border:1px solid rgba(15,31,47,0.14);
     border-radius:var(--radius-sm);padding:0.75rem 1rem;color:var(--text);
     font-size:0.95rem;font-family:inherit;outline:none;margin-bottom:1rem;transition:var(--transition);
   }}
   input:focus{{border-color:var(--accent);box-shadow:0 0 0 3px rgba(16,185,129,0.15);}}
-  input::placeholder{{color:#475569;}}
+  input::placeholder{{color:#b8c2ca;}}
   .consent-row{{
     display:flex;align-items:flex-start;gap:0.75rem;margin:1rem 0;padding:1rem;
-    background:rgba(16,185,129,0.05);border:1px solid rgba(16,185,129,0.15);border-radius:var(--radius-sm);
+    background:var(--accent-tint);border:1px solid rgba(16,185,129,0.2);border-radius:var(--radius-sm);
   }}
   .consent-row input[type=checkbox]{{margin-top:0.2rem;width:18px;height:18px;flex-shrink:0;accent-color:var(--accent);}}
   .consent-row label{{font-size:0.8rem;line-height:1.6;color:var(--text-muted);}}
-  .consent-row a{{color:var(--accent-light);text-decoration:underline;}}
+  .consent-row a{{color:var(--accent-dark);text-decoration:underline;}}
   button{{
     width:100%;margin-top:0.75rem;
     background:linear-gradient(135deg,var(--accent),#059669);color:#fff;border:none;
     padding:0.85rem;font-family:inherit;font-size:0.95rem;font-weight:600;
     border-radius:var(--radius-sm);cursor:pointer;transition:var(--transition);
   }}
-  button:hover{{transform:translateY(-2px);box-shadow:0 8px 24px rgba(16,185,129,0.35);}}
+  button:hover{{transform:translateY(-2px);box-shadow:0 8px 24px rgba(16,185,129,0.25);}}
   button:disabled{{opacity:0.4;cursor:not-allowed;transform:none;box-shadow:none;}}
   .success{{
-    margin-top:1rem;padding:1rem;background:rgba(16,185,129,0.08);
+    margin-top:1rem;padding:1rem;background:var(--accent-tint);
     border:1px solid rgba(16,185,129,0.2);border-radius:var(--radius-sm);
-    font-size:0.9rem;color:var(--accent-light);text-align:center;
+    font-size:0.9rem;color:var(--accent-dark);text-align:center;
   }}
   .error{{
     margin-top:1rem;padding:1rem;background:rgba(239,68,68,0.08);
     border:1px solid rgba(239,68,68,0.2);border-radius:var(--radius-sm);
-    font-size:0.9rem;color:#fca5a5;text-align:center;
+    font-size:0.9rem;color:#dc2626;text-align:center;
   }}
   .foot{{text-align:center;margin-top:1.5rem;font-size:0.8rem;color:var(--text-dim);}}
-  .foot a{{color:var(--accent-light);text-decoration:none;}}
+  .foot a{{color:var(--accent-dark);text-decoration:none;}}
   .foot a:hover{{text-decoration:underline;}}
 </style>
 </head>
@@ -3357,10 +3358,10 @@ def login():
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <style>
-  :root{{--bg:#0f172a;--bg-card:rgba(255,255,255,0.03);--border:rgba(255,255,255,0.06);
-    --text:#f8fafc;--text-muted:#94a3b8;--text-dim:#64748b;
-    --accent:#10b981;--accent-light:#34d399;--radius:1.25rem;--radius-sm:0.75rem;
-    --transition:all 0.2s ease;}}
+  :root{{--bg:#FCFCFB;--bg-card:#fff;--border:rgba(15,31,47,0.08);
+    --text:#0f1f2f;--text-muted:#5a6b7a;--text-dim:#8a9aa9;
+    --accent:#10b981;--accent-light:#34d399;--accent-dark:#0a7a6f;--accent-tint:#E7F7F1;
+    --radius:1.25rem;--radius-sm:0.85rem;--transition:all 0.2s ease;}}
   *{{margin:0;padding:0;box-sizing:border-box;}}
   body{{background:var(--bg);min-height:100vh;margin:0;display:flex;align-items:center;
     justify-content:center;padding:2rem;font-family:'Inter',-apple-system,sans-serif;color:var(--text);}}
@@ -3370,18 +3371,19 @@ def login():
   .nav-back img{{width:28px;height:28px;border-radius:22%;object-fit:contain;}}
   .nav-back span{{font-size:0.85rem;color:var(--text-muted);}}
   .nav-back:hover span{{color:var(--text);}}
-  h1{{font-size:1.75rem;font-weight:800;letter-spacing:-0.02em;margin-bottom:0.5rem;}}
+  h1{{font-size:1.75rem;font-weight:800;letter-spacing:-0.02em;margin-bottom:0.5rem;color:var(--text);}}
   .sub{{color:var(--text-muted);font-size:0.95rem;margin-bottom:1.5rem;line-height:1.5;}}
-  .card{{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:1.75rem;}}
+  .card{{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:1.75rem;
+    box-shadow:0 1px 3px rgba(15,31,47,0.05);}}
   label{{font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;
     color:var(--text-dim);display:block;margin-bottom:0.4rem;}}
   input{{
-    width:100%;background:rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.1);
+    width:100%;background:#fff;border:1px solid rgba(15,31,47,0.14);
     border-radius:var(--radius-sm);padding:0.75rem 1rem;color:var(--text);
     font-size:0.95rem;font-family:inherit;outline:none;transition:var(--transition);
   }}
   input:focus{{border-color:var(--accent);box-shadow:0 0 0 3px rgba(16,185,129,0.15);}}
-  input::placeholder{{color:#475569;}}
+  input::placeholder{{color:#b8c2ca;}}
   .sms-note{{font-size:0.8rem;color:var(--text-dim);margin:0.75rem 0 0;line-height:1.5;}}
   button{{
     width:100%;margin-top:1rem;
@@ -3389,13 +3391,13 @@ def login():
     padding:0.85rem;font-family:inherit;font-size:0.95rem;font-weight:600;
     border-radius:var(--radius-sm);cursor:pointer;transition:var(--transition);
   }}
-  button:hover{{transform:translateY(-2px);box-shadow:0 8px 24px rgba(16,185,129,0.35);}}
+  button:hover{{transform:translateY(-2px);box-shadow:0 8px 24px rgba(16,185,129,0.25);}}
   .msg{{margin-top:1rem;padding:0.85rem;border-radius:var(--radius-sm);font-size:0.9rem;text-align:center;}}
-  .msg.success{{background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);color:var(--accent-light);}}
-  .msg.error{{background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.2);color:#f87171;}}
-  .msg a{{color:var(--accent-light);}}
+  .msg.success{{background:var(--accent-tint);border:1px solid rgba(16,185,129,0.2);color:var(--accent-dark);}}
+  .msg.error{{background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);color:#dc2626;}}
+  .msg a{{color:var(--accent-dark);}}
   .alt{{text-align:center;margin-top:1.25rem;font-size:0.85rem;color:var(--text-dim);}}
-  .alt a{{color:var(--accent-light);text-decoration:none;}}
+  .alt a{{color:var(--accent-dark);text-decoration:none;}}
   .alt a:hover{{text-decoration:underline;}}
 </style>
 </head>
