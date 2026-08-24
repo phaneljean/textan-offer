@@ -1618,18 +1618,19 @@ DEMO_FORM = """
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <style>
   :root {{
-    --bg: #0f172a;
-    --bg-elevated: #1e293b;
-    --bg-card: rgba(255,255,255,0.03);
-    --border: rgba(255,255,255,0.06);
-    --border-hover: rgba(16,185,129,0.3);
-    --text: #f8fafc;
-    --text-muted: #94a3b8;
-    --text-dim: #64748b;
-    --accent: #10b981;
-    --accent-light: #34d399;
+    --bg: #FCFCFB;
+    --bg-card: #fff;
+    --border: rgba(15,31,47,0.08);
+    --border-hover: rgba(0,0,0,0.35);
+    --text: #0f1f2f;
+    --text-muted: #5a6b7a;
+    --text-dim: #8a9aa9;
+    --accent: #171717;
+    --accent-light: #525252;
+    --accent-dark: #000000;
+    --accent-tint: #F0F0EE;
     --radius: 1.25rem;
-    --radius-sm: 0.75rem;
+    --radius-sm: 0.85rem;
     --transition: all 0.2s ease;
   }}
   * {{ margin:0; padding:0; box-sizing:border-box; }}
@@ -1648,11 +1649,11 @@ DEMO_FORM = """
   .nav {{
     display:flex;align-items:center;justify-content:space-between;
     padding:1rem 2rem;position:sticky;top:0;
-    background:rgba(15,23,42,0.9);backdrop-filter:blur(16px);
-    -webkit-backdrop-filter:blur(16px);
+    background:rgba(252,252,251,0.85);backdrop-filter:blur(20px);
+    -webkit-backdrop-filter:blur(20px);
     border-bottom:1px solid var(--border);z-index:100;
   }}
-  .nav-left {{display:flex;align-items:center;gap:0.6rem;font-weight:700;font-size:1.1rem;letter-spacing:-0.02em;}}
+  .nav-left {{display:flex;align-items:center;gap:0.6rem;font-weight:700;font-size:1.1rem;letter-spacing:-0.02em;color:var(--text);}}
   .nav-logo {{width:34px;height:34px;border-radius:22%;overflow:hidden;}}
   .nav-logo img {{width:100%;height:100%;object-fit:contain;}}
   .nav-links {{display:flex;gap:2rem;font-size:0.875rem;font-weight:500;color:var(--text-muted);}}
@@ -1663,18 +1664,18 @@ DEMO_FORM = """
     font-size:0.875rem;font-weight:600;text-decoration:none;display:inline-block;
     transition:var(--transition);
   }}
-  .nav-cta:hover {{transform:scale(1.05);box-shadow:0 0 24px rgba(16,185,129,0.4);}}
+  .nav-cta:hover {{transform:scale(1.05);box-shadow:0 0 24px rgba(0,0,0,0.25);}}
 
   /* Page layout */
   .page {{max-width:580px;margin:0 auto;padding:4rem 1.5rem;overflow-x:hidden;width:100%;}}
   .page-badge {{
     display:inline-flex;align-items:center;gap:0.4rem;
-    background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.2);
-    color:var(--accent-light);font-size:0.7rem;font-weight:700;
+    background:var(--accent-tint);border:1px solid rgba(0,0,0,0.12);
+    color:var(--accent-dark);font-size:0.7rem;font-weight:700;
     padding:0.35rem 0.85rem;border-radius:9999px;
     text-transform:uppercase;letter-spacing:0.06em;margin-bottom:1rem;
   }}
-  .page h1 {{font-size:2.25rem;font-weight:800;letter-spacing:-0.03em;margin-bottom:0.5rem;}}
+  .page h1 {{font-size:2.25rem;font-weight:800;letter-spacing:-0.03em;margin-bottom:0.5rem;color:var(--text);}}
   .page h1 .gradient {{
     background:linear-gradient(135deg,var(--accent-light),var(--accent));
     -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
@@ -1686,6 +1687,7 @@ DEMO_FORM = """
     display:flex;align-items:center;justify-content:center;gap:0.5rem;
     margin-bottom:2rem;padding:1.25rem;
     background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
+    box-shadow:0 1px 3px rgba(15,31,47,0.05);
   }}
   .wf-step {{text-align:center;flex:1;}}
   .wf-icon {{font-size:1.5rem;margin-bottom:0.4rem;}}
@@ -1696,51 +1698,51 @@ DEMO_FORM = """
   /* Card */
   .card {{
     background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
-    padding:2rem;overflow:hidden;max-width:100%;
+    padding:2rem;overflow:hidden;max-width:100%;box-shadow:0 1px 3px rgba(15,31,47,0.05);
   }}
   .field-label {{
     font-size:0.7rem;font-weight:700;color:var(--text-dim);
     text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.5rem;display:block;
   }}
   .card input[type=text] {{
-    width:100%;background:rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.1);
+    width:100%;background:#fff;border:1px solid rgba(15,31,47,0.14);
     border-radius:var(--radius-sm);padding:0.8rem 1rem;color:var(--text);
     font-size:0.95rem;font-family:inherit;outline:none;transition:var(--transition);
   }}
-  .card input[type=text]:focus {{border-color:var(--accent);box-shadow:0 0 0 3px rgba(16,185,129,0.15);}}
-  .card input[type=text]::placeholder {{color:#475569;}}
+  .card input[type=text]:focus {{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,0,0,0.1);}}
+  .card input[type=text]::placeholder {{color:#b8c2ca;}}
   .card button {{
     width:100%;margin-top:0.75rem;
-    background:linear-gradient(135deg,var(--accent),#059669);color:#fff;border:none;
+    background:linear-gradient(135deg,var(--accent),#000);color:#fff;border:none;
     border-radius:var(--radius-sm);padding:0.85rem;font-weight:600;font-size:0.95rem;
     font-family:inherit;cursor:pointer;transition:var(--transition);
   }}
-  .card button:hover {{transform:translateY(-2px);box-shadow:0 8px 24px rgba(16,185,129,0.35);}}
-  .hint {{font-size:0.75rem;color:#475569;margin-top:0.5rem;}}
+  .card button:hover {{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,0.25);}}
+  .hint {{font-size:0.75rem;color:var(--text-dim);margin-top:0.5rem;}}
 
   /* Result */
   .result {{margin-top:1.5rem;padding-top:1.5rem;border-top:1px solid var(--border);}}
   .result-stamp {{
     display:inline-flex;align-items:center;gap:0.4rem;
     font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;
-    color:var(--accent-light);background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.2);
+    color:var(--accent-dark);background:var(--accent-tint);border:1px solid rgba(0,0,0,0.12);
     padding:0.3rem 0.7rem;border-radius:9999px;margin-bottom:1rem;
   }}
   .result-addr {{font-size:1.25rem;font-weight:700;color:var(--text);margin-bottom:1rem;}}
   .result-row {{display:flex;justify-content:space-between;padding:0.5rem 0;font-size:0.9rem;border-bottom:1px solid var(--border);}}
   .result-row .k {{color:var(--text-dim);font-size:0.8rem;text-transform:uppercase;letter-spacing:0.04em;font-weight:600;}}
   .result-row .v {{color:var(--text);font-weight:500;}}
-  .result-ready {{font-size:0.85rem;color:var(--accent-light);margin-top:1rem;}}
+  .result-ready {{font-size:0.85rem;color:var(--accent-dark);margin-top:1rem;}}
 
   .pdf-preview {{margin-top:1.25rem;border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;max-width:100%;}}
   .pdf-preview-label {{
     font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;
-    color:var(--text-dim);padding:0.6rem 1rem;background:rgba(255,255,255,0.03);
+    color:var(--text-dim);padding:0.6rem 1rem;background:rgba(15,31,47,0.02);
     border-bottom:1px solid var(--border);
   }}
-  .pdf-frame {{width:100%;height:560px;border:none;background:#fff;}}
-  .pdf-mobile {{display:none;padding:1.5rem;text-align:center;background:rgba(255,255,255,0.02);}}
-  .pdf-mobile a {{color:var(--accent-light);font-weight:600;font-size:0.9rem;text-decoration:none;}}
+  .pdf-frame {{width:100%;height:560px;border:none;background:#f1f5f9;}}
+  .pdf-mobile {{display:none;padding:1.5rem;text-align:center;background:rgba(15,31,47,0.02);}}
+  .pdf-mobile a {{color:var(--accent-dark);font-weight:600;font-size:0.9rem;text-decoration:none;}}
   .pdf-mobile a:hover {{text-decoration:underline;}}
   @media(max-width:768px){{
     .pdf-frame {{display:none;}}
@@ -1749,11 +1751,11 @@ DEMO_FORM = """
 
   .download-btn {{
     margin-top:1rem;display:block;text-align:center;
-    background:linear-gradient(135deg,var(--accent),#059669);color:#fff;
+    background:linear-gradient(135deg,var(--accent),#000);color:#fff;
     font-weight:600;font-size:0.9rem;padding:0.85rem;border-radius:var(--radius-sm);
     text-decoration:none;transition:var(--transition);
   }}
-  .download-btn:hover {{transform:translateY(-2px);box-shadow:0 8px 24px rgba(16,185,129,0.35);}}
+  .download-btn:hover {{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,0.25);}}
   .disclaimer {{margin-top:1rem;font-size:0.75rem;color:var(--text-dim);line-height:1.5;font-style:italic;}}
 
   /* Integration buttons */
@@ -1764,20 +1766,20 @@ DEMO_FORM = """
     border-radius:var(--radius-sm);cursor:pointer;font-family:inherit;
     letter-spacing:0.02em;transition:var(--transition);
   }}
-  .int-btn:hover {{border-color:var(--accent);color:var(--accent-light);}}
+  .int-btn:hover {{border-color:var(--accent);color:var(--accent-dark);}}
 
   /* Modals */
-  .modal {{position:fixed;inset:0;background:rgba(15,23,42,0.9);display:flex;align-items:center;
+  .modal {{position:fixed;inset:0;background:rgba(15,31,47,0.5);display:flex;align-items:center;
     justify-content:center;z-index:1000;padding:20px;}}
   .modal-box {{
-    background:var(--bg-elevated);padding:2rem;border-radius:var(--radius);width:100%;max-width:380px;
-    position:relative;border:1px solid var(--border);
+    background:var(--bg-card);padding:2rem;border-radius:var(--radius);width:100%;max-width:380px;
+    position:relative;border:1px solid var(--border);box-shadow:0 20px 60px rgba(15,31,47,0.2);
   }}
   .modal-title {{font-size:1.1rem;font-weight:700;color:var(--text);margin:0 0 1rem;}}
   .modal-desc {{font-size:0.85rem;color:var(--text-muted);margin:0 0 0.75rem;line-height:1.5;}}
   .modal-input {{
     width:100%;font-family:inherit;font-size:0.9rem;padding:0.7rem 0.85rem;
-    border:1px solid rgba(255,255,255,0.1);background:rgba(0,0,0,0.3);color:var(--text);
+    border:1px solid rgba(15,31,47,0.14);background:#fff;color:var(--text);
     border-radius:var(--radius-sm);outline:none;margin-bottom:0.6rem;
   }}
   .modal-input:focus {{border-color:var(--accent);}}
@@ -1785,7 +1787,7 @@ DEMO_FORM = """
     width:100%;padding:0.75rem;background:var(--accent);color:#fff;border:none;
     font-family:inherit;font-size:0.9rem;font-weight:600;border-radius:var(--radius-sm);cursor:pointer;
   }}
-  .modal-submit:hover {{background:#059669;}}
+  .modal-submit:hover {{background:#000;}}
   .modal-box .modal-close {{
     position:absolute;top:0.75rem;right:1rem;width:auto;margin-top:0;
     background:none;border:none;border-radius:0;padding:0;
@@ -1793,8 +1795,8 @@ DEMO_FORM = """
   }}
   .modal-box .modal-close:hover {{transform:none;box-shadow:none;color:var(--text);}}
   .modal-status {{margin-top:0.6rem;font-size:0.8rem;color:var(--text-dim);}}
-  .modal-status.success {{color:var(--accent-light);}}
-  .modal-status.fail {{color:#f87171;}}
+  .modal-status.success {{color:var(--accent-dark);}}
+  .modal-status.fail {{color:#dc2626;}}
 
   /* Share */
   .share-section {{margin-top:1.25rem;padding-top:1.25rem;border-top:1px solid var(--border);}}
@@ -1814,35 +1816,35 @@ DEMO_FORM = """
 
   /* Warning / Error */
   .error {{
-    margin-top:1.25rem;padding:1rem;background:rgba(248,113,113,0.08);
-    border:1px solid rgba(248,113,113,0.2);border-radius:var(--radius-sm);
-    font-size:0.85rem;color:#f87171;
+    margin-top:1.25rem;padding:1rem;background:rgba(239,68,68,0.08);
+    border:1px solid rgba(239,68,68,0.2);border-radius:var(--radius-sm);
+    font-size:0.85rem;color:#dc2626;
   }}
   .warning-note {{
-    margin:1rem 0 0.75rem;padding:0.85rem 1rem;background:rgba(251,191,36,0.08);
-    border:1px solid rgba(251,191,36,0.2);border-radius:var(--radius-sm);
-    font-size:0.8rem;color:#fbbf24;line-height:1.5;
+    margin:1rem 0 0.75rem;padding:0.85rem 1rem;background:rgba(245,158,11,0.1);
+    border:1px solid rgba(245,158,11,0.25);border-radius:var(--radius-sm);
+    font-size:0.8rem;color:#b45309;line-height:1.5;
   }}
   .warning-note .wn-title {{font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:0.25rem;}}
 
   /* SMS command menu */
-  .cmd-menu {{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem;margin-top:1.5rem;}}
+  .cmd-menu {{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem;margin-top:1.5rem;box-shadow:0 1px 3px rgba(15,31,47,0.05);}}
   .cmd-menu-title {{font-size:0.7rem;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:1rem;}}
   .cmd-row {{display:flex;gap:1rem;padding:0.55rem 0;border-bottom:1px solid var(--border);align-items:baseline;}}
   .cmd-row:last-child {{border-bottom:none;}}
-  .cmd-key {{font-family:monospace;color:var(--accent-light);font-size:0.85rem;flex:0 0 auto;white-space:nowrap;}}
+  .cmd-key {{font-family:monospace;color:var(--accent-dark);font-size:0.85rem;flex:0 0 auto;white-space:nowrap;}}
   .cmd-desc {{color:var(--text-dim);font-size:0.85rem;}}
   @media(max-width:600px){{.cmd-row {{flex-direction:column;gap:0.15rem;}}}}
 
   /* Trust */
   .trust {{display:flex;gap:1.5rem;margin-top:2rem;justify-content:center;}}
   .trust-item {{text-align:center;}}
-  .trust-val {{font-size:1.25rem;font-weight:800;color:var(--accent-light);}}
+  .trust-val {{font-size:1.25rem;font-weight:800;color:var(--accent-dark);}}
   .trust-label {{font-size:0.7rem;color:var(--text-dim);margin-top:0.2rem;font-weight:500;text-transform:uppercase;letter-spacing:0.04em;}}
 
   /* Footer */
   .foot {{text-align:center;margin-top:2rem;font-size:0.8rem;color:var(--text-dim);line-height:1.6;}}
-  .foot a {{color:var(--accent-light);text-decoration:none;}}
+  .foot a {{color:var(--accent-dark);text-decoration:none;}}
   .foot a:hover {{text-decoration:underline;}}
 
   @media(max-width:600px){{
