@@ -4705,13 +4705,13 @@ THREAD_EXPIRED_HTML = """
 <title>Offer Thread - TxtAnOffer</title>
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"></noscript>
 <style>
-body{font-family:'Inter',sans-serif;background:#0f172a;color:#f8fafc;display:flex;
+body{font-family:'Inter',sans-serif;background:#FCFCFB;color:#0f1f2f;display:flex;
 align-items:center;justify-content:center;min-height:100vh;margin:0;padding:20px;}
-.box{background:rgba(255,255,255,0.03);border-radius:1.25rem;padding:2.5rem;max-width:400px;text-align:center;
-border:1px solid rgba(255,255,255,0.06);}
+.box{background:#fff;border-radius:1.25rem;padding:2.5rem;max-width:400px;text-align:center;
+border:1px solid rgba(15,31,47,0.08);box-shadow:0 1px 2px rgba(15,31,47,0.04);}
 h2{margin:0 0 0.75rem;font-size:1.35rem;font-weight:700;}
-p{color:#94a3b8;font-size:0.9rem;line-height:1.6;}
-a{color:#34d399;text-decoration:none;}
+p{color:#5a6b7a;font-size:0.9rem;line-height:1.6;}
+a{color:#0a7a6f;text-decoration:none;}
 a:hover{text-decoration:underline;}
 </style></head><body><div class="box">
 <h2>Link Expired</h2>
@@ -4814,45 +4814,45 @@ def offer_thread(filename):
 <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <style>
-:root{{--bg:#0f172a;--bg-card:rgba(255,255,255,0.03);--border:rgba(255,255,255,0.06);
---text:#f8fafc;--text-muted:#94a3b8;--text-dim:#64748b;--accent:#10b981;--accent-light:#34d399;
---radius:1.25rem;--radius-sm:0.75rem;}}
+:root{{--bg:#FCFCFB;--bg-card:#fff;--border:rgba(15,31,47,0.08);
+--text:#0f1f2f;--text-muted:#5a6b7a;--text-dim:#8a9aa9;--accent:#10b981;--accent-light:#34d399;
+--accent-dark:#0a7a6f;--accent-tint:#E7F7F1;--radius:1.25rem;--radius-sm:0.85rem;}}
 *{{margin:0;padding:0;box-sizing:border-box;}}
 body{{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;
 -webkit-font-smoothing:antialiased;}}
-.top-bar{{background:rgba(16,185,129,0.1);border-bottom:1px solid rgba(16,185,129,0.2);
-padding:0.6rem 1.5rem;text-align:center;font-size:0.8rem;color:var(--accent-light);font-weight:600;}}
+.top-bar{{background:var(--accent-tint);border-bottom:1px solid rgba(16,185,129,0.2);
+padding:0.6rem 1.5rem;text-align:center;font-size:0.8rem;color:var(--accent-dark);font-weight:600;}}
 .container{{max-width:600px;margin:0 auto;padding:1.5rem 1rem;}}
 .address-card{{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
-padding:1.5rem;text-align:center;margin-bottom:1rem;}}
-.address-card h1{{font-size:1.25rem;font-weight:700;margin-bottom:0.25rem;}}
+padding:1.5rem;text-align:center;margin-bottom:1rem;box-shadow:0 1px 3px rgba(15,31,47,0.05);}}
+.address-card h1{{font-size:1.25rem;font-weight:700;margin-bottom:0.25rem;color:var(--text);}}
 .address-card .meta{{color:var(--text-dim);font-size:0.8rem;}}
 .stats{{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.5rem;margin-bottom:1rem;}}
 .stat{{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);
-padding:0.85rem 0.5rem;text-align:center;}}
+padding:0.85rem 0.5rem;text-align:center;box-shadow:0 1px 3px rgba(15,31,47,0.05);}}
 .stat-label{{font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;
 color:var(--text-dim);margin-bottom:0.2rem;}}
-.stat-value{{font-size:1rem;font-weight:700;}}
-.stat-value.accent{{color:var(--accent-light);}}
+.stat-value{{font-size:1rem;font-weight:700;color:var(--text);}}
+.stat-value.accent{{color:var(--accent-dark);}}
 .actions{{display:flex;flex-direction:column;gap:0.6rem;margin-bottom:1.25rem;}}
 .btn{{display:flex;align-items:center;justify-content:center;gap:0.5rem;padding:0.9rem 1rem;
 border-radius:var(--radius-sm);font-family:inherit;font-size:0.9rem;font-weight:600;
 text-decoration:none;border:none;cursor:pointer;transition:all 0.2s;}}
 .btn-primary{{background:linear-gradient(135deg,var(--accent),#059669);color:#fff;}}
-.btn-primary:hover{{transform:translateY(-1px);box-shadow:0 6px 20px rgba(16,185,129,0.3);}}
+.btn-primary:hover{{transform:translateY(-1px);box-shadow:0 6px 20px rgba(16,185,129,0.25);}}
 .btn-outline{{background:transparent;color:var(--text-muted);border:1px solid var(--border);}}
-.btn-outline:hover{{border-color:var(--accent);color:var(--accent-light);}}
+.btn-outline:hover{{border-color:var(--accent);color:var(--accent-dark);}}
 .pdf-frame{{width:100%;height:70vh;border:1px solid var(--border);border-radius:var(--radius-sm);
-background:#1e293b;}}
+background:#f1f5f9;}}
 .disclaimer{{font-size:0.75rem;color:var(--text-dim);text-align:center;padding:1rem;
 border-top:1px solid var(--border);margin-top:1rem;}}
 .notbinding{{font-size:0.78rem;color:var(--text-muted);background:var(--bg-card);border:1px solid var(--border);
 border-radius:var(--radius-sm);padding:0.75rem 1rem;margin-bottom:1.25rem;line-height:1.5;}}
-.status-panel{{background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);color:var(--accent-light);
+.status-panel{{background:var(--accent-tint);border:1px solid rgba(16,185,129,0.25);color:var(--accent-dark);
 border-radius:var(--radius-sm);padding:0.9rem 1rem;text-align:center;font-size:0.9rem;margin-bottom:1.25rem;}}
 .qa-blocking, .qa-warnings{{border-radius:var(--radius-sm);padding:0.85rem 1rem;margin-bottom:0.85rem;font-size:0.85rem;}}
-.qa-blocking{{background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);color:#fca5a5;}}
-.qa-warnings{{background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.25);color:#fbbf24;}}
+.qa-blocking{{background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);color:#dc2626;}}
+.qa-warnings{{background:rgba(245,158,11,0.10);border:1px solid rgba(245,158,11,0.3);color:#b45309;}}
 .qa-blocking strong, .qa-warnings strong{{display:block;margin-bottom:0.4rem;color:var(--text);}}
 .qa-blocking ul, .qa-warnings ul{{margin:0;padding-left:1.1rem;}}
 .qa-blocking li, .qa-warnings li{{margin-bottom:0.2rem;}}
@@ -4886,7 +4886,7 @@ border-radius:var(--radius-sm);padding:0.9rem 1rem;text-align:center;font-size:0
 <iframe src="{pdf_url}" class="pdf-frame" title="Offer PDF"></iframe>
 
 <div class="disclaimer">
-This is a draft generated by TxtAnOffer. Not affiliated with TREC. &middot; <a href="/" style="color:var(--accent-light);">txtanoffer.com</a>
+This is a draft generated by TxtAnOffer. Not affiliated with TREC. &middot; <a href="/" style="color:var(--accent-dark);">txtanoffer.com</a>
 </div>
 </div>
 </body>
