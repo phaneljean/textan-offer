@@ -832,7 +832,7 @@ def index():
       <div class="step-card">
         <div class="step-num">&check;</div>
         <h3>Built on TREC's current form</h3>
-        <p>Generated from TREC's actual published 20-19 form &mdash; current Paragraph 12B commission language, the mandatory Water Disclosure, and the required IABS brokerage-services notice all included &mdash; not a stale template someone forgot to update.</p>
+        <p>Generated from TREC's actual published 20-19 form &mdash; current Paragraph 12B commission language, the mandatory Water Disclosure, and the required IABS brokerage-services notice all included &mdash; not a stale template someone forgot to update. Mention an HOA and the 36-10 addendum attaches itself, checkbox and all &mdash; no separate form to remember.</p>
       </div>
       <div class="step-card">
         <div class="step-num">&check;</div>
