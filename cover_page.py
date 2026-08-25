@@ -1,6 +1,6 @@
 """
-cover_page.py - Generate dark/emerald or light/print cover page for TREC contracts
-Matches the site's design system: emerald accents, glass-morphism cards.
+cover_page.py - Generate dark or light/print cover page for TREC contracts
+Matches the site's design system: black/charcoal accents, glass-morphism cards.
 """
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
@@ -8,18 +8,37 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.colors import HexColor, Color
 from datetime import datetime, timedelta
 import io
+import os
 import re
 
+LOGO_PATH = os.path.join(os.path.dirname(__file__), "static", "logo.webp")
+
+
+def _draw_brand(c, x, y):
+    """Draws the TxtAnOffer logo at (x, y-15)..(x+24, y+9) -- same footprint
+    as the circular badge it replaces, so header layout doesn't shift.
+    Falls back to a plain accent-colored circle if the logo file is
+    missing, since a broken image must never block real offer generation."""
+    try:
+        c.drawImage(LOGO_PATH, x, y - 15, width=24, height=24,
+                    mask='auto', preserveAspectRatio=True)
+    except Exception:
+        c.setFillColor(Color(*ACCENT_RGB))
+        c.circle(x + 12, y - 3, 12, fill=1, stroke=0)
+        c.setFillColor(ON_ACCENT)
+        c.setFont("Helvetica-Bold", 7)
+        c.drawCentredString(x + 12, y - 6, "TX")
+
 # Fixed accent used in both modes (readable on white and on navy alike).
-ACCENT_RGB = (0.063, 0.725, 0.506)  # ~#10b981
+ACCENT_RGB = (0.09, 0.09, 0.09)  # ~#171717, matches the site's black/charcoal accent
 ON_ACCENT = HexColor("#ffffff")  # text drawn on top of solid accent/avatar shapes
 
 PALETTES = {
     "dark": {
         "page_bg": HexColor("#0f172a"),
         "elevated_bg": HexColor("#1e293b"),
-        "accent": HexColor("#10b981"),
-        "accent_light": HexColor("#34d399"),
+        "accent": HexColor("#e5e7eb"),
+        "accent_light": HexColor("#ffffff"),
         "text_primary": HexColor("#f8fafc"),
         "text_muted": HexColor("#94a3b8"),
         "text_dim": HexColor("#64748b"),
@@ -35,8 +54,8 @@ PALETTES = {
     "light": {
         "page_bg": HexColor("#ffffff"),
         "elevated_bg": None,  # no bottom gradient band when printing
-        "accent": HexColor("#10b981"),
-        "accent_light": HexColor("#059669"),
+        "accent": HexColor("#171717"),
+        "accent_light": HexColor("#000000"),
         "text_primary": HexColor("#111827"),
         "text_muted": HexColor("#4b5563"),
         "text_dim": HexColor("#6b7280"),
@@ -137,11 +156,7 @@ def generate_cover_page(parsed: dict, agent: dict, mode: str = "light") -> bytes
     # === HEADER ===
     y = height - 0.6 * inch
     # Brand
-    c.setFillColor(ACCENT)
-    c.circle(margin + 12, y - 3, 12, fill=1, stroke=0)
-    c.setFillColor(ON_ACCENT)
-    c.setFont("Helvetica-Bold", 7)
-    c.drawCentredString(margin + 12, y - 6, "TX")
+    _draw_brand(c, margin, y)
     c.setFillColor(TEXT_PRIMARY)
     c.setFont("Helvetica-Bold", 10)
     c.drawString(margin + 30, y - 7, "TxtAnOffer")
@@ -154,7 +169,7 @@ def generate_cover_page(parsed: dict, agent: dict, mode: str = "light") -> bytes
     _draw_rounded_rect(c, badge_x - 4, y - 12, tw + 22, 18, r=9,
                        fill_color=Color(*ACCENT_RGB, alpha=0.1),
                        stroke_color=Color(*ACCENT_RGB, alpha=0.2))
-    c.setFillColor(ACCENT_LIGHT if mode == "dark" else HexColor("#047857"))
+    c.setFillColor(ACCENT_LIGHT if mode == "dark" else HexColor("#000000"))
     c.drawString(badge_x + 7, y - 7, badge_text)
 
     # === TITLE BLOCK ===
@@ -485,11 +500,7 @@ def generate_certification_page(parsed: dict, agent: dict, mode: str = "light") 
 
     # === HEADER (brand) ===
     y = height - 0.6 * inch
-    c.setFillColor(ACCENT)
-    c.circle(margin + 12, y - 3, 12, fill=1, stroke=0)
-    c.setFillColor(ON_ACCENT)
-    c.setFont("Helvetica-Bold", 7)
-    c.drawCentredString(margin + 12, y - 6, "TX")
+    _draw_brand(c, margin, y)
     c.setFillColor(TEXT_PRIMARY)
     c.setFont("Helvetica-Bold", 10)
     c.drawString(margin + 30, y - 7, "TxtAnOffer")
