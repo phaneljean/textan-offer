@@ -4104,7 +4104,7 @@ def about():
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>About — TxtAnOffer</title>
-<meta name="description" content="TxtAnOffer was built by a licensed Texas REALTOR who was tired of losing deals to 45-minute paperwork. Here's why it exists.">
+<meta name="description" content="TxtAnOffer was built after real conversations with Texas agents about the 45 minutes lost filling out TREC paperwork. Here's why it exists.">
 <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -4198,26 +4198,26 @@ def about():
 </nav>
 
 <div class="container">
-  <div class="avatar-lg"><img src="/static/logo.svg" alt="Phanel Jean Baptiste"></div>
-  <h1>Built by a Texas Agent, for Texas Agents</h1>
+  <div class="avatar-lg"><img src="/static/logo.svg" alt="TxtAnOffer"></div>
+  <h1>Built After Listening to Texas Agents</h1>
   <div class="kicker">The story behind TxtAnOffer</div>
 
   <div class="about-body">
-    <p>Hi, I'm <strong>Phanel Jean Baptiste</strong>, a licensed Texas REALTOR and the founder of TxtAnOffer.</p>
+    <p>Hi, I'm <strong>Phanel Jean Baptiste</strong>, the founder of TxtAnOffer.</p>
 
-    <p>I built this tool because I was tired of losing deals while sitting in my car filling out TREC forms. In Texas real estate, speed wins &mdash; the agent who gets their offer in first often gets the house. But pulling out a laptop in a parking lot, opening ZipForm, and manually filling 40+ fields on a TREC 20-19 takes 45 minutes.</p>
+    <p>I'm not a real estate agent &mdash; I'm a software builder with a passion for solving real problems with simple tools. TxtAnOffer started after a conversation with a Texas REALTOR who walked me through what a bad day actually looks like: standing in a driveway or sitting in a parking lot, laptop open, manually filling 40+ fields on a TREC 20-19 while a buyer waits, because in Texas real estate the agent who gets their offer in first often gets the house.</p>
 
-    <p>That 45 minutes costs deals.</p>
+    <p>That 45 minutes costs deals. So I built a way to skip it.</p>
 
-    <p>TxtAnOffer cuts that to 10 seconds. Text the details from your phone. Get a filled PDF. Review and sign. Done.</p>
+    <p>TxtAnOffer turns what used to take a laptop and 45 minutes into a text message and 10 seconds. Text the details from your phone. Get a filled PDF. Review it, then send it.</p>
 
-    <h2>Why I Care</h2>
-    <p>I'm not a Silicon Valley startup. I'm an agent who saw a problem and built the solution. Every feature in TxtAnOffer was designed because I needed it in the field:</p>
+    <h2>Why It's Built This Way</h2>
+    <p>Every feature exists because agents told me it mattered, not because a spec sheet said a contract tool should have it:</p>
     <ul>
-      <li><strong>SMS-first</strong> because I'm always on my phone</li>
-      <li><strong>Auto-filled TREC forms</strong> because I hate blank fields</li>
-      <li><strong>Email delivery</strong> because the listing agent needs it now</li>
-      <li><strong>Draft warnings</strong> because I never want to send something I haven't reviewed</li>
+      <li><strong>SMS-first</strong> because most agents I talked to are in the field on their phone, not at a desk</li>
+      <li><strong>Auto-filled TREC forms</strong> because a blank field is where mistakes happen</li>
+      <li><strong>Email delivery</strong> because the listing agent needs the offer now, not after you're back at the office</li>
+      <li><strong>Draft warnings</strong> because nothing should go out until the licensed agent sending it has actually reviewed it</li>
     </ul>
 
     <h2>The Mission</h2>
@@ -4226,8 +4226,8 @@ def about():
 
   <div class="signoff">
     <strong>Phanel Jean Baptiste</strong>
-    TREC License #000137 &middot; RE/MAX<br>
-    <a href="mailto:pejeanbaptiste@gmail.com" style="color:var(--accent-dark);">pejeanbaptiste@gmail.com</a>
+    Founder, TxtAnOffer<br>
+    <a href="/contact" style="color:var(--accent-dark);">Get in touch</a>
   </div>
 
   <p class="foot"><a href="/">&larr; Back to home</a> &middot; <a href="/faq">FAQ</a> &middot; <a href="/contact">Contact</a></p>
