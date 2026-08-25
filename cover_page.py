@@ -31,7 +31,12 @@ def _draw_brand(c, x, y):
     scale = size / 64
 
     def pt(sx, sy):
-        return x + sx * scale, y + (64 - sy) * scale  # flip SVG's y-down to PDF's y-up
+        # Flip SVG's y-down to PDF's y-up, then shift down 15pt so the mark's
+        # own footprint is (y-15)..(y+9) as documented -- without this offset
+        # the mark sits entirely above y (y..y+24) while the wordmark's
+        # baseline is drawn at y-7, leaving the two vertically misaligned:
+        # the text ends up hanging below the mark instead of centered beside it.
+        return x + sx * scale, (y - 15) + (64 - sy) * scale
 
     c.saveState()
     rx, ry, rw, rh, rr = _LOGO_RECT
