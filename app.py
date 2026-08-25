@@ -319,12 +319,6 @@ def index():
       letter-spacing: -0.03em;
       max-width: 620px;
     }
-    .hero h1 .gradient {
-      background: linear-gradient(135deg, var(--accent-light) 0%, var(--accent) 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
     .hero-sub {
       margin-top: 1.1rem;
       font-size: 1.1rem;
@@ -607,7 +601,7 @@ def index():
     <div class="badge">Built for Texas REALTORS</div>
     <h1>
       Generate TREC contracts<br>
-      <span class="gradient">by text message.</span>
+      by text message.
     </h1>
     <p class="hero-sub">
       Text your offer from the parking lot. Get a filled <strong>TREC 20-19</strong> + <strong>Third Party Financing Addendum</strong> PDF in 10 seconds. No app download. No form filling. Just text and go.
