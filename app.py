@@ -672,7 +672,7 @@ def index():
       <div class="dark-card-inner" style="padding:0.6rem;">
         <div class="dash-grid">
           <div class="dash-panel">
-            <div class="dash-panel-label">Integrations <span class="soon-tag">Coming soon</span></div>
+            <div class="dash-panel-label">Integrations</div>
             <div style="margin-top:0.85rem;">
               <div class="integration-row">
                 <div class="integration-icon">D</div>
