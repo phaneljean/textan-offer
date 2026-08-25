@@ -270,19 +270,19 @@ def index():
     .nav-links a { transition: var(--transition); }
     .nav-links a:hover { color: var(--text); }
     .nav-cta {
-      background: linear-gradient(135deg, var(--accent), #000000);
-      color: #fff;
+      background: rgba(15,31,47,0.06);
+      color: var(--text);
       padding: 0.55rem 1.35rem;
       border-radius: 9999px;
       font-size: 0.875rem;
       font-weight: 600;
-      border: none;
+      border: 1px solid rgba(15,31,47,0.12);
       cursor: pointer;
       transition: var(--transition);
       display: inline-block;
       text-decoration: none;
     }
-    .nav-cta:hover { background: #000000; }
+    .nav-cta:hover { background: rgba(15,31,47,0.1); }
 
     /* Main column */
     .main { max-width: 840px; margin: 0 auto; padding: 0 2rem; }
@@ -336,10 +336,6 @@ def index():
     /* Input Card (real, functional) */
     .input-card {
       margin-top: 2rem;
-      background: #fff;
-      border: 1px solid var(--border-strong, rgba(15,31,47,0.12));
-      border-radius: var(--radius);
-      padding: 1.25rem;
       display: flex;
       flex-direction: column;
       gap: 0.75rem;
@@ -372,9 +368,9 @@ def index():
     }
     .input-row input::placeholder { color: #a8b4bd; }
     .input-btn {
-      background: linear-gradient(135deg, var(--accent), #000000);
-      color: #fff;
-      border: none;
+      background: rgba(15,31,47,0.06);
+      color: var(--text);
+      border: 1px solid rgba(15,31,47,0.12);
       border-radius: var(--radius-sm);
       padding: 0.8rem 1.5rem;
       font-weight: 600;
@@ -384,7 +380,7 @@ def index():
       transition: var(--transition);
       white-space: nowrap;
     }
-    .input-btn:hover { background: #000000; }
+    .input-btn:hover { background: rgba(15,31,47,0.1); }
     .input-hint { font-size: 0.75rem; color: var(--text-dim); }
     .hero-phone {
       margin-top: 0.85rem;
