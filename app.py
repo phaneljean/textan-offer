@@ -213,7 +213,6 @@ def index():
       --accent-glow: rgba(23,23,23,0.18);
       --radius: 1.25rem;
       --radius-sm: 0.85rem;
-      --shadow: 0 40px 80px -20px rgba(15,31,47,0.35);
       --transition: all 0.2s ease;
     }
 
@@ -283,10 +282,7 @@ def index():
       display: inline-block;
       text-decoration: none;
     }
-    .nav-cta:hover {
-      transform: scale(1.05);
-      box-shadow: 0 8px 24px rgba(23,23,23,0.3);
-    }
+    .nav-cta:hover { background: #000000; }
 
     /* Main column */
     .main { max-width: 840px; margin: 0 auto; padding: 0 2rem; }
@@ -347,7 +343,6 @@ def index():
       display: flex;
       flex-direction: column;
       gap: 0.75rem;
-      box-shadow: 0 1px 2px rgba(15,31,47,0.04);
       max-width: 540px;
     }
     .input-label {
@@ -389,10 +384,7 @@ def index():
       transition: var(--transition);
       white-space: nowrap;
     }
-    .input-btn:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 24px rgba(23,23,23,0.3);
-    }
+    .input-btn:hover { background: #000000; }
     .input-hint { font-size: 0.75rem; color: var(--text-dim); }
     .hero-phone {
       margin-top: 0.85rem;
@@ -416,7 +408,7 @@ def index():
       border-radius: 2.25rem;
       background: var(--card-dark);
       padding: 10px;
-      box-shadow: var(--shadow), inset 0 0 0 1px rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.08);
       overflow: hidden;
     }
     .dark-card-inner {
@@ -432,14 +424,10 @@ def index():
       background: var(--card-dark);
       border-radius: 0 0 12px 12px;
     }
-    .orb { position: absolute; border-radius: 999px; pointer-events: none; }
-    .orb-1 { top: 0; right: 0; width: 70%; height: 50%; background: rgba(23,23,23,0.18); filter: blur(60px); }
-
     .sms-bubble {
       display: inline-flex; align-items: center; gap: 8px;
       border-radius: 999px; background: #fff; color: var(--text);
       padding: 0.6rem 1rem; font-size: 0.85rem; font-weight: 500;
-      box-shadow: 0 8px 20px -8px rgba(0,0,0,0.35);
       margin: 0.5rem auto 0; max-width: 100%;
     }
     .flow-arrow { text-align: center; color: rgba(255,255,255,0.35); font-size: 1.1rem; padding: 0.35rem 0; }
@@ -449,7 +437,7 @@ def index():
     .demo-error{display:none;color:#fca5a5;font-size:0.85rem;padding:0.5rem 0;text-align:center;}
     .white-card {
       background: #fff; border-radius: 1.1rem; padding: 1rem;
-      box-shadow: 0 12px 24px -12px rgba(0,0,0,0.25), 0 2px 8px rgba(0,0,0,0.06);
+      border: 1px solid rgba(15,31,47,0.08);
     }
     .demo-result { display: block; }
     .demo-result.show { animation: cardPop 0.5s cubic-bezier(0.16,1,0.3,1) both; }
@@ -464,7 +452,7 @@ def index():
     .pdf-card {
       display: flex; align-items: center; gap: 0.75rem;
       margin-top: 0.6rem; padding: 0.85rem; border-radius: 1rem;
-      background: #fff; box-shadow: 0 12px 24px -12px rgba(0,0,0,0.25), 0 2px 8px rgba(0,0,0,0.06);
+      background: #fff; border: 1px solid rgba(15,31,47,0.08);
       text-decoration: none;
     }
     .pdf-icon {
@@ -501,9 +489,7 @@ def index():
       transition: var(--transition);
     }
     .step-card:hover {
-      transform: translateY(-4px);
       border-color: var(--border-hover);
-      box-shadow: 0 16px 32px -16px rgba(15,31,47,0.18);
     }
     .step-num {
       width: 38px; height: 38px;
@@ -651,7 +637,6 @@ def index():
     </div>
 
     <div class="dark-card-wrap">
-      <div class="orb orb-1"></div>
       <div class="dark-card-inner">
         <div class="notch"></div>
         <div class="demo-wrap">
