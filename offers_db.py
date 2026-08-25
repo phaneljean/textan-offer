@@ -36,6 +36,7 @@ def init_offers_table():
         "ALTER TABLE offers ADD COLUMN thread_responded_at TEXT DEFAULT ''",
         "ALTER TABLE offers ADD COLUMN email_sent_at TEXT DEFAULT ''",
         "ALTER TABLE offers ADD COLUMN email_sent_to TEXT DEFAULT ''",
+        "ALTER TABLE offers ADD COLUMN option_days INTEGER",
     ):
         try:
             cursor.execute(ddl)
@@ -54,20 +55,21 @@ def record_offer(phone: str, parsed: dict, filename: str):
     price = parsed.get("price", 0)
     down_pct = parsed.get("down_payment_pct", 0)
     close_days = parsed.get("close_days", 0)
+    option_days = parsed.get("inspection_days")
     address = parsed.get("address", "")
     financing_type = parsed.get("financing_type", "") or ""
     mls = json.dumps({k: parsed.get(k, 0) for k in ("bed", "bath", "sqft", "year_built", "lot_sqft", "listing_price", "property_type")})
     existing = cursor.execute("SELECT id, price FROM offers WHERE filename = ?", (filename,)).fetchone()
     if existing and not existing[1]:
         cursor.execute("""
-            UPDATE offers SET phone=?, address=?, price=?, down_pct=?, close_days=?, mls_json=?, generator_version=?, financing_type=?, created_at=?
+            UPDATE offers SET phone=?, address=?, price=?, down_pct=?, close_days=?, mls_json=?, generator_version=?, financing_type=?, created_at=?, option_days=?
             WHERE id=?
-        """, (phone, address, price, down_pct, close_days, mls, GENERATOR_VERSION, financing_type, now, existing[0]))
+        """, (phone, address, price, down_pct, close_days, mls, GENERATOR_VERSION, financing_type, now, option_days, existing[0]))
     elif not existing:
         cursor.execute("""
-            INSERT INTO offers (phone, address, price, down_pct, close_days, filename, mls_json, generator_version, financing_type, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (phone, address, price, down_pct, close_days, filename, mls, GENERATOR_VERSION, financing_type, now))
+            INSERT INTO offers (phone, address, price, down_pct, close_days, filename, mls_json, generator_version, financing_type, created_at, option_days)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (phone, address, price, down_pct, close_days, filename, mls, GENERATOR_VERSION, financing_type, now, option_days))
     conn.commit()
     conn.close()
 
