@@ -2885,6 +2885,7 @@ def pricing():
       <li><span class="check">&#10003;</span> Everything in Starter</li>
       <li><span class="check">&#10003;</span> One-click DocuSign send</li>
       <li><span class="check">&#10003;</span> Webhook automation (Zapier-compatible)</li>
+      <li><span class="check">&#10003;</span> Agent branding on offer pages</li>
       <li><span class="check">&#10003;</span> Priority support</li>
     </ul>
     <form action="/create-checkout-session" method="POST">
@@ -4978,13 +4979,15 @@ def offer_thread(filename):
     loan_amt = price - down_amt if price else 0
     thread_status = offer.get("thread_status") or "pending"
 
-    # Attribution card: only render for a real, filled-in agent profile --
-    # never for the anonymous demo (source_id "demo-web") or its placeholder
-    # values ("Your Name Here" etc), which would look like a fake identity
-    # on a page a real listing agent might open.
+    # Attribution card: Professional-plan feature. Only renders for a real,
+    # filled-in agent profile on a Professional/Brokerage plan -- never for
+    # the anonymous demo (source_id "demo-web") or its placeholder values
+    # ("Your Name Here" etc), which would look like a fake identity on a
+    # page a real listing agent might open, and never for Starter, which
+    # doesn't include agent branding.
     agent_card_html = ""
     sending_phone = offer.get("phone") or ""
-    if sending_phone and sending_phone != "demo-web":
+    if sending_phone and sending_phone != "demo-web" and has_professional_access(sending_phone):
         sending_agent = get_agent_profile(sending_phone)
         agent_name = (sending_agent.get("name") or "").strip()
         if agent_name:
