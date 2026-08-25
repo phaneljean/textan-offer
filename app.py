@@ -673,11 +673,11 @@ def index():
             <div class="dash-panel-label">Integrations</div>
             <div style="margin-top:0.85rem;">
               <div class="integration-row">
-                <div class="integration-icon">D</div>
+                <div class="integration-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20c3-1 4-4 6-8s4-8 6-8"/><path d="M14 20c2-3 4-4 6-4"/></svg></div>
                 <span class="integration-name">DocuSign</span>
               </div>
               <div class="integration-row">
-                <div class="integration-icon">Z</div>
+                <div class="integration-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 3 14h7l-1 8 11-13h-8z"/></svg></div>
                 <span class="integration-name">Zapier / Webhooks</span>
               </div>
             </div>
