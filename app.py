@@ -475,6 +475,15 @@ def index():
     .pdf-title { font-size: 0.83rem; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .pdf-sub { font-size: 0.72rem; color: var(--text-dim); margin-top: 0.1rem; }
 
+    /* Illustrative demo animation (typing + staggered reveal) */
+    .sms-cursor { display: inline-block; width: 2px; height: 1em; margin-left: 2px; vertical-align: -2px; background: currentColor; opacity: 0; }
+    .sms-cursor.blink { animation: smsCursorBlink 0.9s steps(1) infinite; }
+    @keyframes smsCursorBlink { 50% { opacity: 0; } 0%, 100% { opacity: 1; } }
+    .res-row .v, #pdf-flow-arrow, #res-pdf { transition: opacity 0.3s ease; }
+    @media (prefers-reduced-motion: reduce) {
+      .sms-cursor.blink { animation: none; opacity: 0; }
+    }
+
     /* Steps */
     .steps { max-width: 1000px; margin: 0 auto; padding: 4.5rem 2rem; border-top: 1px solid var(--border); }
     .steps-header { text-align: center; margin-bottom: 3rem; }
@@ -646,7 +655,7 @@ def index():
       <div class="dark-card-inner">
         <div class="notch"></div>
         <div class="demo-wrap">
-          <div class="sms-bubble" style="display:flex;">725k 3% 21day 123 Main St</div>
+          <div class="sms-bubble" style="display:flex;"><span id="sms-typed">725k 3% 21day 123 Main St</span><span class="sms-cursor" id="sms-cursor"></span></div>
           <div class="flow-arrow">&darr;</div>
           <div class="demo-loading" id="demo-loading">Generating your contract...</div>
           <div class="demo-error" id="demo-error"></div>
@@ -657,7 +666,7 @@ def index():
               <div class="res-row"><span class="k">Down payment</span><span class="v" id="res-down">3%</span></div>
               <div class="res-row"><span class="k">Closing</span><span class="v" id="res-close">21 days</span></div>
             </div>
-            <div class="flow-arrow">&darr;</div>
+            <div class="flow-arrow" id="pdf-flow-arrow">&darr;</div>
             <a href="#" id="res-pdf" class="pdf-card" target="_blank">
               <div class="pdf-icon">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
@@ -843,6 +852,85 @@ def index():
     })
     .catch(function(){loading.style.display='none';errEl.textContent='Something went wrong. Try again.';errEl.style.display='block';});
   });
+})();
+
+// Illustrative example above: types out the sample SMS, then reveals
+// Address/Price/Down/Closing one at a time, then the PDF card -- purely
+// decorative, loops on a timer. Independent of the real /api/demo form
+// above; a real submission stops the loop for good so it can never
+// clobber a real result the visitor is looking at.
+(function(){
+  var typedEl = document.getElementById('sms-typed'),
+      cursorEl = document.getElementById('sms-cursor'),
+      addrEl = document.getElementById('res-addr'),
+      priceEl = document.getElementById('res-price'),
+      downEl = document.getElementById('res-down'),
+      closeEl = document.getElementById('res-close'),
+      pdfArrow = document.getElementById('pdf-flow-arrow'),
+      pdfCard = document.getElementById('res-pdf'),
+      demoForm = document.getElementById('live-demo-form');
+  if(!typedEl || !addrEl) return;
+
+  var SCRIPT_TEXT = '725k 3% 21day 123 Main St';
+  var VALUES = {addr:'123 Main St', price:'$725,000', down:'3%', close:'21 days'};
+  var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var stopped = false, timers = [];
+
+  function clearTimers(){ timers.forEach(function(t){clearTimeout(t);}); timers = []; }
+  function after(ms, fn){ timers.push(setTimeout(fn, ms)); }
+  function fade(el, show){ if(el) el.style.opacity = show ? '1' : '0'; }
+
+  function typeText(el, text, cb){
+    var i = 0;
+    el.textContent = '';
+    (function step(){
+      if(stopped) return;
+      el.textContent = text.slice(0, i);
+      i++;
+      if(i <= text.length){ after(45, step); } else if(cb){ after(200, cb); }
+    })();
+  }
+
+  function playCycle(){
+    if(stopped || reduceMotion) return;
+    fade(addrEl,false); fade(priceEl,false); fade(downEl,false); fade(closeEl,false);
+    fade(pdfArrow,false); fade(pdfCard,false);
+    addrEl.textContent=''; priceEl.textContent=''; downEl.textContent=''; closeEl.textContent='';
+    cursorEl.classList.add('blink');
+    typeText(typedEl, SCRIPT_TEXT, function(){
+      cursorEl.classList.remove('blink');
+      after(300, function(){
+        addrEl.textContent = VALUES.addr; fade(addrEl, true);
+        after(280, function(){
+          priceEl.textContent = VALUES.price; fade(priceEl, true);
+          after(280, function(){
+            downEl.textContent = VALUES.down; fade(downEl, true);
+            after(280, function(){
+              closeEl.textContent = VALUES.close; fade(closeEl, true);
+              after(450, function(){
+                fade(pdfArrow, true);
+                after(200, function(){
+                  fade(pdfCard, true);
+                  after(3500, playCycle);
+                });
+              });
+            });
+          });
+        });
+      });
+    });
+  }
+
+  if(!reduceMotion){ after(700, playCycle); }
+
+  if(demoForm){
+    demoForm.addEventListener('submit', function(){
+      stopped = true;
+      clearTimers();
+      cursorEl.classList.remove('blink');
+      [addrEl,priceEl,downEl,closeEl,pdfArrow,pdfCard].forEach(function(el){ if(el) el.style.opacity=''; });
+    });
+  }
 })();
 </script>
 </body>
