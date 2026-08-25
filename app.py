@@ -4881,6 +4881,30 @@ def offer_thread(filename):
     loan_amt = price - down_amt if price else 0
     thread_status = offer.get("thread_status") or "pending"
 
+    # Attribution card: only render for a real, filled-in agent profile --
+    # never for the anonymous demo (source_id "demo-web") or its placeholder
+    # values ("Your Name Here" etc), which would look like a fake identity
+    # on a page a real listing agent might open.
+    agent_card_html = ""
+    sending_phone = offer.get("phone") or ""
+    if sending_phone and sending_phone != "demo-web":
+        sending_agent = get_agent_profile(sending_phone)
+        agent_name = (sending_agent.get("name") or "").strip()
+        if agent_name:
+            agent_brokerage = (sending_agent.get("brokerage") or "").strip()
+            agent_license = (sending_agent.get("license") or "").strip()
+            agent_meta_parts = [p for p in [agent_brokerage, f"License #{agent_license}" if agent_license else ""] if p]
+            agent_meta = " &middot; ".join(agent_meta_parts)
+            agent_initials = "".join(p[0].upper() for p in agent_name.split()[:2]) or "TX"
+            agent_card_html = f"""
+<div class="agent-card">
+  <div class="agent-avatar">{agent_initials}</div>
+  <div>
+    <div class="agent-name">{agent_name}</div>
+    {f'<div class="agent-meta">{agent_meta}</div>' if agent_meta else ''}
+  </div>
+</div>"""
+
     pdf_expires, pdf_sig = sign_pdf_view_params(filename)
     pdf_url = f"/offers/{filename}?expires={pdf_expires}&sig={pdf_sig}"
 
@@ -4949,6 +4973,12 @@ padding:0.6rem 1.5rem;text-align:center;font-size:0.8rem;color:var(--accent-dark
 padding:1.5rem;text-align:center;margin-bottom:1rem;box-shadow:0 1px 3px rgba(15,31,47,0.05);}}
 .address-card h1{{font-size:1.25rem;font-weight:700;margin-bottom:0.25rem;color:var(--text);}}
 .address-card .meta{{color:var(--text-dim);font-size:0.8rem;}}
+.agent-card{{display:flex;align-items:center;gap:0.85rem;background:var(--bg-card);border:1px solid var(--border);
+border-radius:var(--radius-sm);padding:0.9rem 1.1rem;margin-bottom:1rem;box-shadow:0 1px 3px rgba(15,31,47,0.05);}}
+.agent-avatar{{width:42px;height:42px;border-radius:50%;background:var(--accent-tint);color:var(--accent-dark);
+display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.9rem;flex-shrink:0;}}
+.agent-name{{font-size:0.9rem;font-weight:700;color:var(--text);}}
+.agent-meta{{font-size:0.78rem;color:var(--text-dim);margin-top:0.1rem;}}
 .stats{{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.5rem;margin-bottom:1rem;}}
 .stat{{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);
 padding:0.85rem 0.5rem;text-align:center;box-shadow:0 1px 3px rgba(15,31,47,0.05);}}
@@ -4987,6 +5017,7 @@ border-radius:var(--radius-sm);padding:0.9rem 1rem;text-align:center;font-size:0
 <body>
 <div class="top-bar">TREC 20-19 (mandatory as of {TREC_FORM_CURRENT_AS_OF}) — Offer sent to you via TxtAnOffer</div>
 <div class="container">
+{agent_card_html}
 <div class="address-card">
 <h1>{address}</h1>
 <div class="meta">TREC One to Four Family Residential Contract</div>
