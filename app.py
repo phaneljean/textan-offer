@@ -88,6 +88,21 @@ def require_api_auth():
     return None
 
 
+def require_api_or_pdf_signature_auth(pdf_filename, expires, sig):
+    """Either a valid Bearer token (real server-to-server API callers) or a
+    valid signature for one specific PDF -- the review page's own "Send to
+    DocuSign"/"Webhook" buttons, which can never safely hold the server's
+    static API token (anything sent to a browser is visible to that
+    browser's user). The review page already only loads behind a signed
+    link, so re-checking that same signature here proves the caller
+    legitimately has access to this agent's offer, which is what actually
+    matters -- without ever exposing the real API secret client-side.
+    Returns an error response, or None if authorized."""
+    if pdf_filename and verify_pdf_signature(pdf_filename, expires, sig):
+        return None
+    return require_api_auth()
+
+
 def _is_safe_webhook_url(url):
     """Block private/reserved IPs and non-HTTPS URLs to prevent SSRF."""
     from urllib.parse import urlparse
@@ -2243,7 +2258,7 @@ def demo():
                 fetch('/api/docusign', {{
                   method: 'POST',
                   headers: {{'Content-Type': 'application/json'}},
-                  body: JSON.stringify({{pdf_filename: filename, signer_email: email, signer_name: name, parsed: {parsed_json}}})
+                  body: JSON.stringify({{pdf_filename: filename, signer_email: email, signer_name: name, parsed: {parsed_json}, expires: '{_pdf_expires}', sig: '{_pdf_sig}'}})
                 }}).then(r => r.json()).then(d => {{
                   status.textContent = d.success ? 'Sent! Envelope: ' + d.envelope_id : ('Error: ' + d.error);
                   status.className = 'modal-status ' + (d.success ? 'success' : 'fail');
@@ -2258,7 +2273,7 @@ def demo():
                 fetch('/api/webhook', {{
                   method: 'POST',
                   headers: {{'Content-Type': 'application/json'}},
-                  body: JSON.stringify({{source_id: 'demo-web', url: url}})
+                  body: JSON.stringify({{source_id: 'demo-web', url: url, filename: '{filename}', expires: '{_pdf_expires}', sig: '{_pdf_sig}'}})
                 }}).then(r => r.json()).then(d => {{
                   status.textContent = d.success ? 'Webhook saved! Future offers will POST here.' : ('Error: ' + (d.error || ''));
                   status.className = 'modal-status ' + (d.success ? 'success' : 'fail');
@@ -2633,21 +2648,20 @@ def api_send_email():
 
 @app.route("/api/webhook", methods=["GET", "POST", "DELETE"])
 def api_webhook():
-    auth_error = require_api_auth()
-    if auth_error:
-        return auth_error
-
-    if request.method == "GET":
-        source_id = request.args.get("source_id", "")
-        if not source_id:
-            return jsonify({"error": "source_id required"}), 400
-        url = get_webhook(source_id)
-        return jsonify({"source_id": source_id, "url": url, "active": url is not None})
-
     if request.method == "POST":
         data = request.get_json()
         if not data:
             return jsonify({"error": "JSON body required"}), 400
+        # The review page's own "Webhook / Zapier" button calls this with no
+        # bearer token available to it -- authorize via the same signed
+        # filename/expires/sig it already has for the offer being viewed.
+        # True server-to-server API callers still just send a Bearer token
+        # and can omit these.
+        auth_error = require_api_or_pdf_signature_auth(
+            data.get("filename", ""), data.get("expires", ""), data.get("sig", "")
+        )
+        if auth_error:
+            return auth_error
         source_id = data.get("source_id", "")
         url = data.get("url", "")
         if not source_id or not url:
@@ -2659,6 +2673,19 @@ def api_webhook():
         save_webhook(source_id, url)
         track_event("webhook_configured", source_id, {"url": url})
         return jsonify({"success": True, "source_id": source_id, "url": url})
+
+    # GET and DELETE are server-to-server only (no browser UI calls these) --
+    # bearer token required, no signature fallback.
+    auth_error = require_api_auth()
+    if auth_error:
+        return auth_error
+
+    if request.method == "GET":
+        source_id = request.args.get("source_id", "")
+        if not source_id:
+            return jsonify({"error": "source_id required"}), 400
+        url = get_webhook(source_id)
+        return jsonify({"source_id": source_id, "url": url, "active": url is not None})
 
     if request.method == "DELETE":
         data = request.get_json()
@@ -2673,10 +2700,6 @@ def api_webhook():
 
 @app.route("/api/docusign", methods=["POST"])
 def api_docusign():
-    auth_error = require_api_auth()
-    if auth_error:
-        return auth_error
-
     data = request.get_json()
     if not data:
         return jsonify({"success": False, "error": "JSON body required"}), 400
@@ -2685,6 +2708,16 @@ def api_docusign():
     parsed = data.get("parsed", {})
     signer_email = data.get("signer_email", "")
     signer_name = data.get("signer_name", "")
+
+    # The review page's own "Send to DocuSign" button calls this with no
+    # bearer token available to it -- authorize via the same signed
+    # expires/sig it already has for the offer being viewed. True
+    # server-to-server API callers still just send a Bearer token.
+    auth_error = require_api_or_pdf_signature_auth(
+        pdf_filename, data.get("expires", ""), data.get("sig", "")
+    )
+    if auth_error:
+        return auth_error
 
     if not pdf_filename or not signer_email or not signer_name:
         return jsonify({"success": False, "error": "pdf_filename, signer_email, and signer_name required"}), 400
@@ -4964,7 +4997,7 @@ dsBtn.addEventListener('click',function(){{
   dsStatus.className='email-status';dsStatus.style.display='none';
   dsBtn.textContent='Sending...';dsBtn.disabled=true;
   fetch('/api/docusign',{{method:'POST',headers:{{'Content-Type':'application/json'}},
-    body:JSON.stringify({{pdf_filename:'{filename}',signer_email:email,signer_name:name,parsed:{{address:'{address}'}}}})
+    body:JSON.stringify({{pdf_filename:'{filename}',signer_email:email,signer_name:name,parsed:{{address:'{address}'}},expires:'{expires}',sig:'{sig}'}})
   }}).then(function(r){{return r.json();}}).then(function(d){{
     if(d.success){{
       dsStatus.textContent='Sent! Envelope: '+d.envelope_id;dsStatus.className='email-status success';
@@ -4996,7 +5029,7 @@ whBtn.addEventListener('click',function(){{
   whStatus.className='email-status';whStatus.style.display='none';
   whBtn.textContent='Saving...';whBtn.disabled=true;
   fetch('/api/webhook',{{method:'POST',headers:{{'Content-Type':'application/json'}},
-    body:JSON.stringify({{source_id:'{offer["phone"]}',url:url}})
+    body:JSON.stringify({{source_id:'{offer["phone"]}',url:url,filename:'{filename}',expires:'{expires}',sig:'{sig}'}})
   }}).then(function(r){{return r.json();}}).then(function(d){{
     if(d.success){{
       whStatus.textContent='Webhook saved! Future offers will POST here.';whStatus.className='email-status success';
