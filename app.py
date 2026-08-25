@@ -1907,9 +1907,14 @@ DEMO_FORM = """
       <span>TxtAnOffer</span>
     </div>
     <div class="nav-links">
-      <a href="/">Home</a>
+      <a href="/#how">How it works</a>
+      <a href="/#trust">Accuracy</a>
       <a href="/pricing">Pricing</a>
+      <a href="/demo">Demo</a>
+      <a href="/playground">Parser Playground</a>
       <a href="/faq">FAQ</a>
+      <a href="/about">About</a>
+      <a href="/contact">Support</a>
       <a href="/login">Log In</a>
     </div>
     <a href="/signup" class="nav-cta">Start Free Trial</a>
@@ -2381,10 +2386,15 @@ padding:0.4rem 0.85rem;font-size:0.8rem;color:var(--text-muted);cursor:pointer;t
 <span>TxtAnOffer</span>
 </a>
 <div class="nav-links">
-<a href="/">Home</a>
-<a href="/demo">Demo</a>
+<a href="/#how">How it works</a>
+<a href="/#trust">Accuracy</a>
 <a href="/pricing">Pricing</a>
+<a href="/demo">Demo</a>
+<a href="/playground">Parser Playground</a>
 <a href="/faq">FAQ</a>
+<a href="/about">About</a>
+<a href="/contact">Support</a>
+<a href="/login">Log In</a>
 </div>
 <a href="/signup" class="nav-cta">Start Free Trial</a>
 </nav>
@@ -2785,9 +2795,14 @@ def pricing():
     <span>TxtAnOffer</span>
   </a>
   <div class="nav-links">
-    <a href="/">Home</a>
+    <a href="/#how">How it works</a>
+    <a href="/#trust">Accuracy</a>
+    <a href="/pricing">Pricing</a>
     <a href="/demo">Demo</a>
+    <a href="/playground">Parser Playground</a>
     <a href="/faq">FAQ</a>
+    <a href="/about">About</a>
+    <a href="/contact">Support</a>
     <a href="/login">Log In</a>
   </div>
   <a href="/signup" class="nav-cta">Start Free Trial</a>
@@ -2816,6 +2831,8 @@ def pricing():
       <li><span class="check">&#10003;</span> Agent profile auto-fill</li>
       <li><span class="check">&#10003;</span> Email delivery to listing agents</li>
       <li><span class="check">&#10003;</span> Offer history dashboard</li>
+      <li><span class="check">&#10003;</span> One-click DocuSign send</li>
+      <li><span class="check">&#10003;</span> Webhook automation (Zapier-compatible)</li>
     </ul>
     <form action="/create-checkout-session" method="POST">
       <input type="hidden" name="plan" value="starter">
@@ -2827,15 +2844,13 @@ def pricing():
   <div class="pricing-card featured">
     <span class="featured-badge">Most Popular</span>
     <h2 class="plan-name">Professional</h2>
-    <p class="plan-desc">Close deals faster with one-click signing and CRM sync.</p>
+    <p class="plan-desc">For agents who want priority support when it matters.</p>
     <div class="price-row">
       <span class="price-current">$79</span>
       <span class="price-period">/month</span>
     </div>
     <ul class="features">
       <li><span class="check">&#10003;</span> Everything in Starter</li>
-      <li><span class="check">&#10003;</span> One-click DocuSign send</li>
-      <li><span class="check">&#10003;</span> Webhook automation (Zapier-compatible)</li>
       <li><span class="check">&#10003;</span> Priority support</li>
     </ul>
     <form action="/create-checkout-session" method="POST">
@@ -3570,10 +3585,15 @@ def terms():
     <span>TxtAnOffer</span>
   </a>
   <div class="nav-links">
-    <a href="/">Home</a>
-    <a href="/demo">Demo</a>
+    <a href="/#how">How it works</a>
+    <a href="/#trust">Accuracy</a>
     <a href="/pricing">Pricing</a>
+    <a href="/demo">Demo</a>
+    <a href="/playground">Parser Playground</a>
     <a href="/faq">FAQ</a>
+    <a href="/about">About</a>
+    <a href="/contact">Support</a>
+    <a href="/login">Log In</a>
   </div>
   <a href="/signup" class="nav-cta">Start Free Trial</a>
 </nav>
@@ -3812,10 +3832,15 @@ def privacy():
     <span>TxtAnOffer</span>
   </a>
   <div class="nav-links">
-    <a href="/">Home</a>
-    <a href="/demo">Demo</a>
+    <a href="/#how">How it works</a>
+    <a href="/#trust">Accuracy</a>
     <a href="/pricing">Pricing</a>
+    <a href="/demo">Demo</a>
+    <a href="/playground">Parser Playground</a>
     <a href="/faq">FAQ</a>
+    <a href="/about">About</a>
+    <a href="/contact">Support</a>
+    <a href="/login">Log In</a>
   </div>
   <a href="/signup" class="nav-cta">Start Free Trial</a>
 </nav>
@@ -4004,9 +4029,15 @@ def faq():
     <span>TxtAnOffer</span>
   </a>
   <div class="nav-links">
-    <a href="/">Home</a>
-    <a href="/demo">Demo</a>
+    <a href="/#how">How it works</a>
+    <a href="/#trust">Accuracy</a>
     <a href="/pricing">Pricing</a>
+    <a href="/demo">Demo</a>
+    <a href="/playground">Parser Playground</a>
+    <a href="/faq">FAQ</a>
+    <a href="/about">About</a>
+    <a href="/contact">Support</a>
+    <a href="/login">Log In</a>
   </div>
   <a href="/signup" class="nav-cta">Start Free Trial</a>
 </nav>
@@ -4153,10 +4184,15 @@ def about():
     <span>TxtAnOffer</span>
   </a>
   <div class="nav-links">
-    <a href="/">Home</a>
+    <a href="/#how">How it works</a>
+    <a href="/#trust">Accuracy</a>
+    <a href="/pricing">Pricing</a>
     <a href="/demo">Demo</a>
+    <a href="/playground">Parser Playground</a>
     <a href="/faq">FAQ</a>
-    <a href="/contact">Contact</a>
+    <a href="/about">About</a>
+    <a href="/contact">Support</a>
+    <a href="/login">Log In</a>
   </div>
   <a href="/signup" class="nav-cta">Start Free Trial</a>
 </nav>
@@ -4287,10 +4323,15 @@ def contact():
     <span>TxtAnOffer</span>
   </a>
   <div class="nav-links">
-    <a href="/">Home</a>
+    <a href="/#how">How it works</a>
+    <a href="/#trust">Accuracy</a>
+    <a href="/pricing">Pricing</a>
     <a href="/demo">Demo</a>
+    <a href="/playground">Parser Playground</a>
     <a href="/faq">FAQ</a>
     <a href="/about">About</a>
+    <a href="/contact">Support</a>
+    <a href="/login">Log In</a>
   </div>
   <a href="/signup" class="nav-cta">Start Free Trial</a>
 </nav>
