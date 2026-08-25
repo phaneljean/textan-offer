@@ -300,8 +300,8 @@ def index():
       display: inline-flex;
       align-items: center;
       gap: 0.4rem;
-      background: var(--accent-tint);
-      border: 1px solid rgba(23,23,23,0.2);
+      background: rgba(15,31,47,0.05);
+      border: 1px solid rgba(15,31,47,0.4);
       color: #000000;
       font-size: 0.7rem;
       font-weight: 700;
