@@ -499,7 +499,20 @@ def index():
 
     /* Dashboard preview (Connected Apps + review-screen mockup) */
     .dash-grid { display: grid; grid-template-columns: 1fr; gap: 0.85rem; padding: 0.5rem; }
+    @media (min-width: 700px) { .dash-grid { grid-template-columns: 260px 1fr; } }
     .dash-panel { background: #fff; border-radius: 1.1rem; padding: 1.1rem; }
+    .dash-panel-label {
+      font-size: 0.68rem; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase;
+      color: var(--text-dim); display: flex; align-items: center; justify-content: space-between;
+    }
+    .integration-row { display: flex; align-items: center; gap: 0.65rem; padding: 0.6rem 0; }
+    .integration-row:not(:last-of-type) { border-bottom: 1px solid var(--border); }
+    .integration-icon {
+      width: 28px; height: 28px; border-radius: 8px; background: var(--accent-tint);
+      display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 700; color: var(--card-dark); flex-shrink: 0;
+    }
+    .integration-name { font-size: 0.82rem; font-weight: 500; color: var(--text); }
+    .integration-note { font-size: 0.75rem; color: var(--text-dim); line-height: 1.5; margin-top: 0.75rem; }
     .chrome-bar {
       display: flex; align-items: center; gap: 6px;
       padding-bottom: 0.85rem; margin-bottom: 0.9rem; border-bottom: 1px solid var(--border);
@@ -651,11 +664,25 @@ def index():
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
     </div>
     <h1 style="font-size:2.1rem;">See exactly what you'll get</h1>
-    <p class="hero-sub">The same review screen every offer goes through before it can be sent &mdash; DocuSign and Zapier/webhook automation included, free.</p>
+    <p class="hero-sub">The same review screen every offer goes through before it can be sent &mdash; and where DocuSign and Zapier plug in, included free.</p>
 
     <div class="dark-card-wrap">
       <div class="dark-card-inner" style="padding:0.6rem;">
         <div class="dash-grid">
+          <div class="dash-panel">
+            <div class="dash-panel-label">Integrations</div>
+            <div style="margin-top:0.85rem;">
+              <div class="integration-row">
+                <div class="integration-icon">D</div>
+                <span class="integration-name">DocuSign</span>
+              </div>
+              <div class="integration-row">
+                <div class="integration-icon">Z</div>
+                <span class="integration-name">Zapier / Webhooks</span>
+              </div>
+            </div>
+            <div class="integration-note">Included free on every plan &mdash; send to DocuSign or POST to any URL right from the review screen.</div>
+          </div>
           <div class="dash-panel">
             <div class="chrome-bar">
               <div class="chrome-dot"></div><div class="chrome-dot"></div><div class="chrome-dot"></div>
@@ -672,8 +699,6 @@ def index():
             <div class="review-actions">
               <div class="review-btn primary">Email to Listing Agent</div>
               <div class="review-btn ghost">Open PDF</div>
-              <div class="review-btn ghost">Send to DocuSign</div>
-              <div class="review-btn ghost">Webhook / Zapier</div>
             </div>
             <div class="review-caption">Nothing sends until every required field is filled in.</div>
           </div>
