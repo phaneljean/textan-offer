@@ -4751,6 +4751,13 @@ text-decoration:none;border:none;cursor:pointer;transition:all 0.2s;}}
 .btn-outline:hover{{border-color:var(--accent);color:var(--accent-dark);}}
 .pdf-frame{{width:100%;height:70vh;border:1px solid var(--border);border-radius:var(--radius-sm);
 background:#f1f5f9;}}
+.pdf-preview-card{{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
+padding:0.75rem;margin-bottom:1rem;box-shadow:0 1px 3px rgba(15,31,47,0.05);text-align:center;}}
+.pdf-preview-card a{{display:block;}}
+.pdf-preview-img{{width:100%;display:block;border-radius:var(--radius-sm);border:1px solid var(--border);}}
+.pdf-preview-caption{{font-size:0.78rem;color:var(--text-dim);margin-top:0.6rem;}}
+.pdf-preview-caption a{{display:inline;color:var(--accent-dark);font-weight:600;text-decoration:none;}}
+.pdf-preview-caption a:hover{{text-decoration:underline;}}
 .email-form{{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
 padding:1.25rem;margin-bottom:1rem;display:none;}}
 .email-form.show{{display:block;}}
@@ -4801,6 +4808,11 @@ border-top:1px solid var(--border);margin-top:1rem;}}
 {'<div class="qa-warnings"><strong>Heads up before sending:</strong><ul>' + ''.join(f'<li>{w}</li>' for w in validation['warnings']) + '</ul></div>' if validation['warnings'] else ''}
 
 {'<div class="sent-banner" id="sent-banner">&#9989; Sent to <strong>' + email_sent_to + '</strong> on ' + sent_date + '</div>' if email_sent_at else ''}
+
+<div class="pdf-preview-card">
+<a href="{pdf_url}" target="_blank"><img src="/offers/{filename}/preview.png?expires={expires}&sig={sig}" alt="Offer PDF preview" class="pdf-preview-img" loading="lazy"></a>
+<div class="pdf-preview-caption">Page 1 &middot; <a href="{pdf_url}" target="_blank">View all pages</a></div>
+</div>
 
 <div class="actions">
 <button class="btn btn-primary" id="email-toggle"{' disabled' if validation['blocking'] else ''}>{'Resend to Listing Agent' if email_sent_at else 'Email to Listing Agent'}</button>
@@ -5209,6 +5221,37 @@ def serve_offer(filename):
     if not verify_pdf_signature(filename, expires, sig):
         abort(403)
     return send_from_directory(OUTPUT_DIR, filename, as_attachment=False)
+
+
+@app.route("/offers/<path:filename>/preview.png")
+def serve_offer_preview(filename):
+    """Renders one PDF page to a PNG so review pages can show a real preview
+    inline without embedding the browser's own PDF viewer chrome (dark
+    toolbar, thumbnail rail) which clashes with the site's UI."""
+    if ".." in filename or filename.startswith("/"):
+        abort(400)
+    expires = request.args.get("expires")
+    sig = request.args.get("sig")
+    if not verify_pdf_signature(filename, expires, sig):
+        abort(403)
+    page_num = request.args.get("page", "0")
+    page_num = int(page_num) if page_num.isdigit() else 0
+
+    pdf_path = os.path.join(OUTPUT_DIR, filename)
+    if not os.path.exists(pdf_path):
+        abort(404)
+
+    import fitz
+    doc = fitz.open(pdf_path)
+    page_num = max(0, min(page_num, len(doc) - 1))
+    pix = doc[page_num].get_pixmap(matrix=fitz.Matrix(2, 2))
+    png_bytes = pix.tobytes("png")
+    doc.close()
+
+    resp = make_response(png_bytes)
+    resp.headers["Content-Type"] = "image/png"
+    resp.headers["Cache-Control"] = "private, max-age=3600"
+    return resp
 
 
 # --- Dashboard auth (magic link) ------------------------------------------

@@ -8,6 +8,7 @@ reportlab==4.0.7
 PyJWT==2.8.0
 cryptography==42.0.5
 Pillow==10.4.0
+PyMuPDF==1.26.5
 
 # Twilio helper library (used for validating inbound webhook signatures)
 # Pin to a recent 8.x release that's compatible with RequestValidator
