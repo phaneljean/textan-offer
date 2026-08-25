@@ -622,6 +622,7 @@ def index():
       </form>
       <div class="input-hint">Type however feels natural — we handle messy texts. Just get the numbers in there.</div>
       <div class="hero-phone">Prefer texting from your phone? <a href="sms:+18338970333">Text (833) 897-0333</a> to get started.</div>
+      <div class="input-hint" style="margin-top:0.4rem;">By texting, you agree to receive automated messages from TxtAnOffer. Reply STOP to opt out, HELP for help. Msg &amp; data rates may apply.</div>
     </div>
 
     <div class="stats">
