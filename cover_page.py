@@ -8,26 +8,50 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.colors import HexColor, Color
 from datetime import datetime, timedelta
 import io
-import os
 import re
 
-LOGO_PATH = os.path.join(os.path.dirname(__file__), "static", "logo.webp")
+# Redrawn from static/logo.svg (viewBox 0 0 64 64) as native PDF vector
+# shapes rather than an embedded raster -- reportlab can't render SVG
+# directly and no SVG-rasterizing library is installed, so this traces
+# the same rounded-square + zigzag path at PDF scale. If the live SVG is
+# ever redesigned, update these coordinates to match.
+_LOGO_RECT = (2, 2, 60, 60, 15)  # x, y, w, h, rx in SVG units
+_LOGO_PATH_SVG_PTS = [  # SVG-space points (y grows downward), from the <path> d=
+    (18, 44), (18, 20), (38, 20), (28, 30), (46, 30), (46, 48), (28, 48), (38, 38), (18, 38),
+]
 
 
 def _draw_brand(c, x, y):
-    """Draws the TxtAnOffer logo at (x, y-15)..(x+24, y+9) -- same footprint
-    as the circular badge it replaces, so header layout doesn't shift.
-    Falls back to a plain accent-colored circle if the logo file is
-    missing, since a broken image must never block real offer generation."""
-    try:
-        c.drawImage(LOGO_PATH, x, y - 15, width=24, height=24,
-                    mask='auto', preserveAspectRatio=True)
-    except Exception:
-        c.setFillColor(Color(*ACCENT_RGB))
-        c.circle(x + 12, y - 3, 12, fill=1, stroke=0)
-        c.setFillColor(ON_ACCENT)
-        c.setFont("Helvetica-Bold", 7)
-        c.drawCentredString(x + 12, y - 6, "TX")
+    """Draws the real TxtAnOffer logo at (x, y-15)..(x+24, y+9) -- same
+    footprint as the circular badge it replaces, so header layout doesn't
+    shift. Vector-drawn (see note above), so it never depends on an image
+    file being present -- a broken asset must never block real offer
+    generation."""
+    size = 24
+    scale = size / 64
+
+    def pt(sx, sy):
+        return x + sx * scale, y + (64 - sy) * scale  # flip SVG's y-down to PDF's y-up
+
+    c.saveState()
+    rx, ry, rw, rh, rr = _LOGO_RECT
+    px, py = pt(rx, ry + rh)  # top-left in SVG becomes bottom-left after the y-flip
+    _draw_rounded_rect(c, px, py, rw * scale, rh * scale, r=rr * scale,
+                       fill_color=HexColor("#1e293b"), stroke_color=HexColor("#334155"))
+
+    p = c.beginPath()
+    start_x, start_y = pt(*_LOGO_PATH_SVG_PTS[0])
+    p.moveTo(start_x, start_y)
+    for sx, sy in _LOGO_PATH_SVG_PTS[1:]:
+        px2, py2 = pt(sx, sy)
+        p.lineTo(px2, py2)
+    p.close()
+    c.setStrokeColor(HexColor("#ffffff"))
+    c.setLineWidth(3.4 * scale)
+    c.setLineCap(1)   # round
+    c.setLineJoin(1)  # round
+    c.drawPath(p, fill=0, stroke=1)
+    c.restoreState()
 
 # Fixed accent used in both modes (readable on white and on navy alike).
 ACCENT_RGB = (0.09, 0.09, 0.09)  # ~#171717, matches the site's black/charcoal accent
