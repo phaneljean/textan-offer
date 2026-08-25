@@ -262,10 +262,12 @@ def index():
     }
     .nav-links {
       display: flex;
-      gap: 2rem;
-      font-size: 0.875rem;
+      gap: 1.4rem;
+      font-size: 0.85rem;
       font-weight: 500;
       color: var(--text-muted);
+      flex-wrap: nowrap;
+      white-space: nowrap;
     }
     .nav-links a { transition: var(--transition); }
     .nav-links a:hover { color: var(--text); }
@@ -589,8 +591,10 @@ def index():
       <a href="#trust">Accuracy</a>
       <a href="/pricing">Pricing</a>
       <a href="/demo">Demo</a>
+      <a href="/playground">Parser Playground</a>
       <a href="/faq">FAQ</a>
       <a href="/about">About</a>
+      <a href="/contact">Support</a>
       <a href="/login">Log In</a>
     </div>
     <a href="/signup" class="nav-cta">Start Free Trial</a>
