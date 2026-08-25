@@ -495,6 +495,7 @@ def index():
     }
     .step-card h3 { font-size: 1.05rem; font-weight: 700; margin: 0 0 0.5rem; letter-spacing: -0.01em; }
     .step-card p { font-size: 0.87rem; color: var(--text-muted); line-height: 1.55; margin: 0; }
+    .step-caption { font-size: 0.75rem; color: var(--text-dim); margin-top: 0.5rem; }
 
     /* Dashboard preview (Connected Apps + review-screen mockup) */
     .dash-grid { display: grid; grid-template-columns: 1fr; gap: 0.85rem; padding: 0.5rem; }
@@ -735,6 +736,7 @@ def index():
         <div class="step-num">04</div>
         <h3>Get Their Answer</h3>
         <p>Emailing the listing agent sends them a link with the same PDF, plus Accept and Decline buttons. The moment they respond, you get a text &mdash; no more wondering if your offer even got read.</p>
+        <p class="step-caption">Non-binding intent only &mdash; formal acceptance still requires normal signing of the TREC 20-19.</p>
       </div>
     </div>
   </section>
