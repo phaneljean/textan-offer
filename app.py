@@ -651,7 +651,7 @@ def index():
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
     </div>
     <h1 style="font-size:2.1rem;">See exactly what you'll get</h1>
-    <p class="hero-sub">The same review screen every offer goes through before it can be sent.</p>
+    <p class="hero-sub">The same review screen every offer goes through before it can be sent &mdash; DocuSign and Zapier/webhook automation included, free.</p>
 
     <div class="dark-card-wrap">
       <div class="dark-card-inner" style="padding:0.6rem;">
@@ -672,6 +672,8 @@ def index():
             <div class="review-actions">
               <div class="review-btn primary">Email to Listing Agent</div>
               <div class="review-btn ghost">Open PDF</div>
+              <div class="review-btn ghost">Send to DocuSign</div>
+              <div class="review-btn ghost">Webhook / Zapier</div>
             </div>
             <div class="review-caption">Nothing sends until every required field is filled in.</div>
           </div>
