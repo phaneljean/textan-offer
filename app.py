@@ -364,9 +364,9 @@ def index():
     }
     .input-row input::placeholder { color: #a8b4bd; }
     .input-btn {
-      background: rgba(15,31,47,0.06);
-      color: var(--text);
-      border: 1px solid rgba(15,31,47,0.12);
+      background: var(--accent);
+      color: #fff;
+      border: 1px solid var(--accent);
       border-radius: var(--radius-sm);
       padding: 0.8rem 1.5rem;
       font-weight: 600;
@@ -376,7 +376,7 @@ def index():
       transition: var(--transition);
       white-space: nowrap;
     }
-    .input-btn:hover { background: rgba(15,31,47,0.1); }
+    .input-btn:hover { background: var(--accent-light); border-color: var(--accent-light); }
     .input-hint { font-size: 0.75rem; color: var(--text-dim); }
     .hero-phone {
       margin-top: 0.85rem;
