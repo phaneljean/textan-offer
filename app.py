@@ -31,7 +31,7 @@ from pdf_filler import fill_offer_pdf, OUTPUT_DIR
 from pdf_validator import validate_offer_pdf
 from amendment import fill_amendment_pdf
 from agent_profiles import get_agent_profile, save_agent_profile
-from subscriptions import can_generate_offer, increment_offer_count, activate_subscription, deactivate_subscription, get_user, create_user, FREE_OFFER_LIMIT, is_admin_phone
+from subscriptions import can_generate_offer, increment_offer_count, activate_subscription, deactivate_subscription, get_user, create_user, FREE_OFFER_LIMIT, is_admin_phone, has_professional_access
 from analytics import track_event, get_conversion_metrics, get_revenue_metrics, get_recent_sms, get_recent_sms_failures, get_last_blocked_state, get_waitlist_signups, get_signups_by_source
 from integrations import send_offer_email, fire_webhook, save_webhook, get_webhook, delete_webhook, send_to_docusign
 from offers_db import record_offer, get_offers_for_phone, get_offer_by_filename, record_amendment, get_amendments_for_phone, record_thread_response, record_email_sent
@@ -664,7 +664,7 @@ def index():
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
     </div>
     <h1 style="font-size:2.1rem;">See exactly what you'll get</h1>
-    <p class="hero-sub">The same review screen every offer goes through before it can be sent &mdash; and where DocuSign and Zapier plug in, included free.</p>
+    <p class="hero-sub">The same review screen every offer goes through before it can be sent &mdash; and where DocuSign and Zapier plug in.</p>
 
     <div class="dark-card-wrap">
       <div class="dark-card-inner" style="padding:0.6rem;">
@@ -681,7 +681,7 @@ def index():
                 <span class="integration-name">Zapier / Webhooks</span>
               </div>
             </div>
-            <div class="integration-note">Included free on every plan &mdash; send to DocuSign or POST to any URL right from the review screen.</div>
+            <div class="integration-note">Included on the Professional plan &mdash; send to DocuSign or POST to any URL right from the review screen.</div>
           </div>
           <div class="dash-panel">
             <div class="chrome-bar">
@@ -2628,6 +2628,8 @@ def api_webhook():
         url = data.get("url", "")
         if not source_id or not url:
             return jsonify({"error": "source_id and url required"}), 400
+        if not has_professional_access(source_id):
+            return jsonify({"error": "Webhook automation is a Professional-plan feature. Upgrade at txtanoffer.com/pricing."}), 403
         if not _is_safe_webhook_url(url):
             return jsonify({"error": "Invalid webhook URL (must be public HTTPS)"}), 400
         save_webhook(source_id, url)
@@ -2662,6 +2664,11 @@ def api_docusign():
 
     if not pdf_filename or not signer_email or not signer_name:
         return jsonify({"success": False, "error": "pdf_filename, signer_email, and signer_name required"}), 400
+
+    owning_offer = get_offer_by_filename(pdf_filename)
+    owning_phone = owning_offer["phone"] if owning_offer else ""
+    if not has_professional_access(owning_phone):
+        return jsonify({"success": False, "error": "One-click DocuSign send is a Professional-plan feature. Upgrade at txtanoffer.com/pricing."}), 403
 
     pdf_path = os.path.join(OUTPUT_DIR, pdf_filename)
     if not os.path.exists(pdf_path):
@@ -2858,8 +2865,6 @@ def pricing():
       <li><span class="check">&#10003;</span> Agent profile auto-fill</li>
       <li><span class="check">&#10003;</span> Email delivery to listing agents</li>
       <li><span class="check">&#10003;</span> Offer history dashboard</li>
-      <li><span class="check">&#10003;</span> One-click DocuSign send</li>
-      <li><span class="check">&#10003;</span> Webhook automation (Zapier-compatible)</li>
     </ul>
     <form action="/create-checkout-session" method="POST">
       <input type="hidden" name="plan" value="starter">
@@ -2871,13 +2876,15 @@ def pricing():
   <div class="pricing-card featured">
     <span class="featured-badge">Most Popular</span>
     <h2 class="plan-name">Professional</h2>
-    <p class="plan-desc">For agents who want priority support when it matters.</p>
+    <p class="plan-desc">Close deals faster with one-click signing and CRM automation.</p>
     <div class="price-row">
       <span class="price-current">$79</span>
       <span class="price-period">/month</span>
     </div>
     <ul class="features">
       <li><span class="check">&#10003;</span> Everything in Starter</li>
+      <li><span class="check">&#10003;</span> One-click DocuSign send</li>
+      <li><span class="check">&#10003;</span> Webhook automation (Zapier-compatible)</li>
       <li><span class="check">&#10003;</span> Priority support</li>
     </ul>
     <form action="/create-checkout-session" method="POST">
@@ -2947,6 +2954,8 @@ def pricing():
 def create_checkout_session():
     """Create Stripe checkout session for subscription"""
     plan = request.form.get("plan", "starter")
+    if plan not in ("starter", "professional", "brokerage"):
+        plan = "starter"
     price_map = {
         "starter": STRIPE_PRICE_ID,
         "professional": STRIPE_PRICE_ID_PRO,
@@ -2968,6 +2977,7 @@ def create_checkout_session():
             success_url=request.host_url + 'success?session_id={CHECKOUT_SESSION_ID}',
             cancel_url=request.host_url + 'pricing',
             allow_promotion_codes=True,
+            metadata={'plan': plan},
         )
         return redirect(checkout_session.url, code=303)
     except Exception as e:
@@ -3073,13 +3083,14 @@ def stripe_webhook():
         customer_phone = session['customer_details'].get('phone', '')
         customer_id = session['customer']
         subscription_id = session['subscription']
+        plan = (session.get('metadata') or {}).get('plan', 'starter')
 
         # Activate subscription on agent's phone number
         if customer_phone:
             user = get_user(customer_phone)
             if not user:
                 create_user(customer_phone)
-            activate_subscription(customer_phone, customer_id, subscription_id)
+            activate_subscription(customer_phone, customer_id, subscription_id, plan=plan)
 
         # Track conversion
         track_event("subscription_created", customer_phone, metadata={
@@ -4755,11 +4766,32 @@ border-top:1px solid var(--border);margin-top:1rem;}}
 <a href="{pdf_url}" class="btn btn-outline" download="{filename}">Download PDF</a>
 </div>
 
+<div class="actions">
+<button class="btn btn-secondary" id="docusign-toggle">Send to DocuSign</button>
+<button class="btn btn-secondary" id="webhook-toggle">Webhook / Zapier</button>
+</div>
+
 <div class="email-form" id="email-form">
 <label>Listing agent's email</label>
 <input type="email" id="email-to" placeholder="agent@example.com" value="{email_sent_to}">
 <button class="btn btn-primary" id="send-email-btn" style="width:100%;">Send Offer PDF</button>
 <div class="email-status" id="email-status"></div>
+</div>
+
+<div class="email-form" id="docusign-form">
+<label>Listing agent's name</label>
+<input type="text" id="ds-name" placeholder="Jane Smith">
+<label>Listing agent's email</label>
+<input type="email" id="ds-email" placeholder="agent@example.com">
+<button class="btn btn-primary" id="send-docusign-btn" style="width:100%;">Send via DocuSign</button>
+<div class="email-status" id="docusign-status"></div>
+</div>
+
+<div class="email-form" id="webhook-form">
+<label>Webhook URL (Zapier or any endpoint)</label>
+<input type="url" id="wh-url" placeholder="https://hooks.zapier.com/...">
+<button class="btn btn-primary" id="save-webhook-btn" style="width:100%;">Save Webhook</button>
+<div class="email-status" id="webhook-status"></div>
 </div>
 
 <iframe src="{pdf_url}" class="pdf-frame" title="Offer PDF"></iframe>
@@ -4816,6 +4848,71 @@ sendBtn.addEventListener('click',function(){{
 }});
 
 emailInput.addEventListener('keydown',function(e){{if(e.key==='Enter')sendBtn.click();}});
+
+var dsToggle=document.getElementById('docusign-toggle'),
+    dsForm=document.getElementById('docusign-form'),
+    dsBtn=document.getElementById('send-docusign-btn'),
+    dsStatus=document.getElementById('docusign-status'),
+    dsName=document.getElementById('ds-name'),
+    dsEmail=document.getElementById('ds-email');
+
+dsToggle.addEventListener('click',function(){{
+  dsForm.classList.toggle('show');
+  if(dsForm.classList.contains('show'))dsName.focus();
+}});
+
+dsBtn.addEventListener('click',function(){{
+  var name=dsName.value.trim(),email=dsEmail.value.trim();
+  if(!name||!email){{dsStatus.textContent='Name and email required';dsStatus.className='email-status error';return;}}
+  dsStatus.className='email-status';dsStatus.style.display='none';
+  dsBtn.textContent='Sending...';dsBtn.disabled=true;
+  fetch('/api/docusign',{{method:'POST',headers:{{'Content-Type':'application/json'}},
+    body:JSON.stringify({{pdf_filename:'{filename}',signer_email:email,signer_name:name,parsed:{{address:'{address}'}}}})
+  }}).then(function(r){{return r.json();}}).then(function(d){{
+    if(d.success){{
+      dsStatus.textContent='Sent! Envelope: '+d.envelope_id;dsStatus.className='email-status success';
+      dsBtn.textContent='✓ Sent';
+    }}else{{
+      dsStatus.textContent=d.error||'Failed to send.';dsStatus.className='email-status error';
+      dsBtn.textContent='Send via DocuSign';dsBtn.disabled=false;
+    }}
+  }}).catch(function(){{
+    dsStatus.textContent='Network error. Try again.';dsStatus.className='email-status error';
+    dsBtn.textContent='Send via DocuSign';dsBtn.disabled=false;
+  }});
+}});
+
+var whToggle=document.getElementById('webhook-toggle'),
+    whForm=document.getElementById('webhook-form'),
+    whBtn=document.getElementById('save-webhook-btn'),
+    whStatus=document.getElementById('webhook-status'),
+    whUrl=document.getElementById('wh-url');
+
+whToggle.addEventListener('click',function(){{
+  whForm.classList.toggle('show');
+  if(whForm.classList.contains('show'))whUrl.focus();
+}});
+
+whBtn.addEventListener('click',function(){{
+  var url=whUrl.value.trim();
+  if(!url){{whStatus.textContent='Enter a webhook URL';whStatus.className='email-status error';return;}}
+  whStatus.className='email-status';whStatus.style.display='none';
+  whBtn.textContent='Saving...';whBtn.disabled=true;
+  fetch('/api/webhook',{{method:'POST',headers:{{'Content-Type':'application/json'}},
+    body:JSON.stringify({{source_id:'{offer["phone"]}',url:url}})
+  }}).then(function(r){{return r.json();}}).then(function(d){{
+    if(d.success){{
+      whStatus.textContent='Webhook saved! Future offers will POST here.';whStatus.className='email-status success';
+      whBtn.textContent='✓ Saved';
+    }}else{{
+      whStatus.textContent=d.error||'Failed to save.';whStatus.className='email-status error';
+      whBtn.textContent='Save Webhook';whBtn.disabled=false;
+    }}
+  }}).catch(function(){{
+    whStatus.textContent='Network error. Try again.';whStatus.className='email-status error';
+    whBtn.textContent='Save Webhook';whBtn.disabled=false;
+  }});
+}});
 }})();
 </script>
 </body>

@@ -34,9 +34,17 @@ def init_db():
             updated_at TEXT
         )
     """)
+    # Table may already exist from before plan tracking was added.
+    try:
+        cursor.execute("ALTER TABLE users ADD COLUMN plan TEXT DEFAULT 'starter'")
+    except sqlite3.OperationalError:
+        pass  # column already exists
 
     conn.commit()
     conn.close()
+
+# Plans that include DocuSign send + Webhook/Zapier automation, in ascending order.
+PROFESSIONAL_PLANS = {"professional", "brokerage"}
 
 def get_user(phone: str) -> dict:
     """Get user data by phone number"""
@@ -44,7 +52,7 @@ def get_user(phone: str) -> dict:
     cursor = conn.cursor()
 
     cursor.execute("""
-        SELECT phone, offer_count, is_subscribed, stripe_customer_id, stripe_subscription_id
+        SELECT phone, offer_count, is_subscribed, stripe_customer_id, stripe_subscription_id, plan
         FROM users WHERE phone = ?
     """, (phone,))
 
@@ -58,8 +66,17 @@ def get_user(phone: str) -> dict:
             "is_subscribed": bool(row[2]),
             "stripe_customer_id": row[3],
             "stripe_subscription_id": row[4],
+            "plan": row[5] or "starter",
         }
     return None
+
+
+def has_professional_access(phone: str) -> bool:
+    """DocuSign send + Webhook/Zapier automation are Professional-plan features."""
+    if is_admin_phone(phone):
+        return True
+    user = get_user(phone)
+    return bool(user) and user["is_subscribed"] and user["plan"] in PROFESSIONAL_PLANS
 
 def create_user(phone: str) -> dict:
     """Create new user record"""
@@ -103,8 +120,10 @@ def increment_offer_count(phone: str) -> int:
 
     return new_count
 
-def activate_subscription(phone: str, stripe_customer_id: str, stripe_subscription_id: str):
-    """Mark user as subscribed"""
+def activate_subscription(phone: str, stripe_customer_id: str, stripe_subscription_id: str, plan: str = "starter"):
+    """Mark user as subscribed on the given plan (starter/professional/brokerage)."""
+    if plan not in ("starter", "professional", "brokerage"):
+        plan = "starter"
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     now = datetime.utcnow().isoformat()
@@ -114,9 +133,10 @@ def activate_subscription(phone: str, stripe_customer_id: str, stripe_subscripti
         SET is_subscribed = 1,
             stripe_customer_id = ?,
             stripe_subscription_id = ?,
+            plan = ?,
             updated_at = ?
         WHERE phone = ?
-    """, (stripe_customer_id, stripe_subscription_id, now, phone))
+    """, (stripe_customer_id, stripe_subscription_id, plan, now, phone))
 
     conn.commit()
     conn.close()
