@@ -215,6 +215,35 @@ def get_last_blocked_state(phone: str, hours: int = 72):
     import json
     return json.loads(row[0]).get("state")
 
+def get_landing_visits_by_source(days: int = 30) -> list:
+    """Raw homepage-visit counts grouped by ?src= attribution, regardless of
+    whether the visitor ever signed up. Signups-by-source alone can't tell
+    "nobody opened the link" apart from "people opened it and left" -- both
+    look like silence. This answers that: a nonzero count here with zero
+    matching signups means the link IS being clicked, just not converting;
+    a zero count means the messages aren't being opened/clicked at all."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cutoff = (datetime.utcnow() - timedelta(days=days)).isoformat()
+    cursor.execute("""
+        SELECT metadata FROM events
+        WHERE event_type = 'landing_visit' AND created_at > ?
+    """, (cutoff,))
+    rows = cursor.fetchall()
+    conn.close()
+
+    import json
+    counts = {}
+    for row in rows:
+        metadata = json.loads(row[0]) if row[0] else {}
+        source = metadata.get("source") or "direct"
+        counts[source] = counts.get(source, 0) + 1
+
+    return sorted(
+        [{"source": source, "count": count} for source, count in counts.items()],
+        key=lambda r: -r["count"]
+    )
+
 def get_signups_by_source(days: int = 30) -> list:
     """Signup counts grouped by ?src= attribution (Direct Reach, BiggerPockets,
     LinkedIn, etc.), most recent-heavy channels first. 'direct' covers anyone

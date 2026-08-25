@@ -32,7 +32,7 @@ from pdf_validator import validate_offer_pdf
 from amendment import fill_amendment_pdf
 from agent_profiles import get_agent_profile, save_agent_profile
 from subscriptions import can_generate_offer, increment_offer_count, activate_subscription, deactivate_subscription, get_user, create_user, FREE_OFFER_LIMIT, is_admin_phone, has_professional_access
-from analytics import track_event, get_conversion_metrics, get_revenue_metrics, get_recent_sms, get_recent_sms_failures, get_last_blocked_state, get_waitlist_signups, get_signups_by_source
+from analytics import track_event, get_conversion_metrics, get_revenue_metrics, get_recent_sms, get_recent_sms_failures, get_last_blocked_state, get_waitlist_signups, get_signups_by_source, get_landing_visits_by_source
 from integrations import send_offer_email, fire_webhook, save_webhook, get_webhook, delete_webhook, send_to_docusign
 from offers_db import record_offer, get_offers_for_phone, get_offer_by_filename, record_amendment, get_amendments_for_phone, record_thread_response, record_email_sent
 from sms_utils import parse_incoming_sms
@@ -937,6 +937,13 @@ def index():
     # can't overwrite genuine attribution with "direct".
     if src and not request.cookies.get("ta_src"):
         resp.set_cookie("ta_src", src, max_age=30 * 24 * 3600, httponly=True, samesite="Lax")
+    # Log the raw click regardless of whether it ever converts -- signups-by-
+    # source alone can't tell "nobody opened the link" apart from "people
+    # opened it and left", since both are silence in that table. Only log
+    # first-touch (no ta_src cookie yet) so repeat visits from the same
+    # browser during the same 30-day window don't inflate the count.
+    if src and not request.cookies.get("ta_src"):
+        track_event("landing_visit", None, {"source": src})
     return resp
 
 
@@ -3123,6 +3130,7 @@ def analytics_dashboard():
     recent_failures = get_recent_sms_failures(limit=20)
     waitlist_signups = get_waitlist_signups(limit=200)
     signups_by_source = get_signups_by_source(days=30)
+    landing_visits_by_source = get_landing_visits_by_source(days=30)
 
     sms_rows = ""
     for sms in recent_sms:
@@ -3152,6 +3160,9 @@ def analytics_dashboard():
     source_rows = "".join(
         f"<tr><td>{s['source']}</td><td>{s['count']}</td></tr>" for s in signups_by_source
     ) or '<tr><td colspan="2" style="padding:10px;color:#666;">No signups yet.</td></tr>'
+    visit_rows = "".join(
+        f"<tr><td>{v['source']}</td><td>{v['count']}</td></tr>" for v in landing_visits_by_source
+    ) or '<tr><td colspan="2" style="padding:10px;color:#666;">No tagged visits yet.</td></tr>'
     waitlist_rows = ""
     for w in waitlist_signups[:20]:
         from datetime import datetime
@@ -3187,6 +3198,17 @@ body{{font-family:system-ui;max-width:800px;margin:40px auto;padding:20px;}}
     {source_rows}
   </table>
   <p class="label" style="margin-top:8px;">Tag outreach links with <code>?src=name</code> (e.g. <code>txtanoffer.com/signup?src=direct_reach</code>) to attribute signups here.</p>
+</div>
+<div class="metric">
+  <h3>Landing Page Visits by Source (30 days)</h3>
+  <table style="width:100%;border-collapse:collapse;margin-top:10px;">
+    <tr style="background:#eee;text-align:left;">
+      <th style="padding:8px;">Source</th>
+      <th style="padding:8px;">Visits</th>
+    </tr>
+    {visit_rows}
+  </table>
+  <p class="label" style="margin-top:8px;">Raw clicks on a <code>?src=</code> link, counted even if the visitor never signs up &mdash; tells you whether a channel is being opened at all vs. opened-but-not-converting.</p>
 </div>
 <div class="metric">
   <h3>Trial Activation</h3>
