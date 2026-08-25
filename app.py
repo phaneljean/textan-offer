@@ -4439,6 +4439,33 @@ def profile():
 
     existing = get_agent_profile(phone) if phone else {}
 
+    # Preview of the attribution card recipients see on /thread pages --
+    # answers "why don't I see my card" directly, right where an agent would
+    # look for it, instead of leaving them to guess.
+    preview_name = (existing.get("name") or "").strip()
+    if phone and has_professional_access(phone):
+        if preview_name:
+            preview_brokerage = (existing.get("brokerage") or "").strip()
+            preview_license = (existing.get("license") or "").strip()
+            preview_meta_parts = [p for p in [preview_brokerage, f"License #{preview_license}" if preview_license else ""] if p]
+            preview_meta = " &middot; ".join(preview_meta_parts)
+            preview_initials = "".join(p[0].upper() for p in preview_name.split()[:2]) or "TX"
+            preview_block = f"""
+  <div class="preview-label">How this appears to recipients</div>
+  <div class="agent-card">
+    <div class="agent-avatar">{preview_initials}</div>
+    <div>
+      <div class="agent-name">{preview_name}</div>
+      {f'<div class="agent-meta">{preview_meta}</div>' if preview_meta else ''}
+    </div>
+  </div>"""
+        else:
+            preview_block = """
+  <div class="preview-hint">Fill in your name below and save to see your agent card &mdash; it appears at the top of every offer page a listing agent opens.</div>"""
+    else:
+        preview_block = """
+  <div class="preview-hint">Agent branding (the card recipients see with your name, brokerage, and license) is a <a href="/pricing">Professional-plan</a> feature. Upgrade to have it appear on your offer pages.</div>"""
+
     return f"""
 <!DOCTYPE html>
 <html lang="en">
@@ -4507,6 +4534,19 @@ def profile():
     background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
     padding:2rem;box-shadow:0 1px 3px rgba(15,31,47,0.05);
   }}
+  .preview-label {{
+    font-size:0.7rem;font-weight:700;color:var(--text-dim);
+    text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.6rem;
+  }}
+  .agent-card{{display:flex;align-items:center;gap:0.85rem;background:var(--bg-card);border:1px solid var(--border);
+  border-radius:var(--radius-sm);padding:0.9rem 1.1rem;margin-bottom:1.5rem;box-shadow:0 1px 3px rgba(15,31,47,0.05);}}
+  .agent-avatar{{width:42px;height:42px;border-radius:50%;background:var(--accent-tint);color:var(--accent-dark);
+  display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.9rem;flex-shrink:0;}}
+  .agent-name{{font-size:0.9rem;font-weight:700;color:var(--text);}}
+  .agent-meta{{font-size:0.78rem;color:var(--text-dim);margin-top:0.1rem;}}
+  .preview-hint{{font-size:0.82rem;color:var(--text-dim);background:var(--bg-card);border:1px solid var(--border);
+  border-radius:var(--radius-sm);padding:0.9rem 1.1rem;margin-bottom:1.5rem;line-height:1.5;}}
+  .preview-hint a{{color:var(--accent-dark);font-weight:600;}}
   .field-label {{
     font-size:0.7rem;font-weight:700;color:var(--text-dim);
     text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.5rem;display:block;
@@ -4570,6 +4610,7 @@ def profile():
     <h1>Agent Profile</h1>
     <p>Your info auto-fills the cover page on every offer you generate.</p>
   </div>
+{preview_block}
 
   <div class="form-card">
     <form method="POST" action="/profile">
