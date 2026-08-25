@@ -15,6 +15,7 @@ DEFAULTS = {
     "brokerage": "",
     "business_address": "",
     "title_company": "",
+    "title_company_address": "",
     "default_earnest_pct": 0.01,
     "default_option_fee": 250,
 }
@@ -27,6 +28,7 @@ DEMO_PROFILE = {
     "brokerage": "Your Brokerage",
     "business_address": "123 Main St, Austin, TX 78701",
     "title_company": "Your Title Co.",
+    "title_company_address": "456 Congress Ave, Austin, TX 78701",
     "default_earnest_pct": 0.01,
     "default_option_fee": 250,
 }
@@ -50,6 +52,11 @@ def _init_profiles_table():
     # Table may already exist from before business_address was added.
     try:
         conn.execute("ALTER TABLE agent_profiles ADD COLUMN business_address TEXT DEFAULT ''")
+    except sqlite3.OperationalError:
+        pass  # column already exists
+    # Table may already exist from before title_company_address was added.
+    try:
+        conn.execute("ALTER TABLE agent_profiles ADD COLUMN title_company_address TEXT DEFAULT ''")
     except sqlite3.OperationalError:
         pass  # column already exists
     conn.commit()
@@ -78,6 +85,7 @@ def get_agent_profile(source_id: str) -> dict:
             "brokerage": row["brokerage"],
             "business_address": row["business_address"],
             "title_company": row["title_company"],
+            "title_company_address": row["title_company_address"],
             "default_earnest_pct": row["default_earnest_pct"],
             "default_option_fee": row["default_option_fee"],
         }
@@ -91,12 +99,12 @@ def get_agent_profile(source_id: str) -> dict:
 def save_agent_profile(source_id: str, profile: dict):
     conn = sqlite3.connect(DB_PATH)
     conn.execute("""
-        INSERT INTO agent_profiles (source_id, name, license, phone, email, brokerage, business_address, title_company, default_earnest_pct, default_option_fee)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO agent_profiles (source_id, name, license, phone, email, brokerage, business_address, title_company, title_company_address, default_earnest_pct, default_option_fee)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(source_id) DO UPDATE SET
             name=excluded.name, license=excluded.license, phone=excluded.phone,
             email=excluded.email, brokerage=excluded.brokerage, business_address=excluded.business_address,
-            title_company=excluded.title_company,
+            title_company=excluded.title_company, title_company_address=excluded.title_company_address,
             default_earnest_pct=excluded.default_earnest_pct, default_option_fee=excluded.default_option_fee
     """, (
         source_id,
@@ -107,6 +115,7 @@ def save_agent_profile(source_id: str, profile: dict):
         profile.get("brokerage", ""),
         profile.get("business_address", ""),
         profile.get("title_company", ""),
+        profile.get("title_company_address", ""),
         profile.get("default_earnest_pct", 0.01),
         profile.get("default_option_fee", 250),
     ))

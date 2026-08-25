@@ -88,6 +88,14 @@ FIELD_MAP = {
     "option_fee_amount": "as earnest money to 2",     # true: 5A "$___ as the option fee"
     "escrow_agent_name": "undefined_6",                # true: 5A "deliver to ___ (Escrow Agent) at"
 
+    # Escrow agent mailing address -- the "at ___ (address)" that follows the
+    # name above on the same line, wrapping to a second line below it.
+    # Rect-verified 2026-08-25 by rendering distinct markers into every
+    # candidate field on this row and matching against the printed text;
+    # both fields' /T names describe unrelated clauses, not this address.
+    "escrow_agent_address_line1": "other party in writing before entering into a contract of sale  Disclose if applicable",  # true: 5A address line 1
+    "escrow_agent_address_line2": "undefined_7",  # true: 5A address line 2
+
     # Title company (Paragraph 6A) -- separate from escrow agent above.
     "title_company": "insurance Title Policy issued by",
 
@@ -254,7 +262,11 @@ def fill_offer_pdf(parsed: dict, agent_phone: str) -> str:
     if agent.get("title_company"):
         values[FIELD_MAP["title_company"]] = agent["title_company"]
         values[FIELD_MAP["escrow_agent_name"]] = agent["title_company"]
-    
+    if agent.get("title_company_address"):
+        addr_line1, _, addr_line2 = agent["title_company_address"].partition(",")
+        values[FIELD_MAP["escrow_agent_address_line1"]] = addr_line1.strip()
+        values[FIELD_MAP["escrow_agent_address_line2"]] = addr_line2.strip()
+
     from pypdf.generic import NameObject, TextStringObject, BooleanObject
 
     for page in writer.pages:

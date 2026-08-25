@@ -1434,6 +1434,22 @@ def finalize_offer_sms(agent_phone: str, draft: dict):
     if draft.get("has_hoa"):
         includes += " + HOA Addendum"
     includes += " + IABS"
+
+    # One-time nudge on the very first offer only -- an agent with no saved
+    # profile sees a much longer blocking-fields checklist on the review
+    # page (Title Company, Escrow Agent, Buyer's-agent contact all show up
+    # missing) than one who's filled it in once. Told here, once, instead of
+    # leaving them to discover the checklist shrinks only by trial and error.
+    profile_nudge = ""
+    if new_count == 1:
+        agent_profile = draft.get("agent") or {}
+        if not agent_profile.get("title_company") or not agent_profile.get("business_address"):
+            profile_url = request.host_url.rstrip("/") + "/profile"
+            profile_nudge = (
+                f"\n\nTip: add your Title Company & Business Address once at "
+                f"{profile_url} and future offers will need far less filled in by hand."
+            )
+
     reply = (
         f"DONE. TREC draft for {draft['address']} ready:\n\n"
         f"Review & Email: {pdf_url}\n\n"
@@ -1441,6 +1457,7 @@ def finalize_offer_sms(agent_phone: str, draft: dict):
         f"Need to change price/terms? Just text new offer.\n\n"
         f"Reply DASHBOARD for all offers. STOP to unsubscribe, HELP for help."
         f"{status_line}"
+        f"{profile_nudge}"
     )
     twilio_send_sms(agent_phone, reply)
 
@@ -4454,6 +4471,7 @@ def profile():
                 "brokerage": request.form.get("brokerage", "").strip(),
                 "business_address": request.form.get("business_address", "").strip(),
                 "title_company": request.form.get("title_company", "").strip(),
+                "title_company_address": request.form.get("title_company_address", "").strip(),
                 "default_earnest_pct": float(request.form.get("earnest_pct", "1") or "1") / 100,
                 "default_option_fee": int(float(request.form.get("option_fee", "250") or "250")),
             })
@@ -4658,6 +4676,9 @@ def profile():
 
       <label class="field-label">Title company</label>
       <input type="text" name="title_company" placeholder="Texas Title Co." value="{existing.get('title_company', '')}">
+
+      <label class="field-label">Title company address</label>
+      <input type="text" name="title_company_address" placeholder="456 Congress Ave, Austin, TX 78701" value="{existing.get('title_company_address', '')}">
 
       <div class="row">
         <div>
@@ -5437,6 +5458,7 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
           {_pf("Email", agent.get("email"))}
           {_pf("Business Address", agent.get("business_address"))}
           {_pf("Title Company", agent.get("title_company"))}
+          {_pf("Title Company Address", agent.get("title_company_address"))}
           {_pf("Default Earnest %", f"{agent['default_earnest_pct']*100:.1f}%" if agent.get("default_earnest_pct") else None)}
           {_pf("Default Option Fee", f"${agent['default_option_fee']:,}" if agent.get("default_option_fee") else None)}
         </div>"""

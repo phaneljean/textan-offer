@@ -172,14 +172,16 @@ def validate_offer_pdf(pdf_path: str, parsed: dict) -> dict:
         blocking.append("Section 3B: Sum of financing")
     price_val = require("sales_price", "Section 3C: Sales Price total")
 
-    # Section 5: Earnest Money & Escrow Agent name (address is a warning --
-    # never collected, see module docstring)
+    # Section 5: Earnest Money & Escrow Agent name/address. The address only
+    # auto-fills when the agent has set a Title Company address in their
+    # profile (pdf_filler.py); otherwise it's genuinely never collected.
     require("escrow_agent_name", "Section 5A: Escrow Agent name")
     earnest_val = require("earnest_money_amount", "Section 5A: Earnest money amount")
     option_val = require("option_fee_amount", "Section 5A: Option fee amount")
-    warnings.append(
-        "Section 5A: Escrow Agent mailing address is never auto-filled -- add it by hand before sending."
-    )
+    if not values.get(TREC_FIELDS["escrow_agent_address_line1"], "").strip():
+        warnings.append(
+            "Section 5A: Escrow Agent mailing address is never auto-filled -- add it by hand before sending, or add a Title Company address to your profile."
+        )
 
     # Section 6A: Title Company
     require("title_company", "Section 6A: Title Company")
