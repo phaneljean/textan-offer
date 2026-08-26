@@ -684,7 +684,7 @@ def index():
   </section>
 
   <section class="hero section" style="padding-top:1rem;">
-    <div class="icon-circle" style="background:#E7F7F1;border-color:rgba(16,185,129,0.28);color:#10b981;">
+    <div class="icon-circle" style="background:#0f1f2f;border-color:#0f1f2f;color:#10b981;">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
     </div>
     <h1 style="font-size:2.1rem;">See exactly what you'll get</h1>
