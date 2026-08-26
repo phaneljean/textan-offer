@@ -868,11 +868,12 @@ def index():
   });
 })();
 
-// Illustrative example above: types out the sample SMS, then reveals
-// Address/Price/Down/Closing one at a time, then the PDF card -- purely
-// decorative, loops on a timer. Independent of the real /api/demo form
-// above; a real submission stops the loop for good so it can never
-// clobber a real result the visitor is looking at.
+// Illustrative example above: types out the sample SMS once on page
+// load, then reveals Address/Price/Down/Closing one at a time, then
+// the PDF card -- purely decorative, plays exactly once and then sits
+// on the finished state. Independent of the real /api/demo form above;
+// a real submission stops it for good so it can never clobber a real
+// result the visitor is looking at.
 (function(){
   var typedEl = document.getElementById('sms-typed'),
       cursorEl = document.getElementById('sms-cursor'),
@@ -925,7 +926,6 @@ def index():
                 fade(pdfArrow, true);
                 after(200, function(){
                   fade(pdfCard, true);
-                  after(3500, playCycle);
                 });
               });
             });
