@@ -500,10 +500,12 @@ def index():
       border: 1px solid var(--border);
       border-radius: var(--radius);
       padding: 1.75rem;
-      transition: var(--transition);
+      transition: transform 0.25s cubic-bezier(0.16,1,0.3,1), box-shadow 0.25s ease, border-color 0.25s ease;
     }
     .step-card:hover {
       border-color: var(--border-hover);
+      transform: translateY(-4px);
+      box-shadow: 0 4px 8px rgba(15,31,47,0.05), 0 16px 32px -8px rgba(15,31,47,0.14);
     }
     .step-num {
       width: 38px; height: 38px;
