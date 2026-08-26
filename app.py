@@ -300,6 +300,8 @@ def index():
       text-decoration: none;
     }
     .nav-cta:hover { background: rgba(15,31,47,0.1); }
+    .nav-toggle { display: none; flex-direction: column; justify-content: center; gap: 5px; width: 34px; height: 34px; background: none; border: none; cursor: pointer; padding: 0; }
+    .nav-toggle span { display: block; width: 100%; height: 2px; background: var(--text); border-radius: 2px; }
 
     /* Main column */
     .main { max-width: 840px; margin: 0 auto; padding: 0 2rem; }
@@ -589,7 +591,16 @@ def index():
       .main { padding: 0 1.25rem; }
       .hero h1 { font-size: 2.25rem; }
       .steps-grid { grid-template-columns: 1fr; }
-      .nav-links { display: none; }
+      .nav-toggle { display: flex; }
+      .nav-links {
+        display: none; position: absolute; top: 100%; left: 0; right: 0;
+        flex-direction: column; gap: 0; padding: 0.5rem 1.25rem 1.25rem;
+        background: #fff; border-bottom: 1px solid rgba(15,31,47,0.08);
+        white-space: normal;
+      }
+      .nav-links.open { display: flex; }
+      .nav-links a { padding: 0.75rem 0; border-bottom: 1px solid rgba(15,31,47,0.08); }
+      .nav-links a:last-child { border-bottom: none; }
       .stats { gap: 1.5rem; }
     }
     @media (max-width: 480px) {
@@ -607,7 +618,7 @@ def index():
       <div class="nav-logo"><img src="/static/logo.svg" alt="TxtAnOffer"></div>
       <span>TxtAnOffer</span>
     </div>
-    <div class="nav-links">
+    <div class="nav-links" id="navLinks">
       <a href="#how">How it works</a>
       <a href="#trust">Accuracy</a>
       <a href="/pricing">Pricing</a>
@@ -620,7 +631,21 @@ def index():
       <a href="/login">Log In</a>
     </div>
     <a href="/signup" class="nav-cta">Start Free Trial</a>
+    <button class="nav-toggle" id="navToggle" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
   </nav>
+  <script>
+  (function(){
+    var t=document.getElementById('navToggle'), l=document.getElementById('navLinks');
+    if(!t||!l) return;
+    t.addEventListener('click', function(){
+      var open = l.classList.toggle('open');
+      t.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+    l.querySelectorAll('a').forEach(function(a){
+      a.addEventListener('click', function(){ l.classList.remove('open'); t.setAttribute('aria-expanded','false'); });
+    });
+  })();
+  </script>
 
   <div class="main">
   <section class="hero section">
@@ -1805,6 +1830,8 @@ DEMO_FORM = """
     transition:var(--transition);
   }}
   .nav-cta:hover {{transform:scale(1.05);box-shadow:0 0 24px rgba(0,0,0,0.25);}}
+  .nav-toggle {{ display: none; flex-direction: column; justify-content: center; gap: 5px; width: 34px; height: 34px; background: none; border: none; cursor: pointer; padding: 0; }}
+  .nav-toggle span {{ display: block; width: 100%; height: 2px; background: var(--text); border-radius: 2px; }}
 
   /* Page layout */
   .page {{max-width:580px;margin:0 auto;padding:4rem 1.5rem;overflow-x:hidden;width:100%;}}
@@ -1992,7 +2019,11 @@ DEMO_FORM = """
     .page h1 {{font-size:1.75rem;}}
     .workflow {{flex-direction:column;gap:1rem;}}
     .wf-arrow {{transform:rotate(90deg);}}
-    .nav-links {{display:none;}}
+    .nav-toggle {{display:flex;}}
+    .nav-links {{display:none;position:absolute;top:100%;left:0;right:0;flex-direction:column;gap:0;padding:0.5rem 1.25rem 1.25rem;background:#fff;border-bottom:1px solid rgba(15,31,47,0.08);}}
+    .nav-links.open {{display:flex;}}
+    .nav-links a {{padding:0.75rem 0;border-bottom:1px solid rgba(15,31,47,0.08);}}
+    .nav-links a:last-child {{border-bottom:none;}}
     .card {{padding:1.25rem;}}
     .integration-actions {{flex-direction:column;}}
     .int-btn {{min-width:unset;}}
@@ -2007,7 +2038,7 @@ DEMO_FORM = """
       <div class="nav-logo"><img src="/static/logo.svg" alt="TxtAnOffer"></div>
       <span>TxtAnOffer</span>
     </div>
-    <div class="nav-links">
+    <div class="nav-links" id="navLinks">
       <a href="/#how">How it works</a>
       <a href="/#trust">Accuracy</a>
       <a href="/pricing">Pricing</a>
@@ -2019,7 +2050,21 @@ DEMO_FORM = """
       <a href="/login">Log In</a>
     </div>
     <a href="/signup" class="nav-cta">Start Free Trial</a>
+    <button class="nav-toggle" id="navToggle" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
   </nav>
+  <script>
+  (function(){{
+    var t=document.getElementById('navToggle'), l=document.getElementById('navLinks');
+    if(!t||!l) return;
+    t.addEventListener('click', function(){{
+      var open = l.classList.toggle('open');
+      t.setAttribute('aria-expanded', open ? 'true' : 'false');
+    }});
+    l.querySelectorAll('a').forEach(function(a){{
+      a.addEventListener('click', function(){{ l.classList.remove('open'); t.setAttribute('aria-expanded','false'); }});
+    }});
+  }})();
+  </script>
 
   <div class="page">
     <div class="page-badge">Live Demo</div>
@@ -2432,6 +2477,8 @@ position:sticky;top:0;z-index:100;}
 .nav-links a:hover{color:var(--text);}
 .nav-cta{background:var(--accent);color:#fff;padding:0.55rem 1.35rem;border-radius:9999px;
 font-size:0.875rem;font-weight:600;}
+.nav-toggle{display:none;flex-direction:column;justify-content:center;gap:5px;width:34px;height:34px;background:none;border:none;cursor:pointer;padding:0;}
+.nav-toggle span{display:block;width:100%;height:2px;background:var(--text);border-radius:2px;}
 .container{max-width:900px;margin:0 auto;padding:3rem 2rem;}
 h1{font-size:2rem;font-weight:800;letter-spacing:-0.03em;margin-bottom:0.5rem;color:var(--text);}
 .subtitle{color:var(--text-muted);font-size:1rem;margin-bottom:2rem;}
@@ -2476,7 +2523,11 @@ padding:0.4rem 0.85rem;font-size:0.8rem;color:var(--text-muted);cursor:pointer;t
 @media(max-width:600px){
 .result-grid{grid-template-columns:1fr;}
 .format-grid{grid-template-columns:1fr;}
-.nav-links{display:none;}
+.nav-toggle{display:flex;}
+.nav-links{display:none;position:absolute;top:100%;left:0;right:0;flex-direction:column;gap:0;padding:0.5rem 1.25rem 1.25rem;background:#fff;border-bottom:1px solid rgba(15,31,47,0.08);}
+.nav-links.open{display:flex;}
+.nav-links a{padding:0.75rem 0;border-bottom:1px solid rgba(15,31,47,0.08);}
+.nav-links a:last-child{border-bottom:none;}
 }
 </style>
 </head>
@@ -2486,7 +2537,7 @@ padding:0.4rem 0.85rem;font-size:0.8rem;color:var(--text-muted);cursor:pointer;t
 <div class="nav-logo"><img src="/static/logo.svg" alt="TxtAnOffer"></div>
 <span>TxtAnOffer</span>
 </a>
-<div class="nav-links">
+<div class="nav-links" id="navLinks">
 <a href="/#how">How it works</a>
 <a href="/#trust">Accuracy</a>
 <a href="/pricing">Pricing</a>
@@ -2498,7 +2549,21 @@ padding:0.4rem 0.85rem;font-size:0.8rem;color:var(--text-muted);cursor:pointer;t
 <a href="/login">Log In</a>
 </div>
 <a href="/signup" class="nav-cta">Start Free Trial</a>
+<button class="nav-toggle" id="navToggle" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
 </nav>
+<script>
+(function(){
+  var t=document.getElementById('navToggle'), l=document.getElementById('navLinks');
+  if(!t||!l) return;
+  t.addEventListener('click', function(){
+    var open = l.classList.toggle('open');
+    t.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+  l.querySelectorAll('a').forEach(function(a){
+    a.addEventListener('click', function(){ l.classList.remove('open'); t.setAttribute('aria-expanded','false'); });
+  });
+})();
+</script>
 
 <div class="container">
 <h1>Parser Playground</h1>
@@ -2866,6 +2931,8 @@ def pricing():
     transition:var(--transition);
   }
   .nav-cta:hover {transform:scale(1.05);box-shadow:0 0 24px rgba(23,23,23,0.3);}
+  .nav-toggle { display: none; flex-direction: column; justify-content: center; gap: 5px; width: 34px; height: 34px; background: none; border: none; cursor: pointer; padding: 0; }
+  .nav-toggle span { display: block; width: 100%; height: 2px; background: var(--text); border-radius: 2px; }
 
   /* Header */
   .page-header {text-align:center;padding:4rem 2rem 3rem;max-width:700px;margin:0 auto;}
@@ -2942,7 +3009,15 @@ def pricing():
   @media(max-width:600px) {
     .page-header h1 {font-size:2rem;}
     .pricing-grid {padding:0 1rem 2rem;}
-    .nav-links {display:none;}
+    .nav-toggle { display: flex; }
+    .nav-links {
+      display: none; position: absolute; top: 100%; left: 0; right: 0;
+      flex-direction: column; gap: 0; padding: 0.5rem 1.25rem 1.25rem;
+      background: #fff; border-bottom: 1px solid rgba(15,31,47,0.08);
+    }
+    .nav-links.open { display: flex; }
+    .nav-links a { padding: 0.75rem 0; border-bottom: 1px solid rgba(15,31,47,0.08); }
+    .nav-links a:last-child { border-bottom: none; }
   }
 </style>
 </head>
@@ -2953,7 +3028,7 @@ def pricing():
     <div class="nav-logo"><img src="/static/logo.svg" alt="TxtAnOffer"></div>
     <span>TxtAnOffer</span>
   </a>
-  <div class="nav-links">
+  <div class="nav-links" id="navLinks">
     <a href="/#how">How it works</a>
     <a href="/#trust">Accuracy</a>
     <a href="/pricing">Pricing</a>
@@ -2965,7 +3040,21 @@ def pricing():
     <a href="/login">Log In</a>
   </div>
   <a href="/signup" class="nav-cta">Start Free Trial</a>
+  <button class="nav-toggle" id="navToggle" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
 </nav>
+<script>
+(function(){
+  var t=document.getElementById('navToggle'), l=document.getElementById('navLinks');
+  if(!t||!l) return;
+  t.addEventListener('click', function(){
+    var open = l.classList.toggle('open');
+    t.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+  l.querySelectorAll('a').forEach(function(a){
+    a.addEventListener('click', function(){ l.classList.remove('open'); t.setAttribute('aria-expanded','false'); });
+  });
+})();
+</script>
 
 <div class="page-header">
   <h1>Simple pricing.<br><span class="gradient">Massive time savings.</span></h1>
@@ -3718,6 +3807,8 @@ def terms():
     transition:var(--transition);
   }
   .nav-cta:hover {transform:scale(1.05);box-shadow:0 0 24px rgba(0,0,0,0.25);}
+  .nav-toggle { display: none; flex-direction: column; justify-content: center; gap: 5px; width: 34px; height: 34px; background: none; border: none; cursor: pointer; padding: 0; }
+  .nav-toggle span { display: block; width: 100%; height: 2px; background: var(--text); border-radius: 2px; }
 
   .container {max-width:720px;margin:0 auto;padding:3rem 2rem 4rem;}
   .page-header {margin-bottom:2.5rem;}
@@ -3753,7 +3844,15 @@ def terms():
   @media(max-width:600px) {
     .container {padding:2rem 1rem 3rem;}
     .legal-card {padding:1.5rem 1.25rem;}
-    .nav-links {display:none;}
+    .nav-toggle { display: flex; }
+    .nav-links {
+      display: none; position: absolute; top: 100%; left: 0; right: 0;
+      flex-direction: column; gap: 0; padding: 0.5rem 1.25rem 1.25rem;
+      background: #fff; border-bottom: 1px solid rgba(15,31,47,0.08);
+    }
+    .nav-links.open { display: flex; }
+    .nav-links a { padding: 0.75rem 0; border-bottom: 1px solid rgba(15,31,47,0.08); }
+    .nav-links a:last-child { border-bottom: none; }
   }
 </style>
 </head>
@@ -3763,7 +3862,7 @@ def terms():
     <div class="nav-logo"><img src="/static/logo.svg" alt="TxtAnOffer"></div>
     <span>TxtAnOffer</span>
   </a>
-  <div class="nav-links">
+  <div class="nav-links" id="navLinks">
     <a href="/#how">How it works</a>
     <a href="/#trust">Accuracy</a>
     <a href="/pricing">Pricing</a>
@@ -3775,7 +3874,21 @@ def terms():
     <a href="/login">Log In</a>
   </div>
   <a href="/signup" class="nav-cta">Start Free Trial</a>
+  <button class="nav-toggle" id="navToggle" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
 </nav>
+<script>
+(function(){
+  var t=document.getElementById('navToggle'), l=document.getElementById('navLinks');
+  if(!t||!l) return;
+  t.addEventListener('click', function(){
+    var open = l.classList.toggle('open');
+    t.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+  l.querySelectorAll('a').forEach(function(a){
+    a.addEventListener('click', function(){ l.classList.remove('open'); t.setAttribute('aria-expanded','false'); });
+  });
+})();
+</script>
 
 <div class="container">
   <div class="page-header">
@@ -3971,6 +4084,8 @@ def privacy():
     transition:var(--transition);
   }
   .nav-cta:hover {transform:scale(1.05);box-shadow:0 0 24px rgba(0,0,0,0.25);}
+  .nav-toggle { display: none; flex-direction: column; justify-content: center; gap: 5px; width: 34px; height: 34px; background: none; border: none; cursor: pointer; padding: 0; }
+  .nav-toggle span { display: block; width: 100%; height: 2px; background: var(--text); border-radius: 2px; }
 
   .container {max-width:720px;margin:0 auto;padding:3rem 2rem 4rem;}
   .page-header {margin-bottom:2.5rem;}
@@ -4000,7 +4115,15 @@ def privacy():
   @media(max-width:600px) {
     .container {padding:2rem 1rem 3rem;}
     .legal-card {padding:1.5rem 1.25rem;}
-    .nav-links {display:none;}
+    .nav-toggle { display: flex; }
+    .nav-links {
+      display: none; position: absolute; top: 100%; left: 0; right: 0;
+      flex-direction: column; gap: 0; padding: 0.5rem 1.25rem 1.25rem;
+      background: #fff; border-bottom: 1px solid rgba(15,31,47,0.08);
+    }
+    .nav-links.open { display: flex; }
+    .nav-links a { padding: 0.75rem 0; border-bottom: 1px solid rgba(15,31,47,0.08); }
+    .nav-links a:last-child { border-bottom: none; }
   }
 </style>
 </head>
@@ -4010,7 +4133,7 @@ def privacy():
     <div class="nav-logo"><img src="/static/logo.svg" alt="TxtAnOffer"></div>
     <span>TxtAnOffer</span>
   </a>
-  <div class="nav-links">
+  <div class="nav-links" id="navLinks">
     <a href="/#how">How it works</a>
     <a href="/#trust">Accuracy</a>
     <a href="/pricing">Pricing</a>
@@ -4022,7 +4145,21 @@ def privacy():
     <a href="/login">Log In</a>
   </div>
   <a href="/signup" class="nav-cta">Start Free Trial</a>
+  <button class="nav-toggle" id="navToggle" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
 </nav>
+<script>
+(function(){
+  var t=document.getElementById('navToggle'), l=document.getElementById('navLinks');
+  if(!t||!l) return;
+  t.addEventListener('click', function(){
+    var open = l.classList.toggle('open');
+    t.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+  l.querySelectorAll('a').forEach(function(a){
+    a.addEventListener('click', function(){ l.classList.remove('open'); t.setAttribute('aria-expanded','false'); });
+  });
+})();
+</script>
 
 <div class="container">
   <div class="page-header">
@@ -4179,6 +4316,8 @@ def faq():
     transition:var(--transition);
   }
   .nav-cta:hover {transform:scale(1.05);box-shadow:0 0 24px rgba(0,0,0,0.25);}
+  .nav-toggle { display: none; flex-direction: column; justify-content: center; gap: 5px; width: 34px; height: 34px; background: none; border: none; cursor: pointer; padding: 0; }
+  .nav-toggle span { display: block; width: 100%; height: 2px; background: var(--text); border-radius: 2px; }
   .container {max-width:720px;margin:0 auto;padding:3rem 2rem 4rem;}
   .page-header {margin-bottom:2.5rem;}
   .page-header h1 {font-size:2rem;font-weight:800;letter-spacing:-0.03em;margin-bottom:0.25rem;color:var(--text);}
@@ -4197,7 +4336,15 @@ def faq():
   @media(max-width:600px) {
     .container {padding:2rem 1rem 3rem;}
     .faq-item {padding:1.25rem 1.25rem;}
-    .nav-links {display:none;}
+    .nav-toggle { display: flex; }
+    .nav-links {
+      display: none; position: absolute; top: 100%; left: 0; right: 0;
+      flex-direction: column; gap: 0; padding: 0.5rem 1.25rem 1.25rem;
+      background: #fff; border-bottom: 1px solid rgba(15,31,47,0.08);
+    }
+    .nav-links.open { display: flex; }
+    .nav-links a { padding: 0.75rem 0; border-bottom: 1px solid rgba(15,31,47,0.08); }
+    .nav-links a:last-child { border-bottom: none; }
   }
 </style>
 </head>
@@ -4207,7 +4354,7 @@ def faq():
     <div class="nav-logo"><img src="/static/logo.svg" alt="TxtAnOffer"></div>
     <span>TxtAnOffer</span>
   </a>
-  <div class="nav-links">
+  <div class="nav-links" id="navLinks">
     <a href="/#how">How it works</a>
     <a href="/#trust">Accuracy</a>
     <a href="/pricing">Pricing</a>
@@ -4219,7 +4366,21 @@ def faq():
     <a href="/login">Log In</a>
   </div>
   <a href="/signup" class="nav-cta">Start Free Trial</a>
+  <button class="nav-toggle" id="navToggle" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
 </nav>
+<script>
+(function(){
+  var t=document.getElementById('navToggle'), l=document.getElementById('navLinks');
+  if(!t||!l) return;
+  t.addEventListener('click', function(){
+    var open = l.classList.toggle('open');
+    t.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+  l.querySelectorAll('a').forEach(function(a){
+    a.addEventListener('click', function(){ l.classList.remove('open'); t.setAttribute('aria-expanded','false'); });
+  });
+})();
+</script>
 
 <div class="container">
   <div class="page-header">
@@ -4332,6 +4493,8 @@ def trec_changes():
     transition:var(--transition);
   }
   .nav-cta:hover {transform:scale(1.05);box-shadow:0 0 24px rgba(0,0,0,0.25);}
+  .nav-toggle { display: none; flex-direction: column; justify-content: center; gap: 5px; width: 34px; height: 34px; background: none; border: none; cursor: pointer; padding: 0; }
+  .nav-toggle span { display: block; width: 100%; height: 2px; background: var(--text); border-radius: 2px; }
   .container {max-width:760px;margin:0 auto;padding:3rem 2rem 4rem;}
   .page-header {margin-bottom:0.5rem;}
   .badge {
@@ -4391,7 +4554,15 @@ def trec_changes():
   @media(max-width:600px) {
     .container {padding:2rem 1rem 3rem;}
     .change-card {padding:1.25rem 1.25rem;}
-    .nav-links {display:none;}
+    .nav-toggle { display: flex; }
+    .nav-links {
+      display: none; position: absolute; top: 100%; left: 0; right: 0;
+      flex-direction: column; gap: 0; padding: 0.5rem 1.25rem 1.25rem;
+      background: #fff; border-bottom: 1px solid rgba(15,31,47,0.08);
+    }
+    .nav-links.open { display: flex; }
+    .nav-links a { padding: 0.75rem 0; border-bottom: 1px solid rgba(15,31,47,0.08); }
+    .nav-links a:last-child { border-bottom: none; }
   }
 </style>
 </head>
@@ -4401,7 +4572,7 @@ def trec_changes():
     <div class="nav-logo"><img src="/static/logo.svg" alt="TxtAnOffer"></div>
     <span>TxtAnOffer</span>
   </a>
-  <div class="nav-links">
+  <div class="nav-links" id="navLinks">
     <a href="/#how">How it works</a>
     <a href="/#trust">Accuracy</a>
     <a href="/pricing">Pricing</a>
@@ -4411,7 +4582,21 @@ def trec_changes():
     <a href="/login">Log In</a>
   </div>
   <a href="/signup" class="nav-cta">Start Free Trial</a>
+  <button class="nav-toggle" id="navToggle" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
 </nav>
+<script>
+(function(){
+  var t=document.getElementById('navToggle'), l=document.getElementById('navLinks');
+  if(!t||!l) return;
+  t.addEventListener('click', function(){
+    var open = l.classList.toggle('open');
+    t.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+  l.querySelectorAll('a').forEach(function(a){
+    a.addEventListener('click', function(){ l.classList.remove('open'); t.setAttribute('aria-expanded','false'); });
+  });
+})();
+</script>
 
 <div class="container">
   <div class="page-header">
@@ -4535,6 +4720,8 @@ def about():
     transition:var(--transition);
   }
   .nav-cta:hover {transform:scale(1.05);box-shadow:0 0 24px rgba(0,0,0,0.25);}
+  .nav-toggle { display: none; flex-direction: column; justify-content: center; gap: 5px; width: 34px; height: 34px; background: none; border: none; cursor: pointer; padding: 0; }
+  .nav-toggle span { display: block; width: 100%; height: 2px; background: var(--text); border-radius: 2px; }
   .container {max-width:680px;margin:0 auto;padding:3.5rem 2rem 4rem;}
   .avatar-lg {
     width:64px;height:64px;border-radius:50%;overflow:hidden;margin-bottom:1.5rem;
@@ -4558,7 +4745,15 @@ def about():
   .foot a:hover {text-decoration:underline;}
   @media(max-width:600px) {
     .container {padding:2.5rem 1.25rem 3rem;}
-    .nav-links {display:none;}
+    .nav-toggle { display: flex; }
+    .nav-links {
+      display: none; position: absolute; top: 100%; left: 0; right: 0;
+      flex-direction: column; gap: 0; padding: 0.5rem 1.25rem 1.25rem;
+      background: #fff; border-bottom: 1px solid rgba(15,31,47,0.08);
+    }
+    .nav-links.open { display: flex; }
+    .nav-links a { padding: 0.75rem 0; border-bottom: 1px solid rgba(15,31,47,0.08); }
+    .nav-links a:last-child { border-bottom: none; }
   }
 </style>
 </head>
@@ -4568,7 +4763,7 @@ def about():
     <div class="nav-logo"><img src="/static/logo.svg" alt="TxtAnOffer"></div>
     <span>TxtAnOffer</span>
   </a>
-  <div class="nav-links">
+  <div class="nav-links" id="navLinks">
     <a href="/#how">How it works</a>
     <a href="/#trust">Accuracy</a>
     <a href="/pricing">Pricing</a>
@@ -4580,7 +4775,21 @@ def about():
     <a href="/login">Log In</a>
   </div>
   <a href="/signup" class="nav-cta">Start Free Trial</a>
+  <button class="nav-toggle" id="navToggle" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
 </nav>
+<script>
+(function(){
+  var t=document.getElementById('navToggle'), l=document.getElementById('navLinks');
+  if(!t||!l) return;
+  t.addEventListener('click', function(){
+    var open = l.classList.toggle('open');
+    t.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+  l.querySelectorAll('a').forEach(function(a){
+    a.addEventListener('click', function(){ l.classList.remove('open'); t.setAttribute('aria-expanded','false'); });
+  });
+})();
+</script>
 
 <div class="container">
   <div class="avatar-lg"><img src="/static/logo.svg" alt="TxtAnOffer"></div>
@@ -4676,6 +4885,8 @@ def contact():
     transition:var(--transition);
   }
   .nav-cta:hover {transform:scale(1.05);box-shadow:0 0 24px rgba(0,0,0,0.25);}
+  .nav-toggle { display: none; flex-direction: column; justify-content: center; gap: 5px; width: 34px; height: 34px; background: none; border: none; cursor: pointer; padding: 0; }
+  .nav-toggle span { display: block; width: 100%; height: 2px; background: var(--text); border-radius: 2px; }
   .container {max-width:560px;margin:0 auto;padding:3.5rem 2rem 4rem;}
   .page-header {margin-bottom:2rem;}
   .page-header h1 {font-size:2rem;font-weight:800;letter-spacing:-0.03em;margin-bottom:0.4rem;color:var(--text);}
@@ -4697,7 +4908,15 @@ def contact():
   .foot a:hover {text-decoration:underline;}
   @media(max-width:600px) {
     .container {padding:2.5rem 1.25rem 3rem;}
-    .nav-links {display:none;}
+    .nav-toggle { display: flex; }
+    .nav-links {
+      display: none; position: absolute; top: 100%; left: 0; right: 0;
+      flex-direction: column; gap: 0; padding: 0.5rem 1.25rem 1.25rem;
+      background: #fff; border-bottom: 1px solid rgba(15,31,47,0.08);
+    }
+    .nav-links.open { display: flex; }
+    .nav-links a { padding: 0.75rem 0; border-bottom: 1px solid rgba(15,31,47,0.08); }
+    .nav-links a:last-child { border-bottom: none; }
   }
 </style>
 </head>
@@ -4707,7 +4926,7 @@ def contact():
     <div class="nav-logo"><img src="/static/logo.svg" alt="TxtAnOffer"></div>
     <span>TxtAnOffer</span>
   </a>
-  <div class="nav-links">
+  <div class="nav-links" id="navLinks">
     <a href="/#how">How it works</a>
     <a href="/#trust">Accuracy</a>
     <a href="/pricing">Pricing</a>
@@ -4719,7 +4938,21 @@ def contact():
     <a href="/login">Log In</a>
   </div>
   <a href="/signup" class="nav-cta">Start Free Trial</a>
+  <button class="nav-toggle" id="navToggle" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
 </nav>
+<script>
+(function(){
+  var t=document.getElementById('navToggle'), l=document.getElementById('navLinks');
+  if(!t||!l) return;
+  t.addEventListener('click', function(){
+    var open = l.classList.toggle('open');
+    t.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+  l.querySelectorAll('a').forEach(function(a){
+    a.addEventListener('click', function(){ l.classList.remove('open'); t.setAttribute('aria-expanded','false'); });
+  });
+})();
+</script>
 
 <div class="container">
   <div class="page-header">
@@ -4871,6 +5104,8 @@ def profile():
     transition:var(--transition);
   }}
   .nav-cta:hover {{transform:scale(1.05);box-shadow:0 0 24px rgba(23,23,23,0.3);}}
+  .nav-toggle {{ display: none; flex-direction: column; justify-content: center; gap: 5px; width: 34px; height: 34px; background: none; border: none; cursor: pointer; padding: 0; }}
+  .nav-toggle span {{ display: block; width: 100%; height: 2px; background: var(--text); border-radius: 2px; }}
 
   .container {{max-width:520px;margin:0 auto;padding:3rem 1.5rem 4rem;}}
   .page-header {{margin-bottom:2rem;}}
@@ -4933,7 +5168,15 @@ def profile():
   @media(max-width:600px){{
     .container {{padding:2rem 1rem 3rem;}}
     .form-card {{padding:1.5rem 1.25rem;}}
-    .nav-links {{display:none;}}
+    .nav-toggle {{ display: flex; }}
+    .nav-links {{
+      display: none; position: absolute; top: 100%; left: 0; right: 0;
+      flex-direction: column; gap: 0; padding: 0.5rem 1.25rem 1.25rem;
+      background: #fff; border-bottom: 1px solid rgba(15,31,47,0.08);
+    }}
+    .nav-links.open {{ display: flex; }}
+    .nav-links a {{ padding: 0.75rem 0; border-bottom: 1px solid rgba(15,31,47,0.08); }}
+    .nav-links a:last-child {{ border-bottom: none; }}
     .row {{flex-direction:column;gap:0;}}
   }}
 </style>
@@ -4944,13 +5187,27 @@ def profile():
     <div class="nav-logo"><img src="/static/logo.svg" alt="TxtAnOffer"></div>
     <span>TxtAnOffer</span>
   </a>
-  <div class="nav-links">
+  <div class="nav-links" id="navLinks">
     <a href="/">Home</a>
     <a href="/demo">Demo</a>
     <a href="/pricing">Pricing</a>
   </div>
   <a href="/signup" class="nav-cta">Start Free Trial</a>
+  <button class="nav-toggle" id="navToggle" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
 </nav>
+<script>
+(function(){{
+  var t=document.getElementById('navToggle'), l=document.getElementById('navLinks');
+  if(!t||!l) return;
+  t.addEventListener('click', function(){{
+    var open = l.classList.toggle('open');
+    t.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }});
+  l.querySelectorAll('a').forEach(function(a){{
+    a.addEventListener('click', function(){{ l.classList.remove('open'); t.setAttribute('aria-expanded','false'); }});
+  }});
+}})();
+</script>
 
 <div class="container">
   <div class="page-header">
@@ -5830,6 +6087,8 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
   .nav-links {{display:flex;gap:2rem;font-size:0.875rem;font-weight:500;color:var(--text-muted);}}
   .nav-links a {{transition:var(--transition);}}
   .nav-links a:hover {{color:var(--text);}}
+  .nav-toggle {{ display: none; flex-direction: column; justify-content: center; gap: 5px; width: 34px; height: 34px; background: none; border: none; cursor: pointer; padding: 0; }}
+  .nav-toggle span {{ display: block; width: 100%; height: 2px; background: var(--text); border-radius: 2px; }}
 
   .container {{max-width:1000px;margin:0 auto;padding:2.5rem 2rem 4rem;}}
   .greeting {{font-size:1.75rem;font-weight:800;letter-spacing:-0.03em;margin-bottom:0.5rem;color:var(--text);}}
@@ -5969,7 +6228,15 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
     .container {{padding:1.5rem 1rem 1rem;}}
     .stats {{grid-template-columns:1fr 1fr 1fr;}}
     .greeting {{font-size:1.35rem;}}
-    .nav-links {{display:none;}}
+    .nav-toggle {{ display: flex; }}
+    .nav-links {{
+      display: none; position: absolute; top: 100%; left: 0; right: 0;
+      flex-direction: column; gap: 0; padding: 0.5rem 1.25rem 1.25rem;
+      background: #fff; border-bottom: 1px solid rgba(15,31,47,0.08);
+    }}
+    .nav-links.open {{ display: flex; }}
+    .nav-links a {{ padding: 0.75rem 0; border-bottom: 1px solid rgba(15,31,47,0.08); }}
+    .nav-links a:last-child {{ border-bottom: none; }}
     .offer-top {{flex-direction:column;align-items:flex-start;gap:0.15rem;}}
   }}
 </style>
@@ -5980,11 +6247,25 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
     <div class="nav-logo"><img src="/static/logo.svg" alt="TxtAnOffer"></div>
     <span>TxtAnOffer</span>
   </a>
-  <div class="nav-links">
+  <div class="nav-links" id="navLinks">
     <a href="{profile_url}">Edit Profile</a>
     <a href="/pricing">Pricing</a>
   </div>
+  <button class="nav-toggle" id="navToggle" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
 </nav>
+<script>
+(function(){{
+  var t=document.getElementById('navToggle'), l=document.getElementById('navLinks');
+  if(!t||!l) return;
+  t.addEventListener('click', function(){{
+    var open = l.classList.toggle('open');
+    t.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }});
+  l.querySelectorAll('a').forEach(function(a){{
+    a.addEventListener('click', function(){{ l.classList.remove('open'); t.setAttribute('aria-expanded','false'); }});
+  }});
+}})();
+</script>
 
 <div class="container">
   <div class="greeting">Welcome back{', ' + agent.get('name').split()[0] if agent.get('name') else ''}</div>
