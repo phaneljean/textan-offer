@@ -831,16 +831,37 @@ def index():
     loading.style.display='block';
     errEl.style.display='none';
     result.classList.remove('show');
+    var typedEl=document.getElementById('sms-typed'),
+        addrEl=document.getElementById('res-addr'),
+        priceEl=document.getElementById('res-price'),
+        downEl=document.getElementById('res-down'),
+        closeEl=document.getElementById('res-close'),
+        pdfArrow=document.getElementById('pdf-flow-arrow'),
+        pdfCard=document.getElementById('res-pdf');
+    // Show the visitor's own text immediately -- the illustrative loop's
+    // frozen "123 Main St" example must never linger once a real
+    // submission is in flight, or the SMS bubble contradicts the result.
+    if(typedEl) typedEl.textContent=text;
     fetch('/api/demo',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({offer_text:text})})
     .then(function(r){return r.json()})
     .then(function(d){
       loading.style.display='none';
-      if(d.error){errEl.textContent=d.error;errEl.style.display='block';return;}
-      document.getElementById('res-addr').textContent=d.address;
-      document.getElementById('res-price').textContent='$'+Number(d.price).toLocaleString();
-      document.getElementById('res-down').textContent=d.down_pct+'%';
-      document.getElementById('res-close').textContent=d.close_date;
+      if(d.error){
+        errEl.textContent=d.error;errEl.style.display='block';
+        // Clear stale illustrative values so the error doesn't sit next
+        // to a fake address/price/PDF that was never actually generated.
+        addrEl.textContent=''; priceEl.textContent=''; downEl.textContent=''; closeEl.textContent='';
+        if(pdfArrow) pdfArrow.style.opacity='0';
+        if(pdfCard) pdfCard.style.opacity='0';
+        return;
+      }
+      addrEl.textContent=d.address;
+      priceEl.textContent='$'+Number(d.price).toLocaleString();
+      downEl.textContent=d.down_pct+'%';
+      closeEl.textContent=d.close_date;
       document.getElementById('res-pdf').href=d.pdf_url;
+      if(pdfArrow) pdfArrow.style.opacity='1';
+      if(pdfCard) pdfCard.style.opacity='1';
       result.classList.add('show');
     })
     .catch(function(){loading.style.display='none';errEl.textContent='Something went wrong. Try again.';errEl.style.display='block';});
