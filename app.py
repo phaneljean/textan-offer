@@ -2765,6 +2765,30 @@ def api_docusign():
     if not os.path.exists(pdf_path):
         return jsonify({"success": False, "error": "PDF not found"}), 404
 
+    # Same required-fields gate as "Email to Listing Agent" -- a contract
+    # missing a required field (e.g. buyer/seller legal name) must never
+    # go out for e-signature either. The review page disables the button
+    # when this fails, but that's only a UI convenience -- this endpoint
+    # can be hit directly, so re-check server-side.
+    if owning_offer and owning_offer.get("price"):
+        down_amt = int(owning_offer["price"] * owning_offer["down_pct"])
+        validation_parsed = {
+            "address": owning_offer.get("address") or parsed.get("address", ""),
+            "price": owning_offer["price"], "down_payment_amount": down_amt,
+            "loan_amount": owning_offer["price"] - down_amt, "close_days": owning_offer["close_days"],
+            "created_at": owning_offer.get("created_at"),
+            "financing_type_specified": bool(owning_offer.get("financing_type")),
+        }
+    else:
+        validation_parsed = parsed
+    validation = validate_offer_pdf(pdf_path, validation_parsed)
+    if validation["blocking"]:
+        return jsonify({
+            "success": False,
+            "error": "This contract is missing required fields and can't be sent for signature: " + "; ".join(validation["blocking"]),
+            "missing_fields": validation["blocking"],
+        }), 422
+
     result = send_to_docusign(pdf_path, parsed, signer_email, signer_name)
     track_event("docusign_sent" if result["success"] else "docusign_failed", signer_email, result)
     return jsonify(result), 200 if result["success"] else 500
@@ -4931,7 +4955,7 @@ border-top:1px solid var(--border);margin-top:1rem;}}
 </div>
 
 <div class="actions">
-<button class="btn btn-secondary" id="docusign-toggle">Send to DocuSign</button>
+<button class="btn btn-secondary" id="docusign-toggle"{' disabled' if validation['blocking'] else ''}>Send to DocuSign</button>
 <button class="btn btn-secondary" id="webhook-toggle">Webhook / Zapier</button>
 </div>
 
