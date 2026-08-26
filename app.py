@@ -2782,11 +2782,20 @@ def api_docusign():
     else:
         validation_parsed = parsed
     validation = validate_offer_pdf(pdf_path, validation_parsed)
-    if validation["blocking"]:
+    # Buyer/seller legal name is only a WARNING for Email/Download -- the
+    # agent can still open the PDF and type the name in by hand before
+    # emailing or printing it. That "fill in by hand" escape hatch doesn't
+    # exist for DocuSign: this button routes straight to e-signature, so a
+    # blank legal name must block here too, even though it doesn't block
+    # the other two send paths.
+    docusign_blocking = list(validation["blocking"]) + [
+        w for w in validation["warnings"] if "legal name is blank" in w
+    ]
+    if docusign_blocking:
         return jsonify({
             "success": False,
-            "error": "This contract is missing required fields and can't be sent for signature: " + "; ".join(validation["blocking"]),
-            "missing_fields": validation["blocking"],
+            "error": "This contract is missing required fields and can't be sent for signature: " + "; ".join(docusign_blocking),
+            "missing_fields": docusign_blocking,
         }), 422
 
     result = send_to_docusign(pdf_path, parsed, signer_email, signer_name)
@@ -4822,6 +4831,12 @@ def review_offer(filename):
         "close_days": close_days, "created_at": offer.get("created_at"),
         "financing_type_specified": bool(offer.get("financing_type")),
     }) if os.path.exists(pdf_path_on_disk) else {"ok": False, "blocking": ["PDF file not found on server"], "warnings": []}
+    # DocuSign has no "fill in by hand" escape hatch (unlike Email/Download,
+    # where the agent can still type the name in before sending) -- a blank
+    # buyer/seller legal name must disable this button too, even though
+    # it's only a warning for the other two send paths. Matches the
+    # server-side check in api_docusign().
+    docusign_blocking = validation["blocking"] or [w for w in validation["warnings"] if "legal name is blank" in w]
 
     pdf_url = f"/offers/{filename}?expires={expires}&sig={sig}"
 
@@ -4955,7 +4970,7 @@ border-top:1px solid var(--border);margin-top:1rem;}}
 </div>
 
 <div class="actions">
-<button class="btn btn-secondary" id="docusign-toggle"{' disabled' if validation['blocking'] else ''}>Send to DocuSign</button>
+<button class="btn btn-secondary" id="docusign-toggle"{' disabled' if docusign_blocking else ''}>Send to DocuSign</button>
 <button class="btn btn-secondary" id="webhook-toggle">Webhook / Zapier</button>
 </div>
 
