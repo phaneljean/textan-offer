@@ -614,10 +614,10 @@ def index():
 <body>
 
   <nav class="nav">
-    <div class="nav-left">
+    <a href="/" class="nav-left">
       <div class="nav-logo"><img src="/static/logo.svg" alt="TxtAnOffer"></div>
       <span>TxtAnOffer</span>
-    </div>
+    </a>
     <div class="nav-links" id="navLinks">
       <a href="#how">How it works</a>
       <a href="#trust">Accuracy</a>
@@ -2034,10 +2034,10 @@ DEMO_FORM = """
 </head>
 <body>
   <nav class="nav">
-    <div class="nav-left">
+    <a href="/" class="nav-left">
       <div class="nav-logo"><img src="/static/logo.svg" alt="TxtAnOffer"></div>
       <span>TxtAnOffer</span>
-    </div>
+    </a>
     <div class="nav-links" id="navLinks">
       <a href="/#how">How it works</a>
       <a href="/#trust">Accuracy</a>
