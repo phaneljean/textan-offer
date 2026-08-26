@@ -610,12 +610,12 @@ def index():
     <div class="nav-links">
       <a href="#how">How it works</a>
       <a href="#trust">Accuracy</a>
-      <a href="/trec-changes">TREC Changes</a>
       <a href="/pricing">Pricing</a>
       <a href="/demo">Demo</a>
       <a href="/playground">Parser Playground</a>
       <a href="/faq">FAQ</a>
       <a href="/about">About</a>
+      <a href="/trec-changes">TREC Changes</a>
       <a href="/contact">Support</a>
       <a href="/login">Log In</a>
     </div>
@@ -4404,10 +4404,10 @@ def trec_changes():
   <div class="nav-links">
     <a href="/#how">How it works</a>
     <a href="/#trust">Accuracy</a>
-    <a href="/trec-changes">TREC Changes</a>
     <a href="/pricing">Pricing</a>
     <a href="/faq">FAQ</a>
     <a href="/about">About</a>
+    <a href="/trec-changes">TREC Changes</a>
     <a href="/login">Log In</a>
   </div>
   <a href="/signup" class="nav-cta">Start Free Trial</a>
