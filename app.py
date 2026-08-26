@@ -610,6 +610,7 @@ def index():
     <div class="nav-links">
       <a href="#how">How it works</a>
       <a href="#trust">Accuracy</a>
+      <a href="/trec-changes">TREC Changes</a>
       <a href="/pricing">Pricing</a>
       <a href="/demo">Demo</a>
       <a href="/playground">Parser Playground</a>
@@ -776,7 +777,7 @@ def index():
       <div class="step-card">
         <div class="step-num">&check;</div>
         <h3>Built on TREC's current form</h3>
-        <p>Generated from TREC's actual published 20-19 form &mdash; current Paragraph 12B commission language, the mandatory Water Disclosure, and the required IABS brokerage-services notice all included &mdash; not a stale template someone forgot to update. Mention an HOA and the 36-10 addendum attaches itself, checkbox and all &mdash; no separate form to remember.</p>
+        <p>Generated from TREC's actual published 20-19 form &mdash; current Paragraph 12B commission language, the mandatory Water Disclosure, and the required IABS brokerage-services notice all included &mdash; not a stale template someone forgot to update. Mention an HOA and the 36-10 addendum attaches itself, checkbox and all &mdash; no separate form to remember. <a href="/trec-changes" style="color:var(--text);text-decoration:underline;">See what changed &rarr;</a></p>
       </div>
       <div class="step-card">
         <div class="step-num">&check;</div>
@@ -4268,6 +4269,194 @@ def faq():
   </div>
 
   <p class="foot">Still have a question? Email <a href="mailto:support@txtanoffer.com">support@txtanoffer.com</a>.<br><a href="/">&larr; Back to home</a> &middot; <a href="/terms">Terms</a> &middot; <a href="/privacy">Privacy Policy</a></p>
+</div>
+</body>
+</html>"""
+    return html.replace("__TREC_FORM_DATE__", TREC_FORM_CURRENT_AS_OF)
+
+
+@app.route("/trec-changes")
+def trec_changes():
+    html = """<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TREC Contract Changes — TxtAnOffer</title>
+<meta name="description" content="What's changed on the TREC 20-19 One to Four Family Residential Contract -- Paragraph 12B commission language, the mandatory Water Disclosure, the HOA addendum, and how TxtAnOffer keeps every generated contract current.">
+<link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<style>
+  :root {
+    --bg: #F5F5F7;
+    --bg-card: #fff;
+    --border: rgba(15,31,47,0.08);
+    --text: #0f1f2f;
+    --text-muted: #5a6b7a;
+    --text-dim: #8a9aa9;
+    --accent: #171717;
+    --accent-light: #525252;
+    --accent-dark: #000000;
+    --accent-tint: #F0F0EE;
+    --green: #10b981;
+    --green-tint: #E7F7F1;
+    --radius: 1.25rem;
+    --radius-sm: 0.85rem;
+    --transition: all 0.2s ease;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+    background:var(--bg); color:var(--text); line-height:1.5;
+    -webkit-font-smoothing:antialiased; min-height:100vh;
+  }
+  a { color:inherit; text-decoration:none; }
+  .nav {
+    display:flex;align-items:center;justify-content:space-between;
+    padding:1rem 2rem;position:sticky;top:0;
+    background:rgba(255,255,255,0.85);backdrop-filter:blur(20px);
+    -webkit-backdrop-filter:blur(20px);
+    border-bottom:1px solid var(--border);z-index:100;
+  }
+  .nav-left {display:flex;align-items:center;gap:0.6rem;font-weight:700;font-size:1.1rem;letter-spacing:-0.02em;color:var(--text);}
+  .nav-logo {width:34px;height:34px;border-radius:22%;overflow:hidden;}
+  .nav-logo img {width:100%;height:100%;object-fit:contain;}
+  .nav-links {display:flex;gap:1.75rem;font-size:0.875rem;font-weight:500;color:var(--text-muted);}
+  .nav-links a {transition:var(--transition);}
+  .nav-links a:hover {color:var(--text);}
+  .nav-cta {
+    background:var(--accent);color:#fff;padding:0.55rem 1.35rem;border-radius:9999px;
+    font-size:0.875rem;font-weight:600;text-decoration:none;display:inline-block;
+    transition:var(--transition);
+  }
+  .nav-cta:hover {transform:scale(1.05);box-shadow:0 0 24px rgba(0,0,0,0.25);}
+  .container {max-width:760px;margin:0 auto;padding:3rem 2rem 4rem;}
+  .page-header {margin-bottom:0.5rem;}
+  .badge {
+    display:inline-flex;align-items:center;gap:0.4rem;
+    background:var(--green-tint);color:#067a5c;border:1px solid rgba(16,185,129,0.28);
+    padding:0.35rem 0.85rem;border-radius:9999px;font-size:0.72rem;font-weight:700;
+    text-transform:uppercase;letter-spacing:0.04em;margin-bottom:1rem;
+  }
+  .page-header h1 {font-size:2rem;font-weight:800;letter-spacing:-0.03em;margin-bottom:0.5rem;color:var(--text);}
+  .page-header p {font-size:0.95rem;color:var(--text-muted);max-width:60ch;}
+  .last-verified {font-size:0.78rem;color:var(--text-dim);margin-top:1rem;margin-bottom:2.5rem;}
+  .change-card {
+    background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
+    padding:1.75rem;margin-bottom:1.1rem;box-shadow:0 1px 3px rgba(15,31,47,0.05);
+  }
+  .change-card .tag {
+    display:inline-block;font-size:0.68rem;font-weight:700;letter-spacing:0.05em;
+    text-transform:uppercase;color:#067a5c;background:var(--green-tint);
+    padding:0.2rem 0.6rem;border-radius:0.4rem;margin-bottom:0.75rem;
+  }
+  .change-card h2 {font-size:1.05rem;font-weight:700;margin-bottom:0.6rem;color:var(--text);}
+  .change-card p {font-size:0.87rem;line-height:1.7;color:var(--text-muted);}
+  .change-card p + p {margin-top:0.6rem;}
+  .change-card strong {color:var(--text);font-weight:600;}
+  .change-card .handled {
+    margin-top:0.9rem;padding-top:0.9rem;border-top:1px dashed var(--border);
+    font-size:0.83rem;color:var(--text);
+  }
+  .change-card .handled b {color:#067a5c;}
+  .disclaimer-box {
+    background:var(--accent-tint);border:1px solid var(--border);border-radius:var(--radius);
+    padding:1.5rem 1.75rem;margin-top:2rem;font-size:0.82rem;color:var(--text-muted);line-height:1.7;
+  }
+  .disclaimer-box strong {color:var(--text);}
+  .cta-row {
+    margin-top:2.5rem;padding:1.75rem;border-radius:var(--radius);
+    background:var(--text);color:#fff;text-align:center;
+  }
+  .cta-row p {font-size:0.95rem;margin-bottom:1rem;color:rgba(255,255,255,0.85);}
+  .cta-row a {
+    display:inline-block;background:#fff;color:var(--text);padding:0.7rem 1.6rem;
+    border-radius:9999px;font-weight:700;font-size:0.9rem;transition:var(--transition);
+  }
+  .cta-row a:hover {transform:scale(1.05);}
+  .foot {text-align:center;margin-top:2rem;font-size:0.8rem;color:var(--text-dim);}
+  .foot a {color:var(--accent-dark);}
+  .foot a:hover {text-decoration:underline;}
+  @media(max-width:600px) {
+    .container {padding:2rem 1rem 3rem;}
+    .change-card {padding:1.25rem 1.25rem;}
+    .nav-links {display:none;}
+  }
+</style>
+</head>
+<body>
+<nav class="nav">
+  <a href="/" class="nav-left">
+    <div class="nav-logo"><img src="/static/logo.svg" alt="TxtAnOffer"></div>
+    <span>TxtAnOffer</span>
+  </a>
+  <div class="nav-links">
+    <a href="/#how">How it works</a>
+    <a href="/#trust">Accuracy</a>
+    <a href="/trec-changes">TREC Changes</a>
+    <a href="/pricing">Pricing</a>
+    <a href="/faq">FAQ</a>
+    <a href="/about">About</a>
+    <a href="/login">Log In</a>
+  </div>
+  <a href="/signup" class="nav-cta">Start Free Trial</a>
+</nav>
+
+<div class="container">
+  <div class="page-header">
+    <div class="badge">&#9989; Mandatory as of __TREC_FORM_DATE__</div>
+    <h1>What changed on the TREC 20-19</h1>
+    <p>A plain-language rundown of what's currently required on the TREC One to Four Family Residential Contract (Resale) -- and exactly how TxtAnOffer handles each one automatically.</p>
+  </div>
+  <p class="last-verified">Last verified against the TREC-published form: __TREC_FORM_DATE__. This page is updated whenever the underlying form changes -- see the disclaimer below.</p>
+
+  <div class="change-card">
+    <span class="tag">Paragraph 12B</span>
+    <h2>Broker compensation language</h2>
+    <p>Following the industry-wide shift toward more explicit written buyer-broker compensation agreements, TREC's promulgated contract language in Paragraph 12 was updated. Every offer needs the current version of this paragraph, not a stale one from an old template sitting on someone's computer.</p>
+    <div class="handled"><b>How TxtAnOffer handles it:</b> Every generated 20-19 is built from the current TREC-published form, so Paragraph 12B is always the current version -- no old templates, no manual tracking of which revision you're supposed to be using.</div>
+  </div>
+
+  <div class="change-card">
+    <span class="tag">TREC 61-0</span>
+    <h2>Seller's Disclosure re: Groundwater / Surface Water</h2>
+    <p>This disclosure covers the seller's known groundwater and surface water rights on the property -- a mandatory attachment to the 20-19, not an optional add-on.</p>
+    <div class="handled"><b>How TxtAnOffer handles it:</b> Attached automatically to every generated contract. It's not something you have to remember to add separately.</div>
+  </div>
+
+  <div class="change-card">
+    <span class="tag">TREC 36-10</span>
+    <h2>Addendum for Property Subject to Mandatory HOA Membership</h2>
+    <p>Required whenever the property is subject to mandatory membership in a property owners association -- a common miss when a contract gets typed up quickly.</p>
+    <div class="handled"><b>How TxtAnOffer handles it:</b> Mention an HOA anywhere in your text and the 36-10 addendum attaches itself automatically, checkbox and all.</div>
+  </div>
+
+  <div class="change-card">
+    <span class="tag">TREC 40-11</span>
+    <h2>Third Party Financing Addendum</h2>
+    <p>Required whenever the offer isn't an all-cash deal -- financing type, loan terms, and buyer-approval sections all have to line up with the numbers in the main contract.</p>
+    <div class="handled"><b>How TxtAnOffer handles it:</b> Attached automatically for financed offers (and correctly left off for all-cash ones), with the financing terms reconciled against the main contract's numbers.</div>
+  </div>
+
+  <div class="change-card">
+    <span class="tag">IABS 1-2</span>
+    <h2>Information About Brokerage Services</h2>
+    <p>The required notice disclosing brokerage relationships to the parties involved in the transaction.</p>
+    <div class="handled"><b>How TxtAnOffer handles it:</b> Included with every generated contract, with your saved brokerage details filled in automatically from your profile.</div>
+  </div>
+
+  <div class="disclaimer-box">
+    <strong>This page is for general information only -- it is not legal advice and is not a substitute for advice from a licensed Texas real estate attorney.</strong> TxtAnOffer is an independent, third-party tool and is NOT affiliated with, endorsed by, or partnered with the Texas Real Estate Commission (TREC). "TREC" and the form numbers referenced above are designations of the Texas Real Estate Commission. We use publicly available TREC promulgated forms as templates; if TREC revises or replaces a form, there may be a delay before this page and the Service are updated. You, the licensed agent, are responsible for independently confirming that the form version used is current and appropriate for your transaction. See our <a href="/terms" style="color:var(--text);text-decoration:underline;">Terms of Service</a> for the full disclaimer.
+  </div>
+
+  <div class="cta-row">
+    <p>Text your offer terms and get back a contract built on the current form -- every time.</p>
+    <a href="/">Try it free, no card needed &rarr;</a>
+  </div>
+
+  <p class="foot">Questions about a specific form change? Email <a href="mailto:support@txtanoffer.com">support@txtanoffer.com</a>.<br><a href="/">&larr; Back to home</a> &middot; <a href="/faq">FAQ</a> &middot; <a href="/terms">Terms</a></p>
 </div>
 </body>
 </html>"""
