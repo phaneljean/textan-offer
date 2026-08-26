@@ -451,17 +451,23 @@ def index():
     @keyframes cardPop { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     .demo-result .res-row {
       display: flex; justify-content: space-between; align-items: center;
-      padding: 0.6rem 0.8rem; border-radius: 0.7rem; background: rgba(15,31,47,0.04);
+      padding: 0.6rem 0.8rem; border-radius: 0.7rem;
+      background: #fff; border: 1px solid rgba(15,31,47,0.06);
+      box-shadow: 0 1px 2px rgba(15,31,47,0.05), 0 6px 16px -6px rgba(15,31,47,0.18);
+      transition: opacity 0.35s ease, transform 0.35s cubic-bezier(0.16,1,0.3,1);
     }
-    .demo-result .res-row + .res-row { margin-top: 0.4rem; }
+    .demo-result .res-row + .res-row { margin-top: 0.5rem; }
     .demo-result .res-row .k { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-dim); }
     .demo-result .res-row .v { font-size: 0.85rem; font-weight: 600; color: var(--text); }
     .pdf-card {
       display: flex; align-items: center; gap: 0.75rem;
-      margin-top: 0.6rem; padding: 0.85rem; border-radius: 1rem;
-      background: #fff; border: 1px solid rgba(15,31,47,0.08);
+      margin-top: 0.7rem; padding: 0.85rem; border-radius: 1rem;
+      background: #fff; border: 1px solid rgba(15,31,47,0.06);
+      box-shadow: 0 2px 4px rgba(15,31,47,0.06), 0 10px 26px -8px rgba(15,31,47,0.22);
       text-decoration: none;
+      transition: opacity 0.35s ease, transform 0.35s cubic-bezier(0.16,1,0.3,1), box-shadow 0.2s ease;
     }
+    .pdf-card:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(15,31,47,0.08), 0 16px 34px -8px rgba(15,31,47,0.28); }
     .pdf-icon {
       width: 40px; height: 40px; border-radius: 0.7rem; flex-shrink: 0;
       background: var(--accent-tint); display: flex; align-items: center; justify-content: center;
@@ -474,7 +480,8 @@ def index():
     .sms-cursor { display: inline-block; width: 2px; height: 1em; margin-left: 2px; vertical-align: -2px; background: currentColor; opacity: 0; }
     .sms-cursor.blink { animation: smsCursorBlink 0.9s steps(1) infinite; }
     @keyframes smsCursorBlink { 50% { opacity: 0; } 0%, 100% { opacity: 1; } }
-    .res-row .v, #pdf-flow-arrow, #res-pdf { transition: opacity 0.3s ease; }
+    .res-row .v, #pdf-flow-arrow, #res-pdf { transition: opacity 0.35s ease, transform 0.35s cubic-bezier(0.16,1,0.3,1); }
+    .res-row .v { display: inline-block; }
     @media (prefers-reduced-motion: reduce) {
       .sms-cursor.blink { animation: none; opacity: 0; }
     }
@@ -893,7 +900,11 @@ def index():
 
   function clearTimers(){ timers.forEach(function(t){clearTimeout(t);}); timers = []; }
   function after(ms, fn){ timers.push(setTimeout(fn, ms)); }
-  function fade(el, show){ if(el) el.style.opacity = show ? '1' : '0'; }
+  function fade(el, show){
+    if(!el) return;
+    el.style.opacity = show ? '1' : '0';
+    el.style.transform = show ? 'translateY(0) scale(1)' : 'translateY(8px) scale(0.96)';
+  }
 
   function typeText(el, text, cb){
     var i = 0;
