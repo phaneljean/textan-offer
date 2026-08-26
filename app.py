@@ -212,7 +212,7 @@ def index():
   <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
   <style>
     :root {
-      --bg: #FCFCFB;
+      --bg: #F5F5F7;
       --card-dark: #0f1f2f;
       --card-dark-2: #152a3a;
       --card-dark-3: #112333;
@@ -251,7 +251,7 @@ def index():
       padding: 1rem 2rem;
       position: sticky;
       top: 0;
-      background: rgba(252,252,251,0.85);
+      background: rgba(255,255,255,0.85);
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
       border-bottom: 1px solid var(--border);
