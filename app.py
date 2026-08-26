@@ -1723,7 +1723,7 @@ DEMO_FORM = """
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <style>
   :root {{
-    --bg: #FCFCFB;
+    --bg: #F5F5F7;
     --bg-card: #fff;
     --border: rgba(15,31,47,0.08);
     --border-hover: rgba(0,0,0,0.35);
@@ -1754,7 +1754,7 @@ DEMO_FORM = """
   .nav {{
     display:flex;align-items:center;justify-content:space-between;
     padding:1rem 2rem;position:sticky;top:0;
-    background:rgba(252,252,251,0.85);backdrop-filter:blur(20px);
+    background:rgba(255,255,255,0.85);backdrop-filter:blur(20px);
     -webkit-backdrop-filter:blur(20px);
     border-bottom:1px solid var(--border);z-index:100;
   }}
@@ -2380,7 +2380,7 @@ def playground():
 <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <style>
-:root{--bg:#FCFCFB;--bg-card:#fff;--border:rgba(15,31,47,0.08);
+:root{--bg:#F5F5F7;--bg-card:#fff;--border:rgba(15,31,47,0.08);
 --text:#0f1f2f;--text-muted:#5a6b7a;--text-dim:#8a9aa9;--accent:#171717;--accent-light:#525252;
 --accent-dark:#000000;--accent-tint:#F0F0EE;--radius:1.25rem;--radius-sm:0.85rem;}
 *{margin:0;padding:0;box-sizing:border-box;}
@@ -2388,7 +2388,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 -webkit-font-smoothing:antialiased;}
 a{color:inherit;text-decoration:none;}
 .nav{display:flex;align-items:center;justify-content:space-between;padding:1rem 2rem;
-background:rgba(252,252,251,0.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);
+background:rgba(255,255,255,0.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);
 position:sticky;top:0;z-index:100;}
 .nav-left{display:flex;align-items:center;gap:0.6rem;font-weight:700;font-size:1.1rem;color:var(--text);}
 .nav-logo{width:34px;height:34px;border-radius:22%;overflow:hidden;}
@@ -2752,7 +2752,7 @@ def pricing():
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <style>
   :root {
-    --bg: #FCFCFB;
+    --bg: #F5F5F7;
     --bg-card: #fff;
     --border: rgba(15,31,47,0.08);
     --border-hover: rgba(23,23,23,0.35);
@@ -2782,7 +2782,7 @@ def pricing():
   .nav {
     display:flex;align-items:center;justify-content:space-between;
     padding:1rem 2rem;position:sticky;top:0;
-    background:rgba(252,252,251,0.85);backdrop-filter:blur(20px);
+    background:rgba(255,255,255,0.85);backdrop-filter:blur(20px);
     -webkit-backdrop-filter:blur(20px);
     border-bottom:1px solid var(--border);z-index:100;
   }
@@ -3066,7 +3066,7 @@ def success():
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <style>
-  :root{{--bg:#FCFCFB;--bg-card:#fff;--border:rgba(15,31,47,0.08);
+  :root{{--bg:#F5F5F7;--bg-card:#fff;--border:rgba(15,31,47,0.08);
     --text:#0f1f2f;--text-muted:#5a6b7a;--text-dim:#8a9aa9;
     --accent:#171717;--accent-light:#525252;--accent-dark:#000000;--accent-tint:#F0F0EE;
     --radius:1.25rem;--radius-sm:0.85rem;}}
@@ -3400,7 +3400,7 @@ def signup():
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <style>
-  :root{{--bg:#FCFCFB;--bg-card:#fff;--border:rgba(15,31,47,0.08);
+  :root{{--bg:#F5F5F7;--bg-card:#fff;--border:rgba(15,31,47,0.08);
     --text:#0f1f2f;--text-muted:#5a6b7a;--text-dim:#8a9aa9;
     --accent:#171717;--accent-light:#525252;--accent-dark:#000000;--accent-tint:#F0F0EE;
     --radius:1.25rem;--radius-sm:0.85rem;--transition:all 0.2s ease;}}
@@ -3528,7 +3528,7 @@ def login():
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <style>
-  :root{{--bg:#FCFCFB;--bg-card:#fff;--border:rgba(15,31,47,0.08);
+  :root{{--bg:#F5F5F7;--bg-card:#fff;--border:rgba(15,31,47,0.08);
     --text:#0f1f2f;--text-muted:#5a6b7a;--text-dim:#8a9aa9;
     --accent:#171717;--accent-light:#525252;--accent-dark:#000000;--accent-tint:#F0F0EE;
     --radius:1.25rem;--radius-sm:0.85rem;--transition:all 0.2s ease;}}
@@ -3605,7 +3605,7 @@ def terms():
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <style>
   :root {
-    --bg: #FCFCFB;
+    --bg: #F5F5F7;
     --bg-card: #fff;
     --border: rgba(15,31,47,0.08);
     --border-hover: rgba(0,0,0,0.35);
@@ -3634,7 +3634,7 @@ def terms():
   .nav {
     display:flex;align-items:center;justify-content:space-between;
     padding:1rem 2rem;position:sticky;top:0;
-    background:rgba(252,252,251,0.85);backdrop-filter:blur(20px);
+    background:rgba(255,255,255,0.85);backdrop-filter:blur(20px);
     -webkit-backdrop-filter:blur(20px);
     border-bottom:1px solid var(--border);z-index:100;
   }
@@ -3858,7 +3858,7 @@ def privacy():
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <style>
   :root {
-    --bg: #FCFCFB;
+    --bg: #F5F5F7;
     --bg-card: #fff;
     --border: rgba(15,31,47,0.08);
     --border-hover: rgba(0,0,0,0.35);
@@ -3887,7 +3887,7 @@ def privacy():
   .nav {
     display:flex;align-items:center;justify-content:space-between;
     padding:1rem 2rem;position:sticky;top:0;
-    background:rgba(252,252,251,0.85);backdrop-filter:blur(20px);
+    background:rgba(255,255,255,0.85);backdrop-filter:blur(20px);
     -webkit-backdrop-filter:blur(20px);
     border-bottom:1px solid var(--border);z-index:100;
   }
@@ -4071,7 +4071,7 @@ def faq():
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <style>
   :root {
-    --bg: #FCFCFB;
+    --bg: #F5F5F7;
     --bg-card: #fff;
     --border: rgba(15,31,47,0.08);
     --text: #0f1f2f;
@@ -4095,7 +4095,7 @@ def faq():
   .nav {
     display:flex;align-items:center;justify-content:space-between;
     padding:1rem 2rem;position:sticky;top:0;
-    background:rgba(252,252,251,0.85);backdrop-filter:blur(20px);
+    background:rgba(255,255,255,0.85);backdrop-filter:blur(20px);
     -webkit-backdrop-filter:blur(20px);
     border-bottom:1px solid var(--border);z-index:100;
   }
@@ -4222,7 +4222,7 @@ def about():
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <style>
   :root {
-    --bg: #FCFCFB;
+    --bg: #F5F5F7;
     --bg-card: #fff;
     --border: rgba(15,31,47,0.08);
     --text: #0f1f2f;
@@ -4245,7 +4245,7 @@ def about():
   .nav {
     display:flex;align-items:center;justify-content:space-between;
     padding:1rem 2rem;position:sticky;top:0;
-    background:rgba(252,252,251,0.85);backdrop-filter:blur(20px);
+    background:rgba(255,255,255,0.85);backdrop-filter:blur(20px);
     -webkit-backdrop-filter:blur(20px);
     border-bottom:1px solid var(--border);z-index:100;
   }
@@ -4363,7 +4363,7 @@ def contact():
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <style>
   :root {
-    --bg: #FCFCFB;
+    --bg: #F5F5F7;
     --bg-card: #fff;
     --border: rgba(15,31,47,0.08);
     --text: #0f1f2f;
@@ -4386,7 +4386,7 @@ def contact():
   .nav {
     display:flex;align-items:center;justify-content:space-between;
     padding:1rem 2rem;position:sticky;top:0;
-    background:rgba(252,252,251,0.85);backdrop-filter:blur(20px);
+    background:rgba(255,255,255,0.85);backdrop-filter:blur(20px);
     -webkit-backdrop-filter:blur(20px);
     border-bottom:1px solid var(--border);z-index:100;
   }
@@ -4552,7 +4552,7 @@ def profile():
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <style>
   :root{{
-    --bg: #FCFCFB;
+    --bg: #F5F5F7;
     --bg-card: #fff;
     --border: rgba(15,31,47,0.08);
     --border-hover: rgba(23,23,23,0.35);
@@ -4581,7 +4581,7 @@ def profile():
   .nav {{
     display:flex;align-items:center;justify-content:space-between;
     padding:1rem 2rem;position:sticky;top:0;
-    background:rgba(252,252,251,0.85);backdrop-filter:blur(20px);
+    background:rgba(255,255,255,0.85);backdrop-filter:blur(20px);
     -webkit-backdrop-filter:blur(20px);
     border-bottom:1px solid var(--border);z-index:100;
   }}
@@ -4795,7 +4795,7 @@ def review_offer(filename):
 <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <style>
-:root{{--bg:#FCFCFB;--bg-card:#fff;--border:rgba(15,31,47,0.08);
+:root{{--bg:#F5F5F7;--bg-card:#fff;--border:rgba(15,31,47,0.08);
 --text:#0f1f2f;--text-muted:#5a6b7a;--text-dim:#8a9aa9;--accent:#171717;--accent-light:#525252;
 --accent-dark:#000000;--accent-tint:#F0F0EE;--radius:1.25rem;--radius-sm:0.85rem;}}
 *{{margin:0;padding:0;box-sizing:border-box;}}
@@ -5054,7 +5054,7 @@ THREAD_EXPIRED_HTML = """
 <title>Offer Thread - TxtAnOffer</title>
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"></noscript>
 <style>
-body{font-family:'Inter',sans-serif;background:#FCFCFB;color:#0f1f2f;display:flex;
+body{font-family:'Inter',sans-serif;background:#F5F5F7;color:#0f1f2f;display:flex;
 align-items:center;justify-content:center;min-height:100vh;margin:0;padding:20px;}
 .box{background:#fff;border-radius:1.25rem;padding:2.5rem;max-width:400px;text-align:center;
 border:1px solid rgba(15,31,47,0.08);box-shadow:0 1px 2px rgba(15,31,47,0.04);}
@@ -5189,7 +5189,7 @@ def offer_thread(filename):
 <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <style>
-:root{{--bg:#FCFCFB;--bg-card:#fff;--border:rgba(15,31,47,0.08);
+:root{{--bg:#F5F5F7;--bg-card:#fff;--border:rgba(15,31,47,0.08);
 --text:#0f1f2f;--text-muted:#5a6b7a;--text-dim:#8a9aa9;--accent:#171717;--accent-light:#525252;
 --accent-dark:#000000;--accent-tint:#F0F0EE;--radius:1.25rem;--radius-sm:0.85rem;}}
 *{{margin:0;padding:0;box-sizing:border-box;}}
@@ -5366,7 +5366,7 @@ def dashboard():
 <title>Dashboard - TxtAnOffer</title>
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"></noscript>
 <style>
-body{font-family:'Inter',sans-serif;background:#FCFCFB;color:#0f1f2f;display:flex;
+body{font-family:'Inter',sans-serif;background:#F5F5F7;color:#0f1f2f;display:flex;
 align-items:center;justify-content:center;min-height:100vh;margin:0;padding:20px;}
 .box{background:#fff;border-radius:1.25rem;padding:2.5rem;max-width:400px;text-align:center;
 border:1px solid rgba(15,31,47,0.08);box-shadow:0 1px 2px rgba(15,31,47,0.04);}
@@ -5511,7 +5511,7 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <style>
   :root{{
-    --bg: #FCFCFB;
+    --bg: #F5F5F7;
     --bg-card: #fff;
     --border: rgba(15,31,47,0.08);
     --border-hover: rgba(23,23,23,0.35);
@@ -5540,7 +5540,7 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
   .nav {{
     display:flex;align-items:center;justify-content:space-between;
     padding:1rem 2rem;position:sticky;top:0;
-    background:rgba(252,252,251,0.85);backdrop-filter:blur(20px);
+    background:rgba(255,255,255,0.85);backdrop-filter:blur(20px);
     -webkit-backdrop-filter:blur(20px);
     border-bottom:1px solid var(--border);z-index:100;
   }}
@@ -5674,7 +5674,7 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
 
   .bottom-nav {{
     position:sticky;bottom:0;display:flex;justify-content:space-around;
-    background:rgba(252,252,251,0.9);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+    background:rgba(255,255,255,0.9);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
     border-top:1px solid var(--border);padding:0.7rem 0 calc(0.7rem + env(safe-area-inset-bottom));
     margin-top:2.5rem;
   }}
