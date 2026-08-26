@@ -4361,9 +4361,18 @@ def trec_changes():
     font-size:0.83rem;color:var(--text);
   }
   .change-card .handled b {color:#067a5c;}
+  .sources-box {
+    background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
+    padding:1.5rem 1.75rem;margin-top:1.75rem;font-size:0.83rem;color:var(--text-muted);line-height:1.7;
+  }
+  .sources-box h3 {font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:var(--text);margin-bottom:0.7rem;}
+  .sources-box ul {margin-left:1.1rem;}
+  .sources-box li {margin-bottom:0.4rem;}
+  .sources-box a {text-decoration:underline;color:var(--text);}
+  .sources-box a:hover {color:#067a5c;}
   .disclaimer-box {
     background:var(--accent-tint);border:1px solid var(--border);border-radius:var(--radius);
-    padding:1.5rem 1.75rem;margin-top:2rem;font-size:0.82rem;color:var(--text-muted);line-height:1.7;
+    padding:1.5rem 1.75rem;margin-top:1.1rem;font-size:0.82rem;color:var(--text-muted);line-height:1.7;
   }
   .disclaimer-box strong {color:var(--text);}
   .cta-row {
@@ -4445,6 +4454,15 @@ def trec_changes():
     <h2>Information About Brokerage Services</h2>
     <p>The required notice disclosing brokerage relationships to the parties involved in the transaction.</p>
     <div class="handled"><b>How TxtAnOffer handles it:</b> Included with every generated contract, with your saved brokerage details filled in automatically from your profile.</div>
+  </div>
+
+  <div class="sources-box">
+    <h3>Verify this yourself</h3>
+    <p>The forms above are TREC's promulgated contract forms. The Commission's separate rules of conduct and licensing rules -- the ones that govern how brokers and agents operate, not the forms themselves -- live in Texas Administrative Code Title 22, Part 23. Neither TREC's own courtesy copy nor this page is the official legal text; both are conveniences.</p>
+    <ul>
+      <li><a href="https://www.trec.texas.gov/agency-information/rules-and-laws/trec-rules" target="_blank" rel="noopener">TREC Rules</a> -- the Commission's own courtesy summary of Chapters 531 (ethics/conduct), 533 (procedure), 534 (administration), and 535 (licensure).</li>
+      <li><a href="https://texreg.sos.state.tx.us/public/readtac$ext.ViewTAC?tac_view=3&amp;ti=22&amp;pt=23" target="_blank" rel="noopener">Texas Administrative Code, Title 22, Part 23</a> -- the Texas Secretary of State's official rule text, the version that actually controls.</li>
+    </ul>
   </div>
 
   <div class="disclaimer-box">
