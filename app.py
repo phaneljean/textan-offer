@@ -5950,6 +5950,19 @@ def verify_dashboard_signature(phone, expires_str, sig):
     return hmac.compare_digest(sig or "", expected)
 
 
+def sign_wins_url(phone, base_url=""):
+    # Deliberately non-expiring, unlike sign_dashboard_url -- this link is meant
+    # to be posted publicly (social, group chats) and must keep working whenever
+    # someone clicks it later, not just within a short private-session window.
+    sig = hmac.new(PDF_LINK_SECRET.encode(), f"wins:{phone}".encode(), hashlib.sha256).hexdigest()[:20]
+    return f"{base_url}/wins?phone={_urlquote(phone, safe='')}&sig={sig}"
+
+
+def verify_wins_signature(phone, sig):
+    expected = hmac.new(PDF_LINK_SECRET.encode(), f"wins:{phone}".encode(), hashlib.sha256).hexdigest()[:20]
+    return hmac.compare_digest(sig or "", expected)
+
+
 @app.route("/dashboard")
 def dashboard():
     phone = request.args.get("phone", "")
@@ -5988,6 +6001,8 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
 
     # Build offer cards, with each offer's amendments nested inside the same card
     offer_cards = ""
+    accepted_volume = 0
+    accepted_count = 0
     for o in offers:
         pdf_link = sign_pdf_url(o["filename"], request.host_url.rstrip("/"))
         created = o["created_at"][:10]
@@ -6003,6 +6018,10 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
             status = "accepted" if o["thread_status"] == "accept" else "declined"
         else:
             status = "expired" if close_dt < datetime.utcnow() else "draft"
+
+        if status == "accepted":
+            accepted_volume += o["price"]
+            accepted_count += 1
 
         amend_html = ""
         for a in amendments_by_offer.get(o["id"], []):
@@ -6048,6 +6067,22 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
 
     time_saved = _fmt_time_saved(user["offer_count"] * 45)
     avg_close = f"{round(sum(o['close_days'] for o in offers) / len(offers))}d" if offers else "—"
+    wins_url = sign_wins_url(phone, request.host_url.rstrip("/"))
+
+    if accepted_count > 0:
+        milestone_html = f"""
+      <div class="milestone-label">Accepted through TxtAnOffer</div>
+      <div class="milestone-val">${accepted_volume:,}</div>
+      <div class="milestone-sub">{accepted_count} offer{'s' if accepted_count != 1 else ''} accepted</div>
+      <div class="milestone-row">
+        <div></div>
+        <a href="{wins_url}" target="_blank" class="milestone-share">Share this &rarr;</a>
+      </div>"""
+    else:
+        milestone_html = """
+      <div class="milestone-label">Accepted through TxtAnOffer</div>
+      <div class="milestone-val">$0</div>
+      <div class="milestone-sub">Your first accepted offer will show up here.</div>"""
 
     initials = "".join(part[0] for part in agent.get("name", "").split()[:2]).upper() if agent.get("name") else "?"
 
@@ -6156,6 +6191,36 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
     padding:0.3rem 0.85rem;border-radius:9999px;font-size:0.75rem;font-weight:700;
     letter-spacing:0.02em;
   }}
+
+  .milestone-card {{
+    position:relative;overflow:hidden;margin-top:1.5rem;border-radius:var(--radius);
+    background:linear-gradient(160deg, #152a3a 0%, #0f1f2f 60%, #0c1926 100%);
+    padding:1.85rem 1.75rem;color:#fff;
+    box-shadow:0 2px 8px rgba(15,31,47,0.12), 0 16px 40px rgba(15,31,47,0.16);
+  }}
+  .milestone-card::before {{
+    content:'';position:absolute;width:280px;height:280px;border-radius:50%;
+    background:radial-gradient(circle, rgba(16,185,129,0.20) 0%, transparent 70%);
+    top:-120px;right:-80px;pointer-events:none;
+  }}
+  .milestone-label {{
+    position:relative;font-size:0.7rem;font-weight:700;text-transform:uppercase;
+    letter-spacing:0.08em;color:rgba(255,255,255,0.55);margin-bottom:0.6rem;
+  }}
+  .milestone-val {{
+    position:relative;font-size:2.6rem;font-weight:800;letter-spacing:-0.02em;line-height:1.05;
+    background:linear-gradient(135deg, #ffffff 0%, #34d399 100%);
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  }}
+  .milestone-sub {{position:relative;font-size:0.88rem;color:rgba(255,255,255,0.68);margin-top:0.4rem;}}
+  .milestone-row {{position:relative;display:flex;align-items:center;justify-content:space-between;
+    flex-wrap:wrap;gap:1rem;margin-top:1.35rem;}}
+  .milestone-share {{
+    display:inline-flex;align-items:center;gap:0.4rem;background:#10b981;color:#0c1926;
+    font-weight:700;font-size:0.85rem;padding:0.65rem 1.25rem;border-radius:9999px;
+    transition:var(--transition);white-space:nowrap;
+  }}
+  .milestone-share:hover {{background:#34d399;transform:translateY(-1px);}}
 
   .stats {{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1rem;margin:2rem 0;}}
   .stat {{
@@ -6336,6 +6401,10 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
     <div class="stat"><div class="stat-val">{avg_close}</div><div class="stat-label">Avg close</div></div>
   </div>
 
+  <div class="milestone-card">
+    {milestone_html}
+  </div>
+
   <div class="profile-card">
     <div class="profile-card-head">
       <h2>Agent Profile</h2>
@@ -6357,6 +6426,125 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
 </nav>
 </body>
 </html>"""
+
+
+@app.route("/wins")
+def wins_page():
+    phone = request.args.get("phone", "")
+    sig = request.args.get("sig", "")
+
+    if not verify_wins_signature(phone, sig):
+        abort(404)
+
+    user = get_user(phone)
+    if not user:
+        abort(404)
+
+    from agent_profiles import get_agent_profile
+    agent = get_agent_profile(phone)
+    offers = get_offers_for_phone(phone)
+
+    accepted_volume = 0
+    accepted_count = 0
+    for o in offers:
+        try:
+            created_dt = datetime.fromisoformat(o["created_at"])
+        except ValueError:
+            created_dt = datetime.utcnow()
+        close_dt = created_dt + timedelta(days=o.get("close_days") or 0)
+        if o.get("thread_status") == "accept":
+            status = "accepted"
+        elif o.get("thread_status") == "decline":
+            status = "declined"
+        else:
+            status = "expired" if close_dt < datetime.utcnow() else "draft"
+        if status == "accepted":
+            accepted_volume += o["price"]
+            accepted_count += 1
+
+    name = (agent.get("name") or "").strip()
+    brokerage = (agent.get("brokerage") or "").strip()
+    display_name = name or "A Texas Agent"
+    meta_line = brokerage if brokerage else "TxtAnOffer Agent"
+
+    if accepted_count > 0:
+        headline = f"${accepted_volume:,}"
+        sub = f"{accepted_count} offer{'s' if accepted_count != 1 else ''} accepted through TxtAnOffer"
+    else:
+        headline = "Just getting started"
+        sub = "First accepted offer coming soon"
+
+    html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{display_name}'s TxtAnOffer Milestone</title>
+<meta name="description" content="{sub}">
+<link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<style>
+  * {{ margin:0; padding:0; box-sizing:border-box; }}
+  body {{
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+    background:#F5F5F7; color:#0f1f2f; min-height:100vh;
+    display:flex; align-items:center; justify-content:center; padding:1.5rem;
+    -webkit-font-smoothing:antialiased;
+  }}
+  a {{ color:inherit; text-decoration:none; }}
+  .card {{
+    position:relative; overflow:hidden; width:100%; max-width:420px;
+    background:linear-gradient(160deg, #152a3a 0%, #0f1f2f 60%, #0c1926 100%);
+    border-radius:1.75rem; padding:2.75rem 2rem; color:#fff; text-align:center;
+    box-shadow:0 2px 8px rgba(15,31,47,0.15), 0 24px 60px rgba(15,31,47,0.25);
+  }}
+  .card::before {{
+    content:''; position:absolute; width:340px; height:340px; border-radius:50%;
+    background:radial-gradient(circle, rgba(16,185,129,0.22) 0%, transparent 70%);
+    top:-140px; left:50%; transform:translateX(-50%); pointer-events:none;
+  }}
+  .badge {{
+    position:relative; display:inline-flex; align-items:center; gap:0.4rem;
+    background:rgba(16,185,129,0.14); border:1px solid rgba(16,185,129,0.3); color:#34d399;
+    font-size:0.68rem; font-weight:700; text-transform:uppercase; letter-spacing:0.07em;
+    padding:0.35rem 0.85rem; border-radius:9999px; margin-bottom:1.5rem;
+  }}
+  .agent-name {{position:relative; font-size:1rem; font-weight:700; color:#fff;}}
+  .agent-meta {{position:relative; font-size:0.8rem; color:rgba(255,255,255,0.5); margin-top:0.2rem; margin-bottom:1.75rem;}}
+  .headline {{
+    position:relative; font-size:2.9rem; font-weight:800; letter-spacing:-0.02em; line-height:1.05;
+    background:linear-gradient(135deg, #ffffff 0%, #34d399 100%);
+    -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+    word-break:break-word;
+  }}
+  .sub {{position:relative; font-size:0.92rem; color:rgba(255,255,255,0.65); margin-top:0.6rem;}}
+  .divider {{position:relative; height:1px; background:rgba(255,255,255,0.1); margin:2rem 0 1.5rem;}}
+  .cta {{
+    position:relative; display:inline-block; background:#10b981; color:#0c1926;
+    font-weight:700; font-size:0.9rem; padding:0.8rem 1.75rem; border-radius:9999px;
+    transition:all 0.2s ease;
+  }}
+  .cta:hover {{background:#34d399; transform:translateY(-1px);}}
+  .foot {{position:relative; font-size:0.75rem; color:rgba(255,255,255,0.4); margin-top:1.25rem;}}
+  .foot a {{color:rgba(255,255,255,0.6); font-weight:600;}}
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="badge">&#127942; TxtAnOffer Milestone</div>
+    <div class="agent-name">{display_name}</div>
+    <div class="agent-meta">{meta_line}</div>
+    <div class="headline">{headline}</div>
+    <div class="sub">{sub}</div>
+    <div class="divider"></div>
+    <a href="/" class="cta">Try TxtAnOffer free &rarr;</a>
+    <div class="foot">Text your offer. Get your contract. <a href="/">txtanoffer.com</a></div>
+  </div>
+</body>
+</html>"""
+    return html
 
 
 @app.route("/health")
