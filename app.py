@@ -6477,45 +6477,31 @@ def wins_page():
   }}
   a {{ color:inherit; text-decoration:none; }}
   .card {{
-    position:relative; overflow:hidden; width:100%; max-width:420px;
-    background:linear-gradient(160deg, #152a3a 0%, #0f1f2f 60%, #0c1926 100%);
-    border-radius:1.75rem; padding:2.75rem 2rem; color:#fff; text-align:center;
-    box-shadow:0 2px 8px rgba(15,31,47,0.15), 0 24px 60px rgba(15,31,47,0.25);
+    width:100%; max-width:400px; text-align:center;
+    background:#fff; border:1px solid rgba(15,31,47,0.08);
+    border-radius:1.25rem; padding:2.75rem 2rem;
+    box-shadow:0 1px 3px rgba(15,31,47,0.05);
   }}
-  .card::before {{
-    content:''; position:absolute; width:340px; height:340px; border-radius:50%;
-    background:radial-gradient(circle, rgba(16,185,129,0.22) 0%, transparent 70%);
-    top:-140px; left:50%; transform:translateX(-50%); pointer-events:none;
-  }}
-  .badge {{
-    position:relative; display:inline-flex; align-items:center; gap:0.4rem;
-    background:rgba(16,185,129,0.14); border:1px solid rgba(16,185,129,0.3); color:#34d399;
-    font-size:0.68rem; font-weight:700; text-transform:uppercase; letter-spacing:0.07em;
-    padding:0.35rem 0.85rem; border-radius:9999px; margin-bottom:1.5rem;
-  }}
-  .agent-name {{position:relative; font-size:1rem; font-weight:700; color:#fff;}}
-  .agent-meta {{position:relative; font-size:0.8rem; color:rgba(255,255,255,0.5); margin-top:0.2rem; margin-bottom:1.75rem;}}
-  .headline {{
-    position:relative; font-size:2.9rem; font-weight:800; letter-spacing:-0.02em; line-height:1.05;
-    background:linear-gradient(135deg, #ffffff 0%, #34d399 100%);
-    -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
-    word-break:break-word;
-  }}
-  .sub {{position:relative; font-size:0.92rem; color:rgba(255,255,255,0.65); margin-top:0.6rem;}}
-  .divider {{position:relative; height:1px; background:rgba(255,255,255,0.1); margin:2rem 0 1.5rem;}}
+  .logo {{width:48px;height:48px;margin:0 auto 1.5rem;border-radius:22%;overflow:hidden;}}
+  .logo img {{width:100%;height:100%;object-fit:contain;}}
+  .agent-name {{font-size:0.95rem; font-weight:700; color:#0f1f2f;}}
+  .agent-meta {{font-size:0.8rem; color:#8a9aa9; margin-top:0.15rem; margin-bottom:1.75rem;}}
+  .headline {{font-size:2.25rem; font-weight:800; letter-spacing:-0.02em; line-height:1.1; color:#0f1f2f; word-break:break-word;}}
+  .sub {{font-size:0.85rem; color:#5a6b7a; margin-top:0.5rem;}}
+  .divider {{height:1px; background:rgba(15,31,47,0.08); margin:1.75rem 0 1.5rem;}}
   .cta {{
-    position:relative; display:inline-block; background:#10b981; color:#0c1926;
-    font-weight:700; font-size:0.9rem; padding:0.8rem 1.75rem; border-radius:9999px;
-    transition:all 0.2s ease;
+    display:inline-block; font-size:0.85rem; font-weight:600; color:#0f1f2f;
+    border-bottom:1px solid rgba(23,23,23,0.35); padding-bottom:0.1rem;
+    transition:color 0.2s ease;
   }}
-  .cta:hover {{background:#34d399; transform:translateY(-1px);}}
-  .foot {{position:relative; font-size:0.75rem; color:rgba(255,255,255,0.4); margin-top:1.25rem;}}
-  .foot a {{color:rgba(255,255,255,0.6); font-weight:600;}}
+  .cta:hover {{color:#000;}}
+  .foot {{font-size:0.72rem; color:#8a9aa9; margin-top:1.5rem;}}
+  .foot a {{color:#5a6b7a; font-weight:600;}}
 </style>
 </head>
 <body>
   <div class="card">
-    <div class="badge">&#127942; TxtAnOffer Milestone</div>
+    <div class="logo"><img src="/static/logo.png" alt=""></div>
     <div class="agent-name">{display_name}</div>
     <div class="agent-meta">{meta_line}</div>
     <div class="headline">{headline}</div>
