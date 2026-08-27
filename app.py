@@ -6072,9 +6072,9 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
     if accepted_count > 0:
         milestone_html = f"""
       <div class="milestone-logo"><img src="/static/logo.png" alt=""></div>
-      <div class="milestone-val">${accepted_volume:,}</div>
+      <div class="milestone-val">Congrats on ${accepted_volume:,}!</div>
       <div class="milestone-sub">{accepted_count} offer{'s' if accepted_count != 1 else ''} accepted through TxtAnOffer</div>
-      <a href="{wins_url}" target="_blank" class="milestone-share">Share this &rarr;</a>"""
+      <a href="{wins_url}" target="_blank" class="milestone-share">Share your milestone &rarr;</a>"""
     else:
         milestone_html = """
       <div class="milestone-logo"><img src="/static/logo.png" alt=""></div>
@@ -6449,12 +6449,21 @@ def wins_page():
     display_name = name or "A Texas Agent"
     meta_line = brokerage if brokerage else "TxtAnOffer Agent"
 
+    page_url = request.url
     if accepted_count > 0:
-        headline = f"${accepted_volume:,}"
+        headline = f"Congrats on ${accepted_volume:,}!"
         sub = f"{accepted_count} offer{'s' if accepted_count != 1 else ''} accepted through TxtAnOffer"
+        share_text = f"Just hit ${accepted_volume:,} in accepted offers through TxtAnOffer."
+        share_html = f"""
+    <div class="share-row">
+      <a href="https://twitter.com/intent/tweet?text={_urlquote(share_text, safe='')}&url={_urlquote(page_url, safe='')}" target="_blank" rel="noopener" class="share-btn">Share on X</a>
+      <a href="https://www.linkedin.com/sharing/share-offsite/?url={_urlquote(page_url, safe='')}" target="_blank" rel="noopener" class="share-btn">Share on LinkedIn</a>
+    </div>"""
     else:
         headline = "Just getting started"
         sub = "First accepted offer coming soon"
+        share_text = sub
+        share_html = ""
 
     html = f"""<!DOCTYPE html>
 <html lang="en">
@@ -6463,6 +6472,13 @@ def wins_page():
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{display_name}'s TxtAnOffer Milestone</title>
 <meta name="description" content="{sub}">
+<meta property="og:title" content="{display_name}'s TxtAnOffer Milestone">
+<meta property="og:description" content="{share_text}">
+<meta property="og:url" content="{page_url}">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="{display_name}'s TxtAnOffer Milestone">
+<meta name="twitter:description" content="{share_text}">
 <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -6489,6 +6505,13 @@ def wins_page():
   .headline {{font-size:2.25rem; font-weight:800; letter-spacing:-0.02em; line-height:1.1; color:#0f1f2f; word-break:break-word;}}
   .sub {{font-size:0.85rem; color:#5a6b7a; margin-top:0.5rem;}}
   .divider {{height:1px; background:rgba(15,31,47,0.08); margin:1.75rem 0 1.5rem;}}
+  .share-row {{display:flex;gap:0.6rem;margin-top:1.75rem;}}
+  .share-btn {{
+    flex:1; font-size:0.8rem; font-weight:600; color:#0f1f2f;
+    border:1px solid rgba(15,31,47,0.14); border-radius:9999px;
+    padding:0.6rem 0.5rem; transition:var(--transition, all 0.2s ease);
+  }}
+  .share-btn:hover {{border-color:rgba(15,31,47,0.35);background:rgba(15,31,47,0.02);}}
   .cta {{
     display:inline-block; font-size:0.85rem; font-weight:600; color:#0f1f2f;
     border-bottom:1px solid rgba(23,23,23,0.35); padding-bottom:0.1rem;
@@ -6506,6 +6529,7 @@ def wins_page():
     <div class="agent-meta">{meta_line}</div>
     <div class="headline">{headline}</div>
     <div class="sub">{sub}</div>
+    {share_html}
     <div class="divider"></div>
     <a href="/" class="cta">Try TxtAnOffer free &rarr;</a>
     <div class="foot">Text your offer. Get your contract. <a href="/">txtanoffer.com</a></div>
