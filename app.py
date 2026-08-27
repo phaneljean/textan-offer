@@ -236,8 +236,8 @@ def index():
     body {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       background:
-        radial-gradient(ellipse 90% 60% at 50% -10%, rgba(15,31,47,0.05) 0%, transparent 55%),
-        radial-gradient(ellipse 50% 40% at 85% 12%, rgba(16,185,129,0.05) 0%, transparent 50%),
+        radial-gradient(ellipse 90% 500px at 50% -80px, rgba(15,31,47,0.05) 0%, transparent 55%),
+        radial-gradient(ellipse 50% 350px at 85% 100px, rgba(16,185,129,0.05) 0%, transparent 50%),
         var(--bg);
       color: var(--text);
       line-height: 1.5;
@@ -481,6 +481,13 @@ def index():
       top: -100px; left: 50%; transform: translateX(-50%);
       pointer-events: none; z-index: 0;
     }
+    /* This card (the static "review screen" mockup) sits alone on a plain
+       background with nothing else to blend into -- the green ambient touch
+       above is only meant for the live SMS/PDF demo card, so suppress it here. */
+    .dark-card-wrap.no-glow {
+      box-shadow: 0 2px 8px rgba(15,31,47,0.10), 0 12px 40px rgba(15,31,47,0.14);
+    }
+    .dark-card-wrap.no-glow .dark-card-inner::before { display: none; }
     .notch {
       position: absolute; top: 0; left: 50%; transform: translateX(-50%);
       width: 88px; height: 20px;
@@ -771,7 +778,7 @@ def index():
     <h1 style="font-size:2.1rem;">See exactly what you'll get</h1>
     <p class="hero-sub">The same review screen every offer goes through before it can be sent &mdash; and where DocuSign and Zapier plug in.</p>
 
-    <div class="dark-card-wrap">
+    <div class="dark-card-wrap no-glow">
       <div class="dark-card-inner" style="padding:0.6rem;">
         <div class="dash-grid">
           <div class="dash-panel">
