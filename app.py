@@ -650,6 +650,18 @@ def index():
     .footer-copy { color: var(--text-dim); font-size: 0.8rem; }
 
     @media (max-width: 700px) {
+      /* The ambient orbs/gradient are fixed-px sized, tuned to read as a subtle
+         accent against a wide desktop viewport -- at mobile widths those same
+         pixel sizes cover most of the screen and read as a dominant wash
+         instead, so scale everything down here. */
+      body {
+        background:
+          radial-gradient(ellipse 90% 260px at 50% -60px, rgba(15,31,47,0.05) 0%, transparent 55%),
+          radial-gradient(ellipse 70% 180px at 85% 60px, rgba(16,185,129,0.05) 0%, transparent 50%),
+          var(--bg);
+      }
+      body::before { width: 200px; height: 200px; top: -60px; right: -50px; filter: blur(50px); }
+      body::after { width: 150px; height: 150px; top: 140px; left: -50px; filter: blur(45px); }
       .main { padding: 0 1.25rem; }
       .hero h1 { font-size: 2.25rem; }
       .steps-grid { grid-template-columns: 1fr; }
