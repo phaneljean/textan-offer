@@ -235,11 +235,38 @@ def index():
     html { scroll-behavior: smooth; }
     body {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: var(--bg);
+      background:
+        radial-gradient(ellipse 90% 60% at 50% -10%, rgba(15,31,47,0.05) 0%, transparent 55%),
+        radial-gradient(ellipse 50% 40% at 85% 12%, rgba(16,185,129,0.05) 0%, transparent 50%),
+        var(--bg);
       color: var(--text);
       line-height: 1.5;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
+      position: relative;
+      overflow-x: hidden;
+    }
+    /* Ambient hero orbs -- attached to body (not .hero) so the glow bleeds to the
+       real page edges instead of stopping at .main's 840px content width. */
+    body::before {
+      content: '';
+      position: absolute;
+      width: 400px; height: 400px;
+      background: linear-gradient(135deg, rgba(15,31,47,0.10), rgba(15,31,47,0.05));
+      border-radius: 50%;
+      filter: blur(80px);
+      top: -120px; right: -80px;
+      pointer-events: none; z-index: 0;
+    }
+    body::after {
+      content: '';
+      position: absolute;
+      width: 300px; height: 300px;
+      background: linear-gradient(135deg, rgba(16,185,129,0.14), rgba(16,185,129,0.05));
+      border-radius: 50%;
+      filter: blur(70px);
+      top: 260px; left: -80px;
+      pointer-events: none; z-index: 0;
     }
     a { color: inherit; text-decoration: none; }
 
@@ -304,7 +331,7 @@ def index():
     .nav-toggle span { display: block; width: 100%; height: 2px; background: var(--text); border-radius: 2px; }
 
     /* Main column */
-    .main { max-width: 840px; margin: 0 auto; padding: 0 2rem; }
+    .main { max-width: 840px; margin: 0 auto; padding: 0 2rem; position: relative; z-index: 1; }
     .section { padding-top: 4.5rem; }
 
     /* Hero */
@@ -347,37 +374,6 @@ def index():
       line-height: 1.6;
       max-width: 540px;
     }
-
-    /* Ambient hero glow -- :first-of-type scopes this to the real hero only,
-       since the review-screen section below reuses the same "hero section" classes. */
-    .hero.section:first-of-type {
-      position: relative;
-      overflow: hidden;
-      background:
-        radial-gradient(ellipse 90% 60% at 50% -20%, rgba(15,31,47,0.05) 0%, transparent 55%),
-        radial-gradient(ellipse 50% 40% at 85% 35%, rgba(16,185,129,0.05) 0%, transparent 50%);
-    }
-    .hero.section:first-of-type::before {
-      content: '';
-      position: absolute;
-      width: 400px; height: 400px;
-      background: linear-gradient(135deg, rgba(15,31,47,0.10), rgba(15,31,47,0.05));
-      border-radius: 50%;
-      filter: blur(80px);
-      top: -120px; right: -80px;
-      pointer-events: none; z-index: 0;
-    }
-    .hero.section:first-of-type::after {
-      content: '';
-      position: absolute;
-      width: 300px; height: 300px;
-      background: linear-gradient(135deg, rgba(16,185,129,0.14), rgba(16,185,129,0.05));
-      border-radius: 50%;
-      filter: blur(70px);
-      bottom: 20px; left: -80px;
-      pointer-events: none; z-index: 0;
-    }
-    .hero.section:first-of-type > * { position: relative; z-index: 1; }
 
     /* Input Card (real, functional) */
     .input-card {
