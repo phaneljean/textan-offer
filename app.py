@@ -607,7 +607,7 @@ def index():
     .review-stat .k { font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim); }
     .review-stat .v { font-size: 0.85rem; font-weight: 700; margin-top: 0.1rem; }
     .review-warning {
-      background: #FFF8EC; border: 1px solid #FBE7BE; color: #92660A;
+      background: rgba(15,31,47,0.04); border: 1px solid var(--border); color: var(--text-muted);
       border-radius: 0.7rem; padding: 0.65rem 0.85rem; font-size: 0.78rem; line-height: 1.45; margin-bottom: 0.85rem;
     }
     .review-actions { display: flex; gap: 0.6rem; flex-wrap: wrap; }
