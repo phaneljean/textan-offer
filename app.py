@@ -319,7 +319,9 @@ def index():
       display: inline-flex;
       align-items: center;
       gap: 0.4rem;
-      background: rgba(15,31,47,0.05);
+      background: rgba(255,255,255,0.6);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
       border: 1px solid rgba(15,31,47,0.4);
       color: #000000;
       font-size: 0.7rem;
@@ -346,6 +348,37 @@ def index():
       max-width: 540px;
     }
 
+    /* Ambient hero glow -- :first-of-type scopes this to the real hero only,
+       since the review-screen section below reuses the same "hero section" classes. */
+    .hero.section:first-of-type {
+      position: relative;
+      overflow: hidden;
+      background:
+        radial-gradient(ellipse 90% 60% at 50% -20%, rgba(15,31,47,0.05) 0%, transparent 55%),
+        radial-gradient(ellipse 50% 40% at 85% 35%, rgba(16,185,129,0.05) 0%, transparent 50%);
+    }
+    .hero.section:first-of-type::before {
+      content: '';
+      position: absolute;
+      width: 400px; height: 400px;
+      background: linear-gradient(135deg, rgba(15,31,47,0.10), rgba(15,31,47,0.05));
+      border-radius: 50%;
+      filter: blur(80px);
+      top: -120px; right: -80px;
+      pointer-events: none; z-index: 0;
+    }
+    .hero.section:first-of-type::after {
+      content: '';
+      position: absolute;
+      width: 300px; height: 300px;
+      background: linear-gradient(135deg, rgba(16,185,129,0.14), rgba(16,185,129,0.05));
+      border-radius: 50%;
+      filter: blur(70px);
+      bottom: 20px; left: -80px;
+      pointer-events: none; z-index: 0;
+    }
+    .hero.section:first-of-type > * { position: relative; z-index: 1; }
+
     /* Input Card (real, functional) */
     .input-card {
       margin-top: 2rem;
@@ -367,6 +400,7 @@ def index():
       background: #F5F7F6;
       border: 1px solid var(--border);
       border-radius: var(--radius-sm);
+      box-shadow: 0 1px 3px rgba(15,31,47,0.03);
       padding: 0.8rem 1rem;
       color: var(--text);
       font-size: 0.95rem;
@@ -385,6 +419,7 @@ def index():
       color: #fff;
       border: 1px solid var(--accent);
       border-radius: var(--radius-sm);
+      box-shadow: 0 4px 14px rgba(15,31,47,0.16);
       padding: 0.8rem 1.5rem;
       font-weight: 600;
       font-size: 0.9rem;
@@ -405,12 +440,23 @@ def index():
     .hero-phone a { color: #000000; font-weight: 600; text-decoration: none; }
     .hero-phone a:hover { text-decoration: underline; }
 
-    /* Stats */
-    .stats { display: flex; gap: 2.25rem; margin-top: 1.75rem; flex-wrap: wrap; }
+    /* Stats -- glass card floating over the hero glow */
+    .stats {
+      display: flex; gap: 2.25rem; margin-top: 1.75rem; flex-wrap: wrap;
+      background: rgba(255,255,255,0.65);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(15,31,47,0.06);
+      border-radius: 1.25rem;
+      box-shadow: 0 1px 2px rgba(15,31,47,0.03), 0 8px 32px rgba(15,31,47,0.05);
+      padding: 1.1rem 1.4rem;
+      width: fit-content;
+      max-width: 100%;
+    }
     .stat-num { font-size: 1.4rem; font-weight: 800; color: var(--text); line-height: 1; }
     .stat-label { font-size: 0.72rem; color: var(--text-dim); margin-top: 0.25rem; font-weight: 500; }
 
-    /* Dark card wrap (SMS demo + dashboard preview) */
+    /* Dark card wrap (SMS demo + dashboard preview) -- layered ambient shadow */
     .dark-card-wrap {
       margin-top: 2.75rem;
       position: relative;
@@ -418,6 +464,10 @@ def index():
       background: var(--card-dark);
       padding: 10px;
       border: 1px solid rgba(255,255,255,0.08);
+      box-shadow:
+        0 2px 8px rgba(15,31,47,0.10),
+        0 12px 40px rgba(15,31,47,0.14),
+        0 24px 80px rgba(16,185,129,0.08);
       overflow: hidden;
     }
     .dark-card-inner {
@@ -427,11 +477,20 @@ def index():
       padding: 1.5rem;
       overflow: hidden;
     }
+    .dark-card-inner::before {
+      content: '';
+      position: absolute;
+      width: 320px; height: 320px;
+      background: radial-gradient(circle, rgba(16,185,129,0.14) 0%, transparent 70%);
+      top: -100px; left: 50%; transform: translateX(-50%);
+      pointer-events: none; z-index: 0;
+    }
     .notch {
       position: absolute; top: 0; left: 50%; transform: translateX(-50%);
       width: 88px; height: 20px;
       background: var(--card-dark);
       border-radius: 0 0 12px 12px;
+      z-index: 1;
     }
     .sms-bubble {
       display: inline-flex; align-items: center; gap: 8px;
@@ -440,7 +499,7 @@ def index():
       margin: 0.5rem auto 0; max-width: 100%;
     }
     .flow-arrow { text-align: center; color: rgba(255,255,255,0.35); font-size: 1.1rem; padding: 0.35rem 0; }
-    .demo-wrap { max-width: 420px; margin: 0.5rem auto 0; }
+    .demo-wrap { max-width: 420px; margin: 0.5rem auto 0; position: relative; z-index: 1; }
 
     .demo-loading{display:none;color:var(--accent-light);font-size:0.85rem;padding:0.5rem 0;text-align:center;}
     .demo-error{display:none;color:#fca5a5;font-size:0.85rem;padding:0.5rem 0;text-align:center;}
