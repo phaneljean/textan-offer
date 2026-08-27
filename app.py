@@ -6071,17 +6071,13 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
 
     if accepted_count > 0:
         milestone_html = f"""
-      <div class="milestone-label">Accepted through TxtAnOffer</div>
+      <div class="milestone-logo"><img src="/static/logo.png" alt=""></div>
       <div class="milestone-val">${accepted_volume:,}</div>
-      <div class="milestone-sub">{accepted_count} offer{'s' if accepted_count != 1 else ''} accepted</div>
-      <div class="milestone-row">
-        <div></div>
-        <a href="{wins_url}" target="_blank" class="milestone-share">Share this &rarr;</a>
-      </div>"""
+      <div class="milestone-sub">{accepted_count} offer{'s' if accepted_count != 1 else ''} accepted through TxtAnOffer</div>
+      <a href="{wins_url}" target="_blank" class="milestone-share">Share this &rarr;</a>"""
     else:
         milestone_html = """
-      <div class="milestone-label">Accepted through TxtAnOffer</div>
-      <div class="milestone-val">$0</div>
+      <div class="milestone-logo"><img src="/static/logo.png" alt=""></div>
       <div class="milestone-sub">Your first accepted offer will show up here.</div>"""
 
     initials = "".join(part[0] for part in agent.get("name", "").split()[:2]).upper() if agent.get("name") else "?"
@@ -6193,34 +6189,20 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
   }}
 
   .milestone-card {{
-    position:relative;overflow:hidden;margin-top:1.5rem;border-radius:var(--radius);
-    background:linear-gradient(160deg, #152a3a 0%, #0f1f2f 60%, #0c1926 100%);
-    padding:1.85rem 1.75rem;color:#fff;
-    box-shadow:0 2px 8px rgba(15,31,47,0.12), 0 16px 40px rgba(15,31,47,0.16);
+    text-align:center;margin-top:1.5rem;border-radius:var(--radius);
+    background:var(--bg-card);border:1px solid var(--border);
+    padding:2.5rem 2rem;box-shadow:0 1px 3px rgba(15,31,47,0.05);
   }}
-  .milestone-card::before {{
-    content:'';position:absolute;width:280px;height:280px;border-radius:50%;
-    background:radial-gradient(circle, rgba(16,185,129,0.20) 0%, transparent 70%);
-    top:-120px;right:-80px;pointer-events:none;
-  }}
-  .milestone-label {{
-    position:relative;font-size:0.7rem;font-weight:700;text-transform:uppercase;
-    letter-spacing:0.08em;color:rgba(255,255,255,0.55);margin-bottom:0.6rem;
-  }}
-  .milestone-val {{
-    position:relative;font-size:2.6rem;font-weight:800;letter-spacing:-0.02em;line-height:1.05;
-    background:linear-gradient(135deg, #ffffff 0%, #34d399 100%);
-    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
-  }}
-  .milestone-sub {{position:relative;font-size:0.88rem;color:rgba(255,255,255,0.68);margin-top:0.4rem;}}
-  .milestone-row {{position:relative;display:flex;align-items:center;justify-content:space-between;
-    flex-wrap:wrap;gap:1rem;margin-top:1.35rem;}}
+  .milestone-logo {{width:44px;height:44px;margin:0 auto 1.25rem;border-radius:22%;overflow:hidden;}}
+  .milestone-logo img {{width:100%;height:100%;object-fit:contain;}}
+  .milestone-val {{font-size:2.25rem;font-weight:800;letter-spacing:-0.02em;line-height:1.1;color:var(--text);}}
+  .milestone-sub {{font-size:0.85rem;color:var(--text-muted);margin-top:0.5rem;}}
   .milestone-share {{
-    display:inline-flex;align-items:center;gap:0.4rem;background:#10b981;color:#0c1926;
-    font-weight:700;font-size:0.85rem;padding:0.65rem 1.25rem;border-radius:9999px;
-    transition:var(--transition);white-space:nowrap;
+    display:inline-block;margin-top:1.5rem;font-size:0.82rem;font-weight:600;
+    color:var(--text);border-bottom:1px solid var(--border-hover);padding-bottom:0.1rem;
+    transition:var(--transition);
   }}
-  .milestone-share:hover {{background:#34d399;transform:translateY(-1px);}}
+  .milestone-share:hover {{color:var(--accent-dark);}}
 
   .stats {{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1rem;margin:2rem 0;}}
   .stat {{
