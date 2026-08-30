@@ -25,8 +25,9 @@ different internal field names -- if too few of the checked fields are even
 present in the uploaded file, this reports the file as unrecognized rather
 than claiming everything on it is "missing".
 """
-from pdf_validator import _read_values
+from pdf_validator import _read_values, _is_checked, _money_to_int
 from pdf_filler import FIELD_MAP
+from financing_addendum import FIELD_MAP as FA_FIELDS
 
 # (FIELD_MAP key, message shown to the TC, blocking)
 # "blocking" mirrors the same product decision pdf_validator.py already
@@ -98,6 +99,17 @@ INITIALS_PAGES = [
 FA_PREFIX = "FA_"
 FA_INITIALS_PAGE = ("40-11 addendum", "Initialed for identification by Buyer", "undefined_2", "and Seller", "undefined_3")
 
+# Addendum-vs-contract internal consistency. Both sides of each comparison
+# live in the SAME uploaded document, so this needs no external "parsed"
+# ground truth (unlike pdf_validator.py's equivalent check, which compares
+# against parsed["loan_amount"] because it's validating a freshly-generated
+# draft rather than an arbitrary upload). Loan amount uses FA_FIELDS'
+# "first_loan_amount" (already used -- and thus already trusted -- by
+# financing_addendum.py's own fill logic) against pdf_filler.py's
+# already-verified "loan_amount" (Section 3B). Checkbox names likewise
+# reuse pdf_filler.py's already rect-verified "third_party_financing_3b"
+# (Sec 3B row) and "third_party_financing" (Sec 22 addenda list).
+
 
 def _check_initials_quad(values: dict, page_label: str, b1: str, b2: str, s1: str, s2: str) -> list:
     issues = []
@@ -145,12 +157,40 @@ def check_tc_file(pdf_path: str) -> dict:
     for page_label, b1, b2, s1, s2 in INITIALS_PAGES:
         issues.extend(_check_initials_quad(values, page_label, b1, b2, s1, s2))
 
-    # Initials on the 40-11 addendum -- only if the addendum was actually
-    # attached (its fields are FA_-prefixed; a cash offer has none of them).
-    if any(k.startswith(FA_PREFIX) for k in values):
+    # Addendum-attached fields are FA_-prefixed; a cash offer has none of them.
+    has_addendum = any(k.startswith(FA_PREFIX) for k in values)
+
+    # Initials on the 40-11 addendum -- only if actually attached.
+    if has_addendum:
         label, b1, b2, s1, s2 = FA_INITIALS_PAGE
         fa_values = {k: values.get(FA_PREFIX + k, "") for k in (b1, b2, s1, s2)}
         issues.extend(_check_initials_quad(fa_values, label, b1, b2, s1, s2))
+
+    # 1. Loan amount: main contract Section 3B vs. 40-11 principal amount.
+    if has_addendum:
+        main_loan = values.get(FIELD_MAP["loan_amount"], "").strip()
+        fa_loan = values.get(FA_PREFIX + FA_FIELDS["first_loan_amount"], "").strip()
+        if main_loan and fa_loan and _money_to_int(main_loan) != _money_to_int(fa_loan):
+            issues.append({
+                "severity": "blocker",
+                "message": f"Section 3B financing amount ({main_loan}) doesn't match the 40-11 addendum's principal amount ({fa_loan})",
+            })
+
+    # 2. Attachment consistency: the "Third Party Financing Addendum"
+    # checkboxes on the main contract (Sec 3B row + Sec 22 addenda list)
+    # should be checked if and only if a 40-11 is actually attached.
+    checked_3b = _is_checked(values, FIELD_MAP["third_party_financing_3b"])
+    checked_22 = _is_checked(values, FIELD_MAP["third_party_financing"])
+    if has_addendum:
+        if not checked_3b:
+            issues.append({"severity": "blocker", "message": "Section 3B: Third Party Financing Addendum checkbox not checked, but a 40-11 addendum is attached"})
+        if not checked_22:
+            issues.append({"severity": "blocker", "message": "Section 22: Third Party Financing Addendum checkbox not checked, but a 40-11 addendum is attached"})
+    else:
+        if checked_3b:
+            issues.append({"severity": "blocker", "message": "Section 3B: Third Party Financing Addendum checkbox is checked, but no 40-11 addendum is attached"})
+        if checked_22:
+            issues.append({"severity": "blocker", "message": "Section 22: Third Party Financing Addendum checkbox is checked, but no 40-11 addendum is attached"})
 
     blocking_issues = [i for i in issues if i["severity"] == "blocker"]
     return {

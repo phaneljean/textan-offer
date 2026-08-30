@@ -2625,7 +2625,7 @@ font-family:inherit;font-size:0.85rem;font-weight:600;cursor:pointer;}
 <div class="status" id="status"></div>
 <div class="result" id="result"></div>
 </div>
-<p class="scope-note">v1 checks field completeness only: property address, county, buyer/seller name, earnest money, option fee, escrow agent, title company, Effective Date, and Buyer/Seller initials on every page that requires them (including the 40-11 financing addendum, when attached) &mdash; all verified against TREC's actual 20-19 form fields. It does not check whether an addendum's terms match the main contract, or read earnest-money receipts or scanned/flattened PDFs.</p>
+<p class="scope-note">v1 checks field completeness (property address, county, buyer/seller name, earnest money, option fee, escrow agent, title company, Effective Date, Buyer/Seller initials on every page that requires them) plus internal consistency between the contract and an attached 40-11 financing addendum (loan amount matches, Third Party Financing checkboxes agree with whether an addendum is actually attached) &mdash; all verified against TREC's actual form fields. It does not check earnest-money receipts or read scanned/flattened PDFs.</p>
 </div>
 <script>
 const dropZone = document.getElementById('dropZone');
