@@ -51,6 +51,15 @@ CHECKED_FIELDS = [
 # a PDF from a different tool/source won't use this app's field names at all.
 MIN_MATCHED_FIELDS = 3
 
+# If most of the core required fields (address, county, title company,
+# escrow agent, earnest money, option fee -- NOT initials/Effective
+# Date/addendum, which a nearly-finished file can legitimately still be
+# missing right before closing) are blank, this isn't a file with a few
+# fixable gaps -- it's an essentially blank draft. Cheaper for the TC to
+# regenerate cleanly than to chase down that many individual corrections.
+CORE_BLOCKING_FIELDS = sum(1 for _, _, blocking in CHECKED_FIELDS if blocking)
+BLANK_DRAFT_THRESHOLD = 0.7  # fraction of CORE_BLOCKING_FIELDS missing
+
 # Effective Date -- TREC 20-19 page 10 of 12: "EXECUTED the ___ day of ___,
 # 20__ (Effective Date). (BROKER: FILL IN THE DATE OF FINAL ACCEPTANCE.)"
 # Rect-verified 2026-08-30 by rendering distinct markers into each field and
@@ -140,13 +149,17 @@ def check_tc_file(pdf_path: str) -> dict:
                     "20-19 PDFs are supported in this version (not scanned or flattened files)."
                 ),
             }],
+            "looks_like_blank_draft": False,
         }
 
     issues = []
+    core_missing = 0
     for key, message, blocking in CHECKED_FIELDS:
         val = values.get(FIELD_MAP[key], "").strip()
         if not val:
             issues.append({"severity": "blocker" if blocking else "warning", "message": message})
+            if blocking:
+                core_missing += 1
 
     # Effective Date
     missing_parts = [label for label, raw in EFFECTIVE_DATE_FIELDS.items() if not values.get(raw, "").strip()]
@@ -197,4 +210,5 @@ def check_tc_file(pdf_path: str) -> dict:
         "recognized": True,
         "complete": len(blocking_issues) == 0,
         "issues": issues,
+        "looks_like_blank_draft": core_missing / CORE_BLOCKING_FIELDS >= BLANK_DRAFT_THRESHOLD,
     }

@@ -2602,6 +2602,12 @@ padding:0.15rem 0.5rem;border-radius:9999px;height:fit-content;}
 .copy-btn{background:var(--accent);color:#fff;border:none;padding:0.7rem 1.5rem;border-radius:var(--radius-sm);
 font-family:inherit;font-size:0.85rem;font-weight:600;cursor:pointer;}
 .copy-btn:hover{opacity:0.9;}
+.fixit-cta{margin-top:1.25rem;padding:1.1rem 1.25rem;background:var(--accent-tint);border:1px solid var(--border);
+border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;}
+.fixit-cta p{font-size:0.85rem;color:var(--text-muted);margin:0;}
+.fixit-cta a{background:var(--accent);color:#fff;padding:0.6rem 1.25rem;border-radius:9999px;
+font-size:0.85rem;font-weight:600;white-space:nowrap;}
+.fixit-cta a:hover{opacity:0.9;}
 .scope-note{margin-top:2rem;font-size:0.8rem;color:var(--text-dim);line-height:1.6;}
 </style>
 </head>
@@ -2681,6 +2687,9 @@ function renderResult(data) {
     html += '<div class="result-banner complete">All checked fields are filled in.</div>';
   } else {
     html += '<div class="result-banner incomplete">' + issues.length + ' issue' + (issues.length === 1 ? '' : 's') + ' found</div>';
+  }
+  if (data.looks_like_blank_draft) {
+    html += '<div class="fixit-cta"><p>This looks like an essentially blank draft &mdash; more gaps than a quick fix. It may be faster to generate a clean one from scratch.</p><a href="/demo">Generate a clean offer &rarr;</a></div>';
   }
   if (issues.length) {
     html += '<ul class="issue-list">';
