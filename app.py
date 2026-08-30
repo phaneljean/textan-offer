@@ -39,7 +39,9 @@ from sms_utils import parse_incoming_sms
 from cleanup import run_cleanup_if_due
 from reminders import run_reminders_if_due
 from drafts import save_draft, get_draft, clear_draft
+from tc_audit import check_tc_file
 from werkzeug.middleware.proxy_fix import ProxyFix
+import tempfile
 
 app = Flask(__name__)
 # Railway terminates TLS at its edge and forwards plain HTTP internally, so
@@ -47,6 +49,11 @@ app = Flask(__name__)
 # reports "http://" even though the site is only ever served over https.
 # Trusts exactly one proxy hop (Railway's own edge) for X-Forwarded-Proto/Host.
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
+# No upload endpoint existed before /v1/tc/check -- this caps request body
+# size app-wide so an unauthenticated upload can't tie up a worker with a
+# huge file. 15MB is generous for an unflattened AcroForm PDF (this app's
+# own generated offers run well under 1MB) and small enough to reject abuse.
+app.config["MAX_CONTENT_LENGTH"] = 15 * 1024 * 1024
 
 # Stripe configuration
 stripe.api_key = os.environ.get("STRIPE_SECRET_KEY", "")
@@ -2517,6 +2524,191 @@ def api_parse():
         "inspection_days": parsed.get("inspection_days"),
         "has_hoa": parsed.get("has_hoa", False),
     })
+
+
+@app.route("/v1/tc/check", methods=["POST"])
+def tc_check():
+    """Transaction-coordinator file audit: upload a TREC 20-19 AcroForm PDF,
+    get back which already-rect-verified fields are still blank. No auth in
+    v1 (see MAX_CONTENT_LENGTH above for the abuse guard on an open upload
+    endpoint) -- see tc_audit.py for exactly what is and isn't checked."""
+    upload = request.files.get("file")
+    if not upload or not upload.filename:
+        return jsonify({"error": "No file uploaded. Attach a PDF as 'file'."}), 400
+    if not upload.filename.lower().endswith(".pdf"):
+        return jsonify({"error": "Only PDF files are supported."}), 400
+
+    with tempfile.NamedTemporaryFile(suffix=".pdf") as tmp:
+        upload.save(tmp.name)
+        try:
+            result = check_tc_file(tmp.name)
+        except Exception:
+            return jsonify({"error": "Couldn't read that file as a PDF. Make sure it's not corrupted or password-protected."}), 400
+
+    track_event("tc_check", metadata={"recognized": result["recognized"], "complete": result["complete"]})
+    return jsonify(result)
+
+
+@app.route("/tc-check")
+def tc_check_page():
+    return """<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TC File Check — TxtAnOffer</title>
+<meta name="description" content="Drop a filled TREC 20-19 PDF and see what's missing before title kicks it back.">
+<link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<style>
+:root{--bg:#F5F5F7;--bg-card:#fff;--border:rgba(15,31,47,0.08);
+--text:#0f1f2f;--text-muted:#5a6b7a;--text-dim:#8a9aa9;--accent:#171717;--accent-light:#525252;
+--accent-dark:#000000;--accent-tint:#F0F0EE;--radius:1.25rem;--radius-sm:0.85rem;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;
+-webkit-font-smoothing:antialiased;}
+a{color:inherit;text-decoration:none;}
+.nav{display:flex;align-items:center;justify-content:space-between;padding:1rem 2rem;
+background:rgba(255,255,255,0.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);
+position:sticky;top:0;z-index:100;}
+.nav-left{display:flex;align-items:center;gap:0.6rem;font-weight:700;font-size:1.1rem;color:var(--text);}
+.nav-logo{width:34px;height:34px;border-radius:22%;overflow:hidden;}
+.nav-logo img{width:100%;height:100%;object-fit:contain;}
+.container{max-width:700px;margin:0 auto;padding:3rem 2rem;}
+h1{font-size:2rem;font-weight:800;letter-spacing:-0.03em;margin-bottom:0.5rem;color:var(--text);}
+.subtitle{color:var(--text-muted);font-size:1rem;margin-bottom:2rem;}
+.card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:2rem;box-shadow:0 1px 3px rgba(15,31,47,0.05);}
+.drop-zone{border:2px dashed rgba(15,31,47,0.18);border-radius:var(--radius-sm);padding:3rem 1.5rem;
+text-align:center;cursor:pointer;transition:all 0.2s;}
+.drop-zone:hover,.drop-zone.drag{border-color:var(--accent);background:var(--accent-tint);}
+.drop-zone svg{margin-bottom:0.75rem;}
+.drop-zone .dz-title{font-weight:700;font-size:1rem;margin-bottom:0.25rem;}
+.drop-zone .dz-sub{color:var(--text-dim);font-size:0.85rem;}
+input[type=file]{display:none;}
+.status{margin-top:1.25rem;font-size:0.9rem;color:var(--text-muted);display:none;}
+.status.show{display:block;}
+.result{margin-top:1.5rem;display:none;}
+.result.show{display:block;}
+.result-banner{border-radius:var(--radius-sm);padding:1rem 1.25rem;font-weight:700;margin-bottom:1rem;}
+.result-banner.complete{background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.25);color:#047857;}
+.result-banner.incomplete{background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);color:#dc2626;}
+.issue-list{list-style:none;margin-bottom:1.25rem;}
+.issue-item{display:flex;gap:0.6rem;padding:0.65rem 0;border-bottom:1px solid var(--border);font-size:0.9rem;}
+.issue-item:last-child{border-bottom:none;}
+.issue-tag{flex-shrink:0;font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;
+padding:0.15rem 0.5rem;border-radius:9999px;height:fit-content;}
+.issue-tag.blocker{background:rgba(239,68,68,0.12);color:#dc2626;}
+.issue-tag.warning{background:rgba(245,158,11,0.12);color:#b45309;}
+.copy-btn{background:var(--accent);color:#fff;border:none;padding:0.7rem 1.5rem;border-radius:var(--radius-sm);
+font-family:inherit;font-size:0.85rem;font-weight:600;cursor:pointer;}
+.copy-btn:hover{opacity:0.9;}
+.scope-note{margin-top:2rem;font-size:0.8rem;color:var(--text-dim);line-height:1.6;}
+</style>
+</head>
+<body>
+<nav class="nav">
+<a href="/" class="nav-left">
+<div class="nav-logo"><img src="/static/logo.svg" alt="TxtAnOffer"></div>
+<span>TxtAnOffer</span>
+</a>
+</nav>
+<div class="container">
+<h1>TC File Check</h1>
+<p class="subtitle">Drop a filled TREC 20-19 PDF. We'll tell you what's missing before title kicks it back.</p>
+<div class="card">
+<div class="drop-zone" id="dropZone">
+<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#8a9aa9" stroke-width="1.5"><path d="M12 16V4M12 4l-4 4M12 4l4 4" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+<div class="dz-title">Drop a TREC PDF here, or click to choose</div>
+<div class="dz-sub">AcroForm-fillable PDFs only &mdash; not scanned or flattened files</div>
+</div>
+<input type="file" id="fileInput" accept="application/pdf">
+<div class="status" id="status"></div>
+<div class="result" id="result"></div>
+</div>
+<p class="scope-note">v1 checks field completeness only (property address, county, buyer/seller name, earnest money, option fee, escrow agent, title company) against fields this app has verified against TREC's 20-19 form. It does not check Effective Date, initials, addendum cross-references, or earnest-money receipts yet, and it doesn't read scanned/flattened PDFs.</p>
+</div>
+<script>
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const statusEl = document.getElementById('status');
+const resultEl = document.getElementById('result');
+
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag');
+  if (e.dataTransfer.files.length) uploadFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', () => {
+  if (fileInput.files.length) uploadFile(fileInput.files[0]);
+});
+
+function uploadFile(file) {
+  resultEl.classList.remove('show');
+  statusEl.textContent = 'Checking ' + file.name + '...';
+  statusEl.classList.add('show');
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  fetch('/v1/tc/check', { method: 'POST', body: formData })
+    .then(r => r.json())
+    .then(data => {
+      statusEl.classList.remove('show');
+      if (data.error) {
+        renderError(data.error);
+        return;
+      }
+      renderResult(data);
+    })
+    .catch(() => {
+      statusEl.classList.remove('show');
+      renderError('Something went wrong checking that file. Try again.');
+    });
+}
+
+function renderError(msg) {
+  resultEl.innerHTML = '<div class="result-banner incomplete">' + escapeHtml(msg) + '</div>';
+  resultEl.classList.add('show');
+}
+
+function renderResult(data) {
+  const issues = data.issues || [];
+  let html = '';
+  if (data.complete) {
+    html += '<div class="result-banner complete">All checked fields are filled in.</div>';
+  } else {
+    html += '<div class="result-banner incomplete">' + issues.length + ' issue' + (issues.length === 1 ? '' : 's') + ' found</div>';
+  }
+  if (issues.length) {
+    html += '<ul class="issue-list">';
+    for (const issue of issues) {
+      html += '<li class="issue-item"><span class="issue-tag ' + issue.severity + '">' + issue.severity + '</span><span>' + escapeHtml(issue.message) + '</span></li>';
+    }
+    html += '</ul>';
+    html += '<button class="copy-btn" onclick="copyChecklist()">Copy checklist</button>';
+  }
+  resultEl.innerHTML = html;
+  resultEl.classList.add('show');
+  resultEl.dataset.issues = JSON.stringify(issues);
+}
+
+function copyChecklist() {
+  const issues = JSON.parse(resultEl.dataset.issues || '[]');
+  const text = issues.map(i => '- [' + i.severity.toUpperCase() + '] ' + i.message).join('\\n');
+  navigator.clipboard.writeText(text);
+}
+
+function escapeHtml(s) {
+  const div = document.createElement('div');
+  div.textContent = s;
+  return div.innerHTML;
+}
+</script>
+</body>
+</html>"""
 
 
 @app.route("/playground")
