@@ -50,6 +50,63 @@ CHECKED_FIELDS = [
 # a PDF from a different tool/source won't use this app's field names at all.
 MIN_MATCHED_FIELDS = 3
 
+# Effective Date -- TREC 20-19 page 10 of 12: "EXECUTED the ___ day of ___,
+# 20__ (Effective Date). (BROKER: FILL IN THE DATE OF FINAL ACCEPTANCE.)"
+# Rect-verified 2026-08-30 by rendering distinct markers into each field and
+# confirming visually against the printed blank -- none of these 3 raw names
+# describe their own role (another instance of TREC's export-tool naming
+# lying about position). NOT in pdf_filler.py's FIELD_MAP -- this app never
+# fills Effective Date (it's the broker's to fill in on final acceptance,
+# same reasoning as buyer/seller signatures), so it was never rect-verified
+# until now. Note: FIELD_MAP's "closing_year_suffix": "20_2" entry is a
+# stale/unused mismap -- "20_2" is actually this Effective Date year field,
+# not a closing-date field (fill_offer_pdf() never references that key at
+# all; closing date is drawn entirely via reportlab overlay).
+EFFECTIVE_DATE_FIELDS = {
+    "day": "EXECUTED the",
+    "month": "day of",
+    "year": "20_2",
+}
+
+# Initials-for-identification quads -- 4 raw fields per page (Buyer1, Buyer2,
+# Seller1, Seller2), rect-verified 2026-08-30 by rendering distinct COL1-4
+# markers into each candidate field and visually confirming against the
+# printed "Initialed for identification by Buyer ___ ___ and Seller ___ ___"
+# line. IMPORTANT: field names do NOT reliably match role -- on pages 8 and 9
+# (indices 7, 8) the field literally named "and Seller_*" renders in the
+# BUYER2 position, not Seller1 (confirmed by render, not by name). Trust this
+# table's column position, never the field name text, same rule as
+# everywhere else in this codebase's FIELD_MAP.
+# Printed page numbers confirmed via each page's own footer text.
+INITIALS_PAGES = [
+    ("Page 1 of 12", "Initialed for identification by Buyer", "undefined_8", "and Seller", "undefined_9"),
+    ("Page 4 of 12", "Initialed for identification by Buyer_2", "undefined_14", "and Seller_4", "undefined_15"),
+    ("Page 5 of 12", "Initialed for identification by Buyer_3", "Buyers Expenses as allowed by the lender", "and Seller_5", "undefined_16"),
+    ("Page 6 of 12", "Initialed for identification by Buyer_4", "undefined_17", "and Seller_6", "undefined_18"),
+    ("Page 8 of 12", "Initialed for identification by Buyer_521", "and Seller_18", "undefined_2219", "undefined_2322"),
+    ("Page 9 of 12", "Initialed for identification by Buyer_5", "and Seller_7", "undefined_22", "undefined_23"),
+]
+
+# Same quad on the 40-11 Third Party Financing Addendum's own page 1 of 2 --
+# rect-verified 2026-08-30 the same way. Only checked when the addendum is
+# actually attached (its fields are namespaced "FA_" + raw name by
+# financing_addendum.py at merge time -- see pdf_validator.py's same FA_
+# convention). No buyer/seller NAME field exists anywhere on this addendum
+# template (checked directly -- only loan-amount and initials fields do), so
+# a name cross-check between the main contract and this addendum is not
+# buildable; only the addendum's own initials-completeness is checked here.
+FA_PREFIX = "FA_"
+FA_INITIALS_PAGE = ("40-11 addendum", "Initialed for identification by Buyer", "undefined_2", "and Seller", "undefined_3")
+
+
+def _check_initials_quad(values: dict, page_label: str, b1: str, b2: str, s1: str, s2: str) -> list:
+    issues = []
+    if not values.get(b1, "").strip() or not values.get(b2, "").strip():
+        issues.append({"severity": "blocker", "message": f"{page_label}: Buyer initials missing"})
+    if not values.get(s1, "").strip() or not values.get(s2, "").strip():
+        issues.append({"severity": "blocker", "message": f"{page_label}: Seller initials missing"})
+    return issues
+
 
 def check_tc_file(pdf_path: str) -> dict:
     """Audits an uploaded TREC 20-19 AcroForm PDF for missing required
@@ -78,6 +135,22 @@ def check_tc_file(pdf_path: str) -> dict:
         val = values.get(FIELD_MAP[key], "").strip()
         if not val:
             issues.append({"severity": "blocker" if blocking else "warning", "message": message})
+
+    # Effective Date
+    missing_parts = [label for label, raw in EFFECTIVE_DATE_FIELDS.items() if not values.get(raw, "").strip()]
+    if missing_parts:
+        issues.append({"severity": "blocker", "message": "Page 10 of 12: Effective Date is blank"})
+
+    # Initials for identification, main contract
+    for page_label, b1, b2, s1, s2 in INITIALS_PAGES:
+        issues.extend(_check_initials_quad(values, page_label, b1, b2, s1, s2))
+
+    # Initials on the 40-11 addendum -- only if the addendum was actually
+    # attached (its fields are FA_-prefixed; a cash offer has none of them).
+    if any(k.startswith(FA_PREFIX) for k in values):
+        label, b1, b2, s1, s2 = FA_INITIALS_PAGE
+        fa_values = {k: values.get(FA_PREFIX + k, "") for k in (b1, b2, s1, s2)}
+        issues.extend(_check_initials_quad(fa_values, label, b1, b2, s1, s2))
 
     blocking_issues = [i for i in issues if i["severity"] == "blocker"]
     return {
