@@ -215,8 +215,8 @@ def index():
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TxtAnOffer — Generate TREC Contracts by Text Message</title>
-  <meta name="description" content="Texas real estate agents: text your offer details and receive a filled TREC 1-4 contract PDF in under 10 seconds, with every required field verified before it reaches you. No app required.">
+  <title>TxtAnOffer — Draft &amp; Verify TREC Contracts</title>
+  <meta name="description" content="Texas agents and transaction coordinators: draft a TREC 20-19 by text message in 10 seconds, or drop any filled contract in and see what's missing before title kicks it back. No app required.">
   <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -446,6 +446,44 @@ def index():
     }
     .hero-phone a { color: #000000; font-weight: 600; text-decoration: none; }
     .hero-phone a:hover { text-decoration: underline; }
+
+    /* Workflow strip -- Draft / Verify / Close */
+    .workflow-strip { display: flex; align-items: center; gap: 0.6rem; margin-top: 1.5rem;
+      font-size: 0.8rem; font-weight: 700; color: var(--text-muted); flex-wrap: wrap; }
+    .workflow-step { display: flex; align-items: center; gap: 0.5rem; }
+    .workflow-num { width: 22px; height: 22px; border-radius: 999px; background: var(--accent-tint);
+      color: var(--text); display: flex; align-items: center; justify-content: center;
+      font-size: 0.68rem; flex-shrink: 0; }
+    .workflow-arrow { color: var(--text-dim); }
+
+    /* TC-check upload widget (primary hero CTA) */
+    .drop-zone { border: 2px dashed rgba(15,31,47,0.18); border-radius: var(--radius-sm); padding: 2rem 1.5rem;
+      text-align: center; cursor: pointer; transition: var(--transition); background: #fff; }
+    .drop-zone:hover, .drop-zone.drag { border-color: var(--accent); background: var(--accent-tint); }
+    .drop-zone svg { margin-bottom: 0.6rem; }
+    .drop-zone .dz-title { font-weight: 700; font-size: 0.95rem; margin-bottom: 0.2rem; }
+    .drop-zone .dz-sub { color: var(--text-dim); font-size: 0.8rem; }
+    input[type=file] { display: none; }
+    .status { margin-top: 1rem; font-size: 0.85rem; color: var(--text-muted); display: none; }
+    .status.show { display: block; }
+    .result { margin-top: 1.25rem; display: none; }
+    .result.show { display: block; }
+    .result-banner { border-radius: var(--radius-sm); padding: 0.85rem 1.1rem; font-weight: 700; margin-bottom: 0.85rem; font-size: 0.9rem; }
+    .result-banner.complete { background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.25); color: #047857; }
+    .result-banner.incomplete { background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); color: #dc2626; }
+    .issue-list { list-style: none; margin-bottom: 0.6rem; }
+    .issue-item { display: flex; gap: 0.6rem; padding: 0.5rem 0; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
+    .issue-item:last-child { border-bottom: none; }
+    .issue-tag { flex-shrink: 0; font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+      padding: 0.12rem 0.45rem; border-radius: 9999px; height: fit-content; }
+    .issue-tag.blocker { background: rgba(239,68,68,0.12); color: #dc2626; }
+    .issue-tag.warning { background: rgba(245,158,11,0.12); color: #b45309; }
+    .result-more { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem; }
+    .result-more a { color: var(--text); font-weight: 600; text-decoration: underline; }
+
+    /* Secondary CTA (SMS draft) -- demoted below the primary check widget */
+    .secondary-cta { margin-top: 1.75rem; padding-top: 1.5rem; border-top: 1px solid var(--border); max-width: 540px; }
+    .secondary-cta-label { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem; }
 
     /* Stats -- glass card floating over the hero glow */
     .stats {
@@ -735,17 +773,38 @@ def index():
 
   <div class="main">
   <section class="hero section">
-    <div class="badge">Built for Texas REALTORS</div>
+    <div class="badge">For Texas Agents &amp; Transaction Coordinators</div>
     <h1>
-      Generate TREC contracts<br>
-      by text message.
+      Draft instantly.<br>
+      Verify completely.<br>
+      Close smoothly.
     </h1>
     <p class="hero-sub">
-      Text your offer from the parking lot. Get a filled <strong>TREC 20-19</strong> + <strong>Third Party Financing Addendum</strong> PDF in 10 seconds. No app download. No form filling. Just text and go.
+      TxtAnOffer drafts your <strong>TREC 20-19</strong> by text message, and checks any filled contract &mdash; yours or anyone else's &mdash; for the missing initials, dates, and mismatches that make title kick a file back.
     </p>
+
+    <div class="workflow-strip">
+      <div class="workflow-step"><span class="workflow-num">1</span>Draft</div>
+      <div class="workflow-arrow">&rarr;</div>
+      <div class="workflow-step"><span class="workflow-num">2</span>Verify</div>
+      <div class="workflow-arrow">&rarr;</div>
+      <div class="workflow-step"><span class="workflow-num">3</span>Close</div>
+    </div>
 
     <div class="input-card">
       <div class="input-label">Try it now &mdash; no signup required</div>
+      <div class="drop-zone" id="homeDropZone">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#8a9aa9" stroke-width="1.5"><path d="M12 16V4M12 4l-4 4M12 4l4 4" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div class="dz-title">Drop a filled TREC 20-19 PDF here, or click to choose</div>
+        <div class="dz-sub">We'll tell you what's missing before title kicks it back.</div>
+      </div>
+      <input type="file" id="homeFileInput" accept="application/pdf">
+      <div class="status" id="homeStatus"></div>
+      <div class="result" id="homeResult"></div>
+    </div>
+
+    <div class="secondary-cta">
+      <div class="secondary-cta-label">Need to draft an offer fast? Text your details to generate a flawless draft in 60 seconds.</div>
       <form id="live-demo-form">
         <div class="input-row">
           <input type="text" id="demo-input" placeholder="725k 3% 21day Harris 1234 Westheimer Rd" autocomplete="off">
@@ -1067,6 +1126,97 @@ def index():
       cursorEl.classList.remove('blink');
       [addrEl,priceEl,downEl,closeEl,pdfArrow,pdfCard].forEach(function(el){ if(el) el.style.opacity=''; });
     });
+  }
+})();
+</script>
+<script>
+(function(){
+  var dropZone = document.getElementById('homeDropZone'),
+      fileInput = document.getElementById('homeFileInput'),
+      statusEl = document.getElementById('homeStatus'),
+      resultEl = document.getElementById('homeResult');
+  if(!dropZone) return;
+
+  dropZone.addEventListener('click', function(){ fileInput.click(); });
+  dropZone.addEventListener('dragover', function(e){ e.preventDefault(); dropZone.classList.add('drag'); });
+  dropZone.addEventListener('dragleave', function(){ dropZone.classList.remove('drag'); });
+  dropZone.addEventListener('drop', function(e){
+    e.preventDefault();
+    dropZone.classList.remove('drag');
+    if(e.dataTransfer.files.length) uploadFile(e.dataTransfer.files[0]);
+  });
+  fileInput.addEventListener('change', function(){
+    if(fileInput.files.length) uploadFile(fileInput.files[0]);
+  });
+
+  // Same perceived-progress pattern as /tc-check -- one real round trip,
+  // staged labels just so the wait doesn't feel dead.
+  var STATUS_STEPS = ['Reading PDF...', 'Checking required fields...', 'Checking initials & consistency...'];
+  var statusTimers = [];
+
+  function uploadFile(file){
+    resultEl.classList.remove('show');
+    statusTimers.forEach(clearTimeout);
+    statusTimers = STATUS_STEPS.map(function(label, i){
+      return setTimeout(function(){ statusEl.textContent = label; }, i * 450);
+    });
+    statusEl.textContent = STATUS_STEPS[0];
+    statusEl.classList.add('show');
+
+    var formData = new FormData();
+    formData.append('file', file);
+
+    fetch('/v1/tc/check', { method: 'POST', body: formData })
+      .then(function(r){ return r.json(); })
+      .then(function(data){
+        statusTimers.forEach(clearTimeout);
+        statusEl.classList.remove('show');
+        if(data.error){ renderError(data.error); return; }
+        renderResult(data);
+      })
+      .catch(function(){
+        statusTimers.forEach(clearTimeout);
+        statusEl.classList.remove('show');
+        renderError('Something went wrong checking that file. Try again.');
+      });
+  }
+
+  function renderError(msg){
+    resultEl.innerHTML = '<div class="result-banner incomplete">' + escapeHtml(msg) + '</div>';
+    resultEl.classList.add('show');
+  }
+
+  function renderResult(data){
+    var issues = data.issues || [];
+    var html = '';
+    if(data.complete){
+      html += '<div class="result-banner complete">All checked fields are filled in.</div>';
+    } else {
+      html += '<div class="result-banner incomplete">' + issues.length + ' issue' + (issues.length === 1 ? '' : 's') + ' found</div>';
+    }
+    // Homepage widget shows the first few issues -- the full checklist,
+    // copy/download buttons, and blank-draft CTA live on /tc-check itself.
+    var shown = issues.slice(0, 4);
+    if(shown.length){
+      html += '<ul class="issue-list">';
+      shown.forEach(function(issue){
+        html += '<li class="issue-item"><span class="issue-tag ' + issue.severity + '">' + issue.severity + '</span><span>' + escapeHtml(issue.message) + '</span></li>';
+      });
+      html += '</ul>';
+    }
+    if(issues.length > shown.length){
+      html += '<div class="result-more">+' + (issues.length - shown.length) + ' more &mdash; <a href="/tc-check">see the full checklist &rarr;</a></div>';
+    } else if(issues.length){
+      html += '<div class="result-more"><a href="/tc-check">Copy or download this checklist &rarr;</a></div>';
+    }
+    resultEl.innerHTML = html;
+    resultEl.classList.add('show');
+  }
+
+  function escapeHtml(s){
+    var div = document.createElement('div');
+    div.textContent = s;
+    return div.innerHTML;
   }
 })();
 </script>
