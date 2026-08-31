@@ -244,6 +244,33 @@ def get_landing_visits_by_source(days: int = 30) -> list:
         key=lambda r: -r["count"]
     )
 
+def get_tc_check_summary(days: int = 30) -> dict:
+    """Usage summary for the TC file-check tool (/v1/tc/check). Separate
+    from the rest of this module's metrics -- that endpoint tracks a
+    'tc_check' event per request (see app.py's tc_check()) that nothing
+    else here surfaces, so this was invisible on the dashboard until now."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cutoff = (datetime.utcnow() - timedelta(days=days)).isoformat()
+    cursor.execute("""
+        SELECT metadata FROM events
+        WHERE event_type = 'tc_check' AND created_at > ?
+    """, (cutoff,))
+    rows = cursor.fetchall()
+    conn.close()
+
+    import json
+    total = len(rows)
+    recognized = complete = 0
+    for row in rows:
+        metadata = json.loads(row[0]) if row[0] else {}
+        if metadata.get("recognized"):
+            recognized += 1
+        if metadata.get("complete"):
+            complete += 1
+
+    return {"total": total, "recognized": recognized, "complete": complete}
+
 def get_signups_by_source(days: int = 30) -> list:
     """Signup counts grouped by ?src= attribution (Direct Reach, BiggerPockets,
     LinkedIn, etc.), most recent-heavy channels first. 'direct' covers anyone

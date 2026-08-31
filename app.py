@@ -32,7 +32,7 @@ from pdf_validator import validate_offer_pdf
 from amendment import fill_amendment_pdf
 from agent_profiles import get_agent_profile, save_agent_profile
 from subscriptions import can_generate_offer, increment_offer_count, activate_subscription, deactivate_subscription, get_user, create_user, FREE_OFFER_LIMIT, is_admin_phone, has_professional_access
-from analytics import track_event, get_conversion_metrics, get_revenue_metrics, get_recent_sms, get_recent_sms_failures, get_last_blocked_state, get_waitlist_signups, get_signups_by_source, get_landing_visits_by_source
+from analytics import track_event, get_conversion_metrics, get_revenue_metrics, get_recent_sms, get_recent_sms_failures, get_last_blocked_state, get_waitlist_signups, get_signups_by_source, get_landing_visits_by_source, get_tc_check_summary
 from integrations import send_offer_email, fire_webhook, save_webhook, get_webhook, delete_webhook, send_to_docusign
 from offers_db import record_offer, get_offers_for_phone, get_offer_by_filename, record_amendment, get_amendments_for_phone, record_thread_response, record_email_sent
 from sms_utils import parse_incoming_sms
@@ -2564,7 +2564,7 @@ def tc_check():
 
 @app.route("/tc-check")
 def tc_check_page():
-    return """<!DOCTYPE html>
+    html = """<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -2731,6 +2731,19 @@ function escapeHtml(s) {
 </script>
 </body>
 </html>"""
+    # Same ?src= first-touch attribution pattern as the homepage (see "/"
+    # route above) -- reuses the same ta_src cookie, so a tc-check visit
+    # that later leads to a signup still attributes correctly even though
+    # it happened on a different page/day. Without this, every outreach
+    # link into /tc-check was untracked: no way to tell whether a channel
+    # (LinkedIn, a DM) drove any traffic here at all.
+    import re as _re
+    src = _re.sub(r"[^a-zA-Z0-9_-]", "", request.args.get("src", ""))[:60]
+    resp = make_response(html)
+    if src and not request.cookies.get("ta_src"):
+        resp.set_cookie("ta_src", src, max_age=30 * 24 * 3600, httponly=True, samesite="Lax")
+        track_event("landing_visit", None, {"source": src})
+    return resp
 
 
 @app.route("/playground")
@@ -3623,6 +3636,7 @@ def analytics_dashboard():
     waitlist_signups = get_waitlist_signups(limit=200)
     signups_by_source = get_signups_by_source(days=30)
     landing_visits_by_source = get_landing_visits_by_source(days=30)
+    tc_check_summary = get_tc_check_summary(days=30)
 
     sms_rows = ""
     for sms in recent_sms:
@@ -3719,6 +3733,12 @@ body{{font-family:system-ui;max-width:800px;margin:40px auto;padding:20px;}}
   <div class="value">{metrics['total_offers']}</div>
   <div class="label">Total offers generated</div>
   <p>{metrics['avg_offers_per_user']} offers per user average</p>
+</div>
+<div class="metric">
+  <h3>TC File Check</h3>
+  <div class="value">{tc_check_summary['total']}</div>
+  <div class="label">Files checked via /tc-check (30 days)</div>
+  <p>{tc_check_summary['recognized']} recognized as a TREC 20-19 &middot; {tc_check_summary['complete']} came back complete</p>
 </div>
 <h2>Revenue</h2>
 <div class="metric">
