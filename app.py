@@ -705,6 +705,7 @@ def index():
       <a href="/pricing">Pricing</a>
       <a href="/demo">Demo</a>
       <a href="/playground">Parser Playground</a>
+      <a href="/tc-check">TC File Check</a>
       <a href="/faq">FAQ</a>
       <a href="/about">About</a>
       <a href="/trec-changes">TREC Changes</a>
@@ -923,6 +924,7 @@ def index():
       <a href="/privacy">Privacy Policy</a>
       <a href="/pricing">Pricing</a>
       <a href="/playground">Parser Playground</a>
+      <a href="/tc-check">TC File Check</a>
       <a href="mailto:support@txtanoffer.com">Support</a>
     </div>
     <div class="footer-copy">
