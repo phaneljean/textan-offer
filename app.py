@@ -40,6 +40,7 @@ from cleanup import run_cleanup_if_due
 from reminders import run_reminders_if_due
 from drafts import save_draft, get_draft, clear_draft
 from tc_audit import check_tc_file
+from rate_limit import check_and_increment
 from werkzeug.middleware.proxy_fix import ProxyFix
 import tempfile
 
@@ -47,8 +48,11 @@ app = Flask(__name__)
 # Railway terminates TLS at its edge and forwards plain HTTP internally, so
 # without this, request.host_url (used to build every SMS/PDF/checkout link)
 # reports "http://" even though the site is only ever served over https.
-# Trusts exactly one proxy hop (Railway's own edge) for X-Forwarded-Proto/Host.
-app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
+# Trusts exactly one proxy hop (Railway's own edge) for X-Forwarded-Proto/Host/For.
+# x_for=1 makes request.remote_addr the real client IP instead of Railway's edge
+# IP -- added alongside the /v1/tc/check rate limiter, which is useless without it
+# (every request would otherwise appear to come from the same proxy address).
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1, x_for=1)
 # No upload endpoint existed before /v1/tc/check -- this caps request body
 # size app-wide so an unauthenticated upload can't tie up a worker with a
 # huge file. 15MB is generous for an unflattened AcroForm PDF (this app's
@@ -2534,6 +2538,13 @@ def tc_check():
     get back which already-rect-verified fields are still blank. No auth in
     v1 (see MAX_CONTENT_LENGTH above for the abuse guard on an open upload
     endpoint) -- see tc_audit.py for exactly what is and isn't checked."""
+    # Per-IP throttle: this endpoint shares a Railway service (and worker
+    # processes) with the paying SMS product, so an unauthenticated flood
+    # here could degrade that too, not just this free tool.
+    client_ip = request.remote_addr or "unknown"
+    if not check_and_increment(f"tc_check:{client_ip}", limit=20):
+        return jsonify({"error": "Too many requests. Try again in a bit."}), 429
+
     upload = request.files.get("file")
     if not upload or not upload.filename:
         return jsonify({"error": "No file uploaded. Attach a PDF as 'file'."}), 400
