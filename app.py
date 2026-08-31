@@ -602,6 +602,8 @@ def index():
     /* Steps */
     .steps { max-width: 1000px; margin: 0 auto; padding: 4.5rem 2rem; border-top: 1px solid var(--border); }
     .steps-header { text-align: center; margin-bottom: 3rem; }
+    .steps-kicker { font-size: 0.7rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase;
+      letter-spacing: 0.07em; margin-bottom: 0.6rem; }
     .steps-header h2 { font-size: 2rem; font-weight: 800; margin: 0 0 0.5rem; letter-spacing: -0.02em; }
     .steps-header p { color: var(--text-dim); font-size: 1rem; }
     .steps-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; }
@@ -902,6 +904,7 @@ def index():
 
   <section class="steps" id="how">
     <div class="steps-header">
+      <div class="steps-kicker">How the SMS drafting engine works</div>
       <h2>Four steps. No app required.</h2>
       <p>Works with any phone that can send a text message.</p>
     </div>
