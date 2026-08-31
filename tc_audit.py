@@ -25,6 +25,7 @@ different internal field names -- if too few of the checked fields are even
 present in the uploaded file, this reports the file as unrecognized rather
 than claiming everything on it is "missing".
 """
+from pypdf import PdfReader
 from pdf_validator import _read_values, _is_checked, _money_to_int
 from pdf_filler import FIELD_MAP
 from financing_addendum import FIELD_MAP as FA_FIELDS
@@ -134,6 +135,11 @@ def check_tc_file(pdf_path: str) -> dict:
     fields. Returns {"recognized": bool, "complete": bool, "issues": [...]}.
     Raises whatever pypdf raises on a file that isn't a readable PDF at all --
     callers should catch that and turn it into a 400, not a 500."""
+    # Page count only, for the upload-result metadata bar -- a second,
+    # cheap PdfReader open (separate from _read_values' own) rather than
+    # threading a reader object through pdf_validator.py's private helper.
+    page_count = len(PdfReader(pdf_path).pages)
+
     values = _read_values(pdf_path)
 
     matched = sum(1 for key, _, _ in CHECKED_FIELDS if FIELD_MAP[key] in values)
@@ -150,6 +156,8 @@ def check_tc_file(pdf_path: str) -> dict:
                 ),
             }],
             "looks_like_blank_draft": False,
+            "page_count": page_count,
+            "has_addendum": False,
         }
 
     issues = []
@@ -211,4 +219,6 @@ def check_tc_file(pdf_path: str) -> dict:
         "complete": len(blocking_issues) == 0,
         "issues": issues,
         "looks_like_blank_draft": core_missing / CORE_BLOCKING_FIELDS >= BLANK_DRAFT_THRESHOLD,
+        "page_count": page_count,
+        "has_addendum": has_addendum,
     }

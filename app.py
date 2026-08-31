@@ -2621,6 +2621,13 @@ border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:s
 .fixit-cta a{background:var(--accent);color:#fff;padding:0.6rem 1.25rem;border-radius:9999px;
 font-size:0.85rem;font-weight:600;white-space:nowrap;}
 .fixit-cta a:hover{opacity:0.9;}
+.meta-bar{display:flex;flex-wrap:wrap;gap:0.4rem 1.25rem;padding:0.85rem 1.1rem;margin-bottom:1rem;
+background:var(--accent-tint);border:1px solid var(--border);border-radius:var(--radius-sm);
+font-size:0.8rem;color:var(--text-muted);}
+.meta-bar strong{color:var(--text);font-weight:600;}
+.download-btn{background:#fff;color:var(--text);border:1px solid rgba(15,31,47,0.14);padding:0.7rem 1.5rem;
+border-radius:var(--radius-sm);font-family:inherit;font-size:0.85rem;font-weight:600;cursor:pointer;margin-left:0.6rem;}
+.download-btn:hover{border-color:var(--accent);}
 .scope-note{margin-top:2rem;font-size:0.8rem;color:var(--text-dim);line-height:1.6;}
 </style>
 </head>
@@ -2664,28 +2671,48 @@ fileInput.addEventListener('change', () => {
   if (fileInput.files.length) uploadFile(fileInput.files[0]);
 });
 
+// Purely a perceived-progress readout for a request that's actually one
+// round trip -- the backend doesn't stream distinct stages back. Labeled
+// generically (not "AI analyzing..." theater) and never blocks: whichever
+// line is showing when the real response lands, that's when it finishes.
+const STATUS_STEPS = ['Reading PDF...', 'Checking required fields...', 'Checking initials & consistency...'];
+let statusTimers = [];
+
 function uploadFile(file) {
   resultEl.classList.remove('show');
-  statusEl.textContent = 'Checking ' + file.name + '...';
+  statusTimers.forEach(clearTimeout);
+  statusTimers = STATUS_STEPS.map((label, i) =>
+    setTimeout(() => { statusEl.textContent = label; }, i * 450)
+  );
+  statusEl.textContent = STATUS_STEPS[0];
   statusEl.classList.add('show');
 
   const formData = new FormData();
   formData.append('file', file);
+  const startedAt = Date.now();
 
   fetch('/v1/tc/check', { method: 'POST', body: formData })
     .then(r => r.json())
     .then(data => {
+      statusTimers.forEach(clearTimeout);
       statusEl.classList.remove('show');
       if (data.error) {
         renderError(data.error);
         return;
       }
-      renderResult(data);
+      renderResult(data, file);
     })
     .catch(() => {
+      statusTimers.forEach(clearTimeout);
       statusEl.classList.remove('show');
       renderError('Something went wrong checking that file. Try again.');
     });
+}
+
+function formatBytes(n) {
+  if (n < 1024) return n + ' B';
+  if (n < 1024 * 1024) return (n / 1024).toFixed(0) + ' KB';
+  return (n / (1024 * 1024)).toFixed(1) + ' MB';
 }
 
 function renderError(msg) {
@@ -2693,9 +2720,18 @@ function renderError(msg) {
   resultEl.classList.add('show');
 }
 
-function renderResult(data) {
+function renderResult(data, file) {
   const issues = data.issues || [];
   let html = '';
+
+  html += '<div class="meta-bar">';
+  html += '<span><strong>' + escapeHtml(file.name) + '</strong></span>';
+  html += '<span>' + formatBytes(file.size) + '</span>';
+  if (typeof data.page_count === 'number') html += '<span>' + data.page_count + ' page' + (data.page_count === 1 ? '' : 's') + '</span>';
+  html += '<span>' + (data.recognized ? 'TREC 20-19 AcroForm detected' : 'Not recognized as a TREC 20-19') + '</span>';
+  if (data.has_addendum) html += '<span>40-11 addendum attached</span>';
+  html += '</div>';
+
   if (data.complete) {
     html += '<div class="result-banner complete">All checked fields are filled in.</div>';
   } else {
@@ -2711,16 +2747,39 @@ function renderResult(data) {
     }
     html += '</ul>';
     html += '<button class="copy-btn" onclick="copyChecklist()">Copy checklist</button>';
+    html += '<button class="download-btn" onclick="downloadReport()">Download report</button>';
   }
   resultEl.innerHTML = html;
   resultEl.classList.add('show');
   resultEl.dataset.issues = JSON.stringify(issues);
+  resultEl.dataset.filename = file.name;
+}
+
+function checklistText() {
+  const issues = JSON.parse(resultEl.dataset.issues || '[]');
+  return issues.map(i => '- [' + i.severity.toUpperCase() + '] ' + i.message).join('\\n');
 }
 
 function copyChecklist() {
-  const issues = JSON.parse(resultEl.dataset.issues || '[]');
-  const text = issues.map(i => '- [' + i.severity.toUpperCase() + '] ' + i.message).join('\\n');
-  navigator.clipboard.writeText(text);
+  navigator.clipboard.writeText(checklistText());
+}
+
+function downloadReport() {
+  const filename = resultEl.dataset.filename || 'file.pdf';
+  const report = 'TC File Check report\\n' +
+    'File: ' + filename + '\\n' +
+    'Checked: ' + new Date().toLocaleString() + '\\n' +
+    'txtanoffer.com/tc-check\\n\\n' +
+    checklistText() + '\\n';
+  const blob = new Blob([report], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename.replace(/\\.pdf$/i, '') + '-tc-check-report.txt';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }
 
 function escapeHtml(s) {
