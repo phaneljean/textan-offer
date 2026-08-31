@@ -2628,7 +2628,15 @@ font-size:0.8rem;color:var(--text-muted);}
 .download-btn{background:#fff;color:var(--text);border:1px solid rgba(15,31,47,0.14);padding:0.7rem 1.5rem;
 border-radius:var(--radius-sm);font-family:inherit;font-size:0.85rem;font-weight:600;cursor:pointer;margin-left:0.6rem;}
 .download-btn:hover{border-color:var(--accent);}
-.scope-note{margin-top:2rem;font-size:0.8rem;color:var(--text-dim);line-height:1.6;}
+.scope-card{margin-top:2rem;background:var(--accent-tint);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem 1.75rem;}
+.scope-card h3{font-size:0.75rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-dim);margin-bottom:0.9rem;}
+.scope-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.5rem 2rem;margin-bottom:1rem;}
+.scope-grid ul{list-style:none;}
+.scope-grid li{position:relative;padding-left:1.1rem;font-size:0.85rem;color:var(--text-muted);line-height:1.7;}
+.scope-grid li::before{content:'\\2713';position:absolute;left:0;color:#0f9960;font-weight:700;}
+.scope-grid .not-checked li::before{content:'\\2013';color:var(--text-dim);}
+.scope-footnote{font-size:0.78rem;color:var(--text-dim);line-height:1.6;border-top:1px solid var(--border);padding-top:0.85rem;}
+@media(max-width:600px){.scope-grid{grid-template-columns:1fr;}}
 </style>
 </head>
 <body>
@@ -2651,7 +2659,26 @@ border-radius:var(--radius-sm);font-family:inherit;font-size:0.85rem;font-weight
 <div class="status" id="status"></div>
 <div class="result" id="result"></div>
 </div>
-<p class="scope-note">v1 checks field completeness (property address, county, buyer/seller name, earnest money, option fee, escrow agent, title company, Effective Date, Buyer/Seller initials on every page that requires them) plus internal consistency between the contract and an attached 40-11 financing addendum (loan amount matches, Third Party Financing checkboxes agree with whether an addendum is actually attached) &mdash; all verified against TREC's actual form fields. It does not check earnest-money receipts or read scanned/flattened PDFs.</p>
+<div class="scope-card">
+<h3>What this checks</h3>
+<div class="scope-grid">
+<ul>
+<li>Property address, county</li>
+<li>Buyer &amp; Seller legal name</li>
+<li>Earnest money, option fee</li>
+<li>Escrow agent, title company</li>
+<li>Effective Date</li>
+<li>Buyer/Seller initials on every page that requires them</li>
+<li>40-11 addendum loan amount matches the contract</li>
+<li>Third Party Financing checkboxes agree with whether an addendum is attached</li>
+</ul>
+<ul class="not-checked">
+<li>Earnest-money receipts</li>
+<li>Scanned or flattened PDFs</li>
+</ul>
+</div>
+<p class="scope-footnote">Every check above is verified directly against TREC's actual 20-19 form fields &mdash; not guessed from field names, which routinely lie about their own position.</p>
+</div>
 </div>
 <script>
 const dropZone = document.getElementById('dropZone');
