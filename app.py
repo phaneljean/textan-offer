@@ -680,19 +680,6 @@ def index():
     .review-btn.ghost { background: rgba(15,31,47,0.05); color: var(--text-muted); }
     .review-caption { font-size: 0.72rem; color: var(--text-dim); margin-top: 0.75rem; text-align: center; }
 
-    /* SMS Section */
-    .sms-section { max-width: 760px; margin: 0 auto; padding: 4.5rem 2rem; border-top: 1px solid var(--border); }
-    .sms-section h2 { font-size: 1.6rem; font-weight: 800; margin-bottom: 1.5rem; text-align: center; letter-spacing: -0.02em; }
-    .sms-card { background: #fff; border: 1px solid var(--border); border-radius: var(--radius); padding: 1.75rem; }
-    .sms-card h3 { font-size: 1.02rem; font-weight: 700; margin-bottom: 1rem; color: #000000; }
-    .sms-card ul { list-style: none; display: flex; flex-direction: column; gap: 0.7rem; }
-    .sms-card li { font-size: 0.87rem; color: var(--text-muted); line-height: 1.55; padding-left: 1.15rem; position: relative; }
-    .sms-card li::before { content: "\\2022"; position: absolute; left: 0; color: var(--accent); font-weight: 700; }
-    .sms-card li strong { color: var(--text); }
-    .sms-contact { margin-top: 1.4rem; padding-top: 1.4rem; border-top: 1px solid var(--border); font-size: 0.87rem; color: var(--text-muted); }
-    .sms-contact a { color: #000000; }
-    .sms-contact a:hover { text-decoration: underline; }
-
     /* Footer */
     .footer { border-top: 1px solid var(--border); padding: 3rem 2rem; text-align: center; }
     .footer-links { display: flex; justify-content: center; gap: 1.5rem; margin-bottom: 1rem; flex-wrap: wrap; }
@@ -960,25 +947,6 @@ def index():
     </div>
   </section>
 
-  <section class="sms-section">
-    <h2>SMS Messaging Details</h2>
-    <div class="sms-card">
-      <h3>How SMS Is Used</h3>
-      <ul>
-        <li><strong>Opt-in:</strong> Users sign up at txtanoffer.com/signup by providing their phone number and explicitly consenting to receive SMS messages.</li>
-        <li><strong>Message frequency:</strong> Most messages are sent in direct response to user-initiated texts. We also send a one-time reminder a few days before the closing date of an offer you generated. We do not send marketing or promotional messages.</li>
-        <li><strong>Message content:</strong> Replies contain contract confirmation details and a download link to the generated PDF; reminders reference the closing date of an offer already on file.</li>
-        <li><strong>Sample message:</strong> <em>"Got it — $725,000, 3% down, closing Aug 13 2026. Your TREC contract is ready: txtanoffer.com/review/123-main-st.pdf — Reply STOP to unsubscribe, HELP for help. Msg&amp;data rates may apply."</em></li>
-        <li><strong>Sample reminder message:</strong> <em>"Reminder: 123 Main St is scheduled to close on August 13, 2026 (3 days from now). Text DASHBOARD to review. Reply STOP to unsubscribe, HELP for help."</em></li>
-        <li><strong>Opt-out:</strong> Reply STOP at any time to unsubscribe from all messages. Reply HELP for support.</li>
-        <li><strong>Standard message and data rates may apply.</strong></li>
-      </ul>
-      <div class="sms-contact">
-        Questions? Contact us at <a href="mailto:support@txtanoffer.com">support@txtanoffer.com</a>
-      </div>
-    </div>
-  </section>
-
   <footer class="footer">
     <div class="trust-badges">
       <span class="trust-badge"><span class="trust-icon">&#128274;</span>AES-256 Encrypted</span>
@@ -991,6 +959,7 @@ def index():
       <a href="/contact">Contact</a>
       <a href="/terms">Terms of Service</a>
       <a href="/privacy">Privacy Policy</a>
+      <a href="/privacy#sms-messaging">SMS Terms</a>
       <a href="/pricing">Pricing</a>
       <a href="/playground">Parser Playground</a>
       <a href="/tc-check">TC File Check</a>
@@ -4820,7 +4789,7 @@ def privacy():
       <li>To comply with legal obligations</li>
     </ul>
 
-    <h2>3. SMS Messaging</h2>
+    <h2 id="sms-messaging">3. SMS Messaging</h2>
     <p><strong>Program Name:</strong> TxtAnOffer</p>
     <p><strong>Phone Number:</strong> +1 (833) 897-0333</p>
     <p><strong>Opt-in Method:</strong> Users opt in by (1) entering their phone number and checking an unchecked checkbox on www.txtanoffer.com/signup that says "By checking this box, I agree to receive automated transactional SMS messages from TxtAnOffer at +1 (833) 897-0333 about my offer drafts. Message frequency varies based on usage. Reply STOP to opt out, HELP for help. Msg &amp; data rates may apply. Consent is not a condition of purchase." OR (2) by texting offer details directly to +1 (833) 897-0333 after seeing opt-in disclosure on our website.</p>
