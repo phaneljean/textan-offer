@@ -466,6 +466,8 @@ def index():
     .drop-zone svg { margin-bottom: 0.6rem; }
     .drop-zone .dz-title { font-weight: 700; font-size: 0.95rem; margin-bottom: 0.2rem; }
     .drop-zone .dz-sub { color: var(--text-dim); font-size: 0.8rem; }
+    .privacy-note { display: flex; align-items: center; gap: 0.45rem; margin-top: 0.9rem; font-size: 0.78rem; color: var(--text-dim); }
+    .privacy-note svg { flex-shrink: 0; }
     input[type=file] { display: none; }
     .status { margin-top: 1rem; font-size: 0.85rem; color: var(--text-muted); display: none; }
     .status.show { display: block; }
@@ -791,6 +793,7 @@ def index():
         <div class="dz-sub">We'll tell you what's missing before title kicks it back.</div>
       </div>
       <input type="file" id="homeFileInput" accept="application/pdf">
+      <div class="privacy-note"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Processed instantly and never stored &mdash; discarded the moment your results are ready.</div>
       <div class="status" id="homeStatus"></div>
       <div class="result" id="homeResult"></div>
     </div>
@@ -2767,6 +2770,8 @@ text-align:center;cursor:pointer;transition:all 0.2s;}
 .drop-zone svg{margin-bottom:0.75rem;}
 .drop-zone .dz-title{font-weight:700;font-size:1rem;margin-bottom:0.25rem;}
 .drop-zone .dz-sub{color:var(--text-dim);font-size:0.85rem;}
+.privacy-note{display:flex;align-items:center;gap:0.45rem;margin-top:0.9rem;font-size:0.8rem;color:var(--text-dim);}
+.privacy-note svg{flex-shrink:0;}
 input[type=file]{display:none;}
 .status{margin-top:1.25rem;font-size:0.9rem;color:var(--text-muted);display:none;}
 .status.show{display:block;}
@@ -2833,6 +2838,7 @@ border-radius:var(--radius-sm);font-family:inherit;font-size:0.9rem;background:#
 <div class="dz-sub">AcroForm-fillable PDFs only &mdash; not scanned or flattened files</div>
 </div>
 <input type="file" id="fileInput" accept="application/pdf">
+<div class="privacy-note"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Processed instantly and never stored &mdash; your file is discarded the moment your results are ready.</div>
 <div class="status" id="status"></div>
 <div class="result" id="result"></div>
 </div>
