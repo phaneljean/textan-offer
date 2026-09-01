@@ -52,6 +52,11 @@ CHECKED_FIELDS = [
 # a PDF from a different tool/source won't use this app's field names at all.
 MIN_MATCHED_FIELDS = 3
 
+# Same idea, applied to a standalone 40-11 upload's OWN raw field names
+# (financing_addendum.py's FIELD_MAP) rather than the merged-file FA_-
+# prefixed convention -- see check_tc_file()'s two-file path below.
+MIN_MATCHED_FIELDS_FA = 3
+
 # If most of the core required fields (address, county, title company,
 # escrow agent, earnest money, option fee -- NOT initials/Effective
 # Date/addendum, which a nearly-finished file can legitimately still be
@@ -130,20 +135,56 @@ def _check_initials_quad(values: dict, page_label: str, b1: str, b2: str, s1: st
     return issues
 
 
-def check_tc_file(pdf_path: str) -> dict:
+def _matched_main(values: dict) -> int:
+    return sum(1 for key, _, _ in CHECKED_FIELDS if FIELD_MAP[key] in values)
+
+
+def _matched_fa(values: dict) -> int:
+    return sum(1 for name in FA_FIELDS.values() if name in values)
+
+
+def check_tc_file(pdf_paths) -> dict:
     """Audits an uploaded TREC 20-19 AcroForm PDF for missing required
-    fields. Returns {"recognized": bool, "complete": bool, "issues": [...]}.
+    fields, optionally cross-checked against its 40-11 Third Party
+    Financing Addendum uploaded as a SEPARATE second PDF.
+
+    pdf_paths is a list of 1 or 2 file paths, in any order -- each is read
+    independently and classified by field-name fingerprint (whichever
+    matches CHECKED_FIELDS's template is the contract; whichever matches
+    FA_FIELDS's own raw names is the addendum). This is the realistic case:
+    a TC's 40-11 is its own separate PDF filled by whatever tool they used,
+    so it never carries this app's internal FA_-prefix -- that convention
+    only exists on a PDF THIS app generated and merged itself (see
+    financing_addendum.py). A single merged upload with that prefix still
+    works too, unchanged from before, when only one path is given.
+
+    Returns {"recognized": bool, "complete": bool, "issues": [...]}.
     Raises whatever pypdf raises on a file that isn't a readable PDF at all --
     callers should catch that and turn it into a 400, not a 500."""
     # Page count only, for the upload-result metadata bar -- a second,
     # cheap PdfReader open (separate from _read_values' own) rather than
     # threading a reader object through pdf_validator.py's private helper.
-    page_count = len(PdfReader(pdf_path).pages)
+    page_count = sum(len(PdfReader(p).pages) for p in pdf_paths)
+    all_values = [_read_values(p) for p in pdf_paths]
 
-    values = _read_values(pdf_path)
+    main_values = None
+    fa_values = None  # always raw (un-prefixed) FA_FIELDS keys, whichever source it came from
+    if len(all_values) == 1:
+        values = all_values[0]
+        if _matched_main(values) >= MIN_MATCHED_FIELDS:
+            main_values = values
+            # Addendum already merged into this same PDF via pdf_filler.py's FA_ prefix.
+            if any(k.startswith(FA_PREFIX) for k in values):
+                fa_values = {k[len(FA_PREFIX):]: v for k, v in values.items() if k.startswith(FA_PREFIX)}
+    else:
+        for values in all_values:
+            m, f = _matched_main(values), _matched_fa(values)
+            if m >= MIN_MATCHED_FIELDS and m >= f:
+                main_values = values
+            elif f >= MIN_MATCHED_FIELDS_FA:
+                fa_values = values
 
-    matched = sum(1 for key, _, _ in CHECKED_FIELDS if FIELD_MAP[key] in values)
-    if matched < MIN_MATCHED_FIELDS:
+    if main_values is None:
         return {
             "recognized": False,
             "complete": False,
@@ -161,6 +202,7 @@ def check_tc_file(pdf_path: str) -> dict:
             "has_addendum": False,
         }
 
+    values = main_values
     issues = []
     core_missing = 0
     for key, message, blocking in CHECKED_FIELDS:
@@ -179,19 +221,27 @@ def check_tc_file(pdf_path: str) -> dict:
     for page_label, b1, b2, s1, s2 in INITIALS_PAGES:
         issues.extend(_check_initials_quad(values, page_label, b1, b2, s1, s2))
 
-    # Addendum-attached fields are FA_-prefixed; a cash offer has none of them.
-    has_addendum = any(k.startswith(FA_PREFIX) for k in values)
+    has_addendum = fa_values is not None
+
+    # A second file was uploaded but didn't match the 40-11 template --
+    # surface that plainly instead of silently skipping the cross-checks.
+    if len(pdf_paths) == 2 and not has_addendum:
+        issues.append({
+            "severity": "warning",
+            "message": "Second file wasn't recognized as a TREC 40-11 Third Party Financing Addendum -- addendum consistency checks were skipped.",
+            "key": "addendum_file_unrecognized",
+        })
 
     # Initials on the 40-11 addendum -- only if actually attached.
     if has_addendum:
         label, b1, b2, s1, s2 = FA_INITIALS_PAGE
-        fa_values = {k: values.get(FA_PREFIX + k, "") for k in (b1, b2, s1, s2)}
-        issues.extend(_check_initials_quad(fa_values, label, b1, b2, s1, s2))
+        addendum_initials = {k: fa_values.get(k, "") for k in (b1, b2, s1, s2)}
+        issues.extend(_check_initials_quad(addendum_initials, label, b1, b2, s1, s2))
 
     # 1. Loan amount: main contract Section 3B vs. 40-11 principal amount.
     if has_addendum:
         main_loan = values.get(FIELD_MAP["loan_amount"], "").strip()
-        fa_loan = values.get(FA_PREFIX + FA_FIELDS["first_loan_amount"], "").strip()
+        fa_loan = fa_values.get(FA_FIELDS["first_loan_amount"], "").strip()
         if main_loan and fa_loan and _money_to_int(main_loan) != _money_to_int(fa_loan):
             issues.append({
                 "severity": "blocker",

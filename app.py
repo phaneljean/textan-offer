@@ -2699,18 +2699,35 @@ def tc_check():
     client = get_tc_client(cid)
     submitted_email = (request.form.get("email") or "").strip()
 
-    upload = request.files.get("file")
-    if not upload or not upload.filename:
+    # Up to 2 files under the same 'file' field: the contract, and
+    # optionally its 40-11 Third Party Financing Addendum as a separate
+    # PDF (the realistic case -- see tc_audit.check_tc_file's docstring for
+    # why that's not the same as the FA_-prefix merged-file case).
+    uploads = request.files.getlist("file")
+    if not uploads or not uploads[0].filename:
         return jsonify({"error": "No file uploaded. Attach a PDF as 'file'."}), 400
-    if not upload.filename.lower().endswith(".pdf"):
+    if len(uploads) > 2:
+        return jsonify({"error": "Upload at most 2 files: the contract and, if you have it, the 40-11 addendum."}), 400
+    if any(not f.filename.lower().endswith(".pdf") for f in uploads):
         return jsonify({"error": "Only PDF files are supported."}), 400
 
-    with tempfile.NamedTemporaryFile(suffix=".pdf") as tmp:
-        upload.save(tmp.name)
+    tmp_paths = []
+    try:
+        for f in uploads:
+            tmp = tempfile.NamedTemporaryFile(suffix=".pdf", delete=False)
+            f.save(tmp.name)
+            tmp.close()
+            tmp_paths.append(tmp.name)
         try:
-            result = check_tc_file(tmp.name)
+            result = check_tc_file(tmp_paths)
         except Exception:
             return jsonify({"error": "Couldn't read that file as a PDF. Make sure it's not corrupted or password-protected."}), 400
+    finally:
+        for p in tmp_paths:
+            try:
+                os.remove(p)
+            except OSError:
+                pass
 
     record_tc_use(cid)
     # Deduped per file -- initials/addendum checks can fire multiple times
@@ -2843,6 +2860,12 @@ border-radius:var(--radius-sm);font-family:inherit;font-size:0.85rem;font-weight
 border-radius:var(--radius-sm);font-family:inherit;font-size:0.9rem;background:#fff;color:var(--text);}
 .email-gate-form input:focus{outline:none;border-color:var(--accent);}
 .email-gate-fine{font-size:0.78rem;color:var(--text-dim);margin-top:0.75rem;}
+.addendum-toggle{margin-top:0.85rem;font-size:0.82rem;color:var(--text-muted);cursor:pointer;text-decoration:underline;text-underline-offset:2px;width:fit-content;}
+.addendum-toggle:hover{color:var(--text);}
+.addendum-row{margin-top:0.6rem;display:flex;align-items:center;gap:0.6rem;font-size:0.85rem;}
+.addendum-filename{color:var(--text-muted);}
+.addendum-clear{background:none;border:none;color:var(--text-dim);font-size:1rem;cursor:pointer;line-height:1;padding:0.15rem 0.4rem;}
+.addendum-clear:hover{color:var(--text);}
 </style>
 </head>
 <body>
@@ -2862,6 +2885,12 @@ border-radius:var(--radius-sm);font-family:inherit;font-size:0.9rem;background:#
 <div class="dz-sub">AcroForm-fillable PDFs only &mdash; not scanned or flattened files</div>
 </div>
 <input type="file" id="fileInput" accept="application/pdf">
+<div class="addendum-toggle" id="addendumToggle">+ Also have the 40-11 Financing Addendum? Add it to check the loan amount &amp; checkboxes match, too.</div>
+<div class="addendum-row" id="addendumRow" hidden>
+<input type="file" id="addendumInput" accept="application/pdf">
+<span class="addendum-filename" id="addendumFileName"></span>
+<button type="button" class="addendum-clear" id="addendumClear" title="Remove">&times;</button>
+</div>
 <div class="privacy-note"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Processed instantly and never stored &mdash; your file is discarded the moment your results are ready.</div>
 <div class="status" id="status"></div>
 <div class="result" id="result"></div>
@@ -2884,7 +2913,7 @@ border-radius:var(--radius-sm);font-family:inherit;font-size:0.9rem;background:#
 <li>Scanned or flattened PDFs</li>
 </ul>
 </div>
-<p class="scope-footnote">Every check above is verified directly against TREC's actual 20-19 form fields &mdash; not guessed from field names, which routinely lie about their own position.</p>
+<p class="scope-footnote">Every check above is verified directly against TREC's actual 20-19 form fields &mdash; not guessed from field names, which routinely lie about their own position. The 40-11 can be its own separate PDF &mdash; it doesn't need to be merged into the contract file.</p>
 </div>
 </div>
 <script>
@@ -2892,6 +2921,11 @@ const dropZone = document.getElementById('dropZone');
 const fileInput = document.getElementById('fileInput');
 const statusEl = document.getElementById('status');
 const resultEl = document.getElementById('result');
+const addendumToggle = document.getElementById('addendumToggle');
+const addendumRow = document.getElementById('addendumRow');
+const addendumInput = document.getElementById('addendumInput');
+const addendumFileName = document.getElementById('addendumFileName');
+const addendumClear = document.getElementById('addendumClear');
 
 dropZone.addEventListener('click', () => fileInput.click());
 dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag'); });
@@ -2905,6 +2939,25 @@ fileInput.addEventListener('change', () => {
   if (fileInput.files.length) uploadFile(fileInput.files[0]);
 });
 
+addendumToggle.addEventListener('click', () => {
+  addendumToggle.hidden = true;
+  addendumRow.hidden = false;
+  addendumInput.click();
+});
+addendumInput.addEventListener('change', () => {
+  if (addendumInput.files.length) {
+    pendingAddendumFile = addendumInput.files[0];
+    addendumFileName.textContent = pendingAddendumFile.name;
+  }
+});
+addendumClear.addEventListener('click', () => {
+  pendingAddendumFile = null;
+  addendumInput.value = '';
+  addendumFileName.textContent = '';
+  addendumRow.hidden = true;
+  addendumToggle.hidden = false;
+});
+
 // Purely a perceived-progress readout for a request that's actually one
 // round trip -- the backend doesn't stream distinct stages back. Labeled
 // generically (not "AI analyzing..." theater) and never blocks: whichever
@@ -2912,6 +2965,7 @@ fileInput.addEventListener('change', () => {
 const STATUS_STEPS = ['Reading PDF...', 'Checking required fields...', 'Checking initials & consistency...'];
 let statusTimers = [];
 let pendingFile = null;
+let pendingAddendumFile = null;
 
 function uploadFile(file, email) {
   pendingFile = file;
@@ -2925,6 +2979,7 @@ function uploadFile(file, email) {
 
   const formData = new FormData();
   formData.append('file', file);
+  if (pendingAddendumFile) formData.append('file', pendingAddendumFile);
   if (email) formData.append('email', email);
 
   fetch('/v1/tc/check', { method: 'POST', body: formData })
@@ -2955,7 +3010,7 @@ function buildMetaBar(data, file) {
   html += '<span>' + formatBytes(file.size) + '</span>';
   if (typeof data.page_count === 'number') html += '<span>' + data.page_count + ' page' + (data.page_count === 1 ? '' : 's') + '</span>';
   html += '<span>' + (data.recognized ? 'TREC 20-19 AcroForm detected' : 'Not recognized as a TREC 20-19') + '</span>';
-  if (data.has_addendum) html += '<span>40-11 addendum attached</span>';
+  if (data.has_addendum) html += '<span>40-11 addendum attached' + (pendingAddendumFile ? ' (' + escapeHtml(pendingAddendumFile.name) + ')' : '') + '</span>';
   html += '</div>';
   return html;
 }
