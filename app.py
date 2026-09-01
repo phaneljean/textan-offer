@@ -807,56 +807,6 @@ def index():
       <div class="status" id="homeStatus"></div>
       <div class="result" id="homeResult"></div>
     </div>
-
-    <div class="secondary-cta">
-      <div class="secondary-cta-label">Need to draft an offer fast? Text your details to generate a flawless draft in 60 seconds.</div>
-      <form id="live-demo-form">
-        <div class="input-row">
-          <input type="text" id="demo-input" placeholder="725k 3% 21day Harris 1234 Westheimer Rd" autocomplete="off">
-          <button type="submit" class="input-btn">Generate &rarr;</button>
-        </div>
-      </form>
-      <div class="input-hint">Type however feels natural — we handle messy texts. Just get the numbers in there.</div>
-      <div class="hero-phone">Prefer texting from your phone? <a href="sms:+18338970333">Text (833) 897-0333</a> to get started.</div>
-      <div class="input-hint" style="margin-top:0.4rem;">By texting, you agree to receive automated messages from TxtAnOffer. Reply STOP to opt out, HELP for help. Msg &amp; data rates may apply.</div>
-    </div>
-
-    <div class="stats">
-      <div><div class="stat-num">&lt;10s</div><div class="stat-label">Generation time</div></div>
-      <div><div class="stat-num">45 min</div><div class="stat-label">Saved per offer</div></div>
-      <div><div class="stat-num">Free</div><div class="stat-label">No card required</div></div>
-      <div><div class="stat-num">100%</div><div class="stat-label">Required fields checked</div></div>
-    </div>
-
-    <div class="dark-card-wrap">
-      <div class="dark-card-inner">
-        <div class="notch"></div>
-        <div class="demo-wrap">
-          <div class="sms-bubble" style="display:flex;"><span id="sms-typed">725k 3% 21day 123 Main St</span><span class="sms-cursor" id="sms-cursor"></span></div>
-          <div class="flow-arrow">&darr;</div>
-          <div class="demo-loading" id="demo-loading">Generating your contract...</div>
-          <div class="demo-error" id="demo-error"></div>
-          <div class="demo-result" id="demo-result">
-            <div class="white-card">
-              <div class="res-row"><span class="k">Address</span><span class="v" id="res-addr">123 Main St</span></div>
-              <div class="res-row"><span class="k">Price</span><span class="v" id="res-price">$725,000</span></div>
-              <div class="res-row"><span class="k">Down payment</span><span class="v" id="res-down">3%</span></div>
-              <div class="res-row"><span class="k">Closing</span><span class="v" id="res-close">21 days</span></div>
-            </div>
-            <div class="flow-arrow" id="pdf-flow-arrow">&darr;</div>
-            <a href="#" id="res-pdf" class="pdf-card" target="_blank">
-              <div class="pdf-icon">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-              </div>
-              <div class="pdf-meta">
-                <div class="pdf-title">TREC 20-19 Purchase Agreement.pdf</div>
-                <div class="pdf-sub">AES-256 encrypted &middot; Ready to sign</div>
-              </div>
-            </a>
-          </div>
-        </div>
-      </div>
-    </div>
   </section>
 
   <section class="hero section" style="padding-top:1rem;">
@@ -932,6 +882,56 @@ def index():
         <h3>Get Their Answer</h3>
         <p>Emailing the listing agent sends them a link with the same PDF, plus Accept and Decline buttons. The moment they respond, you get a text &mdash; no more wondering if your offer even got read.</p>
         <p class="step-caption">Non-binding intent only &mdash; formal acceptance still requires normal signing of the TREC 20-19.</p>
+      </div>
+    </div>
+
+    <div class="secondary-cta" style="margin:2.5rem auto 0;padding-top:0;border-top:none;max-width:540px;text-align:center;">
+      <div class="secondary-cta-label">Try step 2 yourself — text your details to generate a flawless draft in 60 seconds.</div>
+      <form id="live-demo-form">
+        <div class="input-row">
+          <input type="text" id="demo-input" placeholder="725k 3% 21day Harris 1234 Westheimer Rd" autocomplete="off">
+          <button type="submit" class="input-btn">Generate &rarr;</button>
+        </div>
+      </form>
+      <div class="input-hint">Type however feels natural — we handle messy texts. Just get the numbers in there.</div>
+      <div class="hero-phone">Prefer texting from your phone? <a href="sms:+18338970333">Text (833) 897-0333</a> to get started.</div>
+      <div class="input-hint" style="margin-top:0.4rem;">By texting, you agree to receive automated messages from TxtAnOffer. Reply STOP to opt out, HELP for help. Msg &amp; data rates may apply.</div>
+    </div>
+
+    <div class="stats" style="max-width:640px;margin-left:auto;margin-right:auto;">
+      <div><div class="stat-num">&lt;10s</div><div class="stat-label">Generation time</div></div>
+      <div><div class="stat-num">45 min</div><div class="stat-label">Saved per offer</div></div>
+      <div><div class="stat-num">Free</div><div class="stat-label">No card required</div></div>
+      <div><div class="stat-num">100%</div><div class="stat-label">Required fields checked</div></div>
+    </div>
+
+    <div class="dark-card-wrap" style="max-width:400px;margin:1.75rem auto 0;">
+      <div class="dark-card-inner">
+        <div class="notch"></div>
+        <div class="demo-wrap">
+          <div class="sms-bubble" style="display:flex;"><span id="sms-typed">725k 3% 21day 123 Main St</span><span class="sms-cursor" id="sms-cursor"></span></div>
+          <div class="flow-arrow">&darr;</div>
+          <div class="demo-loading" id="demo-loading">Generating your contract...</div>
+          <div class="demo-error" id="demo-error"></div>
+          <div class="demo-result" id="demo-result">
+            <div class="white-card">
+              <div class="res-row"><span class="k">Address</span><span class="v" id="res-addr">123 Main St</span></div>
+              <div class="res-row"><span class="k">Price</span><span class="v" id="res-price">$725,000</span></div>
+              <div class="res-row"><span class="k">Down payment</span><span class="v" id="res-down">3%</span></div>
+              <div class="res-row"><span class="k">Closing</span><span class="v" id="res-close">21 days</span></div>
+            </div>
+            <div class="flow-arrow" id="pdf-flow-arrow">&darr;</div>
+            <a href="#" id="res-pdf" class="pdf-card" target="_blank">
+              <div class="pdf-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+              </div>
+              <div class="pdf-meta">
+                <div class="pdf-title">TREC 20-19 Purchase Agreement.pdf</div>
+                <div class="pdf-sub">AES-256 encrypted &middot; Ready to sign</div>
+              </div>
+            </a>
+          </div>
+        </div>
       </div>
     </div>
   </section>

@@ -21,6 +21,7 @@ wheels/
 generated_offers/
 .last_cleanup
 .last_reminder_check
+.last_tc_nudge_check
 .env
 .venv
 venv/
