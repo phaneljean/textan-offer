@@ -41,8 +41,10 @@ from reminders import run_reminders_if_due
 from drafts import save_draft, get_draft, clear_draft
 from tc_audit import check_tc_file
 from rate_limit import check_and_increment
+from tc_gate import get_client as get_tc_client, record_use as record_tc_use, save_email as save_tc_email, FREE_USES as TC_FREE_USES
 from werkzeug.middleware.proxy_fix import ProxyFix
 import tempfile
+import uuid
 
 app = Flask(__name__)
 # Railway terminates TLS at its edge and forwards plain HTTP internally, so
@@ -1174,6 +1176,7 @@ def index():
       .then(function(data){
         statusTimers.forEach(clearTimeout);
         statusEl.classList.remove('show');
+        if(data.error === 'email_required'){ renderEmailPrompt(data.message); return; }
         if(data.error){ renderError(data.error); return; }
         renderResult(data);
       })
@@ -1186,6 +1189,14 @@ def index():
 
   function renderError(msg){
     resultEl.innerHTML = '<div class="result-banner incomplete">' + escapeHtml(msg) + '</div>';
+    resultEl.classList.add('show');
+  }
+
+  // Homepage widget keeps the free-use gate simple: rather than duplicating
+  // the email-capture form here, send them to /tc-check where it lives.
+  function renderEmailPrompt(msg){
+    resultEl.innerHTML = '<div class="result-banner incomplete">' + escapeHtml(msg || "You've used your free checks.") + '</div>' +
+      '<div class="result-more"><a href="/tc-check">Enter your email on TC File Check to keep going &rarr;</a></div>';
     resultEl.classList.add('show');
   }
 
@@ -2693,10 +2704,32 @@ def tc_check():
     endpoint) -- see tc_audit.py for exactly what is and isn't checked."""
     # Per-IP throttle: this endpoint shares a Railway service (and worker
     # processes) with the paying SMS product, so an unauthenticated flood
-    # here could degrade that too, not just this free tool.
+    # here could degrade that too, not just this free tool. This applies
+    # regardless of the free-use/email gate below -- it's abuse protection,
+    # not a product limit.
     client_ip = request.remote_addr or "unknown"
     if not check_and_increment(f"tc_check:{client_ip}", limit=20):
         return jsonify({"error": "Too many requests. Try again in a bit."}), 429
+
+    # Product gate: TC_FREE_USES free checks per browser (tracked by an
+    # httponly client-id cookie, not the IP above -- shared offices/NAT
+    # would otherwise share one IP's quota), then an email unlocks
+    # unlimited further use. See tc_gate.py.
+    cid = request.cookies.get("tc_cid") or str(uuid.uuid4())
+    client = get_tc_client(cid)
+    submitted_email = (request.form.get("email") or "").strip()
+
+    if client["use_count"] >= TC_FREE_USES and not client["email"]:
+        if not submitted_email or "@" not in submitted_email:
+            resp = jsonify({
+                "error": "email_required",
+                "message": "You've used your %d free checks. Enter your email to keep checking files." % TC_FREE_USES,
+            })
+            resp.set_cookie("tc_cid", cid, max_age=365 * 24 * 3600, httponly=True, samesite="Lax")
+            return resp, 403
+        save_tc_email(cid, submitted_email)
+        client["email"] = submitted_email
+        track_event("tc_check_email_captured", submitted_email, {"client_id": cid})
 
     upload = request.files.get("file")
     if not upload or not upload.filename:
@@ -2711,8 +2744,15 @@ def tc_check():
         except Exception:
             return jsonify({"error": "Couldn't read that file as a PDF. Make sure it's not corrupted or password-protected."}), 400
 
+    record_tc_use(cid)
     track_event("tc_check", metadata={"recognized": result["recognized"], "complete": result["complete"]})
-    return jsonify(result)
+    if client["email"]:
+        result["checks_remaining"] = None
+    else:
+        result["checks_remaining"] = max(0, TC_FREE_USES - (client["use_count"] + 1))
+    resp = jsonify(result)
+    resp.set_cookie("tc_cid", cid, max_age=365 * 24 * 3600, httponly=True, samesite="Lax")
+    return resp
 
 
 @app.route("/tc-check")
@@ -2790,6 +2830,13 @@ border-radius:var(--radius-sm);font-family:inherit;font-size:0.85rem;font-weight
 .scope-grid .not-checked li::before{content:'\\2013';color:var(--text-dim);}
 .scope-footnote{font-size:0.78rem;color:var(--text-dim);line-height:1.6;border-top:1px solid var(--border);padding-top:0.85rem;}
 @media(max-width:600px){.scope-grid{grid-template-columns:1fr;}}
+.checks-remaining{font-size:0.78rem;color:var(--text-dim);margin:-0.5rem 0 1rem;}
+.email-gate-msg{font-size:0.95rem;font-weight:600;margin-bottom:1rem;}
+.email-gate-form{display:flex;gap:0.6rem;flex-wrap:wrap;}
+.email-gate-form input{flex:1;min-width:180px;padding:0.7rem 1rem;border:1px solid rgba(15,31,47,0.16);
+border-radius:var(--radius-sm);font-family:inherit;font-size:0.9rem;background:#fff;color:var(--text);}
+.email-gate-form input:focus{outline:none;border-color:var(--accent);}
+.email-gate-fine{font-size:0.78rem;color:var(--text-dim);margin-top:0.75rem;}
 </style>
 </head>
 <body>
@@ -2857,8 +2904,10 @@ fileInput.addEventListener('change', () => {
 // line is showing when the real response lands, that's when it finishes.
 const STATUS_STEPS = ['Reading PDF...', 'Checking required fields...', 'Checking initials & consistency...'];
 let statusTimers = [];
+let pendingFile = null;
 
-function uploadFile(file) {
+function uploadFile(file, email) {
+  pendingFile = file;
   resultEl.classList.remove('show');
   statusTimers.forEach(clearTimeout);
   statusTimers = STATUS_STEPS.map((label, i) =>
@@ -2869,13 +2918,17 @@ function uploadFile(file) {
 
   const formData = new FormData();
   formData.append('file', file);
-  const startedAt = Date.now();
+  if (email) formData.append('email', email);
 
   fetch('/v1/tc/check', { method: 'POST', body: formData })
     .then(r => r.json())
     .then(data => {
       statusTimers.forEach(clearTimeout);
       statusEl.classList.remove('show');
+      if (data.error === 'email_required') {
+        renderEmailGate(data.message);
+        return;
+      }
       if (data.error) {
         renderError(data.error);
         return;
@@ -2887,6 +2940,24 @@ function uploadFile(file) {
       statusEl.classList.remove('show');
       renderError('Something went wrong checking that file. Try again.');
     });
+}
+
+function renderEmailGate(message) {
+  resultEl.innerHTML =
+    '<div class="result-banner incomplete">' + escapeHtml(message || "You've used your free checks. Enter your email to keep going.") + '</div>' +
+    '<p class="email-gate-msg">Keep checking files &mdash; enter your email once and this browser is unlimited from then on.</p>' +
+    '<form id="emailGateForm" class="email-gate-form">' +
+    '<input type="email" id="emailGateInput" placeholder="you@brokerage.com" required>' +
+    '<button type="submit" class="copy-btn">Continue</button>' +
+    '</form>' +
+    '<p class="email-gate-fine">No spam &mdash; just occasional product updates.</p>';
+  resultEl.classList.add('show');
+  document.getElementById('emailGateForm').addEventListener('submit', e => {
+    e.preventDefault();
+    const email = document.getElementById('emailGateInput').value.trim();
+    if (!email || !pendingFile) return;
+    uploadFile(pendingFile, email);
+  });
 }
 
 function formatBytes(n) {
@@ -2916,6 +2987,9 @@ function renderResult(data, file) {
     html += '<div class="result-banner complete">All checked fields are filled in.</div>';
   } else {
     html += '<div class="result-banner incomplete">' + issues.length + ' issue' + (issues.length === 1 ? '' : 's') + ' found</div>';
+  }
+  if (typeof data.checks_remaining === 'number') {
+    html += '<p class="checks-remaining">' + data.checks_remaining + (data.checks_remaining === 1 ? ' free check remaining.' : ' free checks remaining.') + '</p>';
   }
   if (data.looks_like_blank_draft) {
     html += '<div class="fixit-cta"><p>This looks like an essentially blank draft &mdash; more gaps than a quick fix. It may be faster to generate a clean one from scratch.</p><a href="/demo">Generate a clean offer &rarr;</a></div>';
