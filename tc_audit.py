@@ -124,9 +124,9 @@ FA_INITIALS_PAGE = ("40-11 addendum", "Initialed for identification by Buyer", "
 def _check_initials_quad(values: dict, page_label: str, b1: str, b2: str, s1: str, s2: str) -> list:
     issues = []
     if not values.get(b1, "").strip() or not values.get(b2, "").strip():
-        issues.append({"severity": "blocker", "message": f"{page_label}: Buyer initials missing"})
+        issues.append({"severity": "blocker", "message": f"{page_label}: Buyer initials missing", "key": "initials_buyer"})
     if not values.get(s1, "").strip() or not values.get(s2, "").strip():
-        issues.append({"severity": "blocker", "message": f"{page_label}: Seller initials missing"})
+        issues.append({"severity": "blocker", "message": f"{page_label}: Seller initials missing", "key": "initials_seller"})
     return issues
 
 
@@ -154,6 +154,7 @@ def check_tc_file(pdf_path: str) -> dict:
                     "field names didn't match our template. Only AcroForm-fillable "
                     "20-19 PDFs are supported in this version (not scanned or flattened files)."
                 ),
+                "key": "unrecognized",
             }],
             "looks_like_blank_draft": False,
             "page_count": page_count,
@@ -165,14 +166,14 @@ def check_tc_file(pdf_path: str) -> dict:
     for key, message, blocking in CHECKED_FIELDS:
         val = values.get(FIELD_MAP[key], "").strip()
         if not val:
-            issues.append({"severity": "blocker" if blocking else "warning", "message": message})
+            issues.append({"severity": "blocker" if blocking else "warning", "message": message, "key": key})
             if blocking:
                 core_missing += 1
 
     # Effective Date
     missing_parts = [label for label, raw in EFFECTIVE_DATE_FIELDS.items() if not values.get(raw, "").strip()]
     if missing_parts:
-        issues.append({"severity": "blocker", "message": "Page 10 of 12: Effective Date is blank"})
+        issues.append({"severity": "blocker", "message": "Page 10 of 12: Effective Date is blank", "key": "effective_date"})
 
     # Initials for identification, main contract
     for page_label, b1, b2, s1, s2 in INITIALS_PAGES:
@@ -195,6 +196,7 @@ def check_tc_file(pdf_path: str) -> dict:
             issues.append({
                 "severity": "blocker",
                 "message": f"Section 3B financing amount ({main_loan}) doesn't match the 40-11 addendum's principal amount ({fa_loan})",
+                "key": "loan_amount_mismatch",
             })
 
     # 2. Attachment consistency: the "Third Party Financing Addendum"
@@ -204,14 +206,14 @@ def check_tc_file(pdf_path: str) -> dict:
     checked_22 = _is_checked(values, FIELD_MAP["third_party_financing"])
     if has_addendum:
         if not checked_3b:
-            issues.append({"severity": "blocker", "message": "Section 3B: Third Party Financing Addendum checkbox not checked, but a 40-11 addendum is attached"})
+            issues.append({"severity": "blocker", "message": "Section 3B: Third Party Financing Addendum checkbox not checked, but a 40-11 addendum is attached", "key": "addendum_checkbox_mismatch"})
         if not checked_22:
-            issues.append({"severity": "blocker", "message": "Section 22: Third Party Financing Addendum checkbox not checked, but a 40-11 addendum is attached"})
+            issues.append({"severity": "blocker", "message": "Section 22: Third Party Financing Addendum checkbox not checked, but a 40-11 addendum is attached", "key": "addendum_checkbox_mismatch"})
     else:
         if checked_3b:
-            issues.append({"severity": "blocker", "message": "Section 3B: Third Party Financing Addendum checkbox is checked, but no 40-11 addendum is attached"})
+            issues.append({"severity": "blocker", "message": "Section 3B: Third Party Financing Addendum checkbox is checked, but no 40-11 addendum is attached", "key": "addendum_checkbox_mismatch"})
         if checked_22:
-            issues.append({"severity": "blocker", "message": "Section 22: Third Party Financing Addendum checkbox is checked, but no 40-11 addendum is attached"})
+            issues.append({"severity": "blocker", "message": "Section 22: Third Party Financing Addendum checkbox is checked, but no 40-11 addendum is attached", "key": "addendum_checkbox_mismatch"})
 
     blocking_issues = [i for i in issues if i["severity"] == "blocker"]
     return {

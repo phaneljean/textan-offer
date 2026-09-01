@@ -1,11 +1,16 @@
 """
-tc_gate.py -- Free-use gate for the anonymous /tc-check tool: FREE_USES
-checks per browser (tracked by an httponly client-id cookie set by the
-route), then an email is required to keep going. Not an auth system --
-once an email is captured for a client id, that browser is unlimited
-going forward. This is a lead-gen/product gate, not the abuse guard
-(that's the per-IP throttle in rate_limit.py, which still applies
+tc_gate.py -- Email-capture gate for the anonymous /tc-check tool: the
+CHECK itself is never limited (see app.py's tc_check()), but the itemized
+per-field report is withheld until an email is on file for this browser
+(tracked by an httponly client-id cookie set by the route). Not an auth
+system -- once an email is captured for a client id, that browser is
+unlimited going forward. This is a lead-gen/product gate, not the abuse
+guard (that's the per-IP throttle in rate_limit.py, which still applies
 regardless of email status).
+
+use_count is no longer used to gate anything (that was the old
+3-free-checks design) -- it's kept purely as a usage metric (how many
+files a TC ran before/after giving an email).
 
 Backed by the same SQLite DB as everything else in this app
 (subscriptions.db on Railway's persistent volume).
@@ -14,7 +19,6 @@ import os
 import sqlite3
 
 DB_PATH = os.environ.get("DATABASE_PATH", "subscriptions.db")
-FREE_USES = 3
 
 
 def _get_conn():

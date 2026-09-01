@@ -41,7 +41,7 @@ from reminders import run_reminders_if_due
 from drafts import save_draft, get_draft, clear_draft
 from tc_audit import check_tc_file
 from rate_limit import check_and_increment
-from tc_gate import get_client as get_tc_client, record_use as record_tc_use, save_email as save_tc_email, FREE_USES as TC_FREE_USES
+from tc_gate import get_client as get_tc_client, record_use as record_tc_use, save_email as save_tc_email
 from tc_nudge import send_immediate_nudge as send_tc_nudge, run_followup_if_due as run_tc_followup_if_due
 from werkzeug.middleware.proxy_fix import ProxyFix
 import tempfile
@@ -1149,8 +1149,8 @@ def index():
       .then(function(data){
         statusTimers.forEach(clearTimeout);
         statusEl.classList.remove('show');
-        if(data.error === 'email_required'){ renderEmailPrompt(data.message); return; }
         if(data.error){ renderError(data.error); return; }
+        if(data.email_required){ renderEmailPrompt(data); return; }
         renderResult(data);
       })
       .catch(function(){
@@ -1165,11 +1165,13 @@ def index():
     resultEl.classList.add('show');
   }
 
-  // Homepage widget keeps the free-use gate simple: rather than duplicating
-  // the email-capture form here, send them to /tc-check where it lives.
-  function renderEmailPrompt(msg){
-    resultEl.innerHTML = '<div class="result-banner incomplete">' + escapeHtml(msg || "You've used your free checks.") + '</div>' +
-      '<div class="result-more"><a href="/tc-check">Enter your email on TC File Check to keep going &rarr;</a></div>';
+  // Homepage widget keeps the email-capture gate simple: rather than
+  // duplicating the email form here, show the real issue count (that's
+  // the hook) and send them to /tc-check to unlock the itemized list.
+  function renderEmailPrompt(data){
+    var html = '<div class="result-banner incomplete">' + data.issue_count + ' issue' + (data.issue_count === 1 ? '' : 's') + ' found</div>';
+    html += '<div class="result-more"><a href="/tc-check">Enter your email on TC File Check to see the full itemized report &rarr;</a></div>';
+    resultEl.innerHTML = html;
     resultEl.classList.add('show');
   }
 
@@ -2687,27 +2689,15 @@ def tc_check():
 
     run_tc_followup_if_due()
 
-    # Product gate: TC_FREE_USES free checks per browser (tracked by an
-    # httponly client-id cookie, not the IP above -- shared offices/NAT
-    # would otherwise share one IP's quota), then an email unlocks
-    # unlimited further use. See tc_gate.py.
+    # Product gate: the tool itself (running a check) is never limited --
+    # only the ITEMIZED report is. Every upload gets a real summary ("4
+    # issues found"); the actual per-field checklist requires an email,
+    # every time, until one is on file for this browser (tracked by an
+    # httponly client-id cookie, not IP -- shared offices/NAT would
+    # otherwise share one visitor's state). See tc_gate.py.
     cid = request.cookies.get("tc_cid") or str(uuid.uuid4())
     client = get_tc_client(cid)
     submitted_email = (request.form.get("email") or "").strip()
-
-    email_just_captured = False
-    if client["use_count"] >= TC_FREE_USES and not client["email"]:
-        if not submitted_email or "@" not in submitted_email:
-            resp = jsonify({
-                "error": "email_required",
-                "message": "You've used your %d free checks. Enter your email to keep checking files." % TC_FREE_USES,
-            })
-            resp.set_cookie("tc_cid", cid, max_age=365 * 24 * 3600, httponly=True, samesite="Lax")
-            return resp, 403
-        save_tc_email(cid, submitted_email)
-        client["email"] = submitted_email
-        email_just_captured = True
-        track_event("tc_check_email_captured", submitted_email, {"client_id": cid})
 
     upload = request.files.get("file")
     if not upload or not upload.filename:
@@ -2723,14 +2713,48 @@ def tc_check():
             return jsonify({"error": "Couldn't read that file as a PDF. Make sure it's not corrupted or password-protected."}), 400
 
     record_tc_use(cid)
-    track_event("tc_check", metadata={"recognized": result["recognized"], "complete": result["complete"]})
-    if email_just_captured:
-        send_tc_nudge(submitted_email, result)
-    if client["email"]:
-        result["checks_remaining"] = None
+    # Deduped per file -- initials/addendum checks can fire multiple times
+    # per file (once per page), and issue_frequency's "% of recognized
+    # files" in analytics.py only means what it says if each file counts
+    # once per issue type, not once per occurrence.
+    issue_keys = sorted({i["key"] for i in result["issues"] if i.get("key")})
+    track_event("tc_check", metadata={
+        "recognized": result["recognized"],
+        "complete": result["complete"],
+        "issue_keys": issue_keys,
+    })
+
+    email_just_captured = False
+    if not client["email"] and submitted_email and "@" in submitted_email:
+        save_tc_email(cid, submitted_email)
+        client["email"] = submitted_email
+        email_just_captured = True
+        track_event("tc_check_email_captured", submitted_email, {"client_id": cid})
+
+    # Nothing to gate on a clean file or an unrecognized upload -- the
+    # itemized list IS the product's value, so only withhold it when
+    # there's actually something in it.
+    has_itemized_content = result["recognized"] and not result["complete"]
+
+    if has_itemized_content and not client["email"]:
+        blockers = sum(1 for i in result["issues"] if i["severity"] == "blocker")
+        warnings = sum(1 for i in result["issues"] if i["severity"] == "warning")
+        track_event("tc_check_gated", metadata={"issue_count": len(result["issues"])})
+        resp = jsonify({
+            "recognized": result["recognized"],
+            "complete": result["complete"],
+            "page_count": result["page_count"],
+            "has_addendum": result["has_addendum"],
+            "looks_like_blank_draft": result["looks_like_blank_draft"],
+            "issue_count": len(result["issues"]),
+            "blocker_count": blockers,
+            "warning_count": warnings,
+            "email_required": True,
+        })
     else:
-        result["checks_remaining"] = max(0, TC_FREE_USES - (client["use_count"] + 1))
-    resp = jsonify(result)
+        if email_just_captured:
+            send_tc_nudge(submitted_email, result)
+        resp = jsonify(result)
     resp.set_cookie("tc_cid", cid, max_age=365 * 24 * 3600, httponly=True, samesite="Lax")
     return resp
 
@@ -2908,12 +2932,12 @@ function uploadFile(file, email) {
     .then(data => {
       statusTimers.forEach(clearTimeout);
       statusEl.classList.remove('show');
-      if (data.error === 'email_required') {
-        renderEmailGate(data.message);
-        return;
-      }
       if (data.error) {
         renderError(data.error);
+        return;
+      }
+      if (data.email_required) {
+        renderGatedSummary(data, file);
         return;
       }
       renderResult(data, file);
@@ -2925,15 +2949,32 @@ function uploadFile(file, email) {
     });
 }
 
-function renderEmailGate(message) {
-  resultEl.innerHTML =
-    '<div class="result-banner incomplete">' + escapeHtml(message || "You've used your free checks. Enter your email to keep going.") + '</div>' +
-    '<p class="email-gate-msg">Keep checking files &mdash; enter your email once and this browser is unlimited from then on.</p>' +
-    '<form id="emailGateForm" class="email-gate-form">' +
+function buildMetaBar(data, file) {
+  let html = '<div class="meta-bar">';
+  html += '<span><strong>' + escapeHtml(file.name) + '</strong></span>';
+  html += '<span>' + formatBytes(file.size) + '</span>';
+  if (typeof data.page_count === 'number') html += '<span>' + data.page_count + ' page' + (data.page_count === 1 ? '' : 's') + '</span>';
+  html += '<span>' + (data.recognized ? 'TREC 20-19 AcroForm detected' : 'Not recognized as a TREC 20-19') + '</span>';
+  if (data.has_addendum) html += '<span>40-11 addendum attached</span>';
+  html += '</div>';
+  return html;
+}
+
+function renderGatedSummary(data, file) {
+  let html = buildMetaBar(data, file);
+  html += '<div class="result-banner incomplete">' + data.issue_count + ' issue' + (data.issue_count === 1 ? '' : 's') + ' found';
+  if (data.blocker_count) html += ' &mdash; ' + data.blocker_count + ' would get this file kicked back by title';
+  html += '</div>';
+  if (data.looks_like_blank_draft) {
+    html += '<div class="fixit-cta"><p>This looks like an essentially blank draft &mdash; more gaps than a quick fix. It may be faster to generate a clean one from scratch.</p><a href="/demo">Generate a clean offer &rarr;</a></div>';
+  }
+  html += '<p class="email-gate-msg">Enter your email to see exactly which fields and sections &mdash; the full itemized checklist.</p>';
+  html += '<form id="emailGateForm" class="email-gate-form">' +
     '<input type="email" id="emailGateInput" placeholder="you@brokerage.com" required>' +
-    '<button type="submit" class="copy-btn">Continue</button>' +
+    '<button type="submit" class="copy-btn">See full report</button>' +
     '</form>' +
     '<p class="email-gate-fine">No spam &mdash; just occasional product updates.</p>';
+  resultEl.innerHTML = html;
   resultEl.classList.add('show');
   document.getElementById('emailGateForm').addEventListener('submit', e => {
     e.preventDefault();
@@ -2956,23 +2997,12 @@ function renderError(msg) {
 
 function renderResult(data, file) {
   const issues = data.issues || [];
-  let html = '';
-
-  html += '<div class="meta-bar">';
-  html += '<span><strong>' + escapeHtml(file.name) + '</strong></span>';
-  html += '<span>' + formatBytes(file.size) + '</span>';
-  if (typeof data.page_count === 'number') html += '<span>' + data.page_count + ' page' + (data.page_count === 1 ? '' : 's') + '</span>';
-  html += '<span>' + (data.recognized ? 'TREC 20-19 AcroForm detected' : 'Not recognized as a TREC 20-19') + '</span>';
-  if (data.has_addendum) html += '<span>40-11 addendum attached</span>';
-  html += '</div>';
+  let html = buildMetaBar(data, file);
 
   if (data.complete) {
     html += '<div class="result-banner complete">All checked fields are filled in.</div>';
   } else {
     html += '<div class="result-banner incomplete">' + issues.length + ' issue' + (issues.length === 1 ? '' : 's') + ' found</div>';
-  }
-  if (typeof data.checks_remaining === 'number') {
-    html += '<p class="checks-remaining">' + data.checks_remaining + (data.checks_remaining === 1 ? ' free check remaining.' : ' free checks remaining.') + '</p>';
   }
   if (data.looks_like_blank_draft) {
     html += '<div class="fixit-cta"><p>This looks like an essentially blank draft &mdash; more gaps than a quick fix. It may be faster to generate a clean one from scratch.</p><a href="/demo">Generate a clean offer &rarr;</a></div>';
@@ -2985,6 +3015,7 @@ function renderResult(data, file) {
     html += '</ul>';
     html += '<button class="copy-btn" onclick="copyChecklist()">Copy checklist</button>';
     html += '<button class="download-btn" onclick="downloadReport()">Download report</button>';
+    html += '<div class="fixit-cta"><p>Every gap above happened because this file was filled out by hand. TxtAnOffer drafts the 20-19 by text message, so these fields are never blank to begin with.</p><a href="/pricing">See how it works &rarr;</a></div>';
   }
   resultEl.innerHTML = html;
   resultEl.classList.add('show');
@@ -3965,6 +3996,10 @@ def analytics_dashboard():
     visit_rows = "".join(
         f"<tr><td>{v['source']}</td><td>{v['count']}</td></tr>" for v in landing_visits_by_source
     ) or '<tr><td colspan="2" style="padding:10px;color:#666;">No tagged visits yet.</td></tr>'
+    tc_issue_rows = "".join(
+        f"<tr><td>{i['label']}</td><td>{i['count']}</td><td>{i['pct_of_recognized']}%</td></tr>"
+        for i in tc_check_summary['issue_frequency']
+    ) or '<tr><td colspan="3" style="padding:10px;color:#666;">No checks recognized yet.</td></tr>'
     waitlist_rows = ""
     for w in waitlist_signups[:20]:
         from datetime import datetime
@@ -4034,7 +4069,25 @@ body{{font-family:system-ui;max-width:800px;margin:40px auto;padding:20px;}}
   <h3>TC File Check</h3>
   <div class="value">{tc_check_summary['total']}</div>
   <div class="label">Files checked via /tc-check (30 days)</div>
-  <p>{tc_check_summary['recognized']} recognized as a TREC 20-19 &middot; {tc_check_summary['complete']} came back complete</p>
+  <p>{tc_check_summary['recognized']} recognized as a TREC 20-19 &middot; {tc_check_summary['complete']} came back complete ({tc_check_summary['completion_rate']}%)</p>
+</div>
+<div class="metric">
+  <h3>TC File Check &rarr; Email Capture</h3>
+  <div class="value">{tc_check_summary['gate_conversion_rate']}%</div>
+  <div class="label">Of uploads that hit the itemized-report gate, gave an email</div>
+  <p>{tc_check_summary['emails_captured']} emails / {tc_check_summary['gated']} gated uploads</p>
+</div>
+<div class="metric">
+  <h3>TC File Check &mdash; Top Issues (30 days)</h3>
+  <table style="width:100%;border-collapse:collapse;margin-top:10px;">
+    <tr style="background:#eee;text-align:left;">
+      <th style="padding:8px;">Issue</th>
+      <th style="padding:8px;">Count</th>
+      <th style="padding:8px;">% of recognized files</th>
+    </tr>
+    {tc_issue_rows}
+  </table>
+  <p class="label" style="margin-top:8px;">Whatever's at the top of this list is both the next marketing hook ("audited N files, X% are missing...") and a candidate for a dedicated feature or reminder.</p>
 </div>
 <h2>Revenue</h2>
 <div class="metric">

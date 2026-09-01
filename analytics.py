@@ -244,11 +244,37 @@ def get_landing_visits_by_source(days: int = 30) -> list:
         key=lambda r: -r["count"]
     )
 
+TC_ISSUE_LABELS = {
+    "unrecognized": "Not a recognized TREC 20-19 template",
+    "address": "Property address blank",
+    "city": "City blank",
+    "county": "County blank",
+    "buyer_name": "Buyer legal name blank",
+    "seller_name": "Seller legal name blank",
+    "escrow_agent_name": "Escrow Agent name blank",
+    "earnest_money_amount": "Earnest money amount blank",
+    "option_fee_amount": "Option fee amount blank",
+    "title_company": "Title Company blank",
+    "effective_date": "Effective Date blank",
+    "initials_buyer": "Buyer initials missing (some page)",
+    "initials_seller": "Seller initials missing (some page)",
+    "loan_amount_mismatch": "40-11 loan amount doesn't match contract",
+    "addendum_checkbox_mismatch": "Third Party Financing checkbox disagrees with addendum",
+}
+
 def get_tc_check_summary(days: int = 30) -> dict:
-    """Usage summary for the TC file-check tool (/v1/tc/check). Separate
-    from the rest of this module's metrics -- that endpoint tracks a
-    'tc_check' event per request (see app.py's tc_check()) that nothing
-    else here surfaces, so this was invisible on the dashboard until now."""
+    """Usage + funnel summary for the TC file-check tool (/v1/tc/check).
+    Separate from the rest of this module's metrics -- that endpoint
+    tracks 'tc_check' / 'tc_check_gated' / 'tc_check_email_captured'
+    events (see app.py's tc_check()) that nothing else here surfaces, so
+    this was invisible on the dashboard until now.
+
+    issue_frequency answers "what checks fire most" directly from
+    production traffic -- each issue in tc_audit.py's CHECKED_FIELDS (plus
+    the derived checks: Effective Date, initials, addendum consistency)
+    carries a stable 'key' precisely so it can be tallied here instead of
+    parsed back out of free-text messages. Percentages are of *recognized*
+    uploads, since an unrecognized file can't fire any real check."""
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cutoff = (datetime.utcnow() - timedelta(days=days)).isoformat()
@@ -257,19 +283,56 @@ def get_tc_check_summary(days: int = 30) -> dict:
         WHERE event_type = 'tc_check' AND created_at > ?
     """, (cutoff,))
     rows = cursor.fetchall()
+
+    cursor.execute("""
+        SELECT COUNT(*) FROM events
+        WHERE event_type = 'tc_check_gated' AND created_at > ?
+    """, (cutoff,))
+    gated = cursor.fetchone()[0]
+
+    cursor.execute("""
+        SELECT COUNT(*) FROM events
+        WHERE event_type = 'tc_check_email_captured' AND created_at > ?
+    """, (cutoff,))
+    emails_captured = cursor.fetchone()[0]
     conn.close()
 
     import json
     total = len(rows)
     recognized = complete = 0
+    issue_counts = {}
     for row in rows:
         metadata = json.loads(row[0]) if row[0] else {}
         if metadata.get("recognized"):
             recognized += 1
         if metadata.get("complete"):
             complete += 1
+        for key in metadata.get("issue_keys") or []:
+            issue_counts[key] = issue_counts.get(key, 0) + 1
 
-    return {"total": total, "recognized": recognized, "complete": complete}
+    issue_frequency = sorted(
+        [
+            {
+                "key": key,
+                "label": TC_ISSUE_LABELS.get(key, key),
+                "count": count,
+                "pct_of_recognized": round(count / recognized * 100, 1) if recognized else 0,
+            }
+            for key, count in issue_counts.items()
+        ],
+        key=lambda r: -r["count"],
+    )
+
+    return {
+        "total": total,
+        "recognized": recognized,
+        "complete": complete,
+        "completion_rate": round(complete / recognized * 100, 1) if recognized else 0,
+        "gated": gated,
+        "emails_captured": emails_captured,
+        "gate_conversion_rate": round(emails_captured / gated * 100, 1) if gated else 0,
+        "issue_frequency": issue_frequency,
+    }
 
 def get_signups_by_source(days: int = 30) -> list:
     """Signup counts grouped by ?src= attribution (Direct Reach, BiggerPockets,
