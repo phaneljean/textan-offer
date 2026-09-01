@@ -42,6 +42,7 @@ from drafts import save_draft, get_draft, clear_draft
 from tc_audit import check_tc_file
 from rate_limit import check_and_increment
 from tc_gate import get_client as get_tc_client, record_use as record_tc_use, save_email as save_tc_email, FREE_USES as TC_FREE_USES
+from tc_nudge import send_immediate_nudge as send_tc_nudge, run_followup_if_due as run_tc_followup_if_due
 from werkzeug.middleware.proxy_fix import ProxyFix
 import tempfile
 import uuid
@@ -1843,6 +1844,7 @@ def sms_reply():
     track_event("sms_received", agent_phone, {"body": incoming_msg})
     run_cleanup_if_due(OUTPUT_DIR)
     run_reminders_if_due(twilio_send_sms)
+    run_tc_followup_if_due()
 
     # Handle keywords
     keyword = incoming_msg.strip().upper()
@@ -2711,6 +2713,8 @@ def tc_check():
     if not check_and_increment(f"tc_check:{client_ip}", limit=20):
         return jsonify({"error": "Too many requests. Try again in a bit."}), 429
 
+    run_tc_followup_if_due()
+
     # Product gate: TC_FREE_USES free checks per browser (tracked by an
     # httponly client-id cookie, not the IP above -- shared offices/NAT
     # would otherwise share one IP's quota), then an email unlocks
@@ -2719,6 +2723,7 @@ def tc_check():
     client = get_tc_client(cid)
     submitted_email = (request.form.get("email") or "").strip()
 
+    email_just_captured = False
     if client["use_count"] >= TC_FREE_USES and not client["email"]:
         if not submitted_email or "@" not in submitted_email:
             resp = jsonify({
@@ -2729,6 +2734,7 @@ def tc_check():
             return resp, 403
         save_tc_email(cid, submitted_email)
         client["email"] = submitted_email
+        email_just_captured = True
         track_event("tc_check_email_captured", submitted_email, {"client_id": cid})
 
     upload = request.files.get("file")
@@ -2746,6 +2752,8 @@ def tc_check():
 
     record_tc_use(cid)
     track_event("tc_check", metadata={"recognized": result["recognized"], "complete": result["complete"]})
+    if email_just_captured:
+        send_tc_nudge(submitted_email, result)
     if client["email"]:
         result["checks_remaining"] = None
     else:

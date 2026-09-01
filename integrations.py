@@ -81,6 +81,43 @@ def send_offer_email(to_email: str, pdf_path: str, parsed: dict, thread_url: str
         return {"success": False, "error": str(e)}
 
 
+def send_plain_email(to_email: str, subject: str, text_body: str) -> dict:
+    """Non-attachment email (TC-check nudges, etc.) -- same SendGrid
+    account/config as send_offer_email, just without a PDF attached."""
+    if not SENDGRID_API_KEY:
+        return {"success": False, "error": "Email not configured (SENDGRID_API_KEY missing)"}
+
+    payload = {
+        "personalizations": [{"to": [{"email": to_email}]}],
+        "from": {"email": FROM_EMAIL, "name": "TxtAnOffer"},
+        "subject": subject,
+        "content": [{"type": "text/plain", "value": text_body}],
+        "tracking_settings": {
+            "click_tracking": {"enable": False, "enable_text": False}
+        },
+    }
+
+    data = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(
+        "https://api.sendgrid.com/v3/mail/send",
+        data=data,
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {SENDGRID_API_KEY}",
+        },
+        method="POST",
+    )
+
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            return {"success": True}
+    except urllib.error.HTTPError as e:
+        body = e.read().decode("utf-8") if e.fp else ""
+        return {"success": False, "error": f"SendGrid error {e.code}: {body[:200]}"}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
 # --- Webhook / Zapier ------------------------------------------------------
 
 def _init_webhooks_table():
