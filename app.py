@@ -3031,6 +3031,33 @@ function renderError(msg) {
   resultEl.classList.add('show');
 }
 
+// Buckets an issue key into which upsell pitch it supports -- each pitch
+// below is a claim actually verified against this codebase (send-blocking
+// in pdf_validator.py / api_send_email, and the shared loan_amount value
+// financing_addendum.py + pdf_filler.py both fill from), not a generic
+// "try our tool" line. Deliberately no bucket for initials_buyer/seller:
+// TxtAnOffer's own generated contracts leave initials for the agent to add
+// after generation too (same as any tool), so there's no honest claim that
+// it prevents that specific gap -- those reports fall through to the
+// generic default pitch instead of a fabricated one.
+const ADDENDUM_MISMATCH_KEYS = new Set(['loan_amount_mismatch', 'addendum_checkbox_mismatch']);
+const BLANK_FIELD_KEYS = new Set(['address', 'city', 'county', 'buyer_name', 'seller_name', 'escrow_agent_name', 'earnest_money_amount', 'option_fee_amount', 'title_company', 'effective_date']);
+
+function buildUpsellCta(issues) {
+  let addendumCount = 0, blankCount = 0;
+  for (const issue of issues) {
+    if (ADDENDUM_MISMATCH_KEYS.has(issue.key)) addendumCount++;
+    else if (BLANK_FIELD_KEYS.has(issue.key)) blankCount++;
+  }
+  if (addendumCount > 0) {
+    return '<div class="fixit-cta"><p>This file&rsquo;s financing addendum doesn&rsquo;t agree with the contract itself &mdash; the kind of mismatch that only happens when a loan amount gets retyped by hand in two places. TxtAnOffer fills it once and uses it everywhere, so the 40-11 and the contract can never disagree.</p><a href="/pricing">See how it works &rarr;</a></div>';
+  }
+  if (blankCount >= 2) {
+    return '<div class="fixit-cta"><p>Tired of chasing agents to fill in blank fields? TxtAnOffer&rsquo;s review screen physically blocks emailing the listing agent until every required TREC field is filled in.</p><a href="/pricing">See how it works &rarr;</a></div>';
+  }
+  return '<div class="fixit-cta"><p>Every gap above happened because this file was filled out by hand. TxtAnOffer drafts the 20-19 by text message, so these fields are never blank to begin with.</p><a href="/pricing">See how it works &rarr;</a></div>';
+}
+
 function renderResult(data, file) {
   const issues = data.issues || [];
   let html = buildMetaBar(data, file);
@@ -3051,7 +3078,7 @@ function renderResult(data, file) {
     html += '</ul>';
     html += '<button class="copy-btn" onclick="copyChecklist()">Copy checklist</button>';
     html += '<button class="download-btn" onclick="downloadReport()">Download report</button>';
-    html += '<div class="fixit-cta"><p>Every gap above happened because this file was filled out by hand. TxtAnOffer drafts the 20-19 by text message, so these fields are never blank to begin with.</p><a href="/pricing">See how it works &rarr;</a></div>';
+    html += buildUpsellCta(issues);
   }
   resultEl.innerHTML = html;
   resultEl.classList.add('show');
