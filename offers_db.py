@@ -79,7 +79,7 @@ def get_offer_by_filename(filename: str) -> dict:
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT id, phone, address, price, down_pct, close_days, filename, mls_json, generator_version, financing_type, thread_status, thread_responded_at, email_sent_at, email_sent_to, created_at
+        SELECT id, phone, address, price, down_pct, close_days, filename, mls_json, generator_version, financing_type, thread_status, thread_responded_at, email_sent_at, email_sent_to, created_at, option_days
         FROM offers WHERE filename = ?
     """, (filename,))
     row = cursor.fetchone()

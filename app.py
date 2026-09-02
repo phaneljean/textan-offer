@@ -38,6 +38,7 @@ from offers_db import record_offer, get_offers_for_phone, get_offer_by_filename,
 from sms_utils import parse_incoming_sms
 from cleanup import run_cleanup_if_due
 from reminders import run_reminders_if_due
+from deadlines import earnest_money_deadline, option_end_date, build_day_one_summary
 from drafts import save_draft, get_draft, clear_draft
 from tc_audit import check_tc_file
 from rate_limit import check_and_increment
@@ -6284,6 +6285,26 @@ def offer_thread(filename):
                 f"Listing agent {verb} your offer on {offer['address']}. View: "
                 + sign_thread_url(filename, request.host_url.rstrip("/")),
             )
+            # Day One summary: a second, immediate text with the deadlines
+            # that now actually exist now that there's an Effective Date --
+            # same content the /thread page shows once accepted (see
+            # build_day_one_summary in deadlines.py), sent right away rather
+            # than making the agent come back to read it. The T-1-day
+            # earnest-money/option reminders in reminders.py cover the
+            # follow-up nudge closer to each deadline.
+            if action == "accept":
+                effective_date = datetime.utcnow().date()
+                close_date = None
+                try:
+                    created_dt = datetime.fromisoformat(offer["created_at"])
+                    if offer.get("close_days"):
+                        close_date = (created_dt + timedelta(days=offer["close_days"])).date()
+                except (KeyError, TypeError, ValueError):
+                    pass
+                summary_lines = build_day_one_summary(
+                    offer["address"], effective_date, offer.get("option_days"), close_date
+                )
+                twilio_send_sms(offer["phone"], "\n".join(summary_lines))
         return redirect(f"/thread/{filename}?expires={expires}&sig={sig}")
 
     track_event("thread_viewed", offer["phone"], {"filename": filename})
@@ -6332,7 +6353,6 @@ def offer_thread(filename):
         "financing_type_specified": bool(offer.get("financing_type")),
     }) if os.path.exists(pdf_path_on_disk) else {"ok": False, "blocking": [], "warnings": []}
 
-    from datetime import timedelta
     try:
         created_dt = datetime.fromisoformat(offer["created_at"])
     except (KeyError, TypeError, ValueError):
@@ -6367,6 +6387,34 @@ def offer_thread(filename):
         responded_label = "Accepted" if thread_status == "accept" or thread_status == "accepted" else "Declined"
         response_block = f"""
 <div class="status-panel">You marked this <strong>{responded_label}</strong> on {offer.get('thread_responded_at', '')[:10]}.</div>"""
+
+    # Day One summary: only once there's a real Effective Date to compute
+    # from (i.e. accepted) -- same content as the immediate acceptance SMS
+    # (see build_day_one_summary in deadlines.py), shown here so it's still
+    # available on a later visit, with a copy button so the agent can paste
+    # it into an email to the buyer/lender/title company themselves (this
+    # app doesn't collect those contacts, so it can't send to them directly).
+    day_one_html = ""
+    if thread_status in ("accept", "accepted"):
+        try:
+            effective_date = datetime.fromisoformat(offer.get("thread_responded_at") or "").date()
+        except ValueError:
+            effective_date = created_dt.date()
+        close_date_obj = (created_dt + timedelta(days=close_days)).date() if close_days else None
+        summary_lines = build_day_one_summary(address, effective_date, offer.get("option_days"), close_date_obj)
+        summary_text = "\n".join(summary_lines)
+        summary_items_html = "".join(f"<li>{line}</li>" for line in summary_lines[1:-1])
+        import json as _json
+        day_one_html = f"""
+<div class="day-one-card">
+<div class="day-one-title">Day One Summary</div>
+<ul class="day-one-list">{summary_items_html}</ul>
+<button class="btn btn-outline" style="width:100%;" onclick="copyDayOneSummary()">Copy summary</button>
+<div class="day-one-hint">Paste this into an email or text to the buyer, lender, and title company.</div>
+</div>
+<script>
+function copyDayOneSummary(){{navigator.clipboard.writeText({_json.dumps(summary_text)});}}
+</script>"""
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -6432,6 +6480,14 @@ border-radius:999px;font-size:0.85rem;font-weight:600;text-decoration:none;}}
 .qa-blocking strong, .qa-warnings strong{{display:block;margin-bottom:0.4rem;color:var(--text);}}
 .qa-blocking ul, .qa-warnings ul{{margin:0;padding-left:1.1rem;}}
 .qa-blocking li, .qa-warnings li{{margin-bottom:0.2rem;}}
+.day-one-card{{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);
+padding:1.1rem 1.25rem;margin-bottom:1.25rem;box-shadow:0 1px 3px rgba(15,31,47,0.05);}}
+.day-one-title{{font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;
+color:var(--text-dim);margin-bottom:0.7rem;}}
+.day-one-list{{list-style:none;margin-bottom:0.9rem;}}
+.day-one-list li{{font-size:0.88rem;color:var(--text);padding:0.35rem 0;border-bottom:1px solid var(--border);}}
+.day-one-list li:last-child{{border-bottom:none;}}
+.day-one-hint{{font-size:0.75rem;color:var(--text-dim);text-align:center;margin-top:0.6rem;}}
 @media(max-width:400px){{
 .stats{{grid-template-columns:1fr 1fr;}}
 .stat:last-child{{grid-column:span 2;}}
@@ -6459,6 +6515,8 @@ border-radius:999px;font-size:0.85rem;font-weight:600;text-decoration:none;}}
 <div class="notbinding">Clicking Accept or Decline sends a quick notification to the buyer's agent. This is not a binding acceptance of the contract and is not an electronic signature &mdash; legal execution of the TREC 20-19 still requires normal signing.</div>
 
 {response_block}
+
+{day_one_html}
 
 <iframe src="{pdf_url}" class="pdf-frame" title="Offer PDF"></iframe>
 

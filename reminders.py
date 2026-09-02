@@ -1,21 +1,35 @@
 """
-reminders.py -- proactively texts agents before two real deadlines on their
-offer: the closing date, and (when the agent specified one) the option
-period's termination deadline. Financing-approval deadlines still aren't
+reminders.py -- proactively texts agents before three real deadlines on
+their offer: the closing date, the option period's termination deadline
+(once accepted), and the Paragraph 5 earnest money / option fee delivery
+deadline (also once accepted). Financing-approval deadlines still aren't
 captured anywhere (never collected from the agent), so we don't guess at
 a date nobody actually agreed to -- but the option period *is* collected
 (parser.py's inspection_days, e.g. "10 day option" in the original text)
-and stored per-offer, so it's just as reliable to remind on as closing.
+and stored per-offer.
 
 Piggybacks on request traffic the same way cleanup.py does -- checked at
 most once per _CHECK_INTERVAL_SECONDS -- rather than requiring a separate
 scheduler/cron to be set up on Railway.
+
+The option and earnest-money reminders are anchored on thread_responded_at
+(the Effective Date proxy -- see deadlines.py), NOT created_at, because both
+periods are contractually "N days after the Effective Date," which can be
+days or weeks after the offer was drafted. An earlier version of the option
+reminder anchored on created_at instead, which understated the real
+deadline for any offer that took more than a few hours to get accepted --
+fixed alongside adding the earnest-money reminder since they share the same
+anchor. The closing reminder stays anchored on created_at: that date is
+fixed at drafting time (created_at + close_days) and printed as such on the
+contract itself (see pdf_filler.py), so it never depends on acceptance.
 """
 import os
 import sqlite3
 import time
 import threading
 from datetime import datetime, timedelta
+
+from deadlines import earnest_money_deadline, option_end_date
 
 DB_PATH = os.environ.get("DATABASE_PATH", "subscriptions.db")
 CLOSING_REMINDER_DAYS_BEFORE = int(os.environ.get("CLOSING_REMINDER_DAYS_BEFORE", 3))
@@ -24,6 +38,10 @@ CLOSING_REMINDER_DAYS_BEFORE = int(os.environ.get("CLOSING_REMINDER_DAYS_BEFORE"
 # keeps this from firing the same day the offer was sent while still
 # leaving real time to act before the unrestricted right to terminate ends.
 OPTION_REMINDER_DAYS_BEFORE = int(os.environ.get("OPTION_REMINDER_DAYS_BEFORE", 2))
+# Earnest money/option fee is due just 3 days after the Effective Date
+# (Paragraph 5) -- a 1-day lead time is the most this window allows while
+# still giving the agent a real heads-up before it's due.
+EARNEST_MONEY_REMINDER_DAYS_BEFORE = int(os.environ.get("EARNEST_MONEY_REMINDER_DAYS_BEFORE", 1))
 
 _STATE_FILE = os.environ.get("REMINDER_STATE_FILE", ".last_reminder_check")
 _CHECK_INTERVAL_SECONDS = 6 * 3600
@@ -91,17 +109,19 @@ def _due_offers():
 
 
 def _due_offers_option():
-    """Real (non-demo) offers with a specified option period whose
-    termination deadline is exactly OPTION_REMINDER_DAYS_BEFORE days away
-    and haven't already gotten one."""
+    """Accepted offers with a specified option period whose termination
+    deadline (counted from the Effective Date, not from when the offer was
+    drafted -- see module docstring) is exactly OPTION_REMINDER_DAYS_BEFORE
+    days away and haven't already gotten one."""
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT id, phone, address, option_days, created_at
+        SELECT id, phone, address, option_days, thread_responded_at
         FROM offers
         WHERE phone NOT LIKE '%demo%'
           AND option_days IS NOT NULL
+          AND thread_status = 'accept'
           AND id NOT IN (SELECT offer_id FROM reminders_sent WHERE kind = 'option')
     """)
     rows = [dict(r) for r in cursor.fetchall()]
@@ -111,12 +131,45 @@ def _due_offers_option():
     due = []
     for r in rows:
         try:
-            created = datetime.fromisoformat(r["created_at"])
+            effective = datetime.fromisoformat(r["thread_responded_at"]).date()
         except (ValueError, TypeError):
             continue
-        option_end_date = (created + timedelta(days=r["option_days"])).date()
-        if option_end_date == target_date:
-            r["option_end_date"] = option_end_date
+        end_date = option_end_date(effective, r["option_days"])
+        if end_date == target_date:
+            r["option_end_date"] = end_date
+            due.append(r)
+    return due
+
+
+def _due_offers_earnest_money():
+    """Accepted offers whose Paragraph 5 earnest money / option fee
+    delivery deadline (3 days after the Effective Date, TREC day-counting
+    rule applied -- see deadlines.py) is exactly
+    EARNEST_MONEY_REMINDER_DAYS_BEFORE days away and haven't already gotten
+    one."""
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT id, phone, address, thread_responded_at
+        FROM offers
+        WHERE phone NOT LIKE '%demo%'
+          AND thread_status = 'accept'
+          AND id NOT IN (SELECT offer_id FROM reminders_sent WHERE kind = 'earnest_money')
+    """)
+    rows = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+
+    target_date = (datetime.utcnow() + timedelta(days=EARNEST_MONEY_REMINDER_DAYS_BEFORE)).date()
+    due = []
+    for r in rows:
+        try:
+            effective = datetime.fromisoformat(r["thread_responded_at"]).date()
+        except (ValueError, TypeError):
+            continue
+        deadline = earnest_money_deadline(effective)
+        if deadline == target_date:
+            r["earnest_money_deadline"] = deadline
             due.append(r)
     return due
 
@@ -161,6 +214,17 @@ def run_reminders_if_due(send_sms_fn):
                 )
                 if send_sms_fn(offer["phone"], body):
                     _mark_sent(offer["id"], "option")
+
+            for offer in _due_offers_earnest_money():
+                body = (
+                    f"Reminder: earnest money + option fee for {offer['address']} "
+                    f"is due {offer['earnest_money_deadline'].strftime('%B %d, %Y')} "
+                    f"({EARNEST_MONEY_REMINDER_DAYS_BEFORE} day"
+                    f"{'s' if EARNEST_MONEY_REMINDER_DAYS_BEFORE != 1 else ''} from now), per Paragraph 5. "
+                    f"Text DASHBOARD to review."
+                )
+                if send_sms_fn(offer["phone"], body):
+                    _mark_sent(offer["id"], "earnest_money")
         except Exception as e:
             print(f"[reminders] Error: {e}")
 
