@@ -218,8 +218,8 @@ def index():
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TxtAnOffer — Draft &amp; Verify TREC Contracts</title>
-  <meta name="description" content="Texas agents and transaction coordinators: draft a TREC 20-19 by text message in 10 seconds, or drop any filled contract in and see what's missing before title kicks it back. No app required.">
+  <title>TxtAnOffer — Catch What Title Kicks Back</title>
+  <meta name="description" content="Free for Texas transaction coordinators: drop a filled TREC 20-19 (and its 40-11 addendum) and see what's missing or inconsistent before title kicks it back. TxtAnOffer also drafts new offers by text message in 10 seconds.">
   <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -737,15 +737,8 @@ def index():
     </a>
     <div class="nav-links" id="navLinks">
       <a href="#how">How it works</a>
-      <a href="#trust">Accuracy</a>
       <a href="/pricing">Pricing</a>
-      <a href="/demo">Demo</a>
-      <a href="/playground">Parser Playground</a>
-      <a href="/tc-check">TC File Check</a>
       <a href="/faq">FAQ</a>
-      <a href="/about">About</a>
-      <a href="/trec-changes">TREC Changes</a>
-      <a href="/contact">Support</a>
       <a href="/login">Log In</a>
     </div>
     <a href="/signup" class="nav-cta">Start Free Trial</a>
@@ -767,23 +760,14 @@ def index():
 
   <div class="main">
   <section class="hero section">
-    <div class="badge">For Texas Agents &amp; Transaction Coordinators</div>
+    <div class="badge">Free for Texas Transaction Coordinators</div>
     <h1>
-      Draft instantly.<br>
-      Verify completely.<br>
-      Close smoothly.
+      Catch what title kicks back<br>
+      &mdash; before you send the file.
     </h1>
     <p class="hero-sub">
-      TxtAnOffer drafts your <strong>TREC 20-19</strong> by text message, and checks any filled contract &mdash; yours or anyone else's &mdash; for the missing initials, dates, and mismatches that make title kick a file back.
+      Drop a filled <strong>TREC 20-19</strong> (and its 40-11 addendum, if you've got one) and see what's missing or inconsistent in seconds &mdash; blank dates, missing initials, mismatched checkboxes, all of it.
     </p>
-
-    <div class="workflow-strip">
-      <div class="workflow-step"><span class="workflow-num">1</span>Draft</div>
-      <div class="workflow-arrow">&rarr;</div>
-      <div class="workflow-step"><span class="workflow-num">2</span>Verify</div>
-      <div class="workflow-arrow">&rarr;</div>
-      <div class="workflow-step"><span class="workflow-num">3</span>Close</div>
-    </div>
 
     <div class="input-card">
       <div class="input-label">Try it now &mdash; no signup required</div>
@@ -799,9 +783,10 @@ def index():
     </div>
   </section>
 
-  <section class="hero section" style="padding-top:1rem;">
-    <h1 style="font-size:2.1rem;">See exactly what you'll get</h1>
-    <p class="hero-sub">The same review screen every offer goes through before it can be sent &mdash; and where DocuSign and Zapier plug in.</p>
+  <section class="section" style="padding-top:1rem;">
+    <div class="steps-kicker">Also from TxtAnOffer &mdash; drafting offers by text</div>
+    <h2 style="font-size:2.1rem;margin-top:0.5rem;">See exactly what you'll get</h2>
+    <p class="hero-sub">Text your offer terms and get back a filled TREC 20-19, ready for the same review screen &mdash; where DocuSign and Zapier plug in.</p>
 
     <div class="dark-card-wrap no-glow">
       <div class="dark-card-inner" style="padding:0.6rem;">
@@ -2264,13 +2249,8 @@ DEMO_FORM = """
     </a>
     <div class="nav-links" id="navLinks">
       <a href="/#how">How it works</a>
-      <a href="/#trust">Accuracy</a>
       <a href="/pricing">Pricing</a>
-      <a href="/demo">Demo</a>
-      <a href="/playground">Parser Playground</a>
       <a href="/faq">FAQ</a>
-      <a href="/about">About</a>
-      <a href="/contact">Support</a>
       <a href="/login">Log In</a>
     </div>
     <a href="/signup" class="nav-cta">Start Free Trial</a>
@@ -3219,13 +3199,8 @@ padding:0.4rem 0.85rem;font-size:0.8rem;color:var(--text-muted);cursor:pointer;t
 </a>
 <div class="nav-links" id="navLinks">
 <a href="/#how">How it works</a>
-<a href="/#trust">Accuracy</a>
 <a href="/pricing">Pricing</a>
-<a href="/demo">Demo</a>
-<a href="/playground">Parser Playground</a>
 <a href="/faq">FAQ</a>
-<a href="/about">About</a>
-<a href="/contact">Support</a>
 <a href="/login">Log In</a>
 </div>
 <a href="/signup" class="nav-cta">Start Free Trial</a>
@@ -3710,13 +3685,8 @@ def pricing():
   </a>
   <div class="nav-links" id="navLinks">
     <a href="/#how">How it works</a>
-    <a href="/#trust">Accuracy</a>
     <a href="/pricing">Pricing</a>
-    <a href="/demo">Demo</a>
-    <a href="/playground">Parser Playground</a>
     <a href="/faq">FAQ</a>
-    <a href="/about">About</a>
-    <a href="/contact">Support</a>
     <a href="/login">Log In</a>
   </div>
   <a href="/signup" class="nav-cta">Start Free Trial</a>
@@ -4573,13 +4543,8 @@ def terms():
   </a>
   <div class="nav-links" id="navLinks">
     <a href="/#how">How it works</a>
-    <a href="/#trust">Accuracy</a>
     <a href="/pricing">Pricing</a>
-    <a href="/demo">Demo</a>
-    <a href="/playground">Parser Playground</a>
     <a href="/faq">FAQ</a>
-    <a href="/about">About</a>
-    <a href="/contact">Support</a>
     <a href="/login">Log In</a>
   </div>
   <a href="/signup" class="nav-cta">Start Free Trial</a>
@@ -4844,13 +4809,8 @@ def privacy():
   </a>
   <div class="nav-links" id="navLinks">
     <a href="/#how">How it works</a>
-    <a href="/#trust">Accuracy</a>
     <a href="/pricing">Pricing</a>
-    <a href="/demo">Demo</a>
-    <a href="/playground">Parser Playground</a>
     <a href="/faq">FAQ</a>
-    <a href="/about">About</a>
-    <a href="/contact">Support</a>
     <a href="/login">Log In</a>
   </div>
   <a href="/signup" class="nav-cta">Start Free Trial</a>
@@ -5065,13 +5025,8 @@ def faq():
   </a>
   <div class="nav-links" id="navLinks">
     <a href="/#how">How it works</a>
-    <a href="/#trust">Accuracy</a>
     <a href="/pricing">Pricing</a>
-    <a href="/demo">Demo</a>
-    <a href="/playground">Parser Playground</a>
     <a href="/faq">FAQ</a>
-    <a href="/about">About</a>
-    <a href="/contact">Support</a>
     <a href="/login">Log In</a>
   </div>
   <a href="/signup" class="nav-cta">Start Free Trial</a>
@@ -5283,11 +5238,8 @@ def trec_changes():
   </a>
   <div class="nav-links" id="navLinks">
     <a href="/#how">How it works</a>
-    <a href="/#trust">Accuracy</a>
     <a href="/pricing">Pricing</a>
     <a href="/faq">FAQ</a>
-    <a href="/about">About</a>
-    <a href="/trec-changes">TREC Changes</a>
     <a href="/login">Log In</a>
   </div>
   <a href="/signup" class="nav-cta">Start Free Trial</a>
@@ -5474,13 +5426,8 @@ def about():
   </a>
   <div class="nav-links" id="navLinks">
     <a href="/#how">How it works</a>
-    <a href="/#trust">Accuracy</a>
     <a href="/pricing">Pricing</a>
-    <a href="/demo">Demo</a>
-    <a href="/playground">Parser Playground</a>
     <a href="/faq">FAQ</a>
-    <a href="/about">About</a>
-    <a href="/contact">Support</a>
     <a href="/login">Log In</a>
   </div>
   <a href="/signup" class="nav-cta">Start Free Trial</a>
@@ -5637,13 +5584,8 @@ def contact():
   </a>
   <div class="nav-links" id="navLinks">
     <a href="/#how">How it works</a>
-    <a href="/#trust">Accuracy</a>
     <a href="/pricing">Pricing</a>
-    <a href="/demo">Demo</a>
-    <a href="/playground">Parser Playground</a>
     <a href="/faq">FAQ</a>
-    <a href="/about">About</a>
-    <a href="/contact">Support</a>
     <a href="/login">Log In</a>
   </div>
   <a href="/signup" class="nav-cta">Start Free Trial</a>
