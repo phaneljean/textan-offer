@@ -33,8 +33,9 @@ from amendment import fill_amendment_pdf
 from agent_profiles import get_agent_profile, save_agent_profile
 from subscriptions import can_generate_offer, increment_offer_count, activate_subscription, deactivate_subscription, get_user, create_user, FREE_OFFER_LIMIT, is_admin_phone, has_professional_access
 from analytics import track_event, get_conversion_metrics, get_revenue_metrics, get_recent_sms, get_recent_sms_failures, get_last_blocked_state, get_waitlist_signups, get_signups_by_source, get_landing_visits_by_source, get_tc_check_summary
-from integrations import send_offer_email, fire_webhook, save_webhook, get_webhook, delete_webhook, send_to_docusign
+from integrations import send_offer_email, fire_webhook, save_webhook, get_webhook, delete_webhook, send_to_docusign, send_plain_email
 from offers_db import record_offer, get_offers_for_phone, get_offer_by_filename, record_amendment, get_amendments_for_phone, record_thread_response, record_email_sent
+from brokerages import extract_brokerage_prefix, link_user_to_brokerage, get_brokerage, get_brokerage_by_code, create_brokerage, list_brokerages, list_brokerage_agents
 from sms_utils import parse_incoming_sms
 from cleanup import run_cleanup_if_due
 from reminders import run_reminders_if_due
@@ -1692,6 +1693,48 @@ def twilio_send_sms(to, body):
     return True
 
 
+def _notify_brokerage_tc(user: dict, draft: dict, pdf_path: str, pdf_url: str):
+    """The 'trojan horse' pipeline: an agent linked to a brokerage (see
+    extract_brokerage_prefix) never has to do anything else -- every offer
+    they text in auto-CCs that brokerage's TC with the finished PDF and a
+    quick compliance read, straight into an inbox they already check.
+    Silent no-op for any agent not linked to a brokerage, and never lets a
+    failure here (bad email, audit engine hiccup) block the agent's own
+    SMS reply -- this is a value-add on top of the core flow, not a gate."""
+    brokerage_id = user.get("brokerage_id") if user else None
+    if not brokerage_id:
+        return
+    try:
+        brokerage = get_brokerage(brokerage_id)
+        if not brokerage or not brokerage.get("tc_email"):
+            return
+        try:
+            audit = check_tc_file([pdf_path])
+            issue_count = len(audit.get("issues") or [])
+            if issue_count:
+                audit_line = f"TC File Check flagged {issue_count} item(s) to review before this goes out."
+            else:
+                audit_line = "TC File Check found nothing missing on the fields it can verify."
+        except Exception:
+            audit_line = "(TC File Check couldn't scan this file automatically -- worth a manual look.)"
+
+        send_plain_email(
+            brokerage["tc_email"],
+            f"New offer drafted: {draft.get('address', 'address unknown')}",
+            (
+                f"An agent on your roster just drafted an offer through TxtAnOffer.\n\n"
+                f"Address: {draft.get('address', 'n/a')}\n"
+                f"Price: ${draft.get('price', 0):,}\n\n"
+                f"PDF: {pdf_url}\n\n"
+                f"{audit_line}\n\n"
+                f"This is an automatic notification for {brokerage['name']} -- the agent still "
+                f"reviews and sends the offer themselves; nothing here is sent on their behalf."
+            ),
+        )
+    except Exception as e:
+        print(f"[BROKERAGE_TC] notify failed for brokerage {brokerage_id}: {e}")
+
+
 def finalize_offer_sms(agent_phone: str, draft: dict):
     """Shared finalize step for the YES confirmation: checks the offer
     limit, generates the PDF, records it, and texts back the result.
@@ -1734,6 +1777,7 @@ def finalize_offer_sms(agent_phone: str, draft: dict):
     pdf_url = sign_pdf_url(filename, request.host_url.rstrip("/"))
     record_offer(agent_phone, draft, filename)
     fire_webhook(agent_phone, draft, pdf_url)
+    _notify_brokerage_tc(user, draft, pdf_path, pdf_url)
 
     if reason in ("subscribed", "admin"):
         status_line = ""
@@ -1935,6 +1979,20 @@ def sms_reply():
         # Check subscription status
         can_generate, reason, user = can_generate_offer(agent_phone)
         print(f"[SMS] Subscription check: can_generate={can_generate}, reason={reason}")
+
+        # A brokerage's join_code leading the message ("KW123 725k 3% 21day
+        # 104 Main St") binds this phone to that brokerage permanently on
+        # first use -- no separate registration step for the agent. Strip
+        # it before any parsing sees the message; a code that doesn't match
+        # a real brokerage is left alone and parsed as normal (most likely
+        # fails as an unrecognized address, same as today).
+        brokerage_hit, incoming_msg = extract_brokerage_prefix(incoming_msg)
+        if brokerage_hit and user.get("brokerage_id") != brokerage_hit["id"]:
+            link_user_to_brokerage(agent_phone, brokerage_hit["id"])
+            track_event("brokerage_linked", agent_phone, {
+                "brokerage_id": brokerage_hit["id"],
+                "brokerage_name": brokerage_hit["name"],
+            })
 
         if not can_generate:
             track_event("limit_reached", agent_phone)
@@ -3829,6 +3887,8 @@ def pricing():
     </div>
     <ul class="features">
       <li><span class="check">&#10003;</span> Everything in Professional</li>
+      <li><span class="check">&#10003;</span> Free SMS drafting for your whole roster</li>
+      <li><span class="check">&#10003;</span> Brokerage roster &amp; compliance dashboard</li>
       <li><span class="check">&#10003;</span> Dedicated onboarding call</li>
       <li><span class="check">&#10003;</span> SLA &amp; dedicated support</li>
     </ul>
@@ -4234,6 +4294,160 @@ body{{font-family:system-ui;max-width:800px;margin:40px auto;padding:20px;}}
 """
 
 
+@app.route("/admin/brokerages", methods=["GET", "POST"])
+def admin_brokerages():
+    """Hand-provision a brokerage account: no self-serve signup exists yet
+    (or is planned soon) -- this is run once per closed B2B deal to generate
+    the join_code you hand the broker. Reuses ANALYTICS_PASSWORD rather than
+    a second secret."""
+    if not ANALYTICS_PASSWORD:
+        abort(503)
+    token = request.args.get("token", "") or request.form.get("token", "")
+    if not hmac.compare_digest(token, ANALYTICS_PASSWORD):
+        abort(403)
+
+    created = None
+    error = None
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        tc_email = request.form.get("tc_email", "").strip()
+        if not name:
+            error = "Brokerage name is required."
+        else:
+            created = create_brokerage(name, tc_email)
+
+    rows = "".join(
+        f"<tr><td style='padding:8px;'>{b['name']}</td>"
+        f"<td style='padding:8px;'>{b.get('tc_email') or '&mdash;'}</td>"
+        f"<td style='padding:8px;font-family:monospace;font-weight:700;'>{b['join_code']}</td>"
+        f"<td style='padding:8px;'><a href='/broker/dashboard/{b['join_code']}?token={token}'>dashboard &rarr;</a></td>"
+        f"<td style='padding:8px;color:#666;'>{b['created_at'][:10]}</td></tr>"
+        for b in list_brokerages()
+    ) or "<tr><td colspan='5' style='padding:8px;color:#666;'>No brokerages yet.</td></tr>"
+
+    created_banner = ""
+    if created:
+        created_banner = (
+            f"<div style='background:#eafaf1;border:1px solid #2ecc71;border-radius:8px;padding:14px;margin-bottom:20px;'>"
+            f"<strong>{created['name']}</strong> created. Join code: "
+            f"<span style='font-family:monospace;font-weight:700;font-size:1.1em;'>{created['join_code']}</span><br>"
+            f"Give this to their agents: text it as a prefix on the first offer (e.g. "
+            f"<code>{created['join_code']} 725k 3% 21day 123 Main St</code>), or paste it into the "
+            f"\"Brokerage join code\" field at /signup."
+            f"</div>"
+        )
+    error_banner = f"<div style='color:#c0392b;margin-bottom:16px;'>{error}</div>" if error else ""
+
+    return f"""<!DOCTYPE html>
+<html><head><title>Brokerages — TxtAnOffer Admin</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>body{{font-family:-apple-system,sans-serif;max-width:900px;margin:40px auto;padding:0 20px;color:#171717;}}
+input{{padding:8px 10px;border:1px solid #ccc;border-radius:6px;font-size:0.9rem;margin-right:8px;}}
+button{{padding:8px 16px;border:none;border-radius:6px;background:#171717;color:#fff;font-weight:600;cursor:pointer;}}
+table{{width:100%;border-collapse:collapse;margin-top:20px;}}
+th{{text-align:left;padding:8px;border-bottom:2px solid #eee;}}
+td{{border-bottom:1px solid #eee;}}
+a{{color:#171717;}}</style>
+</head><body>
+<h1>Brokerages</h1>
+{created_banner}{error_banner}
+<form method="POST">
+  <input type="hidden" name="token" value="{token}">
+  <input type="text" name="name" placeholder="Brokerage name" required>
+  <input type="email" name="tc_email" placeholder="TC email for auto-CC (optional)">
+  <button type="submit">Create</button>
+</form>
+<table>
+<tr><th>Name</th><th>TC email</th><th>Join code</th><th></th><th>Created</th></tr>
+{rows}
+</table>
+</body></html>"""
+
+
+@app.route("/broker/dashboard/<join_code>")
+def broker_dashboard(join_code):
+    """The roster view a managing broker is paying for: every agent linked
+    to their brokerage (via SMS prefix or the signup form) and how much
+    they're using TxtAnOffer, plus TC File Check's sitewide compliance
+    numbers as context. join_code IS the access secret here -- there's no
+    separate broker login yet, same pattern as /thread/<filename>."""
+    brokerage = get_brokerage_by_code(join_code)
+    if not brokerage:
+        abort(404)
+
+    agents = list_brokerage_agents(brokerage["id"])
+    tc_summary = get_tc_check_summary(days=30)
+
+    agent_rows = "".join(
+        f"<tr><td style='padding:8px;'>{a['phone']}</td>"
+        f"<td style='padding:8px;'>{a['offer_count']}</td>"
+        f"<td style='padding:8px;color:#666;'>{(a['last_offer_at'] or 'never')[:10] if a['last_offer_at'] else 'never'}</td></tr>"
+        for a in agents
+    ) or "<tr><td colspan='3' style='padding:8px;color:#666;'>No agents linked yet. Agents join by texting "
+    if not agents:
+        agent_rows += f"<code>{brokerage['join_code']} [offer]</code> as their first message, or entering the code at signup.</td></tr>"
+
+    total_offers = sum(a["offer_count"] for a in agents)
+    issue_rows = "".join(
+        f"<tr><td style='padding:8px;'>{i['label']}</td><td style='padding:8px;'>{i['count']}</td>"
+        f"<td style='padding:8px;'>{i['pct_of_recognized']}%</td></tr>"
+        for i in tc_summary["issue_frequency"][:8]
+    ) or "<tr><td colspan='3' style='padding:8px;color:#666;'>No data yet.</td></tr>"
+
+    return f"""<!DOCTYPE html>
+<html><head><title>{brokerage['name']} — TxtAnOffer</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * {{ box-sizing: border-box; }}
+  body{{font-family:'Inter',-apple-system,sans-serif;max-width:900px;margin:40px auto;padding:0 20px;color:#171717;background:#F5F5F7;}}
+  h1{{font-size:1.6rem;margin-bottom:4px;}}
+  .sub{{color:#5a6b7a;margin-bottom:28px;}}
+  .card{{background:#fff;border:1px solid rgba(15,31,47,0.08);border-radius:14px;padding:22px;margin-bottom:24px;}}
+  .card h2{{font-size:1.05rem;margin:0 0 14px;}}
+  table{{width:100%;border-collapse:collapse;}}
+  th{{text-align:left;padding:8px;border-bottom:2px solid #eee;font-size:0.8rem;color:#8a9aa9;text-transform:uppercase;}}
+  td{{border-bottom:1px solid #eee;font-size:0.9rem;}}
+  .stat-row{{display:flex;gap:24px;margin-bottom:24px;}}
+  .stat{{background:#fff;border:1px solid rgba(15,31,47,0.08);border-radius:14px;padding:18px 22px;flex:1;}}
+  .stat-num{{font-size:1.7rem;font-weight:800;}}
+  .stat-label{{font-size:0.8rem;color:#8a9aa9;margin-top:2px;}}
+</style>
+</head><body>
+<h1>{brokerage['name']}</h1>
+<p class="sub">Roster &amp; compliance dashboard &middot; join code <code>{brokerage['join_code']}</code></p>
+
+<div class="stat-row">
+  <div class="stat"><div class="stat-num">{len(agents)}</div><div class="stat-label">Agents linked</div></div>
+  <div class="stat"><div class="stat-num">{total_offers}</div><div class="stat-label">Offers drafted</div></div>
+  <div class="stat"><div class="stat-num">{tc_summary['completion_rate']}%</div><div class="stat-label">Sitewide file-complete rate (last 30d)</div></div>
+</div>
+
+<div class="card">
+  <h2>Your roster</h2>
+  <table>
+    <tr><th>Phone</th><th>Offers drafted</th><th>Last offer</th></tr>
+    {agent_rows}
+  </table>
+</div>
+
+<div class="card">
+  <h2>What TC File Check catches most (sitewide, last 30 days)</h2>
+  <p style="color:#5a6b7a;font-size:0.85rem;margin-top:-6px;margin-bottom:14px;">
+    Not yet scoped to your roster specifically &mdash; this is every file checked on TxtAnOffer,
+    shown as context for what the tool catches. Have any TC on your team run a file through
+    <a href="/tc-check">the free checker</a> directly for a roster-specific read today.
+  </p>
+  <table>
+    <tr><th>Issue</th><th>Count</th><th>% of recognized files</th></tr>
+    {issue_rows}
+  </table>
+</div>
+
+</body></html>"""
+
+
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
     success_msg = ""
@@ -4248,6 +4462,7 @@ def signup():
         phone = request.form.get("phone", "")
         name = request.form.get("name", "")
         email = request.form.get("email", "")
+        brokerage_code = request.form.get("brokerage_code", "").strip()
         if phone:
             account_ok = True
             try:
@@ -4256,6 +4471,16 @@ def signup():
             except Exception as e:
                 account_ok = False
                 print(f"[SIGNUP] create_user failed for {phone}: {e}")
+
+            if account_ok and brokerage_code:
+                brokerage = get_brokerage_by_code(brokerage_code)
+                if brokerage:
+                    link_user_to_brokerage(phone, brokerage["id"])
+                    track_event("brokerage_linked", phone, {
+                        "brokerage_id": brokerage["id"],
+                        "brokerage_name": brokerage["name"],
+                        "via": "signup_form",
+                    })
 
             if not account_ok:
                 success_msg = (
@@ -4368,6 +4593,8 @@ def signup():
         <input type="text" name="name" placeholder="Your name">
         <label class="field-label">Email</label>
         <input type="email" name="email" placeholder="you@brokerage.com">
+        <label class="field-label">Brokerage join code (optional)</label>
+        <input type="text" name="brokerage_code" placeholder="Given to you by your managing broker" style="text-transform:uppercase;">
         <div class="consent-row">
           <input type="checkbox" id="sms-consent" name="sms_consent">
           <label for="sms-consent">(Optional) I agree to receive automated transactional SMS messages from TxtAnOffer at +1 (833) 897-0333 about my offer drafts. Message frequency varies based on usage. Reply STOP to opt out, HELP for help. Msg &amp; data rates may apply. Consent is not a condition of purchase or service. <a href="/privacy">Privacy Policy</a> &amp; <a href="/terms">Terms</a></label>

@@ -39,6 +39,10 @@ def init_db():
         cursor.execute("ALTER TABLE users ADD COLUMN plan TEXT DEFAULT 'starter'")
     except sqlite3.OperationalError:
         pass  # column already exists
+    try:
+        cursor.execute("ALTER TABLE users ADD COLUMN brokerage_id INTEGER")
+    except sqlite3.OperationalError:
+        pass  # column already exists
 
     conn.commit()
     conn.close()
@@ -52,7 +56,7 @@ def get_user(phone: str) -> dict:
     cursor = conn.cursor()
 
     cursor.execute("""
-        SELECT phone, offer_count, is_subscribed, stripe_customer_id, stripe_subscription_id, plan
+        SELECT phone, offer_count, is_subscribed, stripe_customer_id, stripe_subscription_id, plan, brokerage_id
         FROM users WHERE phone = ?
     """, (phone,))
 
@@ -67,6 +71,7 @@ def get_user(phone: str) -> dict:
             "stripe_customer_id": row[3],
             "stripe_subscription_id": row[4],
             "plan": row[5] or "starter",
+            "brokerage_id": row[6],
         }
     return None
 
