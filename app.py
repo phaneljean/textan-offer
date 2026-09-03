@@ -3679,7 +3679,7 @@ def pricing():
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pricing — TxtAnOffer</title>
-<meta name="description" content="TxtAnOffer pricing plans for Texas real estate agents. Generate TREC contracts instantly from $39/month.">
+<meta name="description" content="TxtAnOffer pricing for Texas agents and brokerages: draft TREC contracts by text from $39/month, or get the Brokerage plan's compliance dashboard for your whole roster at $399/month.">
 <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -3905,17 +3905,37 @@ def pricing():
     <p style="text-align:center;font-size:0.75rem;color:var(--text-dim);margin-top:0.75rem;">3 free offers, then $79/mo. Cancel anytime.</p>
   </div>
 
+  <div class="pricing-card featured" id="brokerage">
+    <span class="featured-badge">For Managing Brokers</span>
+    <h2 class="plan-name">Brokerage</h2>
+    <p class="plan-desc">The compliance dashboard managing brokers and TCs actually pay for &mdash; SMS drafting comes free for your whole roster.</p>
+    <div class="price-row">
+      <span class="price-current">$399</span>
+      <span class="price-period">/month</span>
+    </div>
+    <ul class="features">
+      <li><span class="check">&#10003;</span> Free SMS drafting for your whole roster (unlimited agents)</li>
+      <li><span class="check">&#10003;</span> Every agent's offer auto-checked before it's even sent</li>
+      <li><span class="check">&#10003;</span> Finished PDFs auto-emailed to your TC, no login needed</li>
+      <li><span class="check">&#10003;</span> Brokerage roster &amp; compliance dashboard</li>
+      <li><span class="check">&#10003;</span> Agents join with one text &mdash; no per-agent setup</li>
+    </ul>
+    <form action="/create-checkout-session" method="POST">
+      <input type="hidden" name="plan" value="brokerage">
+      <button type="submit" class="cta-btn">Set Up Your Brokerage</button>
+    </form>
+    <p style="text-align:center;font-size:0.75rem;color:var(--text-dim);margin-top:0.75rem;">Your join code and dashboard link arrive by email right after checkout.</p>
+  </div>
+
   <div class="pricing-card" id="enterprise">
     <h2 class="plan-name">Enterprise</h2>
-    <p class="plan-desc">For large brokerages and franchises.</p>
+    <p class="plan-desc">For large franchises and multi-office brokerages needing custom terms.</p>
     <div class="price-row">
       <span class="price-current">Custom</span>
     </div>
     <ul class="features">
-      <li><span class="check">&#10003;</span> Everything in Professional</li>
-      <li><span class="check">&#10003;</span> Free SMS drafting for your whole roster</li>
-      <li><span class="check">&#10003;</span> Brokerage roster &amp; compliance dashboard</li>
-      <li><span class="check">&#10003;</span> Dedicated onboarding call</li>
+      <li><span class="check">&#10003;</span> Everything in Brokerage</li>
+      <li><span class="check">&#10003;</span> Multi-office rollout &amp; onboarding</li>
       <li><span class="check">&#10003;</span> SLA &amp; dedicated support</li>
     </ul>
     <a href="mailto:hello@txtanoffer.com?subject=Enterprise%20Plan" class="cta-btn outline">Contact Us</a>
@@ -3979,19 +3999,31 @@ def create_checkout_session():
     if not stripe.api_key or not price_id:
         return redirect("mailto:hello@txtanoffer.com?subject=Early%20Adopter%20Signup")
 
+    # The brokerage plan provisions a real brokerage account (see
+    # brokerages.py) on successful payment -- needs a company name Stripe's
+    # checkout doesn't collect by default, so ask for it here via a custom
+    # field. Not used by starter/professional.
+    checkout_kwargs = dict(
+        line_items=[{
+            'price': price_id,
+            'quantity': 1,
+        }],
+        mode='subscription',
+        phone_number_collection={'enabled': True},
+        success_url=request.host_url + 'success?session_id={CHECKOUT_SESSION_ID}',
+        cancel_url=request.host_url + 'pricing',
+        allow_promotion_codes=True,
+        metadata={'plan': plan},
+    )
+    if plan == "brokerage":
+        checkout_kwargs['custom_fields'] = [{
+            'key': 'brokerage_name',
+            'label': {'type': 'custom', 'custom': 'Brokerage / company name'},
+            'type': 'text',
+        }]
+
     try:
-        checkout_session = stripe.checkout.Session.create(
-            line_items=[{
-                'price': price_id,
-                'quantity': 1,
-            }],
-            mode='subscription',
-            phone_number_collection={'enabled': True},
-            success_url=request.host_url + 'success?session_id={CHECKOUT_SESSION_ID}',
-            cancel_url=request.host_url + 'pricing',
-            allow_promotion_codes=True,
-            metadata={'plan': plan},
-        )
+        checkout_session = stripe.checkout.Session.create(**checkout_kwargs)
         return redirect(checkout_session.url, code=303)
     except Exception as e:
         return jsonify(error=str(e)), 400
@@ -4104,6 +4136,40 @@ def stripe_webhook():
             if not user:
                 create_user(customer_phone)
             activate_subscription(customer_phone, customer_id, subscription_id, plan=plan)
+
+        # The brokerage plan self-provisions: a paid checkout creates the
+        # brokerage account, links whoever paid (if they gave a phone) as
+        # its first agent, and emails the join_code -- no manual step from
+        # /admin/brokerages needed for a self-serve signup. Never let this
+        # block subscription activation above if it fails.
+        if plan == "brokerage":
+            try:
+                custom_fields = session.get('custom_fields') or []
+                name_field = next((f for f in custom_fields if f.get('key') == 'brokerage_name'), None)
+                brokerage_name = ((name_field or {}).get('text') or {}).get('value') or customer_email or "New Brokerage"
+                brokerage = create_brokerage(brokerage_name, customer_email or "")
+                if customer_phone:
+                    link_user_to_brokerage(customer_phone, brokerage["id"])
+                if customer_email:
+                    send_plain_email(
+                        customer_email,
+                        f"{brokerage_name} is set up on TxtAnOffer",
+                        (
+                            f"Your brokerage join code: {brokerage['join_code']}\n\n"
+                            f"Give this to your agents. On their first offer, they text it as a prefix:\n"
+                            f"{brokerage['join_code']} 725k 3% 21day 123 Main St\n\n"
+                            f"Or they can enter it at signup: {request.host_url.rstrip('/')}/signup\n\n"
+                            f"Once linked, every offer they draft auto-emails this address with the PDF "
+                            f"and a compliance check -- no login needed. To browse the full roster and "
+                            f"activity, use: {request.host_url.rstrip('/')}/broker/dashboard/{brokerage['join_code']}\n\n"
+                            f"Keep this email -- the join code is also your dashboard link's access key."
+                        ),
+                    )
+                track_event("brokerage_created", customer_phone, {
+                    "brokerage_id": brokerage["id"], "name": brokerage_name, "via": "stripe_checkout",
+                })
+            except Exception as e:
+                print(f"[WEBHOOK] brokerage auto-provision failed: {e}")
 
         # Track conversion
         track_event("subscription_created", customer_phone, metadata={
