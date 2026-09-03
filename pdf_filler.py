@@ -17,7 +17,8 @@ import os
 import io
 from datetime import datetime, timedelta
 from pypdf import PdfReader, PdfWriter
-from cover_page import generate_cover_page, generate_certification_page
+from cover_page import generate_cover_page, generate_certification_page, generate_sponsor_page
+from sponsors import get_sponsor_for_county
 from water_disclosure import fill_water_disclosure
 from financing_addendum import fill_financing_addendum
 from iabs import fill_iabs
@@ -465,6 +466,18 @@ def fill_offer_pdf(parsed: dict, agent_phone: str) -> str:
     # overlays above (closing date, page-11 header, option period).
     cert_pdf_bytes = generate_certification_page(parsed, parsed.get('agent', {}), mode="light")
     final_writer.append(PdfReader(io.BytesIO(cert_pdf_bytes)))
+
+    # Title-sponsor placement (see sponsors.py): appended last, after every
+    # fixed page-index overlay above has already run, so it can never shift
+    # them. Silent no-op when no sponsor covers this county yet -- this is
+    # ad revenue, never a blocker on generating the actual contract.
+    try:
+        sponsor = get_sponsor_for_county(parsed.get("county"))
+        if sponsor:
+            sponsor_pdf_bytes = generate_sponsor_page(sponsor, parsed, mode="light")
+            final_writer.append(PdfReader(io.BytesIO(sponsor_pdf_bytes)))
+    except Exception as e:
+        print(f"[PDF] Sponsor page skipped: {e}")
 
     # No footer, page-number stamp, or any other added mark on the actual
     # TREC contract/addendum pages (indices 1+) -- those are promulgated

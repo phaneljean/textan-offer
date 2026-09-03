@@ -36,6 +36,7 @@ from analytics import track_event, get_conversion_metrics, get_revenue_metrics, 
 from integrations import send_offer_email, fire_webhook, save_webhook, get_webhook, delete_webhook, send_to_docusign, send_plain_email
 from offers_db import record_offer, get_offers_for_phone, get_offer_by_filename, record_amendment, get_amendments_for_phone, record_thread_response, record_email_sent
 from brokerages import extract_brokerage_prefix, link_user_to_brokerage, get_brokerage, get_brokerage_by_code, create_brokerage, list_brokerages, list_brokerage_agents
+from sponsors import create_sponsor, list_sponsors, set_sponsor_active
 from sms_utils import parse_incoming_sms
 from cleanup import run_cleanup_if_due
 from reminders import run_reminders_if_due
@@ -4427,6 +4428,106 @@ a{{color:#171717;}}</style>
 </form>
 <table>
 <tr><th>Name</th><th>TC email</th><th>Join code</th><th></th><th>Created</th></tr>
+{rows}
+</table>
+</body></html>"""
+
+
+@app.route("/admin/sponsors", methods=["GET", "POST"])
+def admin_sponsors():
+    """Hand-provision a title/lender sponsor: their branding page gets
+    appended to every generated contract for a property in one of their
+    counties (see sponsors.py, cover_page.generate_sponsor_page). No
+    exclusivity is enforced here -- don't sell the same county twice."""
+    if not ANALYTICS_PASSWORD:
+        abort(503)
+    token = request.args.get("token", "") or request.form.get("token", "")
+    if not hmac.compare_digest(token, ANALYTICS_PASSWORD):
+        abort(403)
+
+    created = None
+    error = None
+    if request.method == "POST":
+        action = request.form.get("action", "create")
+        if action == "toggle":
+            sponsor_id = int(request.form.get("sponsor_id", 0))
+            active = request.form.get("active") == "1"
+            set_sponsor_active(sponsor_id, active)
+        else:
+            name = request.form.get("name", "").strip()
+            counties_raw = request.form.get("counties", "").strip()
+            tagline = request.form.get("tagline", "").strip()
+            contact_phone = request.form.get("contact_phone", "").strip()
+            contact_email = request.form.get("contact_email", "").strip()
+            counties = [c.strip() for c in counties_raw.split(",") if c.strip()]
+            if not name:
+                error = "Sponsor name is required."
+            elif not counties:
+                error = "At least one county is required (comma-separated)."
+            else:
+                created = create_sponsor(name, counties, tagline, contact_phone, contact_email)
+
+    def sponsor_row(s):
+        toggle_label = "Pause" if s["active"] else "Activate"
+        toggle_next = "0" if s["active"] else "1"
+        status = "<span style='color:#2ecc71;'>active</span>" if s["active"] else "<span style='color:#999;'>paused</span>"
+        return (
+            f"<tr><td style='padding:8px;'>{s['name']}</td>"
+            f"<td style='padding:8px;'>{', '.join(c.title() for c in s['counties'])}</td>"
+            f"<td style='padding:8px;'>{s.get('contact_email') or s.get('contact_phone') or '&mdash;'}</td>"
+            f"<td style='padding:8px;'>{status}</td>"
+            f"<td style='padding:8px;'>"
+            f"<form method='POST' style='display:inline;'>"
+            f"<input type='hidden' name='token' value='{token}'>"
+            f"<input type='hidden' name='action' value='toggle'>"
+            f"<input type='hidden' name='sponsor_id' value='{s['id']}'>"
+            f"<input type='hidden' name='active' value='{toggle_next}'>"
+            f"<button type='submit' style='background:#eee;color:#171717;'>{toggle_label}</button>"
+            f"</form></td>"
+            f"<td style='padding:8px;color:#666;'>{s['created_at'][:10]}</td></tr>"
+        )
+
+    rows = "".join(sponsor_row(s) for s in list_sponsors()) or \
+        "<tr><td colspan='6' style='padding:8px;color:#666;'>No sponsors yet.</td></tr>"
+
+    created_banner = ""
+    if created:
+        created_banner = (
+            f"<div style='background:#eafaf1;border:1px solid #2ecc71;border-radius:8px;padding:14px;margin-bottom:20px;'>"
+            f"<strong>{created['name']}</strong> created for {', '.join(c.title() for c in created['counties'])} County. "
+            f"Their page will now appear on every contract generated for a property in that county."
+            f"</div>"
+        )
+    error_banner = f"<div style='color:#c0392b;margin-bottom:16px;'>{error}</div>" if error else ""
+
+    return f"""<!DOCTYPE html>
+<html><head><title>Title Sponsors — TxtAnOffer Admin</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>body{{font-family:-apple-system,sans-serif;max-width:1000px;margin:40px auto;padding:0 20px;color:#171717;}}
+input{{padding:8px 10px;border:1px solid #ccc;border-radius:6px;font-size:0.9rem;margin-right:8px;margin-bottom:8px;}}
+button{{padding:8px 16px;border:none;border-radius:6px;background:#171717;color:#fff;font-weight:600;cursor:pointer;}}
+table{{width:100%;border-collapse:collapse;margin-top:20px;}}
+th{{text-align:left;padding:8px;border-bottom:2px solid #eee;}}
+td{{border-bottom:1px solid #eee;}}
+a{{color:#171717;}}
+.hint{{color:#666;font-size:0.85rem;margin:-4px 0 12px;}}</style>
+</head><body>
+<h1>Title Sponsors</h1>
+{created_banner}{error_banner}
+<form method="POST">
+  <input type="hidden" name="token" value="{token}">
+  <input type="text" name="name" placeholder="Sponsor name (e.g. Lone Star Title Co.)" required>
+  <input type="text" name="counties" placeholder="Counties, comma-separated (e.g. Harris, Fort Bend, Montgomery)" style="width:340px;" required>
+  <br>
+  <input type="text" name="tagline" placeholder="Tagline (optional)" style="width:260px;">
+  <input type="text" name="contact_phone" placeholder="Phone (optional)">
+  <input type="email" name="contact_email" placeholder="Email (optional)">
+  <br>
+  <button type="submit">Create</button>
+</form>
+<div class="hint">Selling the same county to two sponsors defeats the pitch — check the table below before creating a new one.</div>
+<table>
+<tr><th>Name</th><th>Counties</th><th>Contact</th><th>Status</th><th></th><th>Created</th></tr>
 {rows}
 </table>
 </body></html>"""
