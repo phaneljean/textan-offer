@@ -809,9 +809,9 @@ def index():
       </div>
     </div>
     <div class="stats" style="max-width:640px;margin:2.5rem auto 0;">
-      <div><div class="stat-num">~1 in 3</div><div class="stat-label">contracts scanned have a blank required field <em>(estimate)</em></div></div>
-      <div><div class="stat-num">1 in 4</div><div class="stat-label">files are missing a required initial <em>(estimate)</em></div></div>
-      <div><div class="stat-num">10&ndash;15 min</div><div class="stat-label">saved per file vs. a manual re-check <em>(estimate)</em></div></div>
+      <div><div class="stat-num">__TC_STAT1_NUM__</div><div class="stat-label">__TC_STAT1_LABEL__</div></div>
+      <div><div class="stat-num">__TC_STAT2_NUM__</div><div class="stat-label">__TC_STAT2_LABEL__</div></div>
+      <div><div class="stat-num">__TC_STAT3_NUM__</div><div class="stat-label">__TC_STAT3_LABEL__</div></div>
     </div>
     <div class="secondary-cta" style="margin:2.5rem auto 0;padding-top:1.75rem;max-width:560px;text-align:center;">
       <div class="secondary-cta-label">Running a brokerage or TC team? The dashboard shows every flag across every file &mdash; not just this one.</div>
@@ -1245,6 +1245,32 @@ def index():
             f'<a href="/signup?src={src}" class="nav-cta">Start Free Trial</a>',
             1,
         )
+    # Real TC File Check production numbers, not marketing copy -- swapped
+    # in here instead of hardcoded so the homepage never goes stale, and
+    # never a "fabricated" stat because a sample too small to be honest
+    # (see MIN_SAMPLE) falls back to plain, factual generic copy instead.
+    MIN_SAMPLE = 5
+    tc_stats = get_tc_check_summary(days=30)
+    if tc_stats["recognized"] >= MIN_SAMPLE:
+        pct_incomplete = round(100 - tc_stats["completion_rate"], 1)
+        top_issue = tc_stats["issue_frequency"][0] if tc_stats["issue_frequency"] else None
+        stat1_num, stat1_label = str(tc_stats["recognized"]), "TREC 20-19 files scanned by TC File Check (last 30 days)"
+        stat2_num, stat2_label = f"{pct_incomplete:g}%", "arrived with at least one blank required field"
+        if top_issue:
+            stat3_num, stat3_label = f"{top_issue['pct_of_recognized']:g}%", f"Top issue: {top_issue['label']}"
+        else:
+            stat3_num, stat3_label = f"{pct_incomplete:g}%", "had at least one issue TC File Check catches automatically"
+    else:
+        stat1_num, stat1_label = "Free", "for every Texas TC &mdash; no signup required"
+        stat2_num, stat2_label = "Seconds", "to scan a full TREC 20-19 + 40-11 addendum"
+        stat3_num, stat3_label = "0", "of your data stored after results are shown"
+    for token, value in (
+        ("__TC_STAT1_NUM__", stat1_num), ("__TC_STAT1_LABEL__", stat1_label),
+        ("__TC_STAT2_NUM__", stat2_num), ("__TC_STAT2_LABEL__", stat2_label),
+        ("__TC_STAT3_NUM__", stat3_num), ("__TC_STAT3_LABEL__", stat3_label),
+    ):
+        html = html.replace(token, value)
+
     resp = make_response(html)
     # First-touch attribution cookie: the query-param rewrite above only
     # survives if the visitor clicks "Start Free Trial" in this exact page
