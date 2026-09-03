@@ -3915,7 +3915,7 @@ def pricing():
       <li><span class="check">&#10003;</span> Multi-office rollout &amp; onboarding</li>
       <li><span class="check">&#10003;</span> SLA &amp; dedicated support</li>
     </ul>
-    <a href="mailto:hello@txtanoffer.com?subject=Enterprise%20Plan" class="cta-btn outline">Contact Us</a>
+    <a href="mailto:support@txtanoffer.com?subject=Enterprise%20Plan" class="cta-btn outline">Contact Us</a>
   </div>
 
 </div>
@@ -3974,7 +3974,7 @@ def create_checkout_session():
     price_id = price_map.get(plan, STRIPE_PRICE_ID)
 
     if not stripe.api_key or not price_id:
-        return redirect("mailto:hello@txtanoffer.com?subject=Early%20Adopter%20Signup")
+        return redirect("mailto:support@txtanoffer.com?subject=Early%20Adopter%20Signup")
 
     # The brokerage plan provisions a real brokerage account (see
     # brokerages.py) on successful payment -- needs a company name Stripe's
