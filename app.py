@@ -643,6 +643,18 @@ def index():
     .step-card p { font-size: 0.87rem; color: var(--text-muted); line-height: 1.55; margin: 0; }
     .step-caption { font-size: 0.75rem; color: var(--text-dim); margin-top: 0.5rem; }
 
+    .tc-checklist { list-style: none; margin: 0 auto; padding: 0; max-width: 640px; text-align: left; }
+    .tc-checklist li {
+      display: flex; align-items: flex-start; gap: 0.65rem;
+      padding: 0.65rem 0; border-bottom: 1px solid var(--border);
+      font-size: 0.88rem; color: var(--text-muted); line-height: 1.5;
+    }
+    .tc-checklist li:last-child { border-bottom: none; }
+    .tc-checklist .tc-check {
+      flex: 0 0 auto; width: 1.1rem; color: var(--accent-dark); font-weight: 800; line-height: 1.5;
+    }
+    .tc-checklist strong { color: var(--text); font-weight: 700; }
+
     /* Dashboard preview (Connected Apps + review-screen mockup) */
     .dash-grid { display: grid; grid-template-columns: 1fr; gap: 0.85rem; padding: 0.5rem; }
     @media (min-width: 700px) { .dash-grid { grid-template-columns: 260px 1fr; } }
@@ -783,46 +795,35 @@ def index():
       <div class="status" id="homeStatus"></div>
       <div class="result" id="homeResult"></div>
     </div>
-  </section>
 
-  <section class="steps" id="brokers" style="border-top:none;padding-top:1rem;padding-bottom:2.5rem;">
-    <div class="steps-header" style="margin-bottom:2rem;">
-      <div class="steps-kicker">For managing brokers &amp; TC teams</div>
-      <h2>What this catches before it costs you.</h2>
-      <p>Every TREC 20-19 that reaches a file with a blank field or a missing initial is a liability sitting in someone's name &mdash; and it's usually not the agent who finds out first.</p>
-    </div>
-    <div class="steps-grid">
-      <div class="step-card">
-        <div class="step-num">&check;</div>
-        <h3>Effective Date left blank</h3>
-        <p>The date every other deadline in the contract counts from &mdash; earnest money, option period, all of it.</p>
-      </div>
-      <div class="step-card">
-        <div class="step-num">&check;</div>
-        <h3>Missing buyer or seller initials</h3>
-        <p>Easy to miss on paragraph-by-paragraph sign-offs. Hard to fix once the file is closed.</p>
-      </div>
-      <div class="step-card">
-        <div class="step-num">&check;</div>
-        <h3>40-11 addendum mismatches</h3>
-        <p>Loan amount or financing checkbox on the addendum quietly disagreeing with the contract itself.</p>
-      </div>
-    </div>
-    <div class="stats" style="max-width:640px;margin:2.5rem auto 0;">
+    <div class="stats" style="max-width:640px;margin:2.25rem auto 0;">
       <div><div class="stat-num">__TC_STAT1_NUM__</div><div class="stat-label">__TC_STAT1_LABEL__</div></div>
       <div><div class="stat-num">__TC_STAT2_NUM__</div><div class="stat-label">__TC_STAT2_LABEL__</div></div>
       <div><div class="stat-num">__TC_STAT3_NUM__</div><div class="stat-label">__TC_STAT3_LABEL__</div></div>
     </div>
-    <div class="secondary-cta" style="margin:2.5rem auto 0;padding-top:1.75rem;max-width:560px;text-align:center;">
+  </section>
+
+  <section class="steps" id="brokers" style="border-top:none;padding-top:1rem;padding-bottom:2.5rem;">
+    <div class="steps-header" style="margin-bottom:1.5rem;">
+      <div class="steps-kicker">For managing brokers &amp; TC teams</div>
+      <h2>What this catches before it costs you.</h2>
+      <p>Every TREC 20-19 that reaches a file with a blank field or a missing initial is a liability sitting in someone's name &mdash; and it's usually not the agent who finds out first.</p>
+    </div>
+    <ul class="tc-checklist">
+      <li><span class="tc-check">&check;</span><span><strong>Effective Date left blank</strong> &mdash; the date every other deadline counts from.</span></li>
+      <li><span class="tc-check">&check;</span><span><strong>Missing buyer or seller initials</strong> &mdash; easy to miss page-by-page, hard to fix once closed.</span></li>
+      <li><span class="tc-check">&check;</span><span><strong>40-11 addendum mismatches</strong> &mdash; loan amount or financing checkbox disagreeing with the contract.</span></li>
+    </ul>
+    <div class="secondary-cta" style="margin:1.75rem auto 0;padding-top:1.75rem;max-width:560px;text-align:center;">
       <div class="secondary-cta-label">Running a brokerage or TC team? The dashboard shows every flag across every file &mdash; not just this one.</div>
       <a href="/pricing#enterprise" class="input-btn" style="display:inline-block;text-decoration:none;">See team &amp; brokerage pricing &rarr;</a>
     </div>
   </section>
 
   <section class="section" style="padding-top:1rem;">
-    <div class="steps-kicker">Also from TxtAnOffer &mdash; drafting offers by text</div>
-    <h2 style="font-size:2.1rem;margin-top:0.5rem;">See exactly what you'll get</h2>
-    <p class="hero-sub">Text your offer terms and get back a filled TREC 20-19, ready for the same review screen &mdash; where DocuSign and Zapier plug in.</p>
+    <div class="steps-kicker">Zero-Friction Agent Input</div>
+    <h2 style="font-size:2.1rem;margin-top:0.5rem;">Your agents already know how to use this.</h2>
+    <p class="hero-sub">No login, no dashboard to learn &mdash; agents draft offers from their phone's native texting app, included free with the Brokerage plan for your whole roster.</p>
 
     <div class="dark-card-wrap no-glow">
       <div class="dark-card-inner" style="padding:0.6rem;">
@@ -868,36 +869,11 @@ def index():
 
   <section class="steps" id="how">
     <div class="steps-header">
-      <div class="steps-kicker">How the SMS drafting engine works</div>
-      <h2>Four steps. No app required.</h2>
-      <p>Works with any phone that can send a text message.</p>
-    </div>
-    <div class="steps-grid">
-      <div class="step-card">
-        <div class="step-num">01</div>
-        <h3>Sign Up</h3>
-        <p>Register your phone and agent details. Get a confirmation text to opt in to our SMS service.</p>
-      </div>
-      <div class="step-card">
-        <div class="step-num">02</div>
-        <h3>Text Your Offer</h3>
-        <p>Send price, down payment %, closing days, and address. Our parser extracts everything automatically.</p>
-      </div>
-      <div class="step-card">
-        <div class="step-num">03</div>
-        <h3>Get Your PDF</h3>
-        <p>Receive a link to your filled TREC contract + financing addendum in seconds, ready for DocuSign.</p>
-      </div>
-      <div class="step-card">
-        <div class="step-num">04</div>
-        <h3>Get Their Answer</h3>
-        <p>Emailing the listing agent sends them a link with the same PDF, plus Accept and Decline buttons. The moment they respond, you get a text &mdash; no more wondering if your offer even got read.</p>
-        <p class="step-caption">Non-binding intent only &mdash; formal acceptance still requires normal signing of the TREC 20-19.</p>
-      </div>
+      <h2 style="max-width:620px;margin:0 auto;">Agents text a property address with your office code, and the filled TREC PDF drops straight into your TC's inbox.</h2>
     </div>
 
-    <div class="secondary-cta" style="margin:2.5rem auto 0;padding-top:0;border-top:none;max-width:540px;text-align:center;">
-      <div class="secondary-cta-label">Try step 2 yourself — text your details to generate a flawless draft in 60 seconds.</div>
+    <div class="secondary-cta" style="margin:1.5rem auto 0;padding-top:0;border-top:none;max-width:540px;text-align:center;">
+      <div class="secondary-cta-label">Try it yourself — text your details to generate a flawless draft in 60 seconds.</div>
       <form id="live-demo-form">
         <div class="input-row">
           <input type="text" id="demo-input" placeholder="725k 3% 21day Harris 1234 Westheimer Rd" autocomplete="off">
