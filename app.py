@@ -220,7 +220,7 @@ def index():
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TxtAnOffer — Catch What Title Kicks Back</title>
-  <meta name="description" content="Free for Texas transaction coordinators: drop a filled TREC 20-19 (and its 40-11 addendum) and see what's missing or inconsistent before title kicks it back. TxtAnOffer also drafts new offers by text message in 10 seconds.">
+  <meta name="description" content="Built for Texas managing brokers and transaction coordinators: drop a filled TREC 20-19 (and its 40-11 addendum) and see what's missing or inconsistent before title kicks it back. TxtAnOffer also drafts new offers by text message in 10 seconds.">
   <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -761,7 +761,7 @@ def index():
 
   <div class="main">
   <section class="hero section">
-    <div class="badge">Free for Texas Transaction Coordinators</div>
+    <div class="badge">Built for Texas Brokerages &amp; TC Teams</div>
     <h1>
       Catch what title kicks back<br>
       &mdash; before you send the file.
@@ -781,6 +781,40 @@ def index():
       <div class="privacy-note"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Processed instantly and never stored &mdash; discarded the moment your results are ready.</div>
       <div class="status" id="homeStatus"></div>
       <div class="result" id="homeResult"></div>
+    </div>
+  </section>
+
+  <section class="steps" id="brokers" style="border-top:none;padding-top:1rem;padding-bottom:2.5rem;">
+    <div class="steps-header" style="margin-bottom:2rem;">
+      <div class="steps-kicker">For managing brokers &amp; TC teams</div>
+      <h2>What this catches before it costs you.</h2>
+      <p>Every TREC 20-19 that reaches a file with a blank field or a missing initial is a liability sitting in someone's name &mdash; and it's usually not the agent who finds out first.</p>
+    </div>
+    <div class="steps-grid">
+      <div class="step-card">
+        <div class="step-num">&check;</div>
+        <h3>Effective Date left blank</h3>
+        <p>The date every other deadline in the contract counts from &mdash; earnest money, option period, all of it.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-num">&check;</div>
+        <h3>Missing buyer or seller initials</h3>
+        <p>Easy to miss on paragraph-by-paragraph sign-offs. Hard to fix once the file is closed.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-num">&check;</div>
+        <h3>40-11 addendum mismatches</h3>
+        <p>Loan amount or financing checkbox on the addendum quietly disagreeing with the contract itself.</p>
+      </div>
+    </div>
+    <div class="stats" style="max-width:640px;margin:2.5rem auto 0;">
+      <div><div class="stat-num">~1 in 3</div><div class="stat-label">contracts scanned have a blank required field <em>(estimate)</em></div></div>
+      <div><div class="stat-num">1 in 4</div><div class="stat-label">files are missing a required initial <em>(estimate)</em></div></div>
+      <div><div class="stat-num">10&ndash;15 min</div><div class="stat-label">saved per file vs. a manual re-check <em>(estimate)</em></div></div>
+    </div>
+    <div class="secondary-cta" style="margin:2.5rem auto 0;padding-top:1.75rem;max-width:560px;text-align:center;">
+      <div class="secondary-cta-label">Running a brokerage or TC team? The dashboard shows every flag across every file &mdash; not just this one.</div>
+      <a href="/pricing#enterprise" class="input-btn" style="display:inline-block;text-decoration:none;">See team &amp; brokerage pricing &rarr;</a>
     </div>
   </section>
 
@@ -930,8 +964,8 @@ def index():
       </div>
       <div class="step-card">
         <div class="step-num">&check;</div>
-        <h3>You review it. You send it.</h3>
-        <p>TxtAnOffer drafts the contract; nothing goes to a buyer, seller, or listing agent until you look it over and decide it's ready.</p>
+        <h3>Your office reviews it. Your broker can see it.</h3>
+        <p>TxtAnOffer drafts the contract; nothing goes to a buyer, seller, or listing agent until someone on your team reviews it and decides it's ready &mdash; the same review trail a managing broker can check anytime, on any agent's file.</p>
       </div>
     </div>
   </section>
@@ -3787,7 +3821,7 @@ def pricing():
     <p style="text-align:center;font-size:0.75rem;color:var(--text-dim);margin-top:0.75rem;">3 free offers, then $79/mo. Cancel anytime.</p>
   </div>
 
-  <div class="pricing-card">
+  <div class="pricing-card" id="enterprise">
     <h2 class="plan-name">Enterprise</h2>
     <p class="plan-desc">For large brokerages and franchises.</p>
     <div class="price-row">
