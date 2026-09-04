@@ -28,7 +28,7 @@ _CHECK_INTERVAL_SECONDS = 6 * 3600
 PRICING_URL = "https://txtanoffer.com/pricing"
 
 
-def _issue_summary(result: dict) -> str:
+def issue_summary(result: dict) -> str:
     issues = result.get("issues") or []
     if not issues:
         return "Good news -- no issues found on this one."
@@ -53,7 +53,7 @@ def send_immediate_nudge(email: str, result: dict) -> None:
     subject = "Your TC File Check results"
     body = (
         f"Thanks for using TC File Check on txtanoffer.com.\n\n"
-        f"{_issue_summary(result)}\n\n"
+        f"{issue_summary(result)}\n\n"
         f"Want to skip this step entirely next time? TxtAnOffer drafts your "
         f"TREC 20-19 by text message -- property address, sales price, and "
         f"closing date fill in correctly every time, so there's nothing "

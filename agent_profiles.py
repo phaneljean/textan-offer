@@ -96,6 +96,28 @@ def get_agent_profile(source_id: str) -> dict:
     }
 
 
+def find_by_email(email: str):
+    """Reverse lookup for channels that only have an email address to go on
+    (e.g. a TC Check forwarded by email) -- source_id is normally a phone
+    number, so this is the one place email is queried as the key instead of
+    just a stored field. Case-insensitive; returns None for no match."""
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    row = conn.execute(
+        "SELECT * FROM agent_profiles WHERE lower(email) = lower(?) LIMIT 1", (email.strip(),)
+    ).fetchone()
+    conn.close()
+    if not row:
+        return None
+    return {
+        "source_id": row["source_id"],
+        "name": row["name"],
+        "phone": row["phone"],
+        "email": row["email"],
+        "brokerage": row["brokerage"],
+    }
+
+
 def save_agent_profile(source_id: str, profile: dict):
     conn = sqlite3.connect(DB_PATH)
     conn.execute("""

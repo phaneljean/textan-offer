@@ -30,7 +30,7 @@ from parser import parse_offer_sms, parse_amendment_sms, parse_correction_sms
 from pdf_filler import fill_offer_pdf, OUTPUT_DIR
 from pdf_validator import validate_offer_pdf
 from amendment import fill_amendment_pdf
-from agent_profiles import get_agent_profile, save_agent_profile
+from agent_profiles import get_agent_profile, save_agent_profile, find_by_email
 from subscriptions import can_generate_offer, increment_offer_count, activate_subscription, deactivate_subscription, get_user, create_user, FREE_OFFER_LIMIT, is_admin_phone, has_professional_access
 from analytics import track_event, get_conversion_metrics, get_revenue_metrics, get_recent_sms, get_recent_sms_failures, get_last_blocked_state, get_waitlist_signups, get_signups_by_source, get_landing_visits_by_source, get_tc_check_summary
 from integrations import send_offer_email, fire_webhook, save_webhook, get_webhook, delete_webhook, send_to_docusign, send_plain_email
@@ -46,6 +46,7 @@ from tc_audit import check_tc_file
 from rate_limit import check_and_increment
 from tc_gate import get_client as get_tc_client, record_use as record_tc_use, save_email as save_tc_email
 from tc_nudge import send_immediate_nudge as send_tc_nudge, run_followup_if_due as run_tc_followup_if_due
+from tc_check_email import extract_sender_email, extract_pdf_attachments, format_reply_body, format_no_pdf_reply
 from werkzeug.middleware.proxy_fix import ProxyFix
 import tempfile
 import uuid
@@ -88,6 +89,11 @@ API_BEARER_TOKEN = os.environ.get("API_BEARER_TOKEN", "")
 
 # Analytics dashboard password
 ANALYTICS_PASSWORD = os.environ.get("ANALYTICS_PASSWORD", "")
+
+# TC Check email-forward intake: SendGrid Inbound Parse has no request
+# signing, so this shared secret lives in the webhook path itself
+# (/v1/tc/check/email/<token>) -- see tc_check_email_inbound()'s docstring.
+TC_CHECK_EMAIL_TOKEN = os.environ.get("TC_CHECK_EMAIL_TOKEN", "")
 
 # Twilio configuration
 TWILIO_ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID", "")
@@ -2850,6 +2856,85 @@ def tc_check():
         resp = jsonify(result)
     resp.set_cookie("tc_cid", cid, max_age=365 * 24 * 3600, httponly=True, samesite="Lax")
     return resp
+
+
+@app.route("/v1/tc/check/email/<token>", methods=["POST"])
+def tc_check_email_inbound(token):
+    """SendGrid Inbound Parse target for TC File Check by email-forward
+    (Phase 1 of the document-driven pitch -- see tc_check_email.py). An
+    agent/TC forwards a TREC 20-19 (optionally with its 40-11 addendum) to
+    a dedicated inbox instead of uploading through /tc-check, and gets the
+    same itemized report back by reply.
+
+    No product gate on this path, unlike tc_check() above: the whole point
+    of tc_gate.py's email-capture dance is that the web upload doesn't know
+    who's asking. A forwarded email already comes with the sender's real
+    address, so there's nothing left to gate -- every check gets the full
+    itemized reply.
+
+    Inbound Parse has no request signing, so <token> is a shared secret
+    living in the URL path itself -- the only thing stopping someone else
+    from POSTing a forged 'from' address here and using our SendGrid
+    account to relay an auto-reply at a third party (a real risk for any
+    endpoint that emails whoever a request claims to be from). Combined
+    with the per-sender throttle below. Always returns 200 (SendGrid
+    retries non-2xx responses) except on a bad token, where 404 avoids
+    even confirming the endpoint exists."""
+    if not TC_CHECK_EMAIL_TOKEN or token != TC_CHECK_EMAIL_TOKEN:
+        abort(404)
+
+    sender = extract_sender_email(request.form.get("from", ""))
+    if not sender:
+        return "", 200  # nothing usable to reply to or rate-limit on
+
+    # Keyed by sender email, not IP -- this traffic is relayed through
+    # SendGrid, so the request IP is SendGrid's, not the agent's.
+    if not check_and_increment(f"tc_check_email:{sender}", limit=10):
+        return "", 200
+
+    pdfs = extract_pdf_attachments(request.files, request.form)
+    if not pdfs:
+        send_plain_email(sender, "TC File Check", format_no_pdf_reply())
+        track_event("tc_check", metadata={"source": "email", "recognized": False, "reason": "no_pdf"})
+        return "", 200
+
+    tmp_paths = []
+    try:
+        for f in pdfs:
+            tmp = tempfile.NamedTemporaryFile(suffix=".pdf", delete=False)
+            f.save(tmp.name)
+            tmp.close()
+            tmp_paths.append(tmp.name)
+        try:
+            result = check_tc_file(tmp_paths)
+        except Exception:
+            send_plain_email(
+                sender, "TC File Check",
+                "Couldn't read that as a PDF -- make sure it's not corrupted "
+                "or password-protected, and try forwarding again.\n\n"
+                "-- TxtAnOffer TC Check",
+            )
+            track_event("tc_check", metadata={"source": "email", "recognized": False, "reason": "unreadable"})
+            return "", 200
+    finally:
+        for p in tmp_paths:
+            try:
+                os.remove(p)
+            except OSError:
+                pass
+
+    known_agent = find_by_email(sender)
+    issue_keys = sorted({i["key"] for i in result["issues"] if i.get("key")})
+    track_event("tc_check", metadata={
+        "source": "email",
+        "recognized": result["recognized"],
+        "complete": result["complete"],
+        "issue_keys": issue_keys,
+        "known_sender": known_agent is not None,
+    })
+
+    send_plain_email(sender, "Your TC File Check results", format_reply_body(result))
+    return "", 200
 
 
 @app.route("/tc-check")
