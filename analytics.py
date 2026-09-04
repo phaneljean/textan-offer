@@ -300,6 +300,7 @@ def get_tc_check_summary(days: int = 30) -> dict:
     import json
     total = len(rows)
     recognized = complete = 0
+    web_count = email_count = email_known_sender = 0
     issue_counts = {}
     for row in rows:
         metadata = json.loads(row[0]) if row[0] else {}
@@ -309,6 +310,19 @@ def get_tc_check_summary(days: int = 30) -> dict:
             complete += 1
         for key in metadata.get("issue_keys") or []:
             issue_counts[key] = issue_counts.get(key, 0) + 1
+
+        # Channel split -- app.py's tc_check() (web upload) never sets
+        # 'source' in its tracked metadata, only tc_check_email_inbound()
+        # does (source: "email"), so an absent key means web. known_sender
+        # is only meaningful on the email path (see tc_check_email_inbound's
+        # find_by_email() lookup) -- it's the number that actually answers
+        # whether this channel reaches people the web tool never would.
+        if metadata.get("source") == "email":
+            email_count += 1
+            if metadata.get("known_sender"):
+                email_known_sender += 1
+        else:
+            web_count += 1
 
     issue_frequency = sorted(
         [
@@ -332,6 +346,10 @@ def get_tc_check_summary(days: int = 30) -> dict:
         "emails_captured": emails_captured,
         "gate_conversion_rate": round(emails_captured / gated * 100, 1) if gated else 0,
         "issue_frequency": issue_frequency,
+        "web_count": web_count,
+        "email_count": email_count,
+        "email_known_sender": email_known_sender,
+        "email_new_sender_pct": round((email_count - email_known_sender) / email_count * 100, 1) if email_count else 0,
     }
 
 def get_signups_by_source(days: int = 30) -> list:

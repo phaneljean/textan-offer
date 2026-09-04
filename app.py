@@ -4369,13 +4369,19 @@ body{{font-family:system-ui;max-width:800px;margin:40px auto;padding:20px;}}
 <div class="metric">
   <h3>TC File Check</h3>
   <div class="value">{tc_check_summary['total']}</div>
-  <div class="label">Files checked via /tc-check (30 days)</div>
+  <div class="label">Files checked across both channels (30 days)</div>
   <p>{tc_check_summary['recognized']} recognized as a TREC 20-19 &middot; {tc_check_summary['complete']} came back complete ({tc_check_summary['completion_rate']}%)</p>
+</div>
+<div class="metric">
+  <h3>TC File Check &mdash; Web vs. Email</h3>
+  <div class="value">{tc_check_summary['web_count']} / {tc_check_summary['email_count']}</div>
+  <div class="label">Web uploads (/tc-check) vs. forwarded to tc@check.txtanoffer.com</div>
+  <p>{tc_check_summary['email_new_sender_pct']}% of email forwards came from a sender not already in agent_profiles &mdash; {tc_check_summary['email_known_sender']} of {tc_check_summary['email_count']} were known</p>
 </div>
 <div class="metric">
   <h3>TC File Check &rarr; Email Capture</h3>
   <div class="value">{tc_check_summary['gate_conversion_rate']}%</div>
-  <div class="label">Of uploads that hit the itemized-report gate, gave an email</div>
+  <div class="label">Of web uploads that hit the itemized-report gate, gave an email</div>
   <p>{tc_check_summary['emails_captured']} emails / {tc_check_summary['gated']} gated uploads</p>
 </div>
 <div class="metric">
