@@ -33,7 +33,7 @@ from amendment import fill_amendment_pdf
 from agent_profiles import get_agent_profile, save_agent_profile, find_by_email
 from subscriptions import can_generate_offer, increment_offer_count, activate_subscription, deactivate_subscription, get_user, create_user, FREE_OFFER_LIMIT, is_admin_phone, has_professional_access
 from analytics import track_event, get_conversion_metrics, get_revenue_metrics, get_recent_sms, get_recent_sms_failures, get_last_blocked_state, get_waitlist_signups, get_signups_by_source, get_landing_visits_by_source, get_tc_check_summary
-from integrations import send_offer_email, fire_webhook, save_webhook, get_webhook, delete_webhook, send_to_docusign, send_plain_email
+from integrations import send_offer_email, fire_webhook, save_webhook, get_webhook, delete_webhook, send_to_docusign, send_plain_email, send_html_email
 from offers_db import record_offer, get_offers_for_phone, get_offer_by_filename, record_amendment, get_amendments_for_phone, record_thread_response, record_email_sent
 from brokerages import extract_brokerage_prefix, link_user_to_brokerage, get_brokerage, get_brokerage_by_code, create_brokerage, list_brokerages, list_brokerage_agents
 from sponsors import create_sponsor, list_sponsors, set_sponsor_active
@@ -46,7 +46,12 @@ from tc_audit import check_tc_file
 from rate_limit import check_and_increment
 from tc_gate import get_client as get_tc_client, record_use as record_tc_use, save_email as save_tc_email
 from tc_nudge import send_immediate_nudge as send_tc_nudge, run_followup_if_due as run_tc_followup_if_due
-from tc_check_email import extract_sender_email, extract_pdf_attachments, format_reply_body, format_no_pdf_reply
+from tc_check_email import (
+    extract_sender_email, extract_pdf_attachments,
+    format_reply_body, format_reply_html, subject_line,
+    format_no_pdf_reply, format_no_pdf_html,
+    format_unreadable_reply, format_unreadable_html,
+)
 from werkzeug.middleware.proxy_fix import ProxyFix
 import tempfile
 import uuid
@@ -2894,7 +2899,7 @@ def tc_check_email_inbound(token):
 
     pdfs = extract_pdf_attachments(request.files, request.form)
     if not pdfs:
-        send_plain_email(sender, "TC File Check", format_no_pdf_reply())
+        send_html_email(sender, "TC File Check", format_no_pdf_reply(), format_no_pdf_html())
         track_event("tc_check", metadata={"source": "email", "recognized": False, "reason": "no_pdf"})
         return "", 200
 
@@ -2908,12 +2913,7 @@ def tc_check_email_inbound(token):
         try:
             result = check_tc_file(tmp_paths)
         except Exception:
-            send_plain_email(
-                sender, "TC File Check",
-                "Couldn't read that as a PDF -- make sure it's not corrupted "
-                "or password-protected, and try forwarding again.\n\n"
-                "-- TxtAnOffer TC Check",
-            )
+            send_html_email(sender, "TC File Check", format_unreadable_reply(), format_unreadable_html())
             track_event("tc_check", metadata={"source": "email", "recognized": False, "reason": "unreadable"})
             return "", 200
     finally:
@@ -2933,7 +2933,7 @@ def tc_check_email_inbound(token):
         "known_sender": known_agent is not None,
     })
 
-    send_plain_email(sender, "Your TC File Check results", format_reply_body(result))
+    send_html_email(sender, subject_line(result), format_reply_body(result), format_reply_html(result))
     return "", 200
 
 

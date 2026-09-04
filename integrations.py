@@ -84,6 +84,23 @@ def send_offer_email(to_email: str, pdf_path: str, parsed: dict, thread_url: str
 def send_plain_email(to_email: str, subject: str, text_body: str) -> dict:
     """Non-attachment email (TC-check nudges, etc.) -- same SendGrid
     account/config as send_offer_email, just without a PDF attached."""
+    return _send_email(to_email, subject, [{"type": "text/plain", "value": text_body}])
+
+
+def send_html_email(to_email: str, subject: str, text_body: str, html_body: str) -> dict:
+    """Same as send_plain_email but with a branded HTML part alongside the
+    plain-text fallback (multipart/alternative -- text/plain MUST come
+    first in SendGrid's content array, or delivery is rejected). Every
+    client that can render HTML shows html_body; anything that can't
+    (some corporate filters, screen readers set to plain-text-only) still
+    gets a fully readable text_body."""
+    return _send_email(to_email, subject, [
+        {"type": "text/plain", "value": text_body},
+        {"type": "text/html", "value": html_body},
+    ])
+
+
+def _send_email(to_email: str, subject: str, content: list) -> dict:
     if not SENDGRID_API_KEY:
         return {"success": False, "error": "Email not configured (SENDGRID_API_KEY missing)"}
 
@@ -91,7 +108,7 @@ def send_plain_email(to_email: str, subject: str, text_body: str) -> dict:
         "personalizations": [{"to": [{"email": to_email}]}],
         "from": {"email": FROM_EMAIL, "name": "TxtAnOffer"},
         "subject": subject,
-        "content": [{"type": "text/plain", "value": text_body}],
+        "content": content,
         "tracking_settings": {
             "click_tracking": {"enable": False, "enable_text": False}
         },
