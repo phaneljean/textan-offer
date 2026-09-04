@@ -815,7 +815,7 @@ def index():
       <div class="result" id="homeResult"></div>
     </div>
 
-    <div class="stats" style="max-width:640px;margin:2.25rem auto 0;">
+    <div class="stats" style="max-width:640px;margin:2.25rem 0 0;">
       <div><div class="stat-num">__TC_STAT1_NUM__</div><div class="stat-label">__TC_STAT1_LABEL__</div></div>
       <div><div class="stat-num">__TC_STAT2_NUM__</div><div class="stat-label">__TC_STAT2_LABEL__</div></div>
       <div><div class="stat-num">__TC_STAT3_NUM__</div><div class="stat-label">__TC_STAT3_LABEL__</div></div>
