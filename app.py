@@ -482,6 +482,11 @@ def index():
     .drop-zone .dz-sub { color: var(--text-dim); font-size: 0.8rem; }
     .privacy-note { display: flex; align-items: center; gap: 0.45rem; margin-top: 0.9rem; font-size: 0.78rem; color: var(--text-dim); }
     .privacy-note svg { flex-shrink: 0; }
+    .or-divider { display: flex; align-items: center; gap: 0.75rem; margin: 0.15rem 0; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-dim); }
+    .or-divider::before, .or-divider::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+    .email-forward-note { display: flex; align-items: center; gap: 0.6rem; font-size: 0.82rem; color: var(--text-muted); background: var(--accent-tint); border-radius: var(--radius-sm); padding: 0.8rem 1rem; }
+    .email-forward-note svg { flex-shrink: 0; color: var(--text-dim); }
+    .email-forward-note a { color: var(--accent); font-weight: 700; text-decoration: underline; text-underline-offset: 2px; }
     input[type=file] { display: none; }
     .status { margin-top: 1rem; font-size: 0.85rem; color: var(--text-muted); display: none; }
     .status.show { display: block; }
@@ -803,6 +808,8 @@ def index():
         <div class="dz-sub">We'll tell you what's missing before title kicks it back.</div>
       </div>
       <input type="file" id="homeFileInput" accept="application/pdf">
+      <div class="or-divider">or</div>
+      <div class="email-forward-note"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 6 10-6"/></svg>Already have it in your inbox? Forward it to <a href="mailto:tc@check.txtanoffer.com">tc@check.txtanoffer.com</a></div>
       <div class="privacy-note"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Processed instantly and never stored &mdash; discarded the moment your results are ready.</div>
       <div class="status" id="homeStatus"></div>
       <div class="result" id="homeResult"></div>
@@ -2974,6 +2981,11 @@ text-align:center;cursor:pointer;transition:all 0.2s;}
 .drop-zone .dz-sub{color:var(--text-dim);font-size:0.85rem;}
 .privacy-note{display:flex;align-items:center;gap:0.45rem;margin-top:0.9rem;font-size:0.8rem;color:var(--text-dim);}
 .privacy-note svg{flex-shrink:0;}
+.or-divider{display:flex;align-items:center;gap:0.75rem;margin:0.15rem 0;font-size:0.7rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-dim);}
+.or-divider::before,.or-divider::after{content:"";flex:1;height:1px;background:var(--border);}
+.email-forward-note{display:flex;align-items:center;gap:0.6rem;font-size:0.85rem;color:var(--text-muted);background:var(--accent-tint);border-radius:var(--radius-sm);padding:0.85rem 1rem;}
+.email-forward-note svg{flex-shrink:0;color:var(--text-dim);}
+.email-forward-note a{color:var(--accent);font-weight:700;text-decoration:underline;text-underline-offset:2px;}
 input[type=file]{display:none;}
 .status{margin-top:1.25rem;font-size:0.9rem;color:var(--text-muted);display:none;}
 .status.show{display:block;}
@@ -3024,6 +3036,7 @@ border-radius:var(--radius-sm);font-family:inherit;font-size:0.9rem;background:#
 .addendum-toggle{margin-top:0.85rem;font-size:0.82rem;color:var(--text-muted);cursor:pointer;text-decoration:underline;text-underline-offset:2px;width:fit-content;}
 .addendum-toggle:hover{color:var(--text);}
 .addendum-row{margin-top:0.6rem;display:flex;align-items:center;gap:0.6rem;font-size:0.85rem;}
+.addendum-row[hidden]{display:none;}
 .addendum-filename{color:var(--text-muted);}
 .addendum-clear{background:none;border:none;color:var(--text-dim);font-size:1rem;cursor:pointer;line-height:1;padding:0.15rem 0.4rem;}
 .addendum-clear:hover{color:var(--text);}
@@ -3052,6 +3065,8 @@ border-radius:var(--radius-sm);font-family:inherit;font-size:0.9rem;background:#
 <span class="addendum-filename" id="addendumFileName"></span>
 <button type="button" class="addendum-clear" id="addendumClear" title="Remove">&times;</button>
 </div>
+<div class="or-divider">or</div>
+<div class="email-forward-note"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 6 10-6"/></svg>Already have it in your inbox? Forward it to <a href="mailto:tc@check.txtanoffer.com">tc@check.txtanoffer.com</a></div>
 <div class="privacy-note"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Processed instantly and never stored &mdash; your file is discarded the moment your results are ready.</div>
 <div class="status" id="status"></div>
 <div class="result" id="result"></div>
@@ -3979,6 +3994,7 @@ def pricing():
       <li><span class="check">&#10003;</span> Free SMS drafting for your whole roster (unlimited agents)</li>
       <li><span class="check">&#10003;</span> Every agent's offer auto-checked before it's even sent</li>
       <li><span class="check">&#10003;</span> Finished PDFs auto-emailed to your TC, no login needed</li>
+      <li><span class="check">&#10003;</span> Your TC can also forward any outside file to tc@check.txtanoffer.com for an instant check &mdash; free, no dashboard login needed</li>
       <li><span class="check">&#10003;</span> Brokerage roster &amp; compliance dashboard</li>
       <li><span class="check">&#10003;</span> Agents join with one text &mdash; no per-agent setup</li>
     </ul>
