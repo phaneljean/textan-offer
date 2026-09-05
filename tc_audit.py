@@ -365,3 +365,127 @@ def check_tc_file(pdf_paths) -> dict:
         "has_addendum": has_addendum,
         "has_amendment": has_amendment,
     }
+
+
+# --- Contract-vs-contract "WHAT CHANGED" diff -------------------------------
+#
+# Distinct from everything above: check_tc_file() audits ONE contract
+# (optionally cross-checked against a DIFFERENT form -- a 40-11 or 39-11).
+# compare_contracts() instead diffs TWO uploads of the SAME 20-19 template
+# against each other -- e.g. a signed original vs. a later re-filled
+# version. (key, display label, is_money) -- money fields are compared by
+# parsed cents value via _money_to_int so formatting differences ($725,000
+# vs $725,000.00) don't read as a change; text fields are compared
+# case/whitespace-normalized for the same reason the address check in
+# check_tc_file() had to be (a real value shouldn't read as "changed" just
+# because two different tools capitalized or spaced it differently).
+# Ordered financial fields first to match how a TC actually scans a diff.
+COMPARE_FIELDS = [
+    ("sales_price", "Sales Price", True),
+    ("loan_amount", "Financing Amount", True),
+    ("earnest_money_amount", "Earnest Money", True),
+    ("option_fee_amount", "Option Fee", True),
+    ("escrow_agent_name", "Escrow Agent", False),
+    ("title_company", "Title Company", False),
+    ("buyer_name", "Buyer", False),
+    ("seller_name", "Seller", False),
+    ("address", "Property Address", False),
+    ("city", "City", False),
+    ("county", "County", False),
+]
+
+# Closing date and option period are deliberately NOT in COMPARE_FIELDS and
+# must never be reported as "unchanged" -- rendering 20-19_2.pdf with a
+# marker (2026-09-04) confirmed neither blank has a backing AcroForm field
+# at all in this template (this app itself only ever draws them via a
+# reportlab overlay -- see pdf_filler.py's own comment listing both
+# alongside the page-11 header as overlay-only). There is nothing to read
+# back from ANY uploaded copy of this form for these two values, regardless
+# of which tool filled it -- reporting "unchanged" would imply a
+# verification that structurally cannot happen.
+NOT_COMPARABLE_LABELS = ["Closing date", "Option period"]
+NOT_COMPARABLE_REASON = "Not compared -- this value is not available as a readable form field."
+
+
+def _normalized_text(raw: str) -> str:
+    return " ".join(raw.strip().upper().split())
+
+
+def compare_contracts(original_path: str, updated_path: str) -> dict:
+    """Field-level diff between two TREC 20-19 contract uploads (e.g. an
+    original signed contract and a later re-filled/updated version of the
+    SAME form) -- as distinct from check_tc_file()'s contract-vs-a-
+    DIFFERENT-form cross-checks (40-11, 39-11).
+
+    original_path and updated_path are two SEPARATE, EXPLICIT slots, not a
+    list to classify. Unlike a 40-11 or 39-11, which have their own distinct
+    field-name fingerprint, two uploads of the same 20-19 template are
+    fingerprint-identical -- there is no reliable way to infer which one is
+    "the original" from field content (Effective Date, once filled, might
+    seem like an ordering signal, but it's exactly the kind of inference
+    this app avoids making elsewhere -- see check_tc_file()'s own docstring
+    on not guessing at unverified relationships). Callers MUST know and
+    supply the correct slot themselves.
+
+    Only compares COMPARE_FIELDS -- fields already rect-verified in
+    FIELD_MAP. Closing date and option period are never compared; see
+    NOT_COMPARABLE_LABELS above for why.
+
+    Returns {"recognized": bool, "changes": [...], "not_compared": [...],
+    "not_compared_reason": str} on success, or {"recognized": False,
+    "message": str} if either upload doesn't match the 20-19 template.
+    Raises whatever pypdf raises on a file that isn't a readable PDF at all --
+    callers should catch that and turn it into a 400, not a 500."""
+    orig_values = _read_values(original_path)
+    upd_values = _read_values(updated_path)
+
+    unrecognized = []
+    if _matched_main(orig_values) < MIN_MATCHED_FIELDS:
+        unrecognized.append("original")
+    if _matched_main(upd_values) < MIN_MATCHED_FIELDS:
+        unrecognized.append("updated")
+    if unrecognized:
+        return {
+            "recognized": False,
+            "message": (
+                f"The {' and '.join(unrecognized)} file"
+                f"{'s' if len(unrecognized) > 1 else ''} didn't look like a "
+                "TREC 20-19 form we recognize -- field names didn't match "
+                "our template."
+            ),
+        }
+
+    changes = []
+    for key, label, is_money in COMPARE_FIELDS:
+        field_name = FIELD_MAP[key]
+        o_raw = orig_values.get(field_name, "").strip()
+        u_raw = upd_values.get(field_name, "").strip()
+
+        if not o_raw and not u_raw:
+            changes.append({"field": label, "status": "missing", "key": key})
+            continue
+
+        if is_money:
+            o_norm = _money_to_int(o_raw) if o_raw else None
+            u_norm = _money_to_int(u_raw) if u_raw else None
+        else:
+            o_norm = _normalized_text(o_raw) if o_raw else None
+            u_norm = _normalized_text(u_raw) if u_raw else None
+
+        if o_norm == u_norm:
+            changes.append({"field": label, "status": "unchanged", "key": key})
+        else:
+            changes.append({
+                "field": label,
+                "status": "changed",
+                "key": key,
+                "from": o_raw or "(blank)",
+                "to": u_raw or "(blank)",
+            })
+
+    return {
+        "recognized": True,
+        "changes": changes,
+        "not_compared": NOT_COMPARABLE_LABELS,
+        "not_compared_reason": NOT_COMPARABLE_REASON,
+    }

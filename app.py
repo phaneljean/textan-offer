@@ -42,7 +42,7 @@ from cleanup import run_cleanup_if_due
 from reminders import run_reminders_if_due
 from deadlines import earnest_money_deadline, option_end_date, build_day_one_summary
 from drafts import save_draft, get_draft, clear_draft
-from tc_audit import check_tc_file
+from tc_audit import check_tc_file, compare_contracts
 from rate_limit import check_and_increment
 from tc_gate import get_client as get_tc_client, record_use as record_tc_use, save_email as save_tc_email
 from tc_nudge import send_immediate_nudge as send_tc_nudge, run_followup_if_due as run_tc_followup_if_due
@@ -2943,6 +2943,57 @@ def tc_check_email_inbound(token):
 
     send_html_email(sender, subject_line(result), format_reply_body(result), format_reply_html(result))
     return "", 200
+
+
+@app.route("/v1/tc/compare", methods=["POST"])
+def tc_compare():
+    """WHAT CHANGED: field-level diff between two uploaded TREC 20-19
+    contracts -- e.g. a signed original vs. a later re-filled version of
+    the same form. See tc_audit.compare_contracts() for the actual logic
+    and its scope (only already-verified fields; closing date and option
+    period are explicitly excluded, not mislabeled "unchanged").
+
+    Two EXPLICIT fields, 'original' and 'updated' -- not a file list --
+    because two uploads of the same 20-19 template are fingerprint-
+    identical; there is no reliable way to infer which is which the way
+    /v1/tc/check tells a 40-11 or 39-11 apart from the main contract.
+
+    Not yet linked from the /tc-check page's UI (that page only has a
+    single-contract-plus-optional-addendum upload widget) -- reachable via
+    this endpoint directly for now. Also not gated behind email capture
+    like /v1/tc/check is; that's a product decision (free vs. requires
+    email, same as the completeness check) that hasn't been made for this
+    endpoint yet, not an oversight."""
+    original = request.files.get("original")
+    updated = request.files.get("updated")
+    if not original or not original.filename or not updated or not updated.filename:
+        return jsonify({"error": "Upload both files: 'original' and 'updated'."}), 400
+    if not original.filename.lower().endswith(".pdf") or not updated.filename.lower().endswith(".pdf"):
+        return jsonify({"error": "Only PDF files are supported."}), 400
+
+    tmp_paths = []
+    try:
+        orig_tmp = tempfile.NamedTemporaryFile(suffix=".pdf", delete=False)
+        original.save(orig_tmp.name)
+        orig_tmp.close()
+        tmp_paths.append(orig_tmp.name)
+        upd_tmp = tempfile.NamedTemporaryFile(suffix=".pdf", delete=False)
+        updated.save(upd_tmp.name)
+        upd_tmp.close()
+        tmp_paths.append(upd_tmp.name)
+        try:
+            result = compare_contracts(orig_tmp.name, upd_tmp.name)
+        except Exception:
+            return jsonify({"error": "Couldn't read one of those files as a PDF. Make sure neither is corrupted or password-protected."}), 400
+    finally:
+        for p in tmp_paths:
+            try:
+                os.remove(p)
+            except OSError:
+                pass
+
+    track_event("tc_compare", metadata={"recognized": result.get("recognized")})
+    return jsonify(result)
 
 
 @app.route("/tc-check")
