@@ -2857,10 +2857,12 @@ def tc_check():
             "complete": result["complete"],
             "page_count": result["page_count"],
             "has_addendum": result["has_addendum"],
+            "has_amendment": result["has_amendment"],
             "looks_like_blank_draft": result["looks_like_blank_draft"],
             "issue_count": len(result["issues"]),
             "blocker_count": blockers,
             "warning_count": warnings,
+            "severity": result["severity"],
             "email_required": True,
         })
     else:

@@ -189,6 +189,23 @@ def _matched_fa(values: dict) -> int:
     return sum(1 for name in FA_FIELDS.values() if name in values)
 
 
+# Traffic-light rollup of an issues list -- pure arithmetic over data
+# check_tc_file() already computes (severity + count), not a new signal.
+# "attention" fires on ANY blocker, including the single-issue
+# "unrecognized file" case, which is already a blocker -- no special case
+# needed for that path. Kept as three flat levels, not a numeric score:
+# a single number inviting a false sense of precision (is 6 issues twice
+# as bad as 3?) is exactly the kind of overclaim this module's docstring
+# already warns against for individual fields.
+def _severity_summary(issues: list) -> dict:
+    blockers = sum(1 for i in issues if i.get("severity") == "blocker")
+    if blockers:
+        return {"level": "attention", "emoji": "\U0001F534", "label": "Needs attention", "issue_count": len(issues)}
+    if issues:
+        return {"level": "review", "emoji": "\U0001F7E1", "label": "Review recommended", "issue_count": len(issues)}
+    return {"level": "clear", "emoji": "\U0001F7E2", "label": "No issues detected", "issue_count": 0}
+
+
 def check_tc_file(pdf_paths) -> dict:
     """Audits an uploaded TREC 20-19 AcroForm PDF for missing required
     fields, optionally cross-checked against its 40-11 Third Party
@@ -238,22 +255,24 @@ def check_tc_file(pdf_paths) -> dict:
                 amend_values = values
 
     if main_values is None:
+        unrecognized_issues = [{
+            "severity": "blocker",
+            "message": (
+                "This doesn't look like a TREC 20-19 form we recognize -- "
+                "field names didn't match our template. Only AcroForm-fillable "
+                "20-19 PDFs are supported in this version (not scanned or flattened files)."
+            ),
+            "key": "unrecognized",
+        }]
         return {
             "recognized": False,
             "complete": False,
-            "issues": [{
-                "severity": "blocker",
-                "message": (
-                    "This doesn't look like a TREC 20-19 form we recognize -- "
-                    "field names didn't match our template. Only AcroForm-fillable "
-                    "20-19 PDFs are supported in this version (not scanned or flattened files)."
-                ),
-                "key": "unrecognized",
-            }],
+            "issues": unrecognized_issues,
             "looks_like_blank_draft": False,
             "page_count": page_count,
             "has_addendum": False,
             "has_amendment": False,
+            "severity": _severity_summary(unrecognized_issues),
         }
 
     values = main_values
@@ -364,6 +383,7 @@ def check_tc_file(pdf_paths) -> dict:
         "page_count": page_count,
         "has_addendum": has_addendum,
         "has_amendment": has_amendment,
+        "severity": _severity_summary(issues),
     }
 
 
