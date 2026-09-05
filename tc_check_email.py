@@ -180,7 +180,11 @@ def format_reply_body(result: dict) -> str:
         body += _issue_group_text(blockers, "Critical deal blockers") + "\n"
         body += _issue_group_text(warnings, "Also worth fixing") + "\n"
         body += _UPSELL_TEXT + "\n"
-    body += "Forward another file any time to check it too.\n\n-- TxtAnOffer TC Check"
+    body += (
+        "---\n"
+        "Checked with TC Check by TxtAnOffer\n"
+        "Want to check another file? tc@check.txtanoffer.com"
+    )
     return body
 
 
@@ -248,6 +252,13 @@ _UPSELL_HTML = f"""
 </div>
 """
 
+_SHARE_FOOTER_HTML = f"""
+<p style="margin:20px 0 0;padding-top:16px;border-top:1px solid #eeeeee;font-size:12px;line-height:1.6;color:#a3a3a3;font-family:{_FONT};">
+  Checked with TC Check by TxtAnOffer<br>
+  Want to check another file? <a href="mailto:tc@check.txtanoffer.com" style="color:#525252;">tc@check.txtanoffer.com</a>
+</p>
+"""
+
 
 def _email_shell(heading: str, subheading: str, body_html: str) -> str:
     return f"""<!DOCTYPE html>
@@ -306,7 +317,7 @@ def format_reply_html(result: dict) -> str:
         body += _issue_group_html(blockers, "Critical deal blockers")
         body += _issue_group_html(warnings, "Also worth fixing")
         body += _UPSELL_HTML
-    body += f'<p style="{_P_STYLE}margin-top:20px;">Forward another file any time to check it too.</p>'
+    body += _SHARE_FOOTER_HTML
     return _email_shell("TC File Check results", "On the file you forwarded", body)
 
 
