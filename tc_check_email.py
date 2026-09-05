@@ -3,10 +3,11 @@ tc_check_email.py -- Email-forward intake for TC File Check (see tc_audit.py).
 
 Phase 1 of the "document-driven" TC Check pitch: instead of an agent/TC
 uploading a PDF to txtanoffer.com, they forward the TREC 20-19 (and,
-optionally, its 40-11 addendum) to a dedicated inbox and get the same
-itemized report back by reply. This module only handles the SendGrid
-Inbound Parse payload -> PDF attachments -> reply-text plumbing; the actual
-audit logic is unchanged and lives entirely in tc_audit.check_tc_file().
+optionally, its 40-11 addendum and/or 39-11 amendment) to a dedicated inbox
+and get the same itemized report back by reply. This module only handles
+the SendGrid Inbound Parse payload -> PDF attachments -> reply-text
+plumbing; the actual audit logic is unchanged and lives entirely in
+tc_audit.check_tc_file().
 
 Why a separate module instead of inline in app.py: app.py is already large
 and every other TC Check concern (tc_audit, tc_gate, tc_nudge) is already
@@ -21,7 +22,7 @@ Docs: https://www.twilio.com/docs/sendgrid/for-developers/parsing-email/setting-
 import re
 from html import escape
 
-MAX_ATTACHMENTS = 2  # contract + optional 40-11 addendum, same cap check_tc_file() expects
+MAX_ATTACHMENTS = 3  # contract + optional 40-11 addendum + optional 39-11 amendment, same cap check_tc_file() expects
 
 # Same brand colors as the web TC Check page's .issue-tag.blocker/.warning
 # (see app.py) -- kept in sync by eye, not shared code, since one lives in
@@ -57,7 +58,9 @@ _CONSEQUENCE_TAGS = {
     "initials_seller": "PAGE NOT INITIALED",
     "loan_amount_mismatch": "FINANCING TERMS DISAGREE",
     "addendum_checkbox_mismatch": "ADDENDUM CHECKBOX WRONG",
-    "addendum_file_unrecognized": "ADDENDUM NOT VERIFIED",
+    "amendment_price_mismatch": "PRICE TERMS DISAGREE",
+    "amendment_address_mismatch": "WRONG FILE ATTACHED",
+    "extra_file_unrecognized": "ATTACHMENT NOT VERIFIED",
 }
 
 _UPSELL_URL = "https://txtanoffer.com/pricing#brokerage"

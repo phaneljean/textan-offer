@@ -2793,15 +2793,16 @@ def tc_check():
     client = get_tc_client(cid)
     submitted_email = (request.form.get("email") or "").strip()
 
-    # Up to 2 files under the same 'file' field: the contract, and
-    # optionally its 40-11 Third Party Financing Addendum as a separate
-    # PDF (the realistic case -- see tc_audit.check_tc_file's docstring for
-    # why that's not the same as the FA_-prefix merged-file case).
+    # Up to 3 files under the same 'file' field: the contract, and
+    # optionally its 40-11 Third Party Financing Addendum and/or its 39-11
+    # Amendment to Contract, each as a separate PDF (the realistic case --
+    # see tc_audit.check_tc_file's docstring for why that's not the same as
+    # the FA_-prefix merged-file case).
     uploads = request.files.getlist("file")
     if not uploads or not uploads[0].filename:
         return jsonify({"error": "No file uploaded. Attach a PDF as 'file'."}), 400
-    if len(uploads) > 2:
-        return jsonify({"error": "Upload at most 2 files: the contract and, if you have it, the 40-11 addendum."}), 400
+    if len(uploads) > 3:
+        return jsonify({"error": "Upload at most 3 files: the contract and, if you have them, the 40-11 addendum and/or 39-11 amendment."}), 400
     if any(not f.filename.lower().endswith(".pdf") for f in uploads):
         return jsonify({"error": "Only PDF files are supported."}), 400
 
