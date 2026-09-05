@@ -352,6 +352,40 @@ def get_tc_check_summary(days: int = 30) -> dict:
         "email_new_sender_pct": round((email_count - email_known_sender) / email_count * 100, 1) if email_count else 0,
     }
 
+def get_recent_tc_check_email_senders(limit: int = 20) -> list:
+    """Most recent TC File Check email-forward events with the sender's
+    actual address -- the raw log get_tc_check_summary()'s aggregates
+    can't answer (e.g. "did any of these 9 specific people forward a
+    file?"). Only the email channel carries a sender; web uploads never
+    set 'source', so this filters to source == 'email' in Python rather
+    than SQL since metadata is a JSON blob column."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT metadata, created_at FROM events
+        WHERE event_type = 'tc_check'
+        ORDER BY created_at DESC
+        LIMIT 200
+    """)
+    rows = cursor.fetchall()
+    conn.close()
+
+    import json
+    out = []
+    for metadata_json, created_at in rows:
+        metadata = json.loads(metadata_json) if metadata_json else {}
+        if metadata.get("source") != "email":
+            continue
+        out.append({
+            "sender": metadata.get("sender", "(not recorded)"),
+            "known_sender": metadata.get("known_sender", False),
+            "recognized": metadata.get("recognized"),
+            "created_at": created_at,
+        })
+        if len(out) >= limit:
+            break
+    return out
+
 def get_signups_by_source(days: int = 30) -> list:
     """Signup counts grouped by ?src= attribution (Direct Reach, BiggerPockets,
     LinkedIn, etc.), most recent-heavy channels first. 'direct' covers anyone

@@ -32,7 +32,7 @@ from pdf_validator import validate_offer_pdf
 from amendment import fill_amendment_pdf
 from agent_profiles import get_agent_profile, save_agent_profile, find_by_email
 from subscriptions import can_generate_offer, increment_offer_count, activate_subscription, deactivate_subscription, get_user, create_user, FREE_OFFER_LIMIT, is_admin_phone, has_professional_access
-from analytics import track_event, get_conversion_metrics, get_revenue_metrics, get_recent_sms, get_recent_sms_failures, get_last_blocked_state, get_waitlist_signups, get_signups_by_source, get_landing_visits_by_source, get_tc_check_summary
+from analytics import track_event, get_conversion_metrics, get_revenue_metrics, get_recent_sms, get_recent_sms_failures, get_last_blocked_state, get_waitlist_signups, get_signups_by_source, get_landing_visits_by_source, get_tc_check_summary, get_recent_tc_check_email_senders
 from integrations import send_offer_email, fire_webhook, save_webhook, get_webhook, delete_webhook, send_to_docusign, send_plain_email, send_html_email
 from offers_db import record_offer, get_offers_for_phone, get_offer_by_filename, record_amendment, get_amendments_for_phone, record_thread_response, record_email_sent
 from brokerages import extract_brokerage_prefix, link_user_to_brokerage, get_brokerage, get_brokerage_by_code, create_brokerage, list_brokerages, list_brokerage_agents
@@ -2911,7 +2911,7 @@ def tc_check_email_inbound(token):
     pdfs = extract_pdf_attachments(request.files, request.form)
     if not pdfs:
         send_html_email(sender, "TC File Check", format_no_pdf_reply(), format_no_pdf_html())
-        track_event("tc_check", metadata={"source": "email", "recognized": False, "reason": "no_pdf"})
+        track_event("tc_check", metadata={"source": "email", "recognized": False, "reason": "no_pdf", "sender": sender})
         return "", 200
 
     tmp_paths = []
@@ -2925,7 +2925,7 @@ def tc_check_email_inbound(token):
             result = check_tc_file(tmp_paths)
         except Exception:
             send_html_email(sender, "TC File Check", format_unreadable_reply(), format_unreadable_html())
-            track_event("tc_check", metadata={"source": "email", "recognized": False, "reason": "unreadable"})
+            track_event("tc_check", metadata={"source": "email", "recognized": False, "reason": "unreadable", "sender": sender})
             return "", 200
     finally:
         for p in tmp_paths:
@@ -2942,6 +2942,7 @@ def tc_check_email_inbound(token):
         "complete": result["complete"],
         "issue_keys": issue_keys,
         "known_sender": known_agent is not None,
+        "sender": sender,
     })
 
     send_html_email(sender, subject_line(result), format_reply_body(result), format_reply_html(result))
@@ -4336,6 +4337,19 @@ def analytics_dashboard():
     signups_by_source = get_signups_by_source(days=30)
     landing_visits_by_source = get_landing_visits_by_source(days=30)
     tc_check_summary = get_tc_check_summary(days=30)
+    recent_tc_email_senders = get_recent_tc_check_email_senders(limit=20)
+
+    tc_email_sender_rows = ""
+    for entry in recent_tc_email_senders:
+        from datetime import datetime as _dt
+        dt = _dt.fromisoformat(entry['created_at'])
+        time_str = dt.strftime("%m/%d %H:%M")
+        known_str = "known" if entry['known_sender'] else "new"
+        recognized_str = "yes" if entry['recognized'] else "no"
+        tc_email_sender_rows += (
+            f"<tr><td>{time_str}</td><td>{entry['sender']}</td>"
+            f"<td>{known_str}</td><td>{recognized_str}</td></tr>"
+        )
 
     sms_rows = ""
     for sms in recent_sms:
@@ -4448,6 +4462,19 @@ body{{font-family:system-ui;max-width:800px;margin:40px auto;padding:20px;}}
   <div class="value">{tc_check_summary['web_count']} / {tc_check_summary['email_count']}</div>
   <div class="label">Web uploads (/tc-check) vs. forwarded to tc@check.txtanoffer.com</div>
   <p>{tc_check_summary['email_new_sender_pct']}% of email forwards came from a sender not already in agent_profiles &mdash; {tc_check_summary['email_known_sender']} of {tc_check_summary['email_count']} were known</p>
+</div>
+<div class="metric" style="grid-column:1/-1;">
+  <h3>TC File Check &mdash; Recent Email Senders</h3>
+  <div class="label">Cross-reference against an outreach list's email addresses to attribute a forward to a specific campaign &mdash; raw event log has no other way to answer that.</div>
+  <table style="width:100%;border-collapse:collapse;margin-top:8px;">
+    <tr style="background:#f5f5f5;text-align:left;">
+      <th style="padding:8px;">Time</th>
+      <th style="padding:8px;">Sender</th>
+      <th style="padding:8px;">Known?</th>
+      <th style="padding:8px;">Recognized?</th>
+    </tr>
+    {tc_email_sender_rows if tc_email_sender_rows else '<tr><td colspan="4" style="padding:8px;color:#999;">No email forwards yet.</td></tr>'}
+  </table>
 </div>
 <div class="metric">
   <h3>TC File Check &rarr; Email Capture</h3>
