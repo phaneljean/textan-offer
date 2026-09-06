@@ -836,109 +836,23 @@ def index():
     </ul>
     <div class="secondary-cta" style="margin:1.75rem auto 0;padding-top:1.75rem;max-width:560px;text-align:center;">
       <div class="secondary-cta-label">Running a brokerage or TC team? The dashboard shows every flag across every file &mdash; not just this one.</div>
-      <a href="/pricing#enterprise" class="input-btn" style="display:inline-block;text-decoration:none;">See team &amp; brokerage pricing &rarr;</a>
-    </div>
-  </section>
-
-  <section class="section" style="padding-top:1rem;">
-    <div class="steps-kicker">Zero-Friction Agent Input</div>
-    <h2 style="font-size:2.1rem;margin-top:0.5rem;">Your agents already know how to use this.</h2>
-    <p class="hero-sub">No login, no dashboard to learn &mdash; agents draft offers from their phone's native texting app, included free with the Brokerage plan for your whole roster.</p>
-
-    <div class="dark-card-wrap no-glow">
-      <div class="dark-card-inner" style="padding:0.6rem;">
-        <div class="dash-grid">
-          <div class="dash-panel">
-            <div class="dash-panel-label">Integrations</div>
-            <div style="margin-top:0.85rem;">
-              <div class="integration-row">
-                <div class="integration-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20c3-1 4-4 6-8s4-8 6-8"/><path d="M14 20c2-3 4-4 6-4"/></svg></div>
-                <span class="integration-name">DocuSign</span>
-              </div>
-              <div class="integration-row">
-                <div class="integration-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 3 14h7l-1 8 11-13h-8z"/></svg></div>
-                <span class="integration-name">Zapier / Webhooks</span>
-              </div>
-            </div>
-            <div class="integration-note">Included on the Professional plan &mdash; send to DocuSign or POST to any URL right from the review screen.</div>
-          </div>
-          <div class="dash-panel">
-            <div class="chrome-bar">
-              <div class="chrome-dot"></div><div class="chrome-dot"></div><div class="chrome-dot"></div>
-              <span class="chrome-title">txtanoffer.com/review</span>
-            </div>
-            <div class="review-address">123 Main St</div>
-            <div class="review-sub">TREC One to Four Family Residential Contract</div>
-            <div class="review-stats">
-              <div class="review-stat"><div class="k">Price</div><div class="v">$725,000</div></div>
-              <div class="review-stat"><div class="k">Down</div><div class="v">3% ($21,750)</div></div>
-              <div class="review-stat"><div class="k">Close</div><div class="v">21 days</div></div>
-            </div>
-            <div class="review-warning">Heads up: Section 1 &mdash; Buyer and/or Seller legal name is blank. Fill in by hand before sending.</div>
-            <div class="review-actions">
-              <div class="review-btn primary">Email to Listing Agent</div>
-              <div class="review-btn ghost">Open PDF</div>
-            </div>
-            <div class="review-caption">Nothing sends until every required field is filled in.</div>
-          </div>
-        </div>
-      </div>
+      <a href="/pricing#brokerage" class="input-btn" style="display:inline-block;text-decoration:none;">See Brokerage pricing &rarr;</a>
     </div>
   </section>
   </div>
 
   <section class="steps" id="how">
     <div class="steps-header">
-      <h2 style="max-width:620px;margin:0 auto;">Agents text a property address with your office code, and the filled TREC PDF drops straight into your TC's inbox.</h2>
+      <h2 style="max-width:620px;margin:0 auto;">Forward it, or drop it here. Get back exactly what's missing.</h2>
     </div>
-
-    <div class="secondary-cta" style="margin:1.5rem auto 0;padding-top:0;border-top:none;max-width:540px;text-align:center;">
-      <div class="secondary-cta-label">Try it yourself — text your details to generate a flawless draft in 60 seconds.</div>
-      <form id="live-demo-form">
-        <div class="input-row">
-          <input type="text" id="demo-input" placeholder="725k 3% 21day Harris 1234 Westheimer Rd" autocomplete="off">
-          <button type="submit" class="input-btn">Generate &rarr;</button>
-        </div>
-      </form>
-      <div class="input-hint">Type however feels natural — we handle messy texts. Just get the numbers in there.</div>
-      <div class="input-hint" style="margin-top:0.4rem;">By texting, you agree to receive automated messages from TxtAnOffer. Reply STOP to opt out, HELP for help. Msg &amp; data rates may apply.</div>
-    </div>
-
-    <div class="stats" style="max-width:640px;margin-left:auto;margin-right:auto;">
-      <div><div class="stat-num">&lt;10s</div><div class="stat-label">Generation time</div></div>
-      <div><div class="stat-num">45 min</div><div class="stat-label">Saved per offer</div></div>
-      <div><div class="stat-num">Free</div><div class="stat-label">No card required</div></div>
-      <div><div class="stat-num">100%</div><div class="stat-label">Required fields checked</div></div>
-    </div>
-
-    <div class="dark-card-wrap" style="max-width:400px;margin:1.75rem auto 0;">
-      <div class="dark-card-inner">
-        <div class="notch"></div>
-        <div class="demo-wrap">
-          <div class="sms-bubble" style="display:flex;"><span id="sms-typed">725k 3% 21day 123 Main St</span><span class="sms-cursor" id="sms-cursor"></span></div>
-          <div class="flow-arrow">&darr;</div>
-          <div class="demo-loading" id="demo-loading">Generating your contract...</div>
-          <div class="demo-error" id="demo-error"></div>
-          <div class="demo-result" id="demo-result">
-            <div class="white-card">
-              <div class="res-row"><span class="k">Address</span><span class="v" id="res-addr">123 Main St</span></div>
-              <div class="res-row"><span class="k">Price</span><span class="v" id="res-price">$725,000</span></div>
-              <div class="res-row"><span class="k">Down payment</span><span class="v" id="res-down">3%</span></div>
-              <div class="res-row"><span class="k">Closing</span><span class="v" id="res-close">21 days</span></div>
-            </div>
-            <div class="flow-arrow" id="pdf-flow-arrow">&darr;</div>
-            <a href="#" id="res-pdf" class="pdf-card" target="_blank">
-              <div class="pdf-icon">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-              </div>
-              <div class="pdf-meta">
-                <div class="pdf-title">TREC 20-19 Purchase Agreement.pdf</div>
-                <div class="pdf-sub">AES-256 encrypted &middot; Ready to sign</div>
-              </div>
-            </a>
-          </div>
-        </div>
-      </div>
+    <ul class="tc-checklist" style="max-width:560px;margin:1.5rem auto 0;">
+      <li><span class="tc-check">&check;</span><span>Forward the TREC 20-19 to <strong>tc@check.txtanoffer.com</strong>, or upload it above &mdash; add the 40-11 addendum or 39-11 amendment if you've got them.</span></li>
+      <li><span class="tc-check">&check;</span><span>We re-read the actual filled-in PDF against TREC's current form &mdash; not a guess based on file size or page count.</span></li>
+      <li><span class="tc-check">&check;</span><span>Get an itemized report back in under a minute: what's blank, what's missing an initial, what disagrees with the addendum.</span></li>
+    </ul>
+    <div class="secondary-cta" style="margin:1.75rem auto 0;padding-top:1.75rem;max-width:540px;text-align:center;">
+      <div class="secondary-cta-label">Free. No login. Nothing stored after your results are shown.</div>
+      <a href="/tc-check" class="input-btn" style="display:inline-block;text-decoration:none;">Try TC File Check &rarr;</a>
     </div>
   </section>
 
@@ -951,17 +865,17 @@ def index():
       <div class="step-card">
         <div class="step-num">&check;</div>
         <h3>Every field checked, not just assumed</h3>
-        <p>We re-read the finished PDF itself &mdash; not just the code that filled it &mdash; and flag exactly which required field, checkbox, or dollar amount is missing right on your review screen, before you send it to anyone. Emailing straight to the listing agent is blocked outright until everything required is filled in.</p>
+        <p>We re-read the actual filled-in PDF itself &mdash; not a guess based on file size or page count &mdash; and flag exactly which required field, checkbox, or dollar amount is missing or inconsistent. The same check, run the same way, on every file.</p>
       </div>
       <div class="step-card">
         <div class="step-num">&check;</div>
-        <h3>Built on TREC's current form</h3>
-        <p>Generated from TREC's actual published 20-19 form &mdash; current Paragraph 12B commission language, the mandatory Water Disclosure, and the required IABS brokerage-services notice all included &mdash; not a stale template someone forgot to update. Mention an HOA and the 36-10 addendum attaches itself, checkbox and all &mdash; no separate form to remember. <a href="/trec-changes" style="color:var(--text);text-decoration:underline;">See what changed &rarr;</a></p>
+        <h3>Checked against TREC's current form</h3>
+        <p>Every check is verified against TREC's actual published 20-19 form &mdash; not a static field list someone wrote once and forgot to update when TREC revises it. <a href="/trec-changes" style="color:var(--text);text-decoration:underline;">See what changed &rarr;</a></p>
       </div>
       <div class="step-card">
         <div class="step-num">&check;</div>
-        <h3>Your office reviews it. Your broker can see it.</h3>
-        <p>TxtAnOffer drafts the contract; nothing goes to a buyer, seller, or listing agent until someone on your team reviews it and decides it's ready &mdash; the same review trail a managing broker can check anytime, on any agent's file.</p>
+        <h3>Nothing is stored after your results are shown</h3>
+        <p>Your file is processed to generate the report, then discarded &mdash; on the Brokerage plan, the report reaches your TC automatically on every agent's offer, no dashboard login needed.</p>
       </div>
     </div>
   </section>
@@ -989,140 +903,6 @@ def index():
     </div>
   </footer>
 
-<script>
-(function(){
-  var form=document.getElementById('live-demo-form'),
-      input=document.getElementById('demo-input'),
-      loading=document.getElementById('demo-loading'),
-      errEl=document.getElementById('demo-error'),
-      result=document.getElementById('demo-result');
-  form.addEventListener('submit',function(e){
-    e.preventDefault();
-    var text=input.value.trim();
-    if(!text)return;
-    loading.style.display='block';
-    errEl.style.display='none';
-    result.classList.remove('show');
-    var typedEl=document.getElementById('sms-typed'),
-        addrEl=document.getElementById('res-addr'),
-        priceEl=document.getElementById('res-price'),
-        downEl=document.getElementById('res-down'),
-        closeEl=document.getElementById('res-close'),
-        pdfArrow=document.getElementById('pdf-flow-arrow'),
-        pdfCard=document.getElementById('res-pdf');
-    // Show the visitor's own text immediately -- the illustrative loop's
-    // frozen "123 Main St" example must never linger once a real
-    // submission is in flight, or the SMS bubble contradicts the result.
-    if(typedEl) typedEl.textContent=text;
-    fetch('/api/demo',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({offer_text:text})})
-    .then(function(r){return r.json()})
-    .then(function(d){
-      loading.style.display='none';
-      if(d.error){
-        errEl.textContent=d.error;errEl.style.display='block';
-        // Clear stale illustrative values so the error doesn't sit next
-        // to a fake address/price/PDF that was never actually generated.
-        addrEl.textContent=''; priceEl.textContent=''; downEl.textContent=''; closeEl.textContent='';
-        if(pdfArrow) pdfArrow.style.opacity='0';
-        if(pdfCard) pdfCard.style.opacity='0';
-        return;
-      }
-      addrEl.textContent=d.address;
-      priceEl.textContent='$'+Number(d.price).toLocaleString();
-      downEl.textContent=d.down_pct+'%';
-      closeEl.textContent=d.close_date;
-      document.getElementById('res-pdf').href=d.pdf_url;
-      if(pdfArrow) pdfArrow.style.opacity='1';
-      if(pdfCard) pdfCard.style.opacity='1';
-      result.classList.add('show');
-    })
-    .catch(function(){loading.style.display='none';errEl.textContent='Something went wrong. Try again.';errEl.style.display='block';});
-  });
-})();
-
-// Illustrative example above: types out the sample SMS once on page
-// load, then reveals Address/Price/Down/Closing one at a time, then
-// the PDF card -- purely decorative, plays exactly once and then sits
-// on the finished state. Independent of the real /api/demo form above;
-// a real submission stops it for good so it can never clobber a real
-// result the visitor is looking at.
-(function(){
-  var typedEl = document.getElementById('sms-typed'),
-      cursorEl = document.getElementById('sms-cursor'),
-      addrEl = document.getElementById('res-addr'),
-      priceEl = document.getElementById('res-price'),
-      downEl = document.getElementById('res-down'),
-      closeEl = document.getElementById('res-close'),
-      pdfArrow = document.getElementById('pdf-flow-arrow'),
-      pdfCard = document.getElementById('res-pdf'),
-      demoForm = document.getElementById('live-demo-form');
-  if(!typedEl || !addrEl) return;
-
-  var SCRIPT_TEXT = '725k 3% 21day 123 Main St';
-  var VALUES = {addr:'123 Main St', price:'$725,000', down:'3%', close:'21 days'};
-  var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  var stopped = false, timers = [];
-
-  function clearTimers(){ timers.forEach(function(t){clearTimeout(t);}); timers = []; }
-  function after(ms, fn){ timers.push(setTimeout(fn, ms)); }
-  function fade(el, show){
-    if(!el) return;
-    el.style.opacity = show ? '1' : '0';
-    el.style.transform = show ? 'translateY(0) scale(1)' : 'translateY(8px) scale(0.96)';
-  }
-
-  function typeText(el, text, cb){
-    var i = 0;
-    el.textContent = '';
-    (function step(){
-      if(stopped) return;
-      el.textContent = text.slice(0, i);
-      i++;
-      if(i <= text.length){ after(45, step); } else if(cb){ after(200, cb); }
-    })();
-  }
-
-  function playCycle(){
-    if(stopped || reduceMotion) return;
-    fade(addrEl,false); fade(priceEl,false); fade(downEl,false); fade(closeEl,false);
-    fade(pdfArrow,false); fade(pdfCard,false);
-    addrEl.textContent=''; priceEl.textContent=''; downEl.textContent=''; closeEl.textContent='';
-    cursorEl.classList.add('blink');
-    typeText(typedEl, SCRIPT_TEXT, function(){
-      cursorEl.classList.remove('blink');
-      after(300, function(){
-        addrEl.textContent = VALUES.addr; fade(addrEl, true);
-        after(280, function(){
-          priceEl.textContent = VALUES.price; fade(priceEl, true);
-          after(280, function(){
-            downEl.textContent = VALUES.down; fade(downEl, true);
-            after(280, function(){
-              closeEl.textContent = VALUES.close; fade(closeEl, true);
-              after(450, function(){
-                fade(pdfArrow, true);
-                after(200, function(){
-                  fade(pdfCard, true);
-                });
-              });
-            });
-          });
-        });
-      });
-    });
-  }
-
-  if(!reduceMotion){ after(700, playCycle); }
-
-  if(demoForm){
-    demoForm.addEventListener('submit', function(){
-      stopped = true;
-      clearTimers();
-      cursorEl.classList.remove('blink');
-      [addrEl,priceEl,downEl,closeEl,pdfArrow,pdfCard].forEach(function(el){ if(el) el.style.opacity=''; });
-    });
-  }
-})();
-</script>
 <script>
 (function(){
   var dropZone = document.getElementById('homeDropZone'),
