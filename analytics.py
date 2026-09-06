@@ -262,7 +262,7 @@ TC_ISSUE_LABELS = {
     "addendum_checkbox_mismatch": "Third Party Financing checkbox disagrees with addendum",
 }
 
-def get_tc_check_summary(days: int = 30) -> dict:
+def get_tc_check_summary(days: int = 30, sender_emails: set = None) -> dict:
     """Usage + funnel summary for the TC file-check tool (/v1/tc/check).
     Separate from the rest of this module's metrics -- that endpoint
     tracks 'tc_check' / 'tc_check_gated' / 'tc_check_email_captured'
@@ -274,7 +274,15 @@ def get_tc_check_summary(days: int = 30) -> dict:
     the derived checks: Effective Date, initials, addendum consistency)
     carries a stable 'key' precisely so it can be tallied here instead of
     parsed back out of free-text messages. Percentages are of *recognized*
-    uploads, since an unrecognized file can't fire any real check."""
+    uploads, since an unrecognized file can't fire any real check.
+
+    sender_emails: when given (a lowercase-normalized set), restricts the
+    whole summary to email-forward events from just those senders -- this
+    is what lets /broker/dashboard show a roster-specific read instead of
+    the sitewide one. Only the email channel carries a sender at all (see
+    get_recent_tc_check_email_senders), so passing this drops the web
+    channel and the gate/email-capture funnel numbers entirely, since
+    those happen on the anonymous web tool and have no roster meaning."""
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cutoff = (datetime.utcnow() - timedelta(days=days)).isoformat()
@@ -284,26 +292,36 @@ def get_tc_check_summary(days: int = 30) -> dict:
     """, (cutoff,))
     rows = cursor.fetchall()
 
-    cursor.execute("""
-        SELECT COUNT(*) FROM events
-        WHERE event_type = 'tc_check_gated' AND created_at > ?
-    """, (cutoff,))
-    gated = cursor.fetchone()[0]
+    if sender_emails is not None:
+        gated = 0
+        emails_captured = 0
+    else:
+        cursor.execute("""
+            SELECT COUNT(*) FROM events
+            WHERE event_type = 'tc_check_gated' AND created_at > ?
+        """, (cutoff,))
+        gated = cursor.fetchone()[0]
 
-    cursor.execute("""
-        SELECT COUNT(*) FROM events
-        WHERE event_type = 'tc_check_email_captured' AND created_at > ?
-    """, (cutoff,))
-    emails_captured = cursor.fetchone()[0]
+        cursor.execute("""
+            SELECT COUNT(*) FROM events
+            WHERE event_type = 'tc_check_email_captured' AND created_at > ?
+        """, (cutoff,))
+        emails_captured = cursor.fetchone()[0]
     conn.close()
 
     import json
-    total = len(rows)
     recognized = complete = 0
     web_count = email_count = email_known_sender = 0
     issue_counts = {}
+    total = 0
     for row in rows:
         metadata = json.loads(row[0]) if row[0] else {}
+        if sender_emails is not None:
+            if metadata.get("source") != "email":
+                continue
+            if (metadata.get("sender") or "").strip().lower() not in sender_emails:
+                continue
+        total += 1
         if metadata.get("recognized"):
             recognized += 1
         if metadata.get("complete"):

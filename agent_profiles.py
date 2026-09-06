@@ -118,6 +118,25 @@ def find_by_email(email: str):
     }
 
 
+def get_emails_for_phones(phones: list) -> set:
+    """Reverse of find_by_email, batched: given a brokerage's roster
+    (phones), return the set of lowercase emails those agents have on
+    file. This is the join that lets /broker/dashboard scope TC File
+    Check's email-forward data to one roster -- a phone only shows up in
+    that view if the agent also saved their email in their profile."""
+    phones = [p for p in phones if p]
+    if not phones:
+        return set()
+    conn = sqlite3.connect(DB_PATH)
+    placeholders = ",".join("?" * len(phones))
+    rows = conn.execute(
+        f"SELECT email FROM agent_profiles WHERE source_id IN ({placeholders}) AND email != ''",
+        phones,
+    ).fetchall()
+    conn.close()
+    return {r[0].strip().lower() for r in rows if r[0]}
+
+
 def save_agent_profile(source_id: str, profile: dict):
     conn = sqlite3.connect(DB_PATH)
     conn.execute("""

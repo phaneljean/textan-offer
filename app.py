@@ -30,7 +30,7 @@ from parser import parse_offer_sms, parse_amendment_sms, parse_correction_sms
 from pdf_filler import fill_offer_pdf, OUTPUT_DIR
 from pdf_validator import validate_offer_pdf
 from amendment import fill_amendment_pdf
-from agent_profiles import get_agent_profile, save_agent_profile, find_by_email
+from agent_profiles import get_agent_profile, save_agent_profile, find_by_email, get_emails_for_phones
 from subscriptions import can_generate_offer, increment_offer_count, activate_subscription, deactivate_subscription, get_user, create_user, FREE_OFFER_LIMIT, is_admin_phone, has_professional_access
 from analytics import track_event, get_conversion_metrics, get_revenue_metrics, get_recent_sms, get_recent_sms_failures, get_last_blocked_state, get_waitlist_signups, get_signups_by_source, get_landing_visits_by_source, get_tc_check_summary, get_recent_tc_check_email_senders
 from integrations import send_offer_email, fire_webhook, save_webhook, get_webhook, delete_webhook, send_to_docusign, send_plain_email, send_html_email
@@ -4734,7 +4734,9 @@ def broker_dashboard(join_code):
         abort(404)
 
     agents = list_brokerage_agents(brokerage["id"])
-    tc_summary = get_tc_check_summary(days=30)
+    roster_emails = get_emails_for_phones([a["phone"] for a in agents])
+    roster_scoped = bool(roster_emails)
+    tc_summary = get_tc_check_summary(days=30, sender_emails=roster_emails) if roster_scoped else get_tc_check_summary(days=30)
 
     agent_rows = "".join(
         f"<tr><td style='padding:8px;'>{a['phone']}</td>"
@@ -4746,6 +4748,14 @@ def broker_dashboard(join_code):
         agent_rows += f"<code>{brokerage['join_code']} [offer]</code> as their first message, or entering the code at signup.</td></tr>"
 
     total_offers = sum(a["offer_count"] for a in agents)
+    tc_scope_note = (
+        "Scoped to files forwarded to tc@check.txtanoffer.com by an agent on your roster."
+        if roster_scoped else
+        "Not yet scoped to your roster specifically &mdash; no agent on your roster has an "
+        "email on file yet, so this is every file checked on TxtAnOffer, shown as context "
+        "for what the tool catches. Have an agent save their email in their profile, then "
+        "forward a file to <a href=\"/tc-check\">the free checker</a> for a roster-specific read."
+    )
     issue_rows = "".join(
         f"<tr><td style='padding:8px;'>{i['label']}</td><td style='padding:8px;'>{i['count']}</td>"
         f"<td style='padding:8px;'>{i['pct_of_recognized']}%</td></tr>"
@@ -4779,7 +4789,7 @@ def broker_dashboard(join_code):
 <div class="stat-row">
   <div class="stat"><div class="stat-num">{len(agents)}</div><div class="stat-label">Agents linked</div></div>
   <div class="stat"><div class="stat-num">{total_offers}</div><div class="stat-label">Offers drafted</div></div>
-  <div class="stat"><div class="stat-num">{tc_summary['completion_rate']}%</div><div class="stat-label">Sitewide file-complete rate (last 30d)</div></div>
+  <div class="stat"><div class="stat-num">{tc_summary['completion_rate']}%</div><div class="stat-label">{"Your roster's" if roster_scoped else "Sitewide"} file-complete rate (last 30d)</div></div>
 </div>
 
 <div class="card">
@@ -4791,11 +4801,9 @@ def broker_dashboard(join_code):
 </div>
 
 <div class="card">
-  <h2>What TC File Check catches most (sitewide, last 30 days)</h2>
+  <h2>What TC File Check catches most {"for your roster" if roster_scoped else "(sitewide)"} (last 30 days)</h2>
   <p style="color:#5a6b7a;font-size:0.85rem;margin-top:-6px;margin-bottom:14px;">
-    Not yet scoped to your roster specifically &mdash; this is every file checked on TxtAnOffer,
-    shown as context for what the tool catches. Have any TC on your team run a file through
-    <a href="/tc-check">the free checker</a> directly for a roster-specific read today.
+    {tc_scope_note}
   </p>
   <table>
     <tr><th>Issue</th><th>Count</th><th>% of recognized files</th></tr>
