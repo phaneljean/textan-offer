@@ -863,6 +863,23 @@ def index():
       <a href="/pricing#brokerage" class="input-btn" style="display:inline-block;text-decoration:none;">See Brokerage pricing &rarr;</a>
     </div>
   </section>
+
+  <section class="steps" id="title" style="border-top:none;padding-top:1rem;padding-bottom:2.5rem;">
+    <div class="steps-header" style="margin-bottom:1.5rem;">
+      <div class="steps-kicker">For title companies</div>
+      <h2>Catch it before it reaches your escrow team.</h2>
+      <p>Every broken TREC 20-19 that lands on an escrow officer's desk costs 45&ndash;90 minutes in curative emails back to the agent &mdash; before the file can even close.</p>
+    </div>
+    <ul class="tc-checklist">
+      <li><span class="tc-check">&check;</span><span><strong>Missing signatures &amp; initials</strong> &mdash; a routine reason a file bounces back to the agent.</span></li>
+      <li><span class="tc-check">&check;</span><span><strong>Blank required fields</strong> &mdash; Effective Date, earnest money, escrow agent, and more.</span></li>
+      <li><span class="tc-check">&check;</span><span><strong>Addendum mismatches</strong> &mdash; loan amount or financing terms disagreeing with the contract.</span></li>
+    </ul>
+    <div class="secondary-cta" style="margin:1.75rem auto 0;padding-top:1.75rem;max-width:560px;text-align:center;">
+      <div class="secondary-cta-label">We'll audit your last 20 kicked-back files free, no obligation &mdash; see exactly what we'd have caught.</div>
+      <a href="mailto:support@txtanoffer.com?subject=Title%20company%20pilot" class="input-btn" style="display:inline-block;text-decoration:none;">Talk to us &rarr;</a>
+    </div>
+  </section>
   </div>
 
   <section class="steps" id="how">
