@@ -534,6 +534,9 @@ def index():
       box-shadow: 0 2px 8px rgba(15,31,47,0.10), 0 12px 40px rgba(15,31,47,0.14);
       overflow: hidden;
     }
+    .mock-result-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; row-gap: 0.4rem; margin: 0.9rem 0 0.85rem; }
+    .mock-filename { font-weight: 700; font-size: 0.85rem; color: var(--text); }
+    .mock-badge { background: rgba(220,38,38,0.12); color: #dc2626; font-size: 0.68rem; font-weight: 700; padding: 0.25rem 0.6rem; border-radius: 9999px; white-space: nowrap; }
     .dark-card-inner {
       position: relative;
       border-radius: 1.75rem;
@@ -711,11 +714,9 @@ def index():
       body {
         background:
           radial-gradient(ellipse 90% 260px at 50% -60px, rgba(15,31,47,0.05) 0%, transparent 55%),
-          radial-gradient(ellipse 70% 180px at 85% 60px, rgba(16,185,129,0.05) 0%, transparent 50%),
           var(--bg);
       }
       body::before { width: 200px; height: 200px; top: -60px; right: -50px; filter: blur(50px); }
-      body::after { width: 150px; height: 150px; top: 140px; left: -50px; filter: blur(45px); }
       .main { padding: 0 1.25rem; }
       .hero h1 { font-size: 2.25rem; }
       .steps-grid { grid-template-columns: 1fr; }
@@ -736,6 +737,8 @@ def index():
       .input-row { flex-direction: column; }
       .input-btn { width: 100%; }
       .nav { padding: 1rem; }
+      .mock-filename { font-size: 0.78rem; }
+      .mock-badge { font-size: 0.62rem; padding: 0.2rem 0.5rem; }
     }
   </style>
 </head>
@@ -819,9 +822,9 @@ def index():
             <div class="chrome-dot"></div><div class="chrome-dot"></div><div class="chrome-dot"></div>
             <span class="chrome-title">TC File Check &mdash; Results</span>
           </div>
-          <div style="display:flex;align-items:center;justify-content:space-between;margin:0.9rem 0 0.85rem;">
-            <span style="font-weight:700;font-size:0.85rem;color:var(--text);">123MainSt_TREC2019.pdf</span>
-            <span style="background:rgba(220,38,38,0.12);color:#dc2626;font-size:0.68rem;font-weight:700;padding:0.25rem 0.6rem;border-radius:9999px;white-space:nowrap;">3 issues found</span>
+          <div class="mock-result-header">
+            <span class="mock-filename">123MainSt_TREC2019.pdf</span>
+            <span class="mock-badge">3 issues found</span>
           </div>
           <div style="display:flex;flex-direction:column;gap:0.6rem;">
             <div style="display:flex;align-items:center;gap:0.6rem;">
