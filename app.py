@@ -3821,7 +3821,7 @@ def pricing():
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pricing — TxtAnOffer</title>
-<meta name="description" content="TC File Check is free for Texas transaction coordinators and agents -- forward a TREC 20-19 and get back what's missing. Brokerages that want every agent's file checked automatically get the Brokerage plan at $399/month.">
+<meta name="description" content="TC File Check is free for Texas transaction coordinators and agents -- forward a TREC 20-19 and get back what's missing. Brokerages that want every agent's file checked automatically get the Brokerage plan at $199/month.">
 <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -4023,7 +4023,7 @@ def pricing():
     <h2 class="plan-name">Brokerage</h2>
     <p class="plan-desc">The compliance dashboard managing brokers and TCs actually pay for &mdash; SMS drafting comes free for your whole roster.</p>
     <div class="price-row">
-      <span class="price-current">$399</span>
+      <span class="price-current">$199</span>
       <span class="price-period">/month</span>
     </div>
     <ul class="features">
