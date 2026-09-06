@@ -45,7 +45,7 @@ from drafts import save_draft, get_draft, clear_draft
 from tc_audit import check_tc_file, compare_contracts
 from rate_limit import check_and_increment
 from tc_gate import get_client as get_tc_client, record_use as record_tc_use, save_email as save_tc_email
-from tc_nudge import send_immediate_nudge as send_tc_nudge, run_followup_if_due as run_tc_followup_if_due
+from tc_nudge import run_followup_if_due as run_tc_followup_if_due
 from tc_check_email import (
     extract_sender_email, extract_pdf_attachments,
     format_reply_body, format_reply_html, subject_line,
@@ -54,6 +54,7 @@ from tc_check_email import (
 )
 from werkzeug.middleware.proxy_fix import ProxyFix
 import tempfile
+import threading
 import uuid
 
 app = Flask(__name__)
@@ -487,6 +488,13 @@ def index():
     .email-forward-note { display: flex; align-items: center; gap: 0.6rem; font-size: 0.82rem; color: var(--text-muted); background: var(--accent-tint); border-radius: var(--radius-sm); padding: 0.8rem 1rem; }
     .email-forward-note svg { flex-shrink: 0; color: var(--text-dim); }
     .email-forward-note a { color: var(--accent); font-weight: 700; text-decoration: underline; text-underline-offset: 2px; }
+    .email-optin { margin-top: 0.85rem; display: flex; flex-direction: column; gap: 0.5rem; }
+    .email-optin-check { display: flex; align-items: center; gap: 0.5rem; font-size: 0.82rem; color: var(--text-muted); cursor: pointer; }
+    .email-optin-check input { width: auto; }
+    .email-optin-input { padding: 0.6rem 0.85rem; border: 1px solid rgba(15,31,47,0.16); border-radius: var(--radius-sm); font-family: inherit; font-size: 0.85rem; background: #fff; color: var(--text); }
+    .email-optin-input:focus { outline: none; border-color: var(--accent); }
+    .email-optin-confirm { font-size: 0.78rem; color: #047857; display: none; }
+    .email-optin-confirm.show { display: block; }
     input[type=file] { display: none; }
     .status { margin-top: 1rem; font-size: 0.85rem; color: var(--text-muted); display: none; }
     .status.show { display: block; }
@@ -808,6 +816,11 @@ def index():
         <div class="dz-sub">We'll tell you what's missing before title kicks it back.</div>
       </div>
       <input type="file" id="homeFileInput" accept="application/pdf">
+      <div class="email-optin">
+        <label class="email-optin-check"><input type="checkbox" id="homeEmailOptinCheckbox" checked> Email me this report + future checks for this address</label>
+        <input type="email" id="homeEmailOptinInput" class="email-optin-input" placeholder="you@brokerage.com" autocomplete="email">
+        <div class="email-optin-confirm" id="homeEmailOptinConfirm"></div>
+      </div>
       <div class="or-divider">or</div>
       <div class="email-forward-note"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 6 10-6"/></svg>Already have it in your inbox? Forward it to <a href="mailto:tc@check.txtanoffer.com">tc@check.txtanoffer.com</a></div>
       <div class="privacy-note"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Processed instantly and never stored &mdash; discarded the moment your results are ready.</div>
@@ -948,8 +961,20 @@ def index():
   var dropZone = document.getElementById('homeDropZone'),
       fileInput = document.getElementById('homeFileInput'),
       statusEl = document.getElementById('homeStatus'),
-      resultEl = document.getElementById('homeResult');
+      resultEl = document.getElementById('homeResult'),
+      emailOptinCheckbox = document.getElementById('homeEmailOptinCheckbox'),
+      emailOptinInput = document.getElementById('homeEmailOptinInput'),
+      emailOptinConfirm = document.getElementById('homeEmailOptinConfirm');
   if(!dropZone) return;
+
+  try{ var savedEmail = localStorage.getItem('tc_email_hint'); if(savedEmail) emailOptinInput.value = savedEmail; }catch(e){}
+
+  function optinEmail(){
+    var v = emailOptinInput.value.trim();
+    if(!emailOptinCheckbox.checked || !v) return '';
+    try{ localStorage.setItem('tc_email_hint', v); }catch(e){}
+    return v;
+  }
 
   dropZone.addEventListener('click', function(){ fileInput.click(); });
   dropZone.addEventListener('dragover', function(e){ e.preventDefault(); dropZone.classList.add('drag'); });
@@ -970,6 +995,7 @@ def index():
 
   function uploadFile(file){
     resultEl.classList.remove('show');
+    emailOptinConfirm.classList.remove('show');
     statusTimers.forEach(clearTimeout);
     statusTimers = STATUS_STEPS.map(function(label, i){
       return setTimeout(function(){ statusEl.textContent = label; }, i * 450);
@@ -977,8 +1003,10 @@ def index():
     statusEl.textContent = STATUS_STEPS[0];
     statusEl.classList.add('show');
 
+    var email = optinEmail();
     var formData = new FormData();
     formData.append('file', file);
+    if(email) formData.append('email', email);
 
     fetch('/v1/tc/check', { method: 'POST', body: formData })
       .then(function(r){ return r.json(); })
@@ -986,8 +1014,11 @@ def index():
         statusTimers.forEach(clearTimeout);
         statusEl.classList.remove('show');
         if(data.error){ renderError(data.error); return; }
-        if(data.email_required){ renderEmailPrompt(data); return; }
         renderResult(data);
+        if(email){
+          emailOptinConfirm.textContent = 'Sent to ' + email;
+          emailOptinConfirm.classList.add('show');
+        }
       })
       .catch(function(){
         statusTimers.forEach(clearTimeout);
@@ -998,16 +1029,6 @@ def index():
 
   function renderError(msg){
     resultEl.innerHTML = '<div class="result-banner incomplete">' + escapeHtml(msg) + '</div>';
-    resultEl.classList.add('show');
-  }
-
-  // Homepage widget keeps the email-capture gate simple: rather than
-  // duplicating the email form here, show the real issue count (that's
-  // the hook) and send them to /tc-check to unlock the itemized list.
-  function renderEmailPrompt(data){
-    var html = '<div class="result-banner incomplete">' + data.issue_count + ' issue' + (data.issue_count === 1 ? '' : 's') + ' found</div>';
-    html += '<div class="result-more"><a href="/tc-check">Enter your email on TC File Check to see the full itemized report &rarr;</a></div>';
-    resultEl.innerHTML = html;
     resultEl.classList.add('show');
   }
 
@@ -2594,21 +2615,20 @@ def tc_check():
     endpoint) -- see tc_audit.py for exactly what is and isn't checked."""
     # Per-IP throttle: this endpoint shares a Railway service (and worker
     # processes) with the paying SMS product, so an unauthenticated flood
-    # here could degrade that too, not just this free tool. This applies
-    # regardless of the free-use/email gate below -- it's abuse protection,
-    # not a product limit.
+    # here could degrade that too, not just this free tool. Abuse
+    # protection, not a product limit -- the check itself is always free.
     client_ip = request.remote_addr or "unknown"
     if not check_and_increment(f"tc_check:{client_ip}", limit=20):
         return jsonify({"error": "Too many requests. Try again in a bit."}), 429
 
     run_tc_followup_if_due()
 
-    # Product gate: the tool itself (running a check) is never limited --
-    # only the ITEMIZED report is. Every upload gets a real summary ("4
-    # issues found"); the actual per-field checklist requires an email,
-    # every time, until one is on file for this browser (tracked by an
-    # httponly client-id cookie, not IP -- shared offices/NAT would
-    # otherwise share one visitor's state). See tc_gate.py.
+    # No product gate: every upload gets the full itemized report, always.
+    # Email is a non-blocking opt-in ("email me this report + future checks
+    # for this address") -- tracked per-browser via an httponly client-id
+    # cookie (not IP, since shared offices/NAT would otherwise share one
+    # visitor's state) so a returning visitor is identifiable even on a
+    # check where they leave the box unchecked. See tc_gate.py.
     cid = request.cookies.get("tc_cid") or str(uuid.uuid4())
     client = get_tc_client(cid)
     submitted_email = (request.form.get("email") or "").strip()
@@ -2646,12 +2666,12 @@ def tc_check():
 
     record_tc_use(cid)
 
-    # Resolve identity before tracking the main event, not after -- the
-    # gate's email (once captured, this request or a prior one for this
-    # cid) is the only thing that can ever tie a web upload to a specific
-    # agent/roster, the same way 'sender' does on the email-forward path.
-    # Doing this first means even the very-first-ever check for a cid
-    # carries the email if the uploader supplied one on this same request.
+    # No product gate: the itemized report is the whole point of running a
+    # check, so it's never withheld. Email is a non-blocking opt-in ("email
+    # me this report + future checks for this address") shown alongside the
+    # upload widget, default-checked -- not a condition of seeing results.
+    # Still worth persisting per-cid (same as before) so a returning visitor
+    # is identifiable even on a check where they leave the box unchecked.
     email_just_captured = False
     if not client["email"] and submitted_email and "@" in submitted_email:
         save_tc_email(cid, submitted_email)
@@ -2671,32 +2691,26 @@ def tc_check():
         "sender": (client["email"] or "").strip().lower(),
     })
 
-    # Nothing to gate on a clean file or an unrecognized upload -- the
-    # itemized list IS the product's value, so only withhold it when
-    # there's actually something in it.
-    has_itemized_content = result["recognized"] and not result["complete"]
+    resp = jsonify(result)
 
-    if has_itemized_content and not client["email"]:
-        blockers = sum(1 for i in result["issues"] if i["severity"] == "blocker")
-        warnings = sum(1 for i in result["issues"] if i["severity"] == "warning")
-        track_event("tc_check_gated", metadata={"issue_count": len(result["issues"])})
-        resp = jsonify({
-            "recognized": result["recognized"],
-            "complete": result["complete"],
-            "page_count": result["page_count"],
-            "has_addendum": result["has_addendum"],
-            "has_amendment": result["has_amendment"],
-            "looks_like_blank_draft": result["looks_like_blank_draft"],
-            "issue_count": len(result["issues"]),
-            "blocker_count": blockers,
-            "warning_count": warnings,
-            "severity": result["severity"],
-            "email_required": True,
-        })
-    else:
-        if email_just_captured:
-            send_tc_nudge(submitted_email, result)
-        resp = jsonify(result)
+    # Fire the opt-in report email on every submission that carries a valid
+    # email, not just the first-ever capture -- a returning visitor with the
+    # box still checked expects a copy of *this* report too, and repeat
+    # sends to the same address are exactly the signal the free-for-now
+    # experiment is trying to observe. Reuses the same channel-agnostic
+    # formatters as the email-forward path so a web-upload report and a
+    # forwarded-file report read identically.
+    if submitted_email and "@" in submitted_email:
+        check_count = get_tc_check_count_for_sender(submitted_email)
+
+        def _send_report(to_email=submitted_email, res=result, count=check_count):
+            try:
+                send_html_email(to_email, subject_line(res), format_reply_body(res, count), format_reply_html(res, count))
+            except Exception as e:
+                print(f"[tc_check] report email failed for {to_email}: {e}")
+
+        threading.Thread(target=_send_report, daemon=True).start()
+
     resp.set_cookie("tc_cid", cid, max_age=365 * 24 * 3600, httponly=True, samesite="Lax")
     return resp
 
@@ -2911,12 +2925,13 @@ border-radius:var(--radius-sm);font-family:inherit;font-size:0.85rem;font-weight
 .scope-footnote{font-size:0.78rem;color:var(--text-dim);line-height:1.6;border-top:1px solid var(--border);padding-top:0.85rem;}
 @media(max-width:600px){.scope-grid{grid-template-columns:1fr;}}
 .checks-remaining{font-size:0.78rem;color:var(--text-dim);margin:-0.5rem 0 1rem;}
-.email-gate-msg{font-size:0.95rem;font-weight:600;margin-bottom:1rem;}
-.email-gate-form{display:flex;gap:0.6rem;flex-wrap:wrap;}
-.email-gate-form input{flex:1;min-width:180px;padding:0.7rem 1rem;border:1px solid rgba(15,31,47,0.16);
-border-radius:var(--radius-sm);font-family:inherit;font-size:0.9rem;background:#fff;color:var(--text);}
-.email-gate-form input:focus{outline:none;border-color:var(--accent);}
-.email-gate-fine{font-size:0.78rem;color:var(--text-dim);margin-top:0.75rem;}
+.email-optin{margin-top:1rem;display:flex;flex-direction:column;gap:0.5rem;}
+.email-optin-check{display:flex;align-items:center;gap:0.5rem;font-size:0.85rem;color:var(--text-muted);cursor:pointer;}
+.email-optin-check input{width:auto;}
+.email-optin-input{padding:0.65rem 0.9rem;border:1px solid rgba(15,31,47,0.16);border-radius:var(--radius-sm);font-family:inherit;font-size:0.85rem;background:#fff;color:var(--text);}
+.email-optin-input:focus{outline:none;border-color:var(--accent);}
+.email-optin-confirm{font-size:0.78rem;color:#047857;display:none;}
+.email-optin-confirm.show{display:block;}
 .addendum-toggle{margin-top:0.85rem;font-size:0.82rem;color:var(--text-muted);cursor:pointer;text-decoration:underline;text-underline-offset:2px;width:fit-content;}
 .addendum-toggle:hover{color:var(--text);}
 .addendum-row{margin-top:0.6rem;display:flex;align-items:center;gap:0.6rem;font-size:0.85rem;}
@@ -2948,6 +2963,11 @@ border-radius:var(--radius-sm);font-family:inherit;font-size:0.9rem;background:#
 <input type="file" id="addendumInput" accept="application/pdf">
 <span class="addendum-filename" id="addendumFileName"></span>
 <button type="button" class="addendum-clear" id="addendumClear" title="Remove">&times;</button>
+</div>
+<div class="email-optin">
+<label class="email-optin-check"><input type="checkbox" id="emailOptinCheckbox" checked> Email me this report + future checks for this address</label>
+<input type="email" id="emailOptinInput" class="email-optin-input" placeholder="you@brokerage.com" autocomplete="email">
+<div class="email-optin-confirm" id="emailOptinConfirm"></div>
 </div>
 <div class="or-divider">or</div>
 <div class="email-forward-note"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 6 10-6"/></svg>Already have it in your inbox? Forward it to <a href="mailto:tc@check.txtanoffer.com">tc@check.txtanoffer.com</a></div>
@@ -2986,6 +3006,18 @@ const addendumRow = document.getElementById('addendumRow');
 const addendumInput = document.getElementById('addendumInput');
 const addendumFileName = document.getElementById('addendumFileName');
 const addendumClear = document.getElementById('addendumClear');
+const emailOptinCheckbox = document.getElementById('emailOptinCheckbox');
+const emailOptinInput = document.getElementById('emailOptinInput');
+const emailOptinConfirm = document.getElementById('emailOptinConfirm');
+
+try { const savedEmail = localStorage.getItem('tc_email_hint'); if (savedEmail) emailOptinInput.value = savedEmail; } catch (e) {}
+
+function optinEmail() {
+  const v = emailOptinInput.value.trim();
+  if (!emailOptinCheckbox.checked || !v) return '';
+  try { localStorage.setItem('tc_email_hint', v); } catch (e) {}
+  return v;
+}
 
 dropZone.addEventListener('click', () => fileInput.click());
 dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag'); });
@@ -2993,10 +3025,10 @@ dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag'));
 dropZone.addEventListener('drop', e => {
   e.preventDefault();
   dropZone.classList.remove('drag');
-  if (e.dataTransfer.files.length) uploadFile(e.dataTransfer.files[0]);
+  if (e.dataTransfer.files.length) uploadFile(e.dataTransfer.files[0], optinEmail());
 });
 fileInput.addEventListener('change', () => {
-  if (fileInput.files.length) uploadFile(fileInput.files[0]);
+  if (fileInput.files.length) uploadFile(fileInput.files[0], optinEmail());
 });
 
 addendumToggle.addEventListener('click', () => {
@@ -3030,6 +3062,7 @@ let pendingAddendumFile = null;
 function uploadFile(file, email) {
   pendingFile = file;
   resultEl.classList.remove('show');
+  emailOptinConfirm.classList.remove('show');
   statusTimers.forEach(clearTimeout);
   statusTimers = STATUS_STEPS.map((label, i) =>
     setTimeout(() => { statusEl.textContent = label; }, i * 450)
@@ -3051,11 +3084,11 @@ function uploadFile(file, email) {
         renderError(data.error);
         return;
       }
-      if (data.email_required) {
-        renderGatedSummary(data, file);
-        return;
-      }
       renderResult(data, file);
+      if (email) {
+        emailOptinConfirm.textContent = 'Sent to ' + email;
+        emailOptinConfirm.classList.add('show');
+      }
     })
     .catch(() => {
       statusTimers.forEach(clearTimeout);
@@ -3073,30 +3106,6 @@ function buildMetaBar(data, file) {
   if (data.has_addendum) html += '<span>40-11 addendum attached' + (pendingAddendumFile ? ' (' + escapeHtml(pendingAddendumFile.name) + ')' : '') + '</span>';
   html += '</div>';
   return html;
-}
-
-function renderGatedSummary(data, file) {
-  let html = buildMetaBar(data, file);
-  html += '<div class="result-banner incomplete">' + data.issue_count + ' issue' + (data.issue_count === 1 ? '' : 's') + ' found';
-  if (data.blocker_count) html += ' &mdash; ' + data.blocker_count + ' would get this file kicked back by title';
-  html += '</div>';
-  if (data.looks_like_blank_draft) {
-    html += '<div class="fixit-cta"><p>This looks like an essentially blank draft &mdash; more gaps than a quick fix. It may be faster to generate a clean one from scratch.</p><a href="/demo">Generate a clean offer &rarr;</a></div>';
-  }
-  html += '<p class="email-gate-msg">Enter your email to see exactly which fields and sections &mdash; the full itemized checklist.</p>';
-  html += '<form id="emailGateForm" class="email-gate-form">' +
-    '<input type="email" id="emailGateInput" placeholder="you@brokerage.com" required>' +
-    '<button type="submit" class="copy-btn">See full report</button>' +
-    '</form>' +
-    '<p class="email-gate-fine">No spam &mdash; just occasional product updates.</p>';
-  resultEl.innerHTML = html;
-  resultEl.classList.add('show');
-  document.getElementById('emailGateForm').addEventListener('submit', e => {
-    e.preventDefault();
-    const email = document.getElementById('emailGateInput').value.trim();
-    if (!email || !pendingFile) return;
-    uploadFile(pendingFile, email);
-  });
 }
 
 function formatBytes(n) {
