@@ -275,7 +275,7 @@ def index():
       position: relative;
       overflow-x: hidden;
     }
-    /* Ambient hero orbs -- attached to body (not .hero) so the glow bleeds to the
+    /* Ambient hero orb -- attached to body (not .hero) so the glow bleeds to the
        real page edges instead of stopping at .main's 840px content width. */
     body::before {
       content: '';
@@ -285,16 +285,6 @@ def index():
       border-radius: 50%;
       filter: blur(80px);
       top: -120px; right: -80px;
-      pointer-events: none; z-index: 0;
-    }
-    body::after {
-      content: '';
-      position: absolute;
-      width: 300px; height: 300px;
-      background: linear-gradient(135deg, rgba(16,185,129,0.14), rgba(16,185,129,0.05));
-      border-radius: 50%;
-      filter: blur(70px);
-      top: 260px; left: -80px;
       pointer-events: none; z-index: 0;
     }
     a { color: inherit; text-decoration: none; }
@@ -533,7 +523,7 @@ def index():
     .stat-num { font-size: 1.4rem; font-weight: 800; color: var(--text); line-height: 1; }
     .stat-label { font-size: 0.72rem; color: var(--text-dim); margin-top: 0.25rem; font-weight: 500; }
 
-    /* Dark card wrap (SMS demo + dashboard preview) -- layered ambient shadow */
+    /* Dark card wrap (dashboard/results preview) -- layered ambient shadow */
     .dark-card-wrap {
       margin-top: 2.75rem;
       position: relative;
@@ -541,10 +531,7 @@ def index():
       background: var(--card-dark);
       padding: 10px;
       border: 1px solid rgba(255,255,255,0.08);
-      box-shadow:
-        0 2px 8px rgba(15,31,47,0.10),
-        0 12px 40px rgba(15,31,47,0.14),
-        0 24px 80px rgba(16,185,129,0.08);
+      box-shadow: 0 2px 8px rgba(15,31,47,0.10), 0 12px 40px rgba(15,31,47,0.14);
       overflow: hidden;
     }
     .dark-card-inner {
@@ -554,21 +541,6 @@ def index():
       padding: 1.5rem;
       overflow: hidden;
     }
-    .dark-card-inner::before {
-      content: '';
-      position: absolute;
-      width: 320px; height: 320px;
-      background: radial-gradient(circle, rgba(16,185,129,0.14) 0%, transparent 70%);
-      top: -100px; left: 50%; transform: translateX(-50%);
-      pointer-events: none; z-index: 0;
-    }
-    /* This card (the static "review screen" mockup) sits alone on a plain
-       background with nothing else to blend into -- the green ambient touch
-       above is only meant for the live SMS/PDF demo card, so suppress it here. */
-    .dark-card-wrap.no-glow {
-      box-shadow: 0 2px 8px rgba(15,31,47,0.10), 0 12px 40px rgba(15,31,47,0.14);
-    }
-    .dark-card-wrap.no-glow .dark-card-inner::before { display: none; }
     .notch {
       position: absolute; top: 0; left: 50%; transform: translateX(-50%);
       width: 88px; height: 20px;
