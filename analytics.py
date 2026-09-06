@@ -265,9 +265,15 @@ TC_ISSUE_LABELS = {
 def get_tc_check_summary(days: int = 30, sender_emails: set = None) -> dict:
     """Usage + funnel summary for the TC file-check tool (/v1/tc/check).
     Separate from the rest of this module's metrics -- that endpoint
-    tracks 'tc_check' / 'tc_check_gated' / 'tc_check_email_captured'
-    events (see app.py's tc_check()) that nothing else here surfaces, so
-    this was invisible on the dashboard until now.
+    tracks 'tc_check' / 'tc_check_email_captured' events (see app.py's
+    tc_check()) that nothing else here surfaces, so this was invisible on
+    the dashboard until now.
+
+    email_capture_rate is emails_captured / web_count -- the site-wide web
+    channel, not a "gated uploads" subset. There's no more gate (removed
+    2026-09-06): every web upload shows the full report regardless of
+    email, so the only honest capture rate now is against every web check,
+    not some filtered slice of them.
 
     issue_frequency answers "what checks fire most" directly from
     production traffic -- each issue in tc_audit.py's CHECKED_FIELDS (plus
@@ -297,15 +303,8 @@ def get_tc_check_summary(days: int = 30, sender_emails: set = None) -> dict:
     rows = cursor.fetchall()
 
     if sender_emails is not None:
-        gated = 0
         emails_captured = 0
     else:
-        cursor.execute("""
-            SELECT COUNT(*) FROM events
-            WHERE event_type = 'tc_check_gated' AND created_at > ?
-        """, (cutoff,))
-        gated = cursor.fetchone()[0]
-
         cursor.execute("""
             SELECT COUNT(*) FROM events
             WHERE event_type = 'tc_check_email_captured' AND created_at > ?
@@ -362,9 +361,8 @@ def get_tc_check_summary(days: int = 30, sender_emails: set = None) -> dict:
         "recognized": recognized,
         "complete": complete,
         "completion_rate": round(complete / recognized * 100, 1) if recognized else 0,
-        "gated": gated,
         "emails_captured": emails_captured,
-        "gate_conversion_rate": round(emails_captured / gated * 100, 1) if gated else 0,
+        "email_capture_rate": round(emails_captured / web_count * 100, 1) if web_count else 0,
         "issue_frequency": issue_frequency,
         "web_count": web_count,
         "email_count": email_count,
@@ -399,6 +397,51 @@ def get_tc_check_count_for_sender(email: str) -> int:
         if (metadata.get("sender") or "").strip().lower() == email:
             count += 1
     return count
+
+
+def get_tc_check_repeat_senders(within_days: int = 14) -> dict:
+    """How many distinct people have come back for a 2nd TC Check within
+    `within_days` of their first one, lifetime (not a rolling 30-day
+    window like get_tc_check_summary) -- this is the literal number the
+    free-vs-paid decision was deliberately parked on: "after we see 10+
+    emails come back for a 2nd check in 14 days, pricing solves a real
+    problem." Before the email-gate removal this was mostly unmeasurable
+    (a web check only ever carried a sender if that browser's email was
+    already captured); now every opted-in web check carries one too, same
+    as the email-forward channel, so this is the first point this number
+    can be trusted."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT metadata, created_at FROM events WHERE event_type = 'tc_check'")
+    rows = cursor.fetchall()
+    conn.close()
+
+    import json
+    from collections import defaultdict
+    by_sender = defaultdict(list)
+    for metadata_json, created_at in rows:
+        metadata = json.loads(metadata_json) if metadata_json else {}
+        if "reason" in metadata:
+            continue  # no_pdf / unreadable -- not an actual file checked
+        sender = (metadata.get("sender") or "").strip().lower()
+        if sender:
+            by_sender[sender].append(created_at)
+
+    returned = []
+    for sender, timestamps in by_sender.items():
+        timestamps.sort()
+        first = datetime.fromisoformat(timestamps[0])
+        for ts in timestamps[1:]:
+            if (datetime.fromisoformat(ts) - first).days <= within_days:
+                returned.append(sender)
+                break
+
+    return {
+        "window_days": within_days,
+        "distinct_senders": len(by_sender),
+        "returned_within_window": len(returned),
+        "senders": sorted(returned),
+    }
 
 
 def get_recent_tc_check_email_senders(limit: int = 20) -> list:

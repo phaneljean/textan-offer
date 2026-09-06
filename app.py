@@ -32,7 +32,7 @@ from pdf_validator import validate_offer_pdf
 from amendment import fill_amendment_pdf
 from agent_profiles import get_agent_profile, save_agent_profile, find_by_email, get_emails_for_phones
 from subscriptions import can_generate_offer, increment_offer_count, activate_subscription, deactivate_subscription, get_user, create_user, FREE_OFFER_LIMIT, is_admin_phone, has_professional_access
-from analytics import track_event, get_conversion_metrics, get_revenue_metrics, get_recent_sms, get_recent_sms_failures, get_last_blocked_state, get_waitlist_signups, get_signups_by_source, get_landing_visits_by_source, get_tc_check_summary, get_recent_tc_check_email_senders, get_tc_check_count_for_sender
+from analytics import track_event, get_conversion_metrics, get_revenue_metrics, get_recent_sms, get_recent_sms_failures, get_last_blocked_state, get_waitlist_signups, get_signups_by_source, get_landing_visits_by_source, get_tc_check_summary, get_recent_tc_check_email_senders, get_tc_check_count_for_sender, get_tc_check_repeat_senders
 from integrations import send_offer_email, fire_webhook, save_webhook, get_webhook, delete_webhook, send_to_docusign, send_plain_email, send_html_email
 from offers_db import record_offer, get_offers_for_phone, get_offer_by_filename, record_amendment, get_amendments_for_phone, record_thread_response, record_email_sent
 from brokerages import extract_brokerage_prefix, link_user_to_brokerage, get_brokerage, get_brokerage_by_code, create_brokerage, list_brokerages, list_brokerage_agents
@@ -4134,6 +4134,7 @@ def analytics_dashboard():
     landing_visits_by_source = get_landing_visits_by_source(days=30)
     tc_check_summary = get_tc_check_summary(days=30)
     recent_tc_email_senders = get_recent_tc_check_email_senders(limit=20)
+    tc_repeat_senders = get_tc_check_repeat_senders(within_days=14)
 
     tc_email_sender_rows = ""
     for entry in recent_tc_email_senders:
@@ -4274,9 +4275,15 @@ body{{font-family:system-ui;max-width:800px;margin:40px auto;padding:20px;}}
 </div>
 <div class="metric">
   <h3>TC File Check &rarr; Email Capture</h3>
-  <div class="value">{tc_check_summary['gate_conversion_rate']}%</div>
-  <div class="label">Of web uploads that hit the itemized-report gate, gave an email</div>
-  <p>{tc_check_summary['emails_captured']} emails / {tc_check_summary['gated']} gated uploads</p>
+  <div class="value">{tc_check_summary['email_capture_rate']}%</div>
+  <div class="label">Of web uploads (/tc-check), gave an email via the opt-in checkbox</div>
+  <p>{tc_check_summary['emails_captured']} emails / {tc_check_summary['web_count']} web checks &mdash; no gate anymore, this is every web upload</p>
+</div>
+<div class="metric">
+  <h3>TC File Check &rarr; Repeat Checkers</h3>
+  <div class="value">{tc_repeat_senders['returned_within_window']} / 10</div>
+  <div class="label">Distinct emails that came back for a 2nd check within {tc_repeat_senders['window_days']} days (lifetime, not 30-day)</div>
+  <p>{tc_repeat_senders['distinct_senders']} distinct identified senders total &mdash; goal is 10+ before revisiting pricing</p>
 </div>
 <div class="metric">
   <h3>TC File Check &mdash; Top Issues (30 days)</h3>
