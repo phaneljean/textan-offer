@@ -772,7 +772,7 @@ def index():
       <a href="/faq">FAQ</a>
       <a href="/login">Log In</a>
     </div>
-    <a href="/signup" class="nav-cta">Start Free Trial</a>
+    <a href="/tc-check" class="nav-cta">Try TC Check Free</a>
     <button class="nav-toggle" id="navToggle" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
   </nav>
   <script>
@@ -1048,16 +1048,16 @@ def index():
 </body>
 </html>
 """
-    # Carry ?src=name (e.g. from a Direct Reach email) through the "Start
-    # Free Trial" CTA to /signup, so the eventual signup still attributes
-    # correctly even though the link lands on the homepage first -- see
-    # get_signups_by_source() on /analytics.
+    # Carry ?src=name (e.g. from a Direct Reach email) through the "Try TC
+    # Check Free" CTA to /tc-check, so a click through this exact nav
+    # button still attributes correctly even though it lands on the
+    # homepage first -- see get_landing_visits_by_source() on /analytics.
     import re as _re
     src = _re.sub(r"[^a-zA-Z0-9_-]", "", request.args.get("src", ""))[:60]
     if src:
         html = html.replace(
-            '<a href="/signup" class="nav-cta">Start Free Trial</a>',
-            f'<a href="/signup?src={src}" class="nav-cta">Start Free Trial</a>',
+            '<a href="/tc-check" class="nav-cta">Try TC Check Free</a>',
+            f'<a href="/tc-check?src={src}" class="nav-cta">Try TC Check Free</a>',
             1,
         )
     # Real TC File Check production numbers, not marketing copy -- swapped
@@ -1088,7 +1088,7 @@ def index():
 
     resp = make_response(html)
     # First-touch attribution cookie: the query-param rewrite above only
-    # survives if the visitor clicks "Start Free Trial" in this exact page
+    # survives if the visitor clicks "Try TC Check Free" in this exact page
     # load. Cold-outreach signups routinely happen on a later visit (a
     # different page, a different day) with no ?src on that later click,
     # which silently misattributes real Direct Reach conversions as
@@ -2187,7 +2187,7 @@ DEMO_FORM = """
       <a href="/faq">FAQ</a>
       <a href="/login">Log In</a>
     </div>
-    <a href="/signup" class="nav-cta">Start Free Trial</a>
+    <a href="/tc-check" class="nav-cta">Try TC Check Free</a>
     <button class="nav-toggle" id="navToggle" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
   </nav>
   <script>
@@ -3310,7 +3310,7 @@ padding:0.4rem 0.85rem;font-size:0.8rem;color:var(--text-muted);cursor:pointer;t
 <a href="/faq">FAQ</a>
 <a href="/login">Log In</a>
 </div>
-<a href="/signup" class="nav-cta">Start Free Trial</a>
+<a href="/tc-check" class="nav-cta">Try TC Check Free</a>
 <button class="nav-toggle" id="navToggle" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
 </nav>
 <script>
@@ -3796,7 +3796,7 @@ def pricing():
     <a href="/faq">FAQ</a>
     <a href="/login">Log In</a>
   </div>
-  <a href="/signup" class="nav-cta">Start Free Trial</a>
+  <a href="/tc-check" class="nav-cta">Try TC Check Free</a>
   <button class="nav-toggle" id="navToggle" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
 </nav>
 <script>
@@ -5019,7 +5019,7 @@ def terms():
     <a href="/faq">FAQ</a>
     <a href="/login">Log In</a>
   </div>
-  <a href="/signup" class="nav-cta">Start Free Trial</a>
+  <a href="/tc-check" class="nav-cta">Try TC Check Free</a>
   <button class="nav-toggle" id="navToggle" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
 </nav>
 <script>
@@ -5285,7 +5285,7 @@ def privacy():
     <a href="/faq">FAQ</a>
     <a href="/login">Log In</a>
   </div>
-  <a href="/signup" class="nav-cta">Start Free Trial</a>
+  <a href="/tc-check" class="nav-cta">Try TC Check Free</a>
   <button class="nav-toggle" id="navToggle" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
 </nav>
 <script>
@@ -5501,7 +5501,7 @@ def faq():
     <a href="/faq">FAQ</a>
     <a href="/login">Log In</a>
   </div>
-  <a href="/signup" class="nav-cta">Start Free Trial</a>
+  <a href="/tc-check" class="nav-cta">Try TC Check Free</a>
   <button class="nav-toggle" id="navToggle" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
 </nav>
 <script>
@@ -5714,7 +5714,7 @@ def trec_changes():
     <a href="/faq">FAQ</a>
     <a href="/login">Log In</a>
   </div>
-  <a href="/signup" class="nav-cta">Start Free Trial</a>
+  <a href="/tc-check" class="nav-cta">Try TC Check Free</a>
   <button class="nav-toggle" id="navToggle" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
 </nav>
 <script>
@@ -5902,7 +5902,7 @@ def about():
     <a href="/faq">FAQ</a>
     <a href="/login">Log In</a>
   </div>
-  <a href="/signup" class="nav-cta">Start Free Trial</a>
+  <a href="/tc-check" class="nav-cta">Try TC Check Free</a>
   <button class="nav-toggle" id="navToggle" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
 </nav>
 <script>
@@ -6060,7 +6060,7 @@ def contact():
     <a href="/faq">FAQ</a>
     <a href="/login">Log In</a>
   </div>
-  <a href="/signup" class="nav-cta">Start Free Trial</a>
+  <a href="/tc-check" class="nav-cta">Try TC Check Free</a>
   <button class="nav-toggle" id="navToggle" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
 </nav>
 <script>
@@ -6315,7 +6315,7 @@ def profile():
     <a href="/demo">Demo</a>
     <a href="/pricing">Pricing</a>
   </div>
-  <a href="/signup" class="nav-cta">Start Free Trial</a>
+  <a href="/tc-check" class="nav-cta">Try TC Check Free</a>
   <button class="nav-toggle" id="navToggle" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
 </nav>
 <script>
