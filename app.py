@@ -822,6 +822,46 @@ def index():
     </div>
   </section>
 
+  <section class="steps" style="padding-top:0.5rem;padding-bottom:1.5rem;">
+    <div class="steps-header" style="margin-bottom:1.75rem;">
+      <div class="steps-kicker">This is what comes back</div>
+      <h2 style="font-size:1.9rem;">A real answer, not a maybe.</h2>
+    </div>
+    <div class="dark-card-wrap" style="max-width:440px;margin:0 auto;">
+      <div class="dark-card-inner" style="padding:0.6rem;">
+        <div class="dash-panel">
+          <div class="chrome-bar">
+            <div class="chrome-dot"></div><div class="chrome-dot"></div><div class="chrome-dot"></div>
+            <span class="chrome-title">TC File Check &mdash; Results</span>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin:0.9rem 0 0.85rem;">
+            <span style="font-weight:700;font-size:0.85rem;color:var(--text);">123MainSt_TREC2019.pdf</span>
+            <span style="background:rgba(220,38,38,0.12);color:#dc2626;font-size:0.68rem;font-weight:700;padding:0.25rem 0.6rem;border-radius:9999px;white-space:nowrap;">5 issues found</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:0.6rem;">
+            <div style="display:flex;align-items:center;gap:0.6rem;">
+              <span style="width:7px;height:7px;border-radius:50%;background:#dc2626;flex-shrink:0;"></span>
+              <span style="font-size:0.82rem;color:var(--text);">Buyer initials missing &mdash; page 5</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:0.6rem;">
+              <span style="width:7px;height:7px;border-radius:50%;background:#dc2626;flex-shrink:0;"></span>
+              <span style="font-size:0.82rem;color:var(--text);">Effective Date is blank &mdash; page 10</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:0.6rem;">
+              <span style="width:7px;height:7px;border-radius:50%;background:#d97706;flex-shrink:0;"></span>
+              <span style="font-size:0.82rem;color:var(--text);">40-11 attached, financing checkbox not checked</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:0.6rem;">
+              <span style="width:7px;height:7px;border-radius:50%;background:#16a34a;flex-shrink:0;"></span>
+              <span style="font-size:0.82rem;color:var(--text-muted);">Earnest money amount &mdash; OK</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="text-align:center;font-size:0.75rem;color:var(--text-dim);margin-top:1rem;">Illustrative example &mdash; your real report reflects your actual file.</div>
+  </section>
+
   <section class="steps" id="brokers" style="border-top:none;padding-top:1rem;padding-bottom:2.5rem;">
     <div class="steps-header" style="margin-bottom:1.5rem;">
       <div class="steps-kicker">For managing brokers &amp; TC teams</div>
