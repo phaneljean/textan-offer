@@ -1604,7 +1604,7 @@ def finalize_offer_sms(agent_phone: str, draft: dict):
             twilio_send_sms(agent_phone,
                 f"You've used your {FREE_OFFER_LIMIT} free offers!\n"
                 f"Subscribe for unlimited: {payment_url}\n"
-                f"$39/mo, cancel anytime"
+                f"$40/mo, cancel anytime"
             )
             return
 
@@ -1849,7 +1849,7 @@ def sms_reply():
             twilio_send_sms(agent_phone,
                 f"You've used your {FREE_OFFER_LIMIT} free offers!\n"
                 f"Subscribe for unlimited: {payment_url}\n"
-                f"$39/mo, cancel anytime"
+                f"$40/mo, cancel anytime"
             )
             return "", 200
 
@@ -3833,6 +3833,25 @@ def pricing():
     <p style="text-align:center;font-size:0.75rem;color:var(--text-dim);margin-top:0.75rem;">Free, full stop. This isn't a trial.</p>
   </div>
 
+  <div class="pricing-card" id="individual">
+    <h2 class="plan-name">Individual</h2>
+    <p class="plan-desc">Draft TREC 20-19 offers by text message, unlimited &mdash; past your first 3 free.</p>
+    <div class="price-row">
+      <span class="price-current">$40</span>
+      <span class="price-period">/month</span>
+    </div>
+    <ul class="features">
+      <li><span class="check">&#10003;</span> Unlimited SMS-drafted offers (3 free to start)</li>
+      <li><span class="check">&#10003;</span> Property address, sales price &amp; closing date auto-fill</li>
+      <li><span class="check">&#10003;</span> Finished PDF texted back in seconds</li>
+      <li><span class="check">&#10003;</span> Cancel anytime</li>
+    </ul>
+    <form action="/create-checkout-session" method="POST">
+      <input type="hidden" name="plan" value="starter">
+      <button type="submit" class="cta-btn">Subscribe &mdash; $40/mo</button>
+    </form>
+  </div>
+
   <div class="pricing-card featured" id="brokerage">
     <span class="featured-badge">For Managing Brokers</span>
     <h2 class="plan-name">Brokerage</h2>
@@ -5096,7 +5115,7 @@ def terms():
     <p>We use publicly available TREC promulgated forms as templates. The template currently in use is TREC 20-19, mandatory as of __TREC_FORM_DATE__. If TREC revises or replaces a form, there may be a delay before we update the Service. You are responsible for confirming that the form version used is current and appropriate for your transaction.</p>
 
     <h2><span class="section-num">6.</span> Subscription, Payment, and Cancellation</h2>
-    <p><strong>Pricing:</strong> Plans start at $39.00 per month, billed monthly via Stripe. See <a href="/pricing" style="color:var(--accent-light);">pricing page</a> for current tiers.</p>
+    <p><strong>Pricing:</strong> Plans start at $40.00 per month, billed monthly via Stripe. See <a href="/pricing" style="color:var(--accent-light);">pricing page</a> for current tiers.</p>
     <p><strong>Billing cycle:</strong> Your subscription renews automatically on the same date each month. You will be charged at the beginning of each billing period.</p>
     <p><strong>Cancellation:</strong> You may cancel your subscription at any time through your account settings or by contacting us. Cancellation takes effect at the end of your current billing period — you retain access until that date.</p>
     <p><strong>Refunds:</strong> Payments are non-refundable. We do not provide prorated refunds for partial months. If you cancel mid-cycle, you retain access through the remainder of the paid period but will not receive a refund for unused time.</p>
