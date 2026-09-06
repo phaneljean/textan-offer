@@ -4086,6 +4086,24 @@ def pricing():
   </div>
 </div>
 
+<div class="value-section" style="border-top:1px solid var(--border);">
+  <h2 style="text-align:center;font-size:1.4rem;font-weight:800;margin-bottom:1.5rem;color:var(--text);">Questions</h2>
+  <div class="value-grid">
+    <div class="value-card">
+      <div class="value-title">Is TC File Check really free?</div>
+      <div class="value-text">Yes, full stop. It's how we find out what actually matters to Texas TCs on real files. No trial, no expiration date on it.</div>
+    </div>
+    <div class="value-card">
+      <div class="value-title">Do you store my client's file?</div>
+      <div class="value-text">No. The file is parsed to generate your report, then deleted immediately after &mdash; nothing is kept.</div>
+    </div>
+    <div class="value-card">
+      <div class="value-title">What about SMS offer drafting?</div>
+      <div class="value-text">Still fully working, but it's not sold as its own paid plan anymore &mdash; TC File Check is what Texas TCs actually asked for. SMS drafting is now included free with the Brokerage plan for your whole roster.</div>
+    </div>
+  </div>
+</div>
+
 <div class="footer-note">
   Brokerage cancels anytime. No contracts. By subscribing you agree to our <a href="/terms">Terms of Service</a>.
   <br><br>
