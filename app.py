@@ -3821,7 +3821,7 @@ def pricing():
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pricing — TxtAnOffer</title>
-<meta name="description" content="TxtAnOffer pricing for Texas agents and brokerages: draft TREC contracts by text from $39/month, or get the Brokerage plan's compliance dashboard for your whole roster at $399/month.">
+<meta name="description" content="TC File Check is free for Texas transaction coordinators and agents -- forward a TREC 20-19 and get back what's missing. Brokerages that want every agent's file checked automatically get the Brokerage plan at $399/month.">
 <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -3995,56 +3995,27 @@ def pricing():
 </script>
 
 <div class="page-header">
-  <h1>Simple pricing.<br><span class="gradient">Massive time savings.</span></h1>
-  <p>Stop spending 45 minutes per offer. Pick a plan and start generating contracts in seconds.</p>
-  <p style="margin-top:1rem;color:var(--accent-dark);font-weight:600;font-size:0.95rem;">Try free — 3 offers, no card required.</p>
+  <h1>Free for TCs.<br><span class="gradient">Paid for brokerages.</span></h1>
+  <p>TC File Check catches what's missing in a TREC 20-19 before title does &mdash; forward a file, get a report, no signup. Brokerages that want every agent's file checked automatically get the Brokerage plan.</p>
 </div>
 
 <div class="pricing-grid">
 
-  <div class="pricing-card">
-    <h2 class="plan-name">Starter</h2>
-    <p class="plan-desc">Submit offers faster than any other agent in the room.</p>
-    <div class="price-row">
-      <span class="price-current">$39</span>
-      <span class="price-period">/month</span>
-    </div>
-    <ul class="features">
-      <li><span class="check">&#10003;</span> Unlimited offers via SMS or web</li>
-      <li><span class="check">&#10003;</span> TREC 20-19 + Financing Addendum</li>
-      <li><span class="check">&#10003;</span> Contract amendments (TREC 39-11)</li>
-      <li><span class="check">&#10003;</span> 10-second contract generation</li>
-      <li><span class="check">&#10003;</span> Agent profile auto-fill</li>
-      <li><span class="check">&#10003;</span> Email delivery to listing agents</li>
-      <li><span class="check">&#10003;</span> Offer history dashboard</li>
-    </ul>
-    <form action="/create-checkout-session" method="POST">
-      <input type="hidden" name="plan" value="starter">
-      <button type="submit" class="cta-btn">Start Free Trial</button>
-    </form>
-    <p style="text-align:center;font-size:0.75rem;color:var(--text-dim);margin-top:0.75rem;">3 free offers, then $39/mo. Cancel anytime.</p>
-  </div>
-
   <div class="pricing-card featured">
-    <span class="featured-badge">Most Popular</span>
-    <h2 class="plan-name">Professional</h2>
-    <p class="plan-desc">Close deals faster with one-click signing and CRM automation.</p>
+    <span class="featured-badge">Start Here</span>
+    <h2 class="plan-name">TC File Check</h2>
+    <p class="plan-desc">Forward any TREC 20-19 (plus its 40-11 addendum or 39-11 amendment) and get back exactly what's missing.</p>
     <div class="price-row">
-      <span class="price-current">$79</span>
-      <span class="price-period">/month</span>
+      <span class="price-current">Free</span>
     </div>
     <ul class="features">
-      <li><span class="check">&#10003;</span> Everything in Starter</li>
-      <li><span class="check">&#10003;</span> One-click DocuSign send</li>
-      <li><span class="check">&#10003;</span> Webhook automation (Zapier-compatible)</li>
-      <li><span class="check">&#10003;</span> Agent branding on offer pages</li>
-      <li><span class="check">&#10003;</span> Priority support</li>
+      <li><span class="check">&#10003;</span> Forward to tc@check.txtanoffer.com, or upload on the web</li>
+      <li><span class="check">&#10003;</span> Itemized report: blanks, missing initials, mismatches</li>
+      <li><span class="check">&#10003;</span> Results in under a minute</li>
+      <li><span class="check">&#10003;</span> No signup, no credit card, no dashboard login</li>
     </ul>
-    <form action="/create-checkout-session" method="POST">
-      <input type="hidden" name="plan" value="professional">
-      <button type="submit" class="cta-btn">Start Free Trial</button>
-    </form>
-    <p style="text-align:center;font-size:0.75rem;color:var(--text-dim);margin-top:0.75rem;">3 free offers, then $79/mo. Cancel anytime.</p>
+    <a href="/tc-check" class="cta-btn">Try TC Check Free</a>
+    <p style="text-align:center;font-size:0.75rem;color:var(--text-dim);margin-top:0.75rem;">Free, full stop. This isn't a trial.</p>
   </div>
 
   <div class="pricing-card featured" id="brokerage">
@@ -4089,16 +4060,16 @@ def pricing():
 <div class="value-section">
   <div class="value-grid">
     <div class="value-card">
-      <div class="value-title">Time ROI</div>
-      <div class="value-text">Save 45 minutes per offer. At 5 offers/month, that's 3.75 hours back &mdash; worth $187-$562 of your time.</div>
+      <div class="value-title">Catch It Before Title Does</div>
+      <div class="value-text">Missing a signature, an initial, or the Effective Date is what gets a file kicked back. TC File Check flags it before you send it.</div>
     </div>
     <div class="value-card">
-      <div class="value-title">Zero Errors</div>
-      <div class="value-text">Math calculated automatically. No more "$21,750 or 3%?" double-checking. Every field consistent.</div>
+      <div class="value-title">Actually Free</div>
+      <div class="value-text">Not a trial. Not a lead-gen gate on the important part. Forward a file, get the report, every time.</div>
     </div>
     <div class="value-card">
-      <div class="value-title">Cheaper Than Coffee</div>
-      <div class="value-text">At 5 offers/month, Starter costs $7.80 per contract. Less than a coffee for 45 minutes of your time back.</div>
+      <div class="value-title">One Roster, One View</div>
+      <div class="value-text">Brokerage plan checks every agent's offer automatically and drops the finished PDF in your TC's inbox &mdash; no one has to remember to forward anything.</div>
     </div>
   </div>
 </div>
@@ -4106,19 +4077,19 @@ def pricing():
 <div style="max-width:640px;margin:0 auto;padding:2rem;text-align:center;">
   <div style="background:var(--accent-tint);border:1px solid rgba(23,23,23,0.2);border-radius:1rem;padding:2rem 1.75rem;">
     <div style="font-size:1.5rem;margin-bottom:0.5rem;">&#128737;</div>
-    <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:0.5rem;">Zero-Risk Guarantee</h3>
+    <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:0.5rem;">No Risk on Either Plan</h3>
     <p style="color:var(--text-muted);font-size:0.9rem;line-height:1.7;margin:0;">
-      Start with <strong style="color:var(--text);">3 free offers</strong> — no credit card required.
-      When you subscribe, cancel anytime from your dashboard — no contracts, no fees, no questions asked.
+      TC File Check is <strong style="color:var(--text);">free, no card required, no trial to expire</strong>.
+      Brokerage is a real subscription — cancel anytime from your dashboard, no contracts, no fees, no questions asked.
       Cancellation takes effect at the end of your billing cycle so you keep access through the period you paid for.
     </p>
   </div>
 </div>
 
 <div class="footer-note">
-  All plans cancel anytime. No contracts. By subscribing you agree to our <a href="/terms">Terms of Service</a>.
+  Brokerage cancels anytime. No contracts. By subscribing you agree to our <a href="/terms">Terms of Service</a>.
   <br><br>
-  <a href="/demo">&larr; Try the demo</a> &middot; <a href="/">Home</a>
+  <a href="/tc-check">&larr; Try TC File Check</a> &middot; <a href="/">Home</a>
 </div>
 
 </body>
