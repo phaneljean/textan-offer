@@ -158,7 +158,26 @@ def _issue_group_text(issues: list, heading: str, limit: int = 6) -> str:
     return "\n".join(lines) + "\n"
 
 
-def format_reply_body(result: dict) -> str:
+def _ordinal(n: int) -> str:
+    if 10 <= n % 100 <= 20:
+        suffix = "th"
+    else:
+        suffix = {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
+    return f"{n}{suffix}"
+
+
+def _streak_note(check_count: int) -> str:
+    """A quiet 'this is your Nth file' line -- the cheapest version of the
+    habit-forming usage messaging idea in the GTM roadmap, now that every
+    check's sender is tracked. Silent on a first-ever check (nothing to
+    brag about yet) and on an unknown count (0, e.g. no sender to key
+    off), so it only ever appears once it's actually true."""
+    if check_count and check_count >= 2:
+        return f"This is your {_ordinal(check_count)} file checked with TC Check. "
+    return ""
+
+
+def format_reply_body(result: dict, check_count: int = 0) -> str:
     if not result["recognized"]:
         return (
             "We couldn't read that as a TREC 20-19 we recognize.\n\n"
@@ -183,7 +202,7 @@ def format_reply_body(result: dict) -> str:
     body += (
         "---\n"
         "Checked with TC Check by TxtAnOffer\n"
-        "Want to check another file? tc@check.txtanoffer.com"
+        f"{_streak_note(check_count)}Want to check another file? tc@check.txtanoffer.com"
     )
     return body
 
@@ -252,10 +271,13 @@ _UPSELL_HTML = f"""
 </div>
 """
 
-_SHARE_FOOTER_HTML = f"""
+def _share_footer_html(check_count: int = 0) -> str:
+    streak = _streak_note(check_count)
+    streak_html = f"{escape(streak)}<br>" if streak else ""
+    return f"""
 <p style="margin:20px 0 0;padding-top:16px;border-top:1px solid #eeeeee;font-size:12px;line-height:1.6;color:#a3a3a3;font-family:{_FONT};">
   Checked with TC Check by TxtAnOffer<br>
-  Want to check another file? <a href="mailto:tc@check.txtanoffer.com" style="color:#525252;">tc@check.txtanoffer.com</a>
+  {streak_html}Want to check another file? <a href="mailto:tc@check.txtanoffer.com" style="color:#525252;">tc@check.txtanoffer.com</a>
 </p>
 """
 
@@ -297,7 +319,7 @@ def _status_banner_html(result: dict) -> str:
     )
 
 
-def format_reply_html(result: dict) -> str:
+def format_reply_html(result: dict, check_count: int = 0) -> str:
     if not result["recognized"]:
         body = (
             f'<p style="{_P_STYLE}">This works with AcroForm-fillable TREC 20-19 PDFs '
@@ -317,7 +339,7 @@ def format_reply_html(result: dict) -> str:
         body += _issue_group_html(blockers, "Critical deal blockers")
         body += _issue_group_html(warnings, "Also worth fixing")
         body += _UPSELL_HTML
-    body += _SHARE_FOOTER_HTML
+    body += _share_footer_html(check_count)
     return _email_shell("TC File Check results", "On the file you forwarded", body)
 
 

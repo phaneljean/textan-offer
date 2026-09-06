@@ -372,6 +372,35 @@ def get_tc_check_summary(days: int = 30, sender_emails: set = None) -> dict:
         "email_new_sender_pct": round((email_count - email_known_sender) / email_count * 100, 1) if email_count else 0,
     }
 
+def get_tc_check_count_for_sender(email: str) -> int:
+    """Lifetime count of tc_check events carrying this sender, across both
+    channels (email-forward always has one; web only once that browser's
+    gate email has been captured -- see app.py's tc_check()). Used to put
+    a genuine "this is your Nth file" line in the email-forward reply --
+    the cheapest version of the habit-forming usage messaging idea in
+    [[project_txtanoffer_gtm_roadmap]], since the sender is already
+    tracked on every event. No time cutoff, unlike get_tc_check_summary --
+    this is meant to read as a running lifetime tally, not a 30-day stat."""
+    email = (email or "").strip().lower()
+    if not email:
+        return 0
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT metadata FROM events WHERE event_type = 'tc_check'")
+    rows = cursor.fetchall()
+    conn.close()
+
+    import json
+    count = 0
+    for (metadata_json,) in rows:
+        metadata = json.loads(metadata_json) if metadata_json else {}
+        if "reason" in metadata:
+            continue  # no_pdf / unreadable -- not an actual file checked
+        if (metadata.get("sender") or "").strip().lower() == email:
+            count += 1
+    return count
+
+
 def get_recent_tc_check_email_senders(limit: int = 20) -> list:
     """Most recent TC File Check email-forward events with the sender's
     actual address -- the raw log get_tc_check_summary()'s aggregates
