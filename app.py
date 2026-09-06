@@ -915,7 +915,6 @@ def index():
       <a href="/privacy">Privacy Policy</a>
       <a href="/privacy#sms-messaging">SMS Terms</a>
       <a href="/pricing">Pricing</a>
-      <a href="/playground">Parser Playground</a>
       <a href="/tc-check">TC File Check</a>
       <a href="mailto:support@txtanoffer.com">Support</a>
     </div>
