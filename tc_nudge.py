@@ -91,7 +91,16 @@ def _mark_checked():
 def run_followup_if_due() -> None:
     """Day-3 re-engagement email for anyone who gave an email but hasn't
     been nudged again. Call from the same high-traffic route reminders.py
-    and cleanup.py are piggybacked on."""
+    and cleanup.py are piggybacked on.
+
+    DISABLED 2026-09-06: pitched the old "3 offers, no card required" SMS
+    trial, which no longer exists as advertised (nav CTA and pricing both
+    moved to TC Check / $199 Brokerage) -- an automated send with stale
+    claims going out days after the fact is worse than no send. TC Check's
+    own opt-in report email (see app.py's /v1/tc/check) covers the
+    immediate-touch case with copy that's actually still accurate. Left in
+    place rather than deleted in case a correct day-3 touch is wanted later."""
+    return
     if not _check_due():
         return
     _mark_checked()

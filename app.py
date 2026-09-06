@@ -849,7 +849,7 @@ def index():
           </div>
           <div style="display:flex;align-items:center;justify-content:space-between;margin:0.9rem 0 0.85rem;">
             <span style="font-weight:700;font-size:0.85rem;color:var(--text);">123MainSt_TREC2019.pdf</span>
-            <span style="background:rgba(220,38,38,0.12);color:#dc2626;font-size:0.68rem;font-weight:700;padding:0.25rem 0.6rem;border-radius:9999px;white-space:nowrap;">5 issues found</span>
+            <span style="background:rgba(220,38,38,0.12);color:#dc2626;font-size:0.68rem;font-weight:700;padding:0.25rem 0.6rem;border-radius:9999px;white-space:nowrap;">3 issues found</span>
           </div>
           <div style="display:flex;flex-direction:column;gap:0.6rem;">
             <div style="display:flex;align-items:center;gap:0.6rem;">
@@ -863,10 +863,6 @@ def index():
             <div style="display:flex;align-items:center;gap:0.6rem;">
               <span style="width:7px;height:7px;border-radius:50%;background:#d97706;flex-shrink:0;"></span>
               <span style="font-size:0.82rem;color:var(--text);">40-11 attached, financing checkbox not checked</span>
-            </div>
-            <div style="display:flex;align-items:center;gap:0.6rem;">
-              <span style="width:7px;height:7px;border-radius:50%;background:#16a34a;flex-shrink:0;"></span>
-              <span style="font-size:0.82rem;color:var(--text-muted);">Earnest money amount &mdash; OK</span>
             </div>
           </div>
         </div>
