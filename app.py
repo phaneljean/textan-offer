@@ -2826,6 +2826,20 @@ def tc_check():
                 pass
 
     record_tc_use(cid)
+
+    # Resolve identity before tracking the main event, not after -- the
+    # gate's email (once captured, this request or a prior one for this
+    # cid) is the only thing that can ever tie a web upload to a specific
+    # agent/roster, the same way 'sender' does on the email-forward path.
+    # Doing this first means even the very-first-ever check for a cid
+    # carries the email if the uploader supplied one on this same request.
+    email_just_captured = False
+    if not client["email"] and submitted_email and "@" in submitted_email:
+        save_tc_email(cid, submitted_email)
+        client["email"] = submitted_email
+        email_just_captured = True
+        track_event("tc_check_email_captured", submitted_email, {"client_id": cid})
+
     # Deduped per file -- initials/addendum checks can fire multiple times
     # per file (once per page), and issue_frequency's "% of recognized
     # files" in analytics.py only means what it says if each file counts
@@ -2835,14 +2849,8 @@ def tc_check():
         "recognized": result["recognized"],
         "complete": result["complete"],
         "issue_keys": issue_keys,
+        "sender": (client["email"] or "").strip().lower(),
     })
-
-    email_just_captured = False
-    if not client["email"] and submitted_email and "@" in submitted_email:
-        save_tc_email(cid, submitted_email)
-        client["email"] = submitted_email
-        email_just_captured = True
-        track_event("tc_check_email_captured", submitted_email, {"client_id": cid})
 
     # Nothing to gate on a clean file or an unrecognized upload -- the
     # itemized list IS the product's value, so only withhold it when

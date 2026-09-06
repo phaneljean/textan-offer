@@ -277,12 +277,16 @@ def get_tc_check_summary(days: int = 30, sender_emails: set = None) -> dict:
     uploads, since an unrecognized file can't fire any real check.
 
     sender_emails: when given (a lowercase-normalized set), restricts the
-    whole summary to email-forward events from just those senders -- this
-    is what lets /broker/dashboard show a roster-specific read instead of
-    the sitewide one. Only the email channel carries a sender at all (see
-    get_recent_tc_check_email_senders), so passing this drops the web
-    channel and the gate/email-capture funnel numbers entirely, since
-    those happen on the anonymous web tool and have no roster meaning."""
+    whole summary to tc_check events whose 'sender' matches one of those
+    addresses -- this is what lets /broker/dashboard show a roster-specific
+    read instead of the sitewide one. Both channels can carry a sender now:
+    the email-forward path always has one (it's the From address), and the
+    web path only does once that browser's gate email has been captured
+    (see app.py's tc_check()) -- an anonymous web check with no email on
+    file for it yet can never match a roster and is correctly excluded.
+    Passing this drops the gate/email-capture funnel numbers entirely,
+    since those happen on the anonymous web tool and have no roster
+    meaning."""
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cutoff = (datetime.utcnow() - timedelta(days=days)).isoformat()
@@ -317,8 +321,6 @@ def get_tc_check_summary(days: int = 30, sender_emails: set = None) -> dict:
     for row in rows:
         metadata = json.loads(row[0]) if row[0] else {}
         if sender_emails is not None:
-            if metadata.get("source") != "email":
-                continue
             if (metadata.get("sender") or "").strip().lower() not in sender_emails:
                 continue
         total += 1
