@@ -52,7 +52,13 @@ from tc_check_email import (
     format_no_pdf_reply, format_no_pdf_html,
     format_unreadable_reply, format_unreadable_html,
 )
+from tc_bulk import (
+    extract_pdfs_from_zip, create_batch, get_batch, process_batch,
+    BulkUploadError, MAX_BULK_FILES,
+)
 from werkzeug.middleware.proxy_fix import ProxyFix
+from html import escape
+import shutil
 import tempfile
 import threading
 import uuid
@@ -70,7 +76,11 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1, x_for=1)
 # size app-wide so an unauthenticated upload can't tie up a worker with a
 # huge file. 15MB is generous for an unflattened AcroForm PDF (this app's
 # own generated offers run well under 1MB) and small enough to reject abuse.
-app.config["MAX_CONTENT_LENGTH"] = 15 * 1024 * 1024
+# Raised from 15MB to cover /tc-check/bulk's zip upload (up to 200 files) --
+# tc_bulk.py enforces its own tighter per-file/per-batch byte caps on top of
+# this, and both bulk routes are rate-limited separately (see tc_bulk_ip/
+# tc_bulk_email below), so this ceiling only bounds worst-case body size.
+app.config["MAX_CONTENT_LENGTH"] = 200 * 1024 * 1024
 
 # Stripe configuration
 stripe.api_key = os.environ.get("STRIPE_SECRET_KEY", "")
@@ -2982,6 +2992,7 @@ border-radius:var(--radius-sm);font-family:inherit;font-size:0.85rem;font-weight
 </ul>
 </div>
 <p class="scope-footnote">Every check above is verified directly against TREC's actual 20-19 form fields &mdash; not guessed from field names, which routinely lie about their own position. The 40-11 can be its own separate PDF &mdash; it doesn't need to be merged into the contract file.</p>
+<p class="scope-footnote">Auditing a whole closed-file archive? <a href="/tc-check/bulk" style="color:var(--accent);font-weight:700;text-decoration:underline;text-underline-offset:2px;">Bulk-check up to 200 files at once &rarr;</a></p>
 </div>
 </div>
 <script>
@@ -3210,6 +3221,204 @@ function escapeHtml(s) {
         resp.set_cookie("ta_src", src, max_age=30 * 24 * 3600, httponly=True, samesite="Lax")
         track_event("landing_visit", None, {"source": src})
     return resp
+
+
+_BULK_PAGE_STYLE = """
+:root{--bg:#F5F5F7;--bg-card:#fff;--border:rgba(15,31,47,0.08);
+--text:#0f1f2f;--text-muted:#5a6b7a;--text-dim:#8a9aa9;--accent:#171717;--accent-light:#525252;
+--accent-tint:#F0F0EE;--radius:1.25rem;--radius-sm:0.85rem;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased;}
+a{color:var(--accent);}
+.container{max-width:560px;margin:0 auto;padding:3rem 2rem;}
+h1{font-size:1.75rem;font-weight:800;letter-spacing:-0.03em;margin-bottom:0.5rem;}
+.subtitle{color:var(--text-muted);font-size:0.95rem;margin-bottom:2rem;line-height:1.5;}
+.card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:2rem;box-shadow:0 1px 3px rgba(15,31,47,0.05);}
+label{display:block;font-size:0.85rem;font-weight:600;margin-bottom:0.4rem;}
+input[type=email],input[type=file]{display:block;width:100%;padding:0.7rem 0.9rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:0.9rem;margin-bottom:1.25rem;background:#fff;}
+.hint{font-size:0.78rem;color:var(--text-dim);margin-top:-1rem;margin-bottom:1.25rem;}
+.submit-btn{background:var(--accent);color:#fff;border:none;padding:0.8rem 1.6rem;border-radius:var(--radius-sm);font-family:inherit;font-size:0.9rem;font-weight:600;cursor:pointer;width:100%;}
+.submit-btn:hover{opacity:0.9;}
+.error-box{background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);color:#dc2626;border-radius:var(--radius-sm);padding:0.9rem 1.1rem;font-size:0.85rem;margin-bottom:1.25rem;}
+.stat-banner{border-radius:var(--radius-sm);padding:1rem 1.25rem;font-weight:700;margin-bottom:1.5rem;background:rgba(245,158,11,0.10);color:#b45309;font-size:1.05rem;}
+.issue-row{display:flex;justify-content:space-between;gap:1rem;padding:0.6rem 0;border-bottom:1px solid var(--border);font-size:0.88rem;}
+.issue-row:last-child{border-bottom:none;}
+.issue-count{flex-shrink:0;font-weight:700;color:var(--text-muted);}
+table.file-table{width:100%;font-size:0.82rem;border-collapse:collapse;margin-top:0.5rem;}
+table.file-table th{text-align:left;color:var(--text-dim);font-weight:600;font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;padding-bottom:0.5rem;border-bottom:1px solid var(--border);}
+table.file-table td{padding:0.5rem 0;border-bottom:1px solid var(--border);vertical-align:top;}
+.badge{font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.03em;padding:0.12rem 0.45rem;border-radius:9999px;}
+.badge.clean{background:rgba(16,185,129,0.12);color:#047857;}
+.badge.issues{background:rgba(239,68,68,0.1);color:#dc2626;}
+.badge.unread{background:rgba(15,31,47,0.08);color:var(--text-dim);}
+"""
+
+
+@app.route("/tc-check/bulk", methods=["GET"])
+def tc_check_bulk_page():
+    """Self-serve entry point for auditing a whole batch of closed files
+    at once instead of one at a time -- see tc_bulk.py for why this needs
+    an email (results take a few minutes, so there's nothing to show
+    synchronously) and why it's a plain form POST rather than the AJAX/
+    drag-drop widget on /tc-check (no perceived-progress trick makes sense
+    when the real wait is minutes, not seconds)."""
+    html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bulk TC File Check — TxtAnOffer</title>
+<meta name="description" content="Upload up to {MAX_BULK_FILES} closed TREC 20-19 files as one zip and get an aggregate report of what's missing across all of them.">
+<link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<style>{_BULK_PAGE_STYLE}</style>
+</head>
+<body>
+<div class="container">
+<h1>Bulk TC File Check</h1>
+<p class="subtitle">Zip up to {MAX_BULK_FILES} closed TREC 20-19 files (contracts only, one per transaction) and upload it below. We'll check every file and email you one report: how many had at least one issue, and which issues showed up most across the batch. Takes a few minutes for a large batch.</p>
+<div class="card">
+<form method="POST" action="/tc-check/bulk" enctype="multipart/form-data">
+<label for="email">Email (required &mdash; we'll send your report here)</label>
+<input type="email" id="email" name="email" required placeholder="you@brokerage.com">
+<label for="file">Zip file of PDFs</label>
+<input type="file" id="file" name="file" accept=".zip" required>
+<p class="hint">Each check runs alone (no addendum cross-check inside a batch) &mdash; for the full field-by-field addendum comparison on one file at a time, use <a href="/tc-check">the single-file checker</a>.</p>
+<button type="submit" class="submit-btn">Check my files</button>
+</form>
+</div>
+</div>
+</body>
+</html>"""
+    return make_response(html)
+
+
+@app.route("/tc-check/bulk", methods=["POST"])
+def tc_check_bulk_submit():
+    client_ip = request.remote_addr or "unknown"
+    email = (request.form.get("email") or "").strip()
+
+    def _error_page(message):
+        html = f"""<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bulk TC File Check — TxtAnOffer</title>
+<style>{_BULK_PAGE_STYLE}</style></head><body>
+<div class="container"><h1>Bulk TC File Check</h1>
+<div class="card"><div class="error-box">{escape(message)}</div>
+<a href="/tc-check/bulk">&larr; Try again</a></div></div></body></html>"""
+        return make_response(html, 400)
+
+    if not email or "@" not in email:
+        return _error_page("Enter a valid email address -- that's where your report will be sent.")
+
+    # Two separate abuse guards, day-long windows since a real batch takes
+    # a few minutes of background work per submission (unlike /tc-check's
+    # per-request throttle): per-IP catches one abusive source hammering
+    # this from different email addresses, per-email catches one address
+    # resubmitting from different IPs.
+    if not check_and_increment(f"tc_bulk_ip:{client_ip}", limit=3, window_seconds=86400):
+        return _error_page("Too many bulk batches from this connection today. Try again tomorrow.")
+    if not check_and_increment(f"tc_bulk_email:{email.lower()}", limit=3, window_seconds=86400):
+        return _error_page("Too many bulk batches from this email today. Try again tomorrow.")
+
+    upload = request.files.get("file")
+    if not upload or not upload.filename:
+        return _error_page("No zip file uploaded.")
+    if not upload.filename.lower().endswith(".zip"):
+        return _error_page("Only .zip files are supported.")
+
+    batch_id = uuid.uuid4().hex
+    tmp_dir = tempfile.mkdtemp(prefix=f"tc_bulk_{batch_id}_")
+    zip_path = os.path.join(tmp_dir, "upload.zip")
+    upload.save(zip_path)
+
+    try:
+        files = extract_pdfs_from_zip(zip_path, tmp_dir)
+    except BulkUploadError as e:
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+        return _error_page(str(e))
+    finally:
+        try:
+            os.remove(zip_path)
+        except OSError:
+            pass
+
+    create_batch(batch_id, email, len(files))
+    track_event("tc_check_bulk_submitted", metadata={"batch_id": batch_id, "file_count": len(files)})
+    threading.Thread(target=process_batch, args=(batch_id, email, files, tmp_dir), daemon=True).start()
+
+    return redirect(f"/tc-check/bulk/{batch_id}")
+
+
+@app.route("/tc-check/bulk/<batch_id>")
+def tc_check_bulk_results(batch_id):
+    """No auth beyond the batch_id itself -- same unguessable-token
+    pattern as /thread/<filename> and a brokerage join_code. Processing
+    isn't done yet on most first loads (see process_batch's background
+    thread), so this meta-refreshes every 10s until status flips to done;
+    no JS polling since a self-serve prospect landing here for the first
+    time shouldn't need working JS to eventually see their results."""
+    batch = get_batch(batch_id)
+    if not batch:
+        return make_response("Batch not found.", 404)
+
+    if batch["status"] == "processing":
+        html = f"""<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="refresh" content="10">
+<title>Bulk TC File Check — TxtAnOffer</title>
+<style>{_BULK_PAGE_STYLE}</style></head><body>
+<div class="container"><h1>Still checking&hellip;</h1>
+<p class="subtitle">Checking {batch['file_count']} file(s). This page refreshes automatically -- we'll also email the report to {escape(batch['email'])} the moment it's ready.</p>
+</div></body></html>"""
+        return make_response(html)
+
+    if batch["status"] == "error" or not batch["result"]:
+        html = f"""<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bulk TC File Check — TxtAnOffer</title>
+<style>{_BULK_PAGE_STYLE}</style></head><body>
+<div class="container"><h1>Something went wrong</h1>
+<div class="card"><div class="error-box">{escape(batch.get('error') or 'This batch could not be processed.')}</div>
+<a href="/tc-check/bulk">&larr; Try again</a></div></div></body></html>"""
+        return make_response(html)
+
+    result = batch["result"]
+    issue_rows = "".join(
+        f'<div class="issue-row"><span>{escape(item["message"])}</span><span class="issue-count">{item["count"]}x</span></div>'
+        for item in result["top_issues"]
+    ) or '<p class="hint" style="margin:0;">No recurring issues found.</p>'
+
+    def _badge(f):
+        if f["unreadable"] or not f["recognized"]:
+            return '<span class="badge unread">Unreadable</span>'
+        return '<span class="badge clean">Clean</span>' if f["complete"] else f'<span class="badge issues">{f["issue_count"]} issue(s)</span>'
+
+    file_rows = "".join(
+        f'<tr><td>{escape(f["filename"])}</td><td>{_badge(f)}</td></tr>'
+        for f in result["per_file"]
+    )
+
+    html = f"""<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bulk TC File Check results — TxtAnOffer</title>
+<style>{_BULK_PAGE_STYLE}</style></head><body>
+<div class="container">
+<h1>Batch results</h1>
+<p class="subtitle">{result['total_files']} file(s) checked, {result['recognized_count']} recognized as a TREC 20-19.</p>
+<div class="stat-banner">{result['with_issues_count']} of {result['recognized_count']} files had at least one issue</div>
+<div class="card">
+<p class="hint" style="margin:0 0 0.75rem;text-transform:uppercase;font-weight:700;letter-spacing:0.04em;">Most common issues in this batch</p>
+{issue_rows}
+</div>
+<div class="card" style="margin-top:1.5rem;">
+<table class="file-table"><thead><tr><th>File</th><th>Result</th></tr></thead><tbody>
+{file_rows}
+</tbody></table>
+</div>
+<p class="hint" style="margin-top:1.5rem;">Want every agent's file checked automatically before it reaches this stage? <a href="/pricing#brokerage">See the Brokerage Dashboard &rarr;</a></p>
+</div></body></html>"""
+    return make_response(html)
 
 
 @app.route("/playground")
