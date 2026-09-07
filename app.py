@@ -867,10 +867,12 @@ def index():
       <li><span class="tc-check">&check;</span><span><strong>Missing buyer or seller initials</strong> &mdash; easy to miss page-by-page, hard to fix once closed.</span></li>
       <li><span class="tc-check">&check;</span><span><strong>40-11 addendum mismatches</strong> &mdash; loan amount or financing checkbox disagreeing with the contract.</span></li>
       <li><span class="tc-check">&check;</span><span><strong>39-11 amendment mismatches</strong> &mdash; sales price or property address disagreeing with the original contract.</span></li>
+      <li><span class="tc-check">&check;</span><span><strong>Your whole closed-file backlog</strong> &mdash; zip up to 200 files and see your real error rate today, not just the next file you upload.</span></li>
     </ul>
     <div class="secondary-cta" style="margin:1.75rem auto 0;padding-top:1.75rem;max-width:560px;text-align:center;">
       <div class="secondary-cta-label">Running a brokerage or TC team? The dashboard shows every flag across every file &mdash; not just this one.</div>
       <a href="/pricing#brokerage" class="input-btn" style="display:inline-block;text-decoration:none;">See Brokerage pricing &rarr;</a>
+      <div style="margin-top:0.85rem;"><a href="/tc-check/bulk" style="font-size:0.85rem;color:var(--text-muted);text-decoration:underline;text-underline-offset:2px;">Or bulk-check your files yourself right now &rarr;</a></div>
     </div>
   </section>
 
@@ -4075,6 +4077,7 @@ def pricing():
       <li><span class="check">&#10003;</span> Every agent's offer auto-checked before it's even sent</li>
       <li><span class="check">&#10003;</span> Finished PDFs auto-emailed to your TC, no login needed</li>
       <li><span class="check">&#10003;</span> Your TC can also forward any outside file to tc@check.txtanoffer.com for an instant check &mdash; free, no dashboard login needed</li>
+      <li><span class="check">&#10003;</span> Bulk-check your whole closed-file backlog &mdash; zip up to 200 files, get one report on your real error rate</li>
       <li><span class="check">&#10003;</span> Brokerage roster &amp; compliance dashboard</li>
       <li><span class="check">&#10003;</span> Agents join with one text &mdash; no per-agent setup</li>
     </ul>
