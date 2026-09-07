@@ -3232,12 +3232,15 @@ _BULK_PAGE_STYLE = """
 *{margin:0;padding:0;box-sizing:border-box;}
 body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased;}
 a{color:var(--accent);}
+.bulk-nav{max-width:560px;margin:0 auto;padding:1.5rem 2rem 0;}
+.bulk-nav-link{display:inline-flex;align-items:center;gap:0.5rem;font-weight:700;font-size:1rem;color:var(--text);text-decoration:none;}
+.bulk-logo{width:28px;height:28px;border-radius:22%;object-fit:contain;display:block;}
 .container{max-width:560px;margin:0 auto;padding:3rem 2rem;}
 h1{font-size:1.75rem;font-weight:800;letter-spacing:-0.03em;margin-bottom:0.5rem;}
 .subtitle{color:var(--text-muted);font-size:0.95rem;margin-bottom:2rem;line-height:1.5;}
 .card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:2rem;box-shadow:0 1px 3px rgba(15,31,47,0.05);}
 label{display:block;font-size:0.85rem;font-weight:600;margin-bottom:0.4rem;}
-input[type=email],input[type=file]{display:block;width:100%;padding:0.7rem 0.9rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:0.9rem;margin-bottom:1.25rem;background:#fff;}
+input[type=email],input[type=file],input[type=text]{display:block;width:100%;padding:0.7rem 0.9rem;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:0.9rem;margin-bottom:1.25rem;background:#fff;box-sizing:border-box;}
 .hint{font-size:0.78rem;color:var(--text-dim);margin-top:-1rem;margin-bottom:1.25rem;}
 .submit-btn{background:var(--accent);color:#fff;border:none;padding:0.8rem 1.6rem;border-radius:var(--radius-sm);font-family:inherit;font-size:0.9rem;font-weight:600;cursor:pointer;width:100%;}
 .submit-btn:hover{opacity:0.9;}
@@ -3276,6 +3279,7 @@ def tc_check_bulk_page():
 <style>{_BULK_PAGE_STYLE}</style>
 </head>
 <body>
+<div class="bulk-nav"><a href="/" class="bulk-nav-link"><img src="/static/logo.svg" alt="" class="bulk-logo">TxtAnOffer</a></div>
 <div class="container">
 <h1>Bulk TC File Check</h1>
 <p class="subtitle">Zip up to {FREE_BULK_LIMIT} closed TREC 20-19 files (contracts only, one per transaction) for a free sample report: how many had at least one issue, and which issues showed up most across the batch. Have a Brokerage join code? Check your whole backlog, up to {MAX_BULK_FILES} files, no extra charge.</p>
@@ -3307,6 +3311,7 @@ def tc_check_bulk_submit():
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Bulk TC File Check — TxtAnOffer</title>
 <style>{_BULK_PAGE_STYLE}</style></head><body>
+<div class="bulk-nav"><a href="/" class="bulk-nav-link"><img src="/static/logo.svg" alt="" class="bulk-logo">TxtAnOffer</a></div>
 <div class="container"><h1>Bulk TC File Check</h1>
 <div class="card"><div class="error-box">{escape(message)}</div>
 <a href="/tc-check/bulk">&larr; Try again</a></div></div></body></html>"""
@@ -3387,6 +3392,7 @@ def tc_check_bulk_results(batch_id):
 <meta http-equiv="refresh" content="10">
 <title>Bulk TC File Check — TxtAnOffer</title>
 <style>{_BULK_PAGE_STYLE}</style></head><body>
+<div class="bulk-nav"><a href="/" class="bulk-nav-link"><img src="/static/logo.svg" alt="" class="bulk-logo">TxtAnOffer</a></div>
 <div class="container"><h1>Still checking&hellip;</h1>
 <p class="subtitle">Checking {batch['file_count']} file(s). This page refreshes automatically -- we'll also email the report to {escape(batch['email'])} the moment it's ready.</p>
 </div></body></html>"""
@@ -3397,6 +3403,7 @@ def tc_check_bulk_results(batch_id):
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Bulk TC File Check — TxtAnOffer</title>
 <style>{_BULK_PAGE_STYLE}</style></head><body>
+<div class="bulk-nav"><a href="/" class="bulk-nav-link"><img src="/static/logo.svg" alt="" class="bulk-logo">TxtAnOffer</a></div>
 <div class="container"><h1>Something went wrong</h1>
 <div class="card"><div class="error-box">{escape(batch.get('error') or 'This batch could not be processed.')}</div>
 <a href="/tc-check/bulk">&larr; Try again</a></div></div></body></html>"""
@@ -3430,6 +3437,7 @@ def tc_check_bulk_results(batch_id):
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Bulk TC File Check results — TxtAnOffer</title>
 <style>{_BULK_PAGE_STYLE}</style></head><body>
+<div class="bulk-nav"><a href="/" class="bulk-nav-link"><img src="/static/logo.svg" alt="" class="bulk-logo">TxtAnOffer</a></div>
 <div class="container">
 <h1>Batch results</h1>
 <p class="subtitle">{result['total_files']} file(s) checked, {result['recognized_count']} recognized as a TREC 20-19.</p>
