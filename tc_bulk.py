@@ -1,10 +1,19 @@
 """
-tc_bulk.py -- Bulk TC File Check: a brokerage uploads a single .zip of up
-to MAX_BULK_FILES closed TREC 20-19 files and gets back one aggregate
-report (how many had at least one issue, which issues were most common
-across the batch) instead of running the single-file checker by hand
-200 times. Reuses tc_audit.check_tc_file() unchanged -- this module only
-adds zip handling, batch persistence, and aggregation on top of it.
+tc_bulk.py -- Bulk TC File Check: upload a single .zip of closed TREC
+20-19 files and get back one aggregate report (how many had at least one
+issue, which issues were most common across the batch) instead of
+running the single-file checker by hand many times over. Reuses
+tc_audit.check_tc_file() unchanged -- this module only adds zip handling,
+batch persistence, and aggregation on top of it.
+
+Two tiers, gated by an optional brokerage join_code (see app.py's
+/tc-check/bulk POST route): anyone gets FREE_BULK_LIMIT files as a real,
+fully-detailed sample -- enough to prove the aggregate report is worth
+something, not enough to substitute for the paid Brokerage Dashboard's
+job of checking a brokerage's *entire*, ongoing backlog for free forever.
+A verified join_code raises the cap to MAX_BULK_FILES. This mirrors the
+existing SMS-prefix brokerage binding in brokerages.py -- same "give the
+free tool teeth, but the real scale requires being a customer" shape.
 
 Each zip entry is checked alone (no 40-11/39-11 pairing across files --
 see tc_audit.check_tc_file's docstring for why that needs each of a
@@ -35,7 +44,8 @@ from analytics import track_event
 
 DB_PATH = os.environ.get("DATABASE_PATH", "subscriptions.db")
 
-MAX_BULK_FILES = 200
+FREE_BULK_LIMIT = 20  # anonymous/no-join_code cap -- a real sample, not the whole backlog
+MAX_BULK_FILES = 200  # cap once a valid brokerage join_code is given
 MAX_ZIP_ENTRIES = 600  # scanned before filtering to .pdf -- rejects an absurdly padded zip outright
 MAX_SINGLE_FILE_BYTES = 20 * 1024 * 1024  # one AcroForm 20-19 is a few hundred KB; 20MB is already generous
 MAX_TOTAL_BYTES = 300 * 1024 * 1024  # sum of uncompressed PDF sizes actually extracted
@@ -122,13 +132,15 @@ class BulkUploadError(ValueError):
     show directly to the user (no internal detail leaks)."""
 
 
-def extract_pdfs_from_zip(zip_path: str, tmp_dir: str) -> list:
+def extract_pdfs_from_zip(zip_path: str, tmp_dir: str, max_files: int = FREE_BULK_LIMIT) -> list:
     """Reads the zip at zip_path and writes each recognized PDF entry out
     to its own file inside tmp_dir. Returns a list of
     {"path": str, "filename": str} dicts -- caller owns cleanup of tmp_dir.
     Raises BulkUploadError on anything that fails the size/count guards
     below; those are abuse/sanity limits, not product limits, so the
-    message stays generic rather than explaining the exact threshold."""
+    message stays generic -- except the file-count cap itself, which is a
+    real product limit (see module docstring) and says so plainly, with
+    an upsell when the caller is on the free (un-gated) tier."""
     try:
         zf = zipfile.ZipFile(zip_path)
     except zipfile.BadZipFile:
@@ -148,8 +160,14 @@ def extract_pdfs_from_zip(zip_path: str, tmp_dir: str) -> list:
         ]
         if not pdf_infos:
             raise BulkUploadError("No PDF files found in that zip.")
-        if len(pdf_infos) > MAX_BULK_FILES:
-            raise BulkUploadError(f"That zip has {len(pdf_infos)} PDFs -- up to {MAX_BULK_FILES} per batch. Split it up and send the rest separately.")
+        if len(pdf_infos) > max_files:
+            if max_files <= FREE_BULK_LIMIT:
+                raise BulkUploadError(
+                    f"That zip has {len(pdf_infos)} PDFs -- the free sample covers up to {FREE_BULK_LIMIT}. "
+                    f"For your whole backlog (up to {MAX_BULK_FILES} files), set up the Brokerage Dashboard "
+                    f"and use your join code above, or see txtanoffer.com/pricing#brokerage."
+                )
+            raise BulkUploadError(f"That zip has {len(pdf_infos)} PDFs -- up to {max_files} per batch. Split it up and send the rest separately.")
 
         total_bytes = sum(info.file_size for info in pdf_infos)
         if total_bytes > MAX_TOTAL_BYTES:
@@ -166,12 +184,16 @@ def extract_pdfs_from_zip(zip_path: str, tmp_dir: str) -> list:
         return extracted
 
 
-def run_batch(batch_id: str, files: list) -> dict:
+def run_batch(batch_id: str, files: list, tier: str = "free", brokerage_name: str = None) -> dict:
     """files: list of {"path", "filename"} as returned by
     extract_pdfs_from_zip. Runs check_tc_file on each independently and
     returns the aggregate result dict that gets persisted and emailed.
     Does not raise -- a single unreadable file is recorded as its own
-    per-file entry, not a batch-wide failure."""
+    per-file entry, not a batch-wide failure.
+
+    tier/brokerage_name are carried through untouched (not computed here)
+    so the results page and email can say who this batch ran as and skip
+    the Brokerage upsell for someone who's already a customer."""
     per_file = []
     issue_key_counts = {}
     issue_key_messages = {}  # first-seen human-readable message per key, for the report
@@ -221,10 +243,12 @@ def run_batch(batch_id: str, files: list) -> dict:
         "with_issues_count": len(with_issues),
         "top_issues": [{"key": k, "count": c, "message": issue_key_messages[k]} for k, c in top_issues],
         "per_file": per_file,
+        "tier": tier,
+        "brokerage_name": brokerage_name,
     }
 
 
-def process_batch(batch_id: str, email: str, files: list, tmp_dir: str) -> None:
+def process_batch(batch_id: str, email: str, files: list, tmp_dir: str, tier: str = "free", brokerage_name: str = None) -> None:
     """Full background-thread job: run the checks, persist the result,
     email it, clean up the extracted PDFs, and record one analytics event
     for the whole batch. Deliberately a single "tc_check_bulk" event, not
@@ -234,7 +258,7 @@ def process_batch(batch_id: str, email: str, files: list, tmp_dir: str) -> None:
     that signal if it were counted the same way. Never lets an exception
     escape (this runs with no request context to report one to)."""
     try:
-        result = run_batch(batch_id, files)
+        result = run_batch(batch_id, files, tier=tier, brokerage_name=brokerage_name)
         save_batch_result(batch_id, result)
         track_event("tc_check_bulk", metadata={
             "batch_id": batch_id,
@@ -242,6 +266,7 @@ def process_batch(batch_id: str, email: str, files: list, tmp_dir: str) -> None:
             "total_files": result["total_files"],
             "recognized_count": result["recognized_count"],
             "with_issues_count": result["with_issues_count"],
+            "tier": tier,
         })
         try:
             send_html_email(
@@ -282,13 +307,15 @@ def format_batch_email_body(batch_id: str, result: dict) -> str:
         for item in result["top_issues"]:
             body += f"- ({item['count']}x) {item['message']}\n"
         body += "\n"
-    body += (
-        f"Full per-file breakdown: {_results_url(batch_id)}\n\n"
-        "---\n"
-        "Checked with TC Check by TxtAnOffer\n"
-        "Want this running automatically on every file your agents submit? "
-        "See the Brokerage Dashboard: https://txtanoffer.com/pricing#brokerage"
-    )
+    body += f"Full per-file breakdown: {_results_url(batch_id)}\n\n---\nChecked with TC Check by TxtAnOffer\n"
+    if result.get("tier") == "brokerage":
+        body += f"Checked under your {result.get('brokerage_name') or 'Brokerage'} account -- no file cap.\n"
+    else:
+        body += (
+            f"This is your free {FREE_BULK_LIMIT}-file sample. "
+            "Want your whole backlog checked, with no cap? "
+            "See the Brokerage Dashboard: https://txtanoffer.com/pricing#brokerage"
+        )
     return body
 
 
@@ -318,5 +345,9 @@ def format_batch_email_html(batch_id: str, result: dict) -> str:
         f'<p style="{_P_STYLE}margin-top:20px;">'
         f'<a href="{_results_url(batch_id)}" style="color:#171717;font-weight:600;">See the full per-file breakdown &rarr;</a></p>'
     )
-    body += _UPSELL_HTML
+    if result.get("tier") == "brokerage":
+        brokerage_name = escape(result.get("brokerage_name") or "Brokerage")
+        body += f'<p style="{_P_STYLE}color:#737373;">Checked under your {brokerage_name} account &mdash; no file cap.</p>'
+    else:
+        body += _UPSELL_HTML
     return _email_shell("Your batch results are ready", f"{total} files checked", body)

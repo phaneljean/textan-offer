@@ -32,7 +32,7 @@ from pdf_validator import validate_offer_pdf
 from amendment import fill_amendment_pdf
 from agent_profiles import get_agent_profile, save_agent_profile, find_by_email, get_emails_for_phones
 from subscriptions import can_generate_offer, increment_offer_count, activate_subscription, deactivate_subscription, get_user, create_user, FREE_OFFER_LIMIT, is_admin_phone, has_professional_access
-from analytics import track_event, get_conversion_metrics, get_revenue_metrics, get_recent_sms, get_recent_sms_failures, get_last_blocked_state, get_waitlist_signups, get_signups_by_source, get_landing_visits_by_source, get_tc_check_summary, get_recent_tc_check_email_senders, get_tc_check_count_for_sender, get_tc_check_repeat_senders
+from analytics import track_event, get_conversion_metrics, get_revenue_metrics, get_recent_sms, get_recent_sms_failures, get_last_blocked_state, get_waitlist_signups, get_signups_by_source, get_landing_visits_by_source, get_tc_check_summary, get_recent_tc_check_email_senders, get_tc_check_count_for_sender, get_tc_check_repeat_senders, get_tc_check_bulk_summary
 from integrations import send_offer_email, fire_webhook, save_webhook, get_webhook, delete_webhook, send_to_docusign, send_plain_email, send_html_email
 from offers_db import record_offer, get_offers_for_phone, get_offer_by_filename, record_amendment, get_amendments_for_phone, record_thread_response, record_email_sent
 from brokerages import extract_brokerage_prefix, link_user_to_brokerage, get_brokerage, get_brokerage_by_code, create_brokerage, list_brokerages, list_brokerage_agents
@@ -54,7 +54,7 @@ from tc_check_email import (
 )
 from tc_bulk import (
     extract_pdfs_from_zip, create_batch, get_batch, process_batch,
-    BulkUploadError, MAX_BULK_FILES,
+    BulkUploadError, MAX_BULK_FILES, FREE_BULK_LIMIT,
 )
 from werkzeug.middleware.proxy_fix import ProxyFix
 from html import escape
@@ -867,12 +867,12 @@ def index():
       <li><span class="tc-check">&check;</span><span><strong>Missing buyer or seller initials</strong> &mdash; easy to miss page-by-page, hard to fix once closed.</span></li>
       <li><span class="tc-check">&check;</span><span><strong>40-11 addendum mismatches</strong> &mdash; loan amount or financing checkbox disagreeing with the contract.</span></li>
       <li><span class="tc-check">&check;</span><span><strong>39-11 amendment mismatches</strong> &mdash; sales price or property address disagreeing with the original contract.</span></li>
-      <li><span class="tc-check">&check;</span><span><strong>Your whole closed-file backlog</strong> &mdash; zip up to 200 files and see your real error rate today, not just the next file you upload.</span></li>
+      <li><span class="tc-check">&check;</span><span><strong>Your whole closed-file backlog</strong> &mdash; free sample checks up to 20 files at once; a Brokerage join code raises that to 200, no extra charge.</span></li>
     </ul>
     <div class="secondary-cta" style="margin:1.75rem auto 0;padding-top:1.75rem;max-width:560px;text-align:center;">
       <div class="secondary-cta-label">Running a brokerage or TC team? The dashboard shows every flag across every file &mdash; not just this one.</div>
       <a href="/pricing#brokerage" class="input-btn" style="display:inline-block;text-decoration:none;">See Brokerage pricing &rarr;</a>
-      <div style="margin-top:0.85rem;"><a href="/tc-check/bulk" style="font-size:0.85rem;color:var(--text-muted);text-decoration:underline;text-underline-offset:2px;">Or bulk-check your files yourself right now &rarr;</a></div>
+      <div style="margin-top:0.85rem;"><a href="/tc-check/bulk" style="font-size:0.85rem;color:var(--text-muted);text-decoration:underline;text-underline-offset:2px;">Or try a free 20-file bulk sample right now &rarr;</a></div>
     </div>
   </section>
 
@@ -3270,7 +3270,7 @@ def tc_check_bulk_page():
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Bulk TC File Check — TxtAnOffer</title>
-<meta name="description" content="Upload up to {MAX_BULK_FILES} closed TREC 20-19 files as one zip and get an aggregate report of what's missing across all of them.">
+<meta name="description" content="Upload a zip of closed TREC 20-19 files and get an aggregate report of what's missing across all of them.">
 <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <style>{_BULK_PAGE_STYLE}</style>
@@ -3278,13 +3278,15 @@ def tc_check_bulk_page():
 <body>
 <div class="container">
 <h1>Bulk TC File Check</h1>
-<p class="subtitle">Zip up to {MAX_BULK_FILES} closed TREC 20-19 files (contracts only, one per transaction) and upload it below. We'll check every file and email you one report: how many had at least one issue, and which issues showed up most across the batch. Takes a few minutes for a large batch.</p>
+<p class="subtitle">Zip up to {FREE_BULK_LIMIT} closed TREC 20-19 files (contracts only, one per transaction) for a free sample report: how many had at least one issue, and which issues showed up most across the batch. Have a Brokerage join code? Check your whole backlog, up to {MAX_BULK_FILES} files, no extra charge.</p>
 <div class="card">
 <form method="POST" action="/tc-check/bulk" enctype="multipart/form-data">
 <label for="email">Email (required &mdash; we'll send your report here)</label>
 <input type="email" id="email" name="email" required placeholder="you@brokerage.com">
 <label for="file">Zip file of PDFs</label>
 <input type="file" id="file" name="file" accept=".zip" required>
+<label for="join_code">Brokerage join code (optional)</label>
+<input type="text" id="join_code" name="join_code" placeholder="Leave blank for the free sample">
 <p class="hint">Each check runs alone (no addendum cross-check inside a batch) &mdash; for the full field-by-field addendum comparison on one file at a time, use <a href="/tc-check">the single-file checker</a>.</p>
 <button type="submit" class="submit-btn">Check my files</button>
 </form>
@@ -3323,6 +3325,18 @@ def tc_check_bulk_submit():
     if not check_and_increment(f"tc_bulk_email:{email.lower()}", limit=3, window_seconds=86400):
         return _error_page("Too many bulk batches from this email today. Try again tomorrow.")
 
+    # An optional join_code raises the file cap from FREE_BULK_LIMIT to
+    # MAX_BULK_FILES -- see tc_bulk.py's module docstring for why: the
+    # free tier is a real, fully-detailed sample, not a substitute for the
+    # paid Brokerage Dashboard's job of checking a whole backlog for free.
+    join_code = (request.form.get("join_code") or "").strip()
+    brokerage = get_brokerage_by_code(join_code) if join_code else None
+    if join_code and not brokerage:
+        return _error_page("That join code wasn't recognized. Double-check it, or leave it blank for the free sample.")
+    tier = "brokerage" if brokerage else "free"
+    file_limit = MAX_BULK_FILES if brokerage else FREE_BULK_LIMIT
+    brokerage_name = brokerage["name"] if brokerage else None
+
     upload = request.files.get("file")
     if not upload or not upload.filename:
         return _error_page("No zip file uploaded.")
@@ -3335,7 +3349,7 @@ def tc_check_bulk_submit():
     upload.save(zip_path)
 
     try:
-        files = extract_pdfs_from_zip(zip_path, tmp_dir)
+        files = extract_pdfs_from_zip(zip_path, tmp_dir, max_files=file_limit)
     except BulkUploadError as e:
         shutil.rmtree(tmp_dir, ignore_errors=True)
         return _error_page(str(e))
@@ -3346,8 +3360,11 @@ def tc_check_bulk_submit():
             pass
 
     create_batch(batch_id, email, len(files))
-    track_event("tc_check_bulk_submitted", metadata={"batch_id": batch_id, "file_count": len(files)})
-    threading.Thread(target=process_batch, args=(batch_id, email, files, tmp_dir), daemon=True).start()
+    track_event("tc_check_bulk_submitted", metadata={"batch_id": batch_id, "file_count": len(files), "tier": tier})
+    threading.Thread(
+        target=process_batch, args=(batch_id, email, files, tmp_dir),
+        kwargs={"tier": tier, "brokerage_name": brokerage_name}, daemon=True,
+    ).start()
 
     return redirect(f"/tc-check/bulk/{batch_id}")
 
@@ -3401,6 +3418,14 @@ def tc_check_bulk_results(batch_id):
         for f in result["per_file"]
     )
 
+    if result.get("tier") == "brokerage":
+        footer_note = f"Checked under your {escape(result.get('brokerage_name') or 'Brokerage')} account &mdash; no file cap."
+    else:
+        footer_note = (
+            f"This was your free {FREE_BULK_LIMIT}-file sample. "
+            'Want your whole backlog checked, with no cap? <a href="/pricing#brokerage">See the Brokerage Dashboard &rarr;</a>'
+        )
+
     html = f"""<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Bulk TC File Check results — TxtAnOffer</title>
@@ -3418,7 +3443,7 @@ def tc_check_bulk_results(batch_id):
 {file_rows}
 </tbody></table>
 </div>
-<p class="hint" style="margin-top:1.5rem;">Want every agent's file checked automatically before it reaches this stage? <a href="/pricing#brokerage">See the Brokerage Dashboard &rarr;</a></p>
+<p class="hint" style="margin-top:1.5rem;">{footer_note}</p>
 </div></body></html>"""
     return make_response(html)
 
@@ -4077,7 +4102,7 @@ def pricing():
       <li><span class="check">&#10003;</span> Every agent's offer auto-checked before it's even sent</li>
       <li><span class="check">&#10003;</span> Finished PDFs auto-emailed to your TC, no login needed</li>
       <li><span class="check">&#10003;</span> Your TC can also forward any outside file to tc@check.txtanoffer.com for an instant check &mdash; free, no dashboard login needed</li>
-      <li><span class="check">&#10003;</span> Bulk-check your whole closed-file backlog &mdash; zip up to 200 files, get one report on your real error rate</li>
+      <li><span class="check">&#10003;</span> Bulk-check your whole closed-file backlog &mdash; up to 200 files per batch with your join code (the free tool caps at 20)</li>
       <li><span class="check">&#10003;</span> Brokerage roster &amp; compliance dashboard</li>
       <li><span class="check">&#10003;</span> Agents join with one text &mdash; no per-agent setup</li>
     </ul>
@@ -4384,6 +4409,7 @@ def analytics_dashboard():
     tc_check_summary = get_tc_check_summary(days=30)
     recent_tc_email_senders = get_recent_tc_check_email_senders(limit=20)
     tc_repeat_senders = get_tc_check_repeat_senders(within_days=14)
+    tc_bulk_summary = get_tc_check_bulk_summary(days=30)
 
     # Every 30-day metric above answers "how are we doing overall" but not
     # "did anything happen since yesterday" -- that used to require manually
@@ -4395,6 +4421,7 @@ def analytics_dashboard():
     signups_by_source_24h = get_signups_by_source(days=1)
     landing_visits_by_source_24h = get_landing_visits_by_source(days=1)
     tc_check_summary_24h = get_tc_check_summary(days=1)
+    tc_bulk_summary_24h = get_tc_check_bulk_summary(days=1)
 
     def _merge_24h_counts(rows_30, rows_24, key_field):
         """rows_24's keys are always a subset of rows_30's (see comment
@@ -4578,6 +4605,14 @@ body{{font-family:system-ui;max-width:800px;margin:40px auto;padding:20px;}}
     {tc_issue_rows}
   </table>
   <p class="label" style="margin-top:8px;">Whatever's at the top of this list is both the next marketing hook ("audited N files, X% are missing...") and a candidate for a dedicated feature or reminder.</p>
+</div>
+<div class="metric">
+  <h3>Bulk TC File Check</h3>
+  <div class="value">{tc_bulk_summary['batches']}</div>
+  <div class="label">Batches submitted at /tc-check/bulk (30 days)</div>
+  <p>{tc_bulk_summary['total_files']} files checked total &middot; {tc_bulk_summary['with_issues']} of {tc_bulk_summary['recognized']} recognized files had at least one issue ({tc_bulk_summary['with_issues_pct']}%)</p>
+  <p>{tc_bulk_summary['free_batches']} free-tier batches (capped at {FREE_BULK_LIMIT} files) &middot; {tc_bulk_summary['brokerage_batches']} with a Brokerage join code (up to {MAX_BULK_FILES})</p>
+  <p class="h24">Last 24h: {tc_bulk_summary_24h['batches']} batches &middot; {tc_bulk_summary_24h['total_files']} files &middot; {tc_bulk_summary_24h['brokerage_batches']} brokerage-tier</p>
 </div>
 <h2>Revenue</h2>
 <div class="metric">

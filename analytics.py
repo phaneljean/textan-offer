@@ -478,6 +478,54 @@ def get_recent_tc_check_email_senders(limit: int = 20) -> list:
             break
     return out
 
+def get_tc_check_bulk_summary(days: int = 30) -> dict:
+    """Usage summary for Bulk TC File Check batches (/tc-check/bulk, see
+    tc_bulk.py) -- deliberately separate from get_tc_check_summary()'s
+    per-file numbers above. One 'tc_check_bulk' event already represents
+    an entire batch (tc_bulk.process_batch fires exactly one per batch,
+    not one per file inside it), so folding this into the single-check
+    funnel would badly skew it: one 20-file free sample would look like
+    20x the single-check traffic it actually represents.
+
+    free_batches/brokerage_batches split by tier (tc_bulk.FREE_BULK_LIMIT
+    vs MAX_BULK_FILES) -- answers the real question this metric exists
+    for: is the free sample cap actually driving anyone to use a join
+    code, or is every batch still on the free tier."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cutoff = (datetime.utcnow() - timedelta(days=days)).isoformat()
+    cursor.execute("""
+        SELECT metadata FROM events
+        WHERE event_type = 'tc_check_bulk' AND created_at > ?
+    """, (cutoff,))
+    rows = cursor.fetchall()
+    conn.close()
+
+    import json
+    batches = total_files = recognized = with_issues = 0
+    free_batches = brokerage_batches = 0
+    for row in rows:
+        metadata = json.loads(row[0]) if row[0] else {}
+        batches += 1
+        total_files += metadata.get("total_files", 0)
+        recognized += metadata.get("recognized_count", 0)
+        with_issues += metadata.get("with_issues_count", 0)
+        if metadata.get("tier") == "brokerage":
+            brokerage_batches += 1
+        else:
+            free_batches += 1
+
+    return {
+        "batches": batches,
+        "total_files": total_files,
+        "recognized": recognized,
+        "with_issues": with_issues,
+        "with_issues_pct": round(with_issues / recognized * 100, 1) if recognized else 0,
+        "free_batches": free_batches,
+        "brokerage_batches": brokerage_batches,
+    }
+
+
 def get_signups_by_source(days: int = 30) -> list:
     """Signup counts grouped by ?src= attribution (Direct Reach, BiggerPockets,
     LinkedIn, etc.), most recent-heavy channels first. 'direct' covers anyone
