@@ -4385,6 +4385,28 @@ def analytics_dashboard():
     recent_tc_email_senders = get_recent_tc_check_email_senders(limit=20)
     tc_repeat_senders = get_tc_check_repeat_senders(within_days=14)
 
+    # Every 30-day metric above answers "how are we doing overall" but not
+    # "did anything happen since yesterday" -- that used to require manually
+    # eyeballing timestamps in the raw activity tables. Re-running the same
+    # days-scoped functions with days=1 gives a true trailing-24h window
+    # (not a calendar-day bucket) for free, since a days=1 cutoff is always
+    # a strict subset of the days=30 one -- no new query logic needed.
+    metrics_24h = get_conversion_metrics(days=1)
+    signups_by_source_24h = get_signups_by_source(days=1)
+    landing_visits_by_source_24h = get_landing_visits_by_source(days=1)
+    tc_check_summary_24h = get_tc_check_summary(days=1)
+
+    def _merge_24h_counts(rows_30, rows_24, key_field):
+        """rows_24's keys are always a subset of rows_30's (see comment
+        above), so this only needs to look up rows_30's ordering and fill
+        in 0 for anything with no activity in the last 24h."""
+        by_key_24 = {r[key_field]: r["count"] for r in rows_24}
+        return [{**r, "count_24h": by_key_24.get(r[key_field], 0)} for r in rows_30]
+
+    signups_by_source_merged = _merge_24h_counts(signups_by_source, signups_by_source_24h, "source")
+    landing_visits_by_source_merged = _merge_24h_counts(landing_visits_by_source, landing_visits_by_source_24h, "source")
+    tc_issue_frequency_merged = _merge_24h_counts(tc_check_summary["issue_frequency"], tc_check_summary_24h["issue_frequency"], "key")
+
     tc_email_sender_rows = ""
     for entry in recent_tc_email_senders:
         from datetime import datetime as _dt
@@ -4423,15 +4445,15 @@ def analytics_dashboard():
         for state, count in sorted(waitlist_by_state.items(), key=lambda kv: -kv[1])
     ) or '<tr><td colspan="2" style="padding:10px;color:#666;">No waitlist signups yet.</td></tr>'
     source_rows = "".join(
-        f"<tr><td>{s['source']}</td><td>{s['count']}</td></tr>" for s in signups_by_source
-    ) or '<tr><td colspan="2" style="padding:10px;color:#666;">No signups yet.</td></tr>'
+        f"<tr><td>{s['source']}</td><td>{s['count']}</td><td>{s['count_24h']}</td></tr>" for s in signups_by_source_merged
+    ) or '<tr><td colspan="3" style="padding:10px;color:#666;">No signups yet.</td></tr>'
     visit_rows = "".join(
-        f"<tr><td>{v['source']}</td><td>{v['count']}</td></tr>" for v in landing_visits_by_source
-    ) or '<tr><td colspan="2" style="padding:10px;color:#666;">No tagged visits yet.</td></tr>'
+        f"<tr><td>{v['source']}</td><td>{v['count']}</td><td>{v['count_24h']}</td></tr>" for v in landing_visits_by_source_merged
+    ) or '<tr><td colspan="3" style="padding:10px;color:#666;">No tagged visits yet.</td></tr>'
     tc_issue_rows = "".join(
-        f"<tr><td>{i['label']}</td><td>{i['count']}</td><td>{i['pct_of_recognized']}%</td></tr>"
-        for i in tc_check_summary['issue_frequency']
-    ) or '<tr><td colspan="3" style="padding:10px;color:#666;">No checks recognized yet.</td></tr>'
+        f"<tr><td>{i['label']}</td><td>{i['count']}</td><td>{i['pct_of_recognized']}%</td><td>{i['count_24h']}</td></tr>"
+        for i in tc_issue_frequency_merged
+    ) or '<tr><td colspan="4" style="padding:10px;color:#666;">No checks recognized yet.</td></tr>'
     waitlist_rows = ""
     for w in waitlist_signups[:20]:
         from datetime import datetime
@@ -4448,6 +4470,7 @@ body{{font-family:system-ui;max-width:800px;margin:40px auto;padding:20px;}}
 .metric h3{{margin:0 0 10px;color:#333;}}
 .metric .value{{font-size:32px;font-weight:bold;color:#A9772F;}}
 .metric .label{{color:#666;font-size:14px;}}
+.h24{{margin-top:6px;font-size:13px;color:#A9772F;font-weight:600;}}
 </style></head><body>
 <h1>TxtAnOffer Analytics</h1>
 <h2>Last 30 Days</h2>
@@ -4456,13 +4479,15 @@ body{{font-family:system-ui;max-width:800px;margin:40px auto;padding:20px;}}
   <div class="value">{metrics['overall_conversion_rate']}%</div>
   <div class="label">Free → Paid Conversion Rate</div>
   <p>{metrics['signups']} signups → {metrics['conversions']} paid</p>
+  <p class="h24">Last 24h: {metrics_24h['signups']} signups &rarr; {metrics_24h['conversions']} paid</p>
 </div>
 <div class="metric">
   <h3>Signups by Source (30 days)</h3>
   <table style="width:100%;border-collapse:collapse;margin-top:10px;">
     <tr style="background:#eee;text-align:left;">
       <th style="padding:8px;">Source</th>
-      <th style="padding:8px;">Signups</th>
+      <th style="padding:8px;">30 Days</th>
+      <th style="padding:8px;">Last 24h</th>
     </tr>
     {source_rows}
   </table>
@@ -4473,7 +4498,8 @@ body{{font-family:system-ui;max-width:800px;margin:40px auto;padding:20px;}}
   <table style="width:100%;border-collapse:collapse;margin-top:10px;">
     <tr style="background:#eee;text-align:left;">
       <th style="padding:8px;">Source</th>
-      <th style="padding:8px;">Visits</th>
+      <th style="padding:8px;">30 Days</th>
+      <th style="padding:8px;">Last 24h</th>
     </tr>
     {visit_rows}
   </table>
@@ -4484,30 +4510,35 @@ body{{font-family:system-ui;max-width:800px;margin:40px auto;padding:20px;}}
   <div class="value">{metrics['trial_activation_rate']}%</div>
   <div class="label">Users who complete 3 free offers</div>
   <p>{metrics['trial_completions']} / {metrics['signups']} users</p>
+  <p class="h24">Last 24h: {metrics_24h['trial_completions']} / {metrics_24h['signups']} users</p>
 </div>
 <div class="metric">
   <h3>Paywall → Paid</h3>
   <div class="value">{metrics['paywall_to_paid_rate']}%</div>
   <div class="label">Users who pay after hitting limit</div>
   <p>{metrics['conversions']} / {metrics['hit_paywall']} users</p>
+  <p class="h24">Last 24h: {metrics_24h['conversions']} / {metrics_24h['hit_paywall']} users</p>
 </div>
 <div class="metric">
   <h3>Usage</h3>
   <div class="value">{metrics['total_offers']}</div>
   <div class="label">Total offers generated</div>
   <p>{metrics['avg_offers_per_user']} offers per user average</p>
+  <p class="h24">Last 24h: {metrics_24h['total_offers']} offers generated</p>
 </div>
 <div class="metric">
   <h3>TC File Check</h3>
   <div class="value">{tc_check_summary['total']}</div>
   <div class="label">Files checked across both channels (30 days)</div>
   <p>{tc_check_summary['recognized']} recognized as a TREC 20-19 &middot; {tc_check_summary['complete']} came back complete ({tc_check_summary['completion_rate']}%)</p>
+  <p class="h24">Last 24h: {tc_check_summary_24h['total']} checked &middot; {tc_check_summary_24h['recognized']} recognized &middot; {tc_check_summary_24h['complete']} complete</p>
 </div>
 <div class="metric">
   <h3>TC File Check &mdash; Web vs. Email</h3>
   <div class="value">{tc_check_summary['web_count']} / {tc_check_summary['email_count']}</div>
   <div class="label">Web uploads (/tc-check) vs. forwarded to tc@check.txtanoffer.com</div>
   <p>{tc_check_summary['email_new_sender_pct']}% of email forwards came from a sender not already in agent_profiles &mdash; {tc_check_summary['email_known_sender']} of {tc_check_summary['email_count']} were known</p>
+  <p class="h24">Last 24h: {tc_check_summary_24h['web_count']} web / {tc_check_summary_24h['email_count']} email</p>
 </div>
 <div class="metric" style="grid-column:1/-1;">
   <h3>TC File Check &mdash; Recent Email Senders</h3>
@@ -4527,6 +4558,7 @@ body{{font-family:system-ui;max-width:800px;margin:40px auto;padding:20px;}}
   <div class="value">{tc_check_summary['email_capture_rate']}%</div>
   <div class="label">Of web uploads (/tc-check), gave an email via the opt-in checkbox</div>
   <p>{tc_check_summary['emails_captured']} emails / {tc_check_summary['web_count']} web checks &mdash; no gate anymore, this is every web upload</p>
+  <p class="h24">Last 24h: {tc_check_summary_24h['emails_captured']} / {tc_check_summary_24h['web_count']}</p>
 </div>
 <div class="metric">
   <h3>TC File Check &rarr; Repeat Checkers</h3>
@@ -4541,6 +4573,7 @@ body{{font-family:system-ui;max-width:800px;margin:40px auto;padding:20px;}}
       <th style="padding:8px;">Issue</th>
       <th style="padding:8px;">Count</th>
       <th style="padding:8px;">% of recognized files</th>
+      <th style="padding:8px;">Last 24h</th>
     </tr>
     {tc_issue_rows}
   </table>
