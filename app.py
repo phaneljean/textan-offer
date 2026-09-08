@@ -257,14 +257,14 @@ def index():
       --card-dark-3: #112333;
       --bg-card: #fff;
       --border: rgba(15,31,47,0.08);
-      --border-hover: rgba(23,23,23,0.35);
+      --border-hover: rgba(11,93,82,0.35);
       --text: #0f1f2f;
       --text-muted: #5a6b7a;
       --text-dim: #8a9aa9;
-      --accent: #171717;
-      --accent-light: #525252;
-      --accent-tint: #F0F0EE;
-      --accent-glow: rgba(23,23,23,0.18);
+      --accent: #0b5d52;
+      --accent-light: #16806e;
+      --accent-tint: #E7F3F1;
+      --accent-glow: rgba(11,93,82,0.18);
       --radius: 1.25rem;
       --radius-sm: 0.85rem;
       --transition: all 0.2s ease;
@@ -367,7 +367,7 @@ def index():
     .hero { padding-top: 4rem; padding-bottom: 1rem; }
     .icon-circle {
       width: 52px; height: 52px; border-radius: 999px;
-      background: var(--accent-tint); border: 1px solid rgba(23,23,23,0.18);
+      background: var(--accent-tint); border: 1px solid rgba(11,93,82,0.18);
       display: flex; align-items: center; justify-content: center;
       margin-bottom: 1.5rem; color: var(--card-dark);
     }
@@ -379,7 +379,7 @@ def index():
       backdrop-filter: blur(6px);
       -webkit-backdrop-filter: blur(6px);
       border: 1px solid rgba(15,31,47,0.4);
-      color: #000000;
+      color: #0a3a33;
       font-size: 0.7rem;
       font-weight: 700;
       padding: 0.35rem 0.85rem;
@@ -435,7 +435,7 @@ def index():
     }
     .input-row input:focus {
       border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(23,23,23,0.12);
+      box-shadow: 0 0 0 3px rgba(11,93,82,0.12);
       background: #fff;
     }
     .input-row input::placeholder { color: #a8b4bd; }
@@ -462,7 +462,7 @@ def index():
       font-size: 0.8rem;
       color: var(--text-muted);
     }
-    .hero-phone a { color: #000000; font-weight: 600; text-decoration: none; }
+    .hero-phone a { color: #0a3a33; font-weight: 600; text-decoration: none; }
     .hero-phone a:hover { text-decoration: underline; }
 
     /* Workflow strip -- Draft / Verify / Close */
@@ -642,7 +642,7 @@ def index():
     .step-num {
       width: 38px; height: 38px;
       background: var(--accent-tint);
-      color: #000000;
+      color: #0a3a33;
       border-radius: var(--radius-sm);
       display: flex; align-items: center; justify-content: center;
       font-weight: 700;
@@ -803,7 +803,7 @@ def index():
       <input type="file" id="homeFileInput" accept="application/pdf">
       <div class="email-optin">
         <label class="email-optin-check"><input type="checkbox" id="homeEmailOptinCheckbox" checked> Email me this report + future checks for this address</label>
-        <input type="email" id="homeEmailOptinInput" class="email-optin-input" placeholder="you@brokerage.com" autocomplete="email">
+        <input type="email" id="homeEmailOptinInput" class="email-optin-input" placeholder="you@example.com" autocomplete="email">
         <div class="email-optin-confirm" id="homeEmailOptinConfirm"></div>
       </div>
       <div class="or-divider">or</div>
@@ -860,7 +860,7 @@ def index():
     <div class="steps-header" style="margin-bottom:1.5rem;">
       <div class="steps-kicker">For TCs &mdash; in-house, independent, or running your own roster of brokerages</div>
       <h2>What this catches before it costs you.</h2>
-      <p>Every TREC 20-19 that reaches a file with a blank field or a missing initial is a liability sitting in someone's name &mdash; and it's usually not the agent who finds out first. It's the TC's name on the file, whether that's one brokerage or six.</p>
+      <p>You already catch nearly everything by hand, page by page. This is the second set of eyes for the one blank that gets past even a careful TC eventually &mdash; and it's usually not the agent who finds out first. It's your name on the file, whether that's one brokerage or six.</p>
     </div>
     <ul class="tc-checklist">
       <li><span class="tc-check">&check;</span><span><strong>Effective Date left blank</strong> &mdash; the date every other deadline counts from.</span></li>
@@ -935,8 +935,8 @@ def index():
 
   <footer class="footer">
     <div class="trust-badges">
-      <span class="trust-badge"><span class="trust-icon">&#128274;</span>AES-256 Encrypted</span>
-      <span class="trust-badge"><span class="trust-icon">&#9729;</span>SOC 2 Type II Infrastructure</span>
+      <span class="trust-badge"><span class="trust-icon">&#128274;</span>Your file isn't stored</span>
+      <span class="trust-badge"><span class="trust-icon">&#127775;</span>Built &amp; run in Texas</span>
       <span class="trust-badge"><span class="trust-icon">&#128179;</span>Billing by Stripe</span>
     </div>
     <div class="footer-links">
@@ -947,7 +947,7 @@ def index():
       <a href="/privacy">Privacy Policy</a>
       <a href="/privacy#sms-messaging">SMS Terms</a>
       <a href="/pricing">Pricing</a>
-      <a href="/playground">Parser Playground</a>
+      <a href="/playground">Try a Sample Text</a>
       <a href="/tc-check">TC File Check</a>
       <a href="mailto:support@txtanoffer.com">Support</a>
     </div>
@@ -1954,10 +1954,10 @@ DEMO_FORM = """
     --text: #0f1f2f;
     --text-muted: #5a6b7a;
     --text-dim: #8a9aa9;
-    --accent: #171717;
-    --accent-light: #525252;
-    --accent-dark: #000000;
-    --accent-tint: #F0F0EE;
+    --accent: #0b5d52;
+    --accent-light: #16806e;
+    --accent-dark: #0a3a33;
+    --accent-tint: #E7F3F1;
     --radius: 1.25rem;
     --radius-sm: 0.85rem;
     --transition: all 0.2s ease;
@@ -2855,8 +2855,8 @@ def tc_check_page():
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <style>
 :root{--bg:#F5F5F7;--bg-card:#fff;--border:rgba(15,31,47,0.08);
---text:#0f1f2f;--text-muted:#5a6b7a;--text-dim:#8a9aa9;--accent:#171717;--accent-light:#525252;
---accent-dark:#000000;--accent-tint:#F0F0EE;--radius:1.25rem;--radius-sm:0.85rem;}
+--text:#0f1f2f;--text-muted:#5a6b7a;--text-dim:#8a9aa9;--accent:#0b5d52;--accent-light:#16806e;
+--accent-dark:#0a3a33;--accent-tint:#E7F3F1;--radius:1.25rem;--radius-sm:0.85rem;}
 *{margin:0;padding:0;box-sizing:border-box;}
 body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;
 -webkit-font-smoothing:antialiased;}
@@ -2966,7 +2966,7 @@ border-radius:var(--radius-sm);font-family:inherit;font-size:0.85rem;font-weight
 </div>
 <div class="email-optin">
 <label class="email-optin-check"><input type="checkbox" id="emailOptinCheckbox" checked> Email me this report + future checks for this address</label>
-<input type="email" id="emailOptinInput" class="email-optin-input" placeholder="you@brokerage.com" autocomplete="email">
+<input type="email" id="emailOptinInput" class="email-optin-input" placeholder="you@example.com" autocomplete="email">
 <div class="email-optin-confirm" id="emailOptinConfirm"></div>
 </div>
 <div class="or-divider">or</div>
@@ -3227,8 +3227,8 @@ function escapeHtml(s) {
 
 _BULK_PAGE_STYLE = """
 :root{--bg:#F5F5F7;--bg-card:#fff;--border:rgba(15,31,47,0.08);
---text:#0f1f2f;--text-muted:#5a6b7a;--text-dim:#8a9aa9;--accent:#171717;--accent-light:#525252;
---accent-tint:#F0F0EE;--radius:1.25rem;--radius-sm:0.85rem;}
+--text:#0f1f2f;--text-muted:#5a6b7a;--text-dim:#8a9aa9;--accent:#0b5d52;--accent-light:#16806e;
+--accent-tint:#E7F3F1;--radius:1.25rem;--radius-sm:0.85rem;}
 *{margin:0;padding:0;box-sizing:border-box;}
 body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased;}
 a{color:var(--accent);}
@@ -3286,7 +3286,7 @@ def tc_check_bulk_page():
 <div class="card">
 <form method="POST" action="/tc-check/bulk" enctype="multipart/form-data">
 <label for="email">Email (required &mdash; we'll send your report here)</label>
-<input type="email" id="email" name="email" required placeholder="you@brokerage.com">
+<input type="email" id="email" name="email" required placeholder="you@example.com">
 <label for="file">Zip file of PDFs</label>
 <input type="file" id="file" name="file" accept=".zip" required>
 <label for="join_code">Brokerage join code (optional)</label>
@@ -3469,8 +3469,8 @@ def playground():
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <style>
 :root{--bg:#F5F5F7;--bg-card:#fff;--border:rgba(15,31,47,0.08);
---text:#0f1f2f;--text-muted:#5a6b7a;--text-dim:#8a9aa9;--accent:#171717;--accent-light:#525252;
---accent-dark:#000000;--accent-tint:#F0F0EE;--radius:1.25rem;--radius-sm:0.85rem;}
+--text:#0f1f2f;--text-muted:#5a6b7a;--text-dim:#8a9aa9;--accent:#0b5d52;--accent-light:#16806e;
+--accent-dark:#0a3a33;--accent-tint:#E7F3F1;--radius:1.25rem;--radius-sm:0.85rem;}
 *{margin:0;padding:0;box-sizing:border-box;}
 body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;
 -webkit-font-smoothing:antialiased;}
@@ -3891,14 +3891,14 @@ def pricing():
     --bg: #F5F5F7;
     --bg-card: #fff;
     --border: rgba(15,31,47,0.08);
-    --border-hover: rgba(23,23,23,0.35);
+    --border-hover: rgba(11,93,82,0.35);
     --text: #0f1f2f;
     --text-muted: #5a6b7a;
     --text-dim: #8a9aa9;
-    --accent: #171717;
-    --accent-light: #525252;
-    --accent-dark: #000000;
-    --accent-tint: #F0F0EE;
+    --accent: #0b5d52;
+    --accent-light: #16806e;
+    --accent-dark: #0a3a33;
+    --accent-tint: #E7F3F1;
     --radius: 1.25rem;
     --radius-sm: 0.85rem;
     --transition: all 0.2s ease;
@@ -3933,7 +3933,7 @@ def pricing():
     font-size:0.875rem;font-weight:600;text-decoration:none;display:inline-block;
     transition:var(--transition);
   }
-  .nav-cta:hover {transform:scale(1.05);box-shadow:0 0 24px rgba(23,23,23,0.3);}
+  .nav-cta:hover {transform:scale(1.05);box-shadow:0 0 24px rgba(11,93,82,0.3);}
   .nav-toggle { display: none; flex-direction: column; justify-content: center; gap: 5px; width: 34px; height: 34px; background: none; border: none; cursor: pointer; padding: 0; }
   .nav-toggle span { display: block; width: 100%; height: 2px; background: var(--text); border-radius: 2px; }
 
@@ -3980,12 +3980,12 @@ def pricing():
 
   .cta-btn {
     display:block;width:100%;padding:0.85rem;
-    background:linear-gradient(135deg,var(--accent),#000000);color:#fff;
+    background:linear-gradient(135deg,var(--accent),#0a3a33);color:#fff;
     border:none;font-family:inherit;font-size:0.9rem;font-weight:600;
     border-radius:var(--radius-sm);cursor:pointer;text-align:center;
     transition:var(--transition);text-decoration:none;
   }
-  .cta-btn:hover {transform:translateY(-2px);box-shadow:0 8px 24px rgba(23,23,23,0.25);}
+  .cta-btn:hover {transform:translateY(-2px);box-shadow:0 8px 24px rgba(11,93,82,0.25);}
   .cta-btn.outline {
     background:transparent;border:1px solid var(--border);color:var(--text-muted);
   }
@@ -4155,7 +4155,7 @@ def pricing():
 </div>
 
 <div style="max-width:640px;margin:0 auto;padding:2rem;text-align:center;">
-  <div style="background:var(--accent-tint);border:1px solid rgba(23,23,23,0.2);border-radius:1rem;padding:2rem 1.75rem;">
+  <div style="background:var(--accent-tint);border:1px solid rgba(11,93,82,0.2);border-radius:1rem;padding:2rem 1.75rem;">
     <div style="font-size:1.5rem;margin-bottom:0.5rem;">&#128737;</div>
     <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:0.5rem;">No Risk on Either Plan</h3>
     <p style="color:var(--text-muted);font-size:0.9rem;line-height:1.7;margin:0;">
@@ -4267,7 +4267,7 @@ def success():
 <style>
   :root{{--bg:#F5F5F7;--bg-card:#fff;--border:rgba(15,31,47,0.08);
     --text:#0f1f2f;--text-muted:#5a6b7a;--text-dim:#8a9aa9;
-    --accent:#171717;--accent-light:#525252;--accent-dark:#000000;--accent-tint:#F0F0EE;
+    --accent:#0b5d52;--accent-light:#16806e;--accent-dark:#0a3a33;--accent-tint:#E7F3F1;
     --radius:1.25rem;--radius-sm:0.85rem;}}
   *{{margin:0;padding:0;box-sizing:border-box;}}
   body{{background:var(--bg);min-height:100vh;margin:0;display:flex;align-items:center;
@@ -4284,10 +4284,10 @@ def success():
   .next-steps li{{margin:0.5rem 0;font-size:0.9rem;color:var(--text-muted);line-height:1.5;}}
   .next-steps li strong{{color:var(--text);}}
   .btn{{display:inline-block;padding:0.85rem 2rem;
-    background:linear-gradient(135deg,var(--accent),#000000);color:#fff;
+    background:linear-gradient(135deg,var(--accent),#0a3a33);color:#fff;
     text-decoration:none;border-radius:var(--radius-sm);font-weight:600;font-size:0.95rem;
     transition:all 0.2s ease;}}
-  .btn:hover{{transform:translateY(-2px);box-shadow:0 8px 24px rgba(23,23,23,0.25);}}
+  .btn:hover{{transform:translateY(-2px);box-shadow:0 8px 24px rgba(11,93,82,0.25);}}
   .logo{{margin-bottom:1.5rem;}}
   .logo img{{width:48px;height:48px;border-radius:22%;object-fit:contain;}}
 </style>
@@ -4727,13 +4727,13 @@ def admin_brokerages():
     return f"""<!DOCTYPE html>
 <html><head><title>Brokerages — TxtAnOffer Admin</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<style>body{{font-family:-apple-system,sans-serif;max-width:900px;margin:40px auto;padding:0 20px;color:#171717;}}
+<style>body{{font-family:-apple-system,sans-serif;max-width:900px;margin:40px auto;padding:0 20px;color:#0b5d52;}}
 input{{padding:8px 10px;border:1px solid #ccc;border-radius:6px;font-size:0.9rem;margin-right:8px;}}
-button{{padding:8px 16px;border:none;border-radius:6px;background:#171717;color:#fff;font-weight:600;cursor:pointer;}}
+button{{padding:8px 16px;border:none;border-radius:6px;background:#0b5d52;color:#fff;font-weight:600;cursor:pointer;}}
 table{{width:100%;border-collapse:collapse;margin-top:20px;}}
 th{{text-align:left;padding:8px;border-bottom:2px solid #eee;}}
 td{{border-bottom:1px solid #eee;}}
-a{{color:#171717;}}</style>
+a{{color:#0b5d52;}}</style>
 </head><body>
 <h1>Brokerages</h1>
 {created_banner}{error_banner}
@@ -4799,7 +4799,7 @@ def admin_sponsors():
             f"<input type='hidden' name='action' value='toggle'>"
             f"<input type='hidden' name='sponsor_id' value='{s['id']}'>"
             f"<input type='hidden' name='active' value='{toggle_next}'>"
-            f"<button type='submit' style='background:#eee;color:#171717;'>{toggle_label}</button>"
+            f"<button type='submit' style='background:#eee;color:#0b5d52;'>{toggle_label}</button>"
             f"</form></td>"
             f"<td style='padding:8px;color:#666;'>{s['created_at'][:10]}</td></tr>"
         )
@@ -4820,13 +4820,13 @@ def admin_sponsors():
     return f"""<!DOCTYPE html>
 <html><head><title>Title Sponsors — TxtAnOffer Admin</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<style>body{{font-family:-apple-system,sans-serif;max-width:1000px;margin:40px auto;padding:0 20px;color:#171717;}}
+<style>body{{font-family:-apple-system,sans-serif;max-width:1000px;margin:40px auto;padding:0 20px;color:#0b5d52;}}
 input{{padding:8px 10px;border:1px solid #ccc;border-radius:6px;font-size:0.9rem;margin-right:8px;margin-bottom:8px;}}
-button{{padding:8px 16px;border:none;border-radius:6px;background:#171717;color:#fff;font-weight:600;cursor:pointer;}}
+button{{padding:8px 16px;border:none;border-radius:6px;background:#0b5d52;color:#fff;font-weight:600;cursor:pointer;}}
 table{{width:100%;border-collapse:collapse;margin-top:20px;}}
 th{{text-align:left;padding:8px;border-bottom:2px solid #eee;}}
 td{{border-bottom:1px solid #eee;}}
-a{{color:#171717;}}
+a{{color:#0b5d52;}}
 .hint{{color:#666;font-size:0.85rem;margin:-4px 0 12px;}}</style>
 </head><body>
 <h1>Title Sponsors</h1>
@@ -4897,7 +4897,7 @@ def broker_dashboard(join_code):
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
   * {{ box-sizing: border-box; }}
-  body{{font-family:'Inter',-apple-system,sans-serif;max-width:900px;margin:40px auto;padding:0 20px;color:#171717;background:#F5F5F7;}}
+  body{{font-family:'Inter',-apple-system,sans-serif;max-width:900px;margin:40px auto;padding:0 20px;color:#0b5d52;background:#F5F5F7;}}
   h1{{font-size:1.6rem;margin-bottom:4px;}}
   .sub{{color:#5a6b7a;margin-bottom:28px;}}
   .card{{background:#fff;border:1px solid rgba(15,31,47,0.08);border-radius:14px;padding:22px;margin-bottom:24px;}}
@@ -4999,7 +4999,7 @@ def signup():
                     '</div>'
                     '<div style="display:flex;gap:0.5rem;margin-top:1rem;flex-wrap:wrap;">'
                     f'<a href="{profile_url}" style="flex:1;text-align:center;padding:0.75rem 1rem;'
-                    'background:linear-gradient(135deg,var(--accent),#000000);color:#fff;border-radius:var(--radius-sm);'
+                    'background:linear-gradient(135deg,var(--accent),#0a3a33);color:#fff;border-radius:var(--radius-sm);'
                     'font-weight:600;font-size:0.85rem;text-decoration:none;">Set Up Your Profile &rarr;</a>'
                     '<a href="/pricing" style="flex:1;text-align:center;padding:0.75rem 1rem;'
                     'background:var(--bg-card);color:var(--text-muted);border:1px solid var(--border);'
@@ -5019,7 +5019,7 @@ def signup():
 <style>
   :root{{--bg:#F5F5F7;--bg-card:#fff;--border:rgba(15,31,47,0.08);
     --text:#0f1f2f;--text-muted:#5a6b7a;--text-dim:#8a9aa9;
-    --accent:#171717;--accent-light:#525252;--accent-dark:#000000;--accent-tint:#F0F0EE;
+    --accent:#0b5d52;--accent-light:#16806e;--accent-dark:#0a3a33;--accent-tint:#E7F3F1;
     --radius:1.25rem;--radius-sm:0.85rem;--transition:all 0.2s ease;}}
   *{{margin:0;padding:0;box-sizing:border-box;}}
   body{{background:var(--bg);min-height:100vh;margin:0;display:flex;align-items:center;
@@ -5041,26 +5041,26 @@ def signup():
     border-radius:var(--radius-sm);padding:0.75rem 1rem;color:var(--text);
     font-size:0.95rem;font-family:inherit;outline:none;margin-bottom:1rem;transition:var(--transition);
   }}
-  input:focus{{border-color:var(--accent);box-shadow:0 0 0 3px rgba(23,23,23,0.15);}}
+  input:focus{{border-color:var(--accent);box-shadow:0 0 0 3px rgba(11,93,82,0.15);}}
   input::placeholder{{color:#b8c2ca;}}
   .consent-row{{
     display:flex;align-items:flex-start;gap:0.75rem;margin:1rem 0;padding:1rem;
-    background:var(--accent-tint);border:1px solid rgba(23,23,23,0.2);border-radius:var(--radius-sm);
+    background:var(--accent-tint);border:1px solid rgba(11,93,82,0.2);border-radius:var(--radius-sm);
   }}
   .consent-row input[type=checkbox]{{margin-top:0.2rem;width:18px;height:18px;flex-shrink:0;accent-color:var(--accent);}}
   .consent-row label{{font-size:0.8rem;line-height:1.6;color:var(--text-muted);}}
   .consent-row a{{color:var(--accent-dark);text-decoration:underline;}}
   button{{
     width:100%;margin-top:0.75rem;
-    background:linear-gradient(135deg,var(--accent),#000000);color:#fff;border:none;
+    background:linear-gradient(135deg,var(--accent),#0a3a33);color:#fff;border:none;
     padding:0.85rem;font-family:inherit;font-size:0.95rem;font-weight:600;
     border-radius:var(--radius-sm);cursor:pointer;transition:var(--transition);
   }}
-  button:hover{{transform:translateY(-2px);box-shadow:0 8px 24px rgba(23,23,23,0.25);}}
+  button:hover{{transform:translateY(-2px);box-shadow:0 8px 24px rgba(11,93,82,0.25);}}
   button:disabled{{opacity:0.4;cursor:not-allowed;transform:none;box-shadow:none;}}
   .success{{
     margin-top:1rem;padding:1rem;background:var(--accent-tint);
-    border:1px solid rgba(23,23,23,0.2);border-radius:var(--radius-sm);
+    border:1px solid rgba(11,93,82,0.2);border-radius:var(--radius-sm);
     font-size:0.9rem;color:var(--accent-dark);text-align:center;
   }}
   .error{{
@@ -5086,7 +5086,7 @@ def signup():
         <label class="field-label">Name</label>
         <input type="text" name="name" placeholder="Your name">
         <label class="field-label">Email</label>
-        <input type="email" name="email" placeholder="you@brokerage.com">
+        <input type="email" name="email" placeholder="you@example.com">
         <label class="field-label">Brokerage join code (optional)</label>
         <input type="text" name="brokerage_code" placeholder="Given to you by your managing broker" style="text-transform:uppercase;">
         <div class="consent-row">
@@ -5149,7 +5149,7 @@ def login():
 <style>
   :root{{--bg:#F5F5F7;--bg-card:#fff;--border:rgba(15,31,47,0.08);
     --text:#0f1f2f;--text-muted:#5a6b7a;--text-dim:#8a9aa9;
-    --accent:#171717;--accent-light:#525252;--accent-dark:#000000;--accent-tint:#F0F0EE;
+    --accent:#0b5d52;--accent-light:#16806e;--accent-dark:#0a3a33;--accent-tint:#E7F3F1;
     --radius:1.25rem;--radius-sm:0.85rem;--transition:all 0.2s ease;}}
   *{{margin:0;padding:0;box-sizing:border-box;}}
   body{{background:var(--bg);min-height:100vh;margin:0;display:flex;align-items:center;
@@ -5171,18 +5171,18 @@ def login():
     border-radius:var(--radius-sm);padding:0.75rem 1rem;color:var(--text);
     font-size:0.95rem;font-family:inherit;outline:none;transition:var(--transition);
   }}
-  input:focus{{border-color:var(--accent);box-shadow:0 0 0 3px rgba(23,23,23,0.15);}}
+  input:focus{{border-color:var(--accent);box-shadow:0 0 0 3px rgba(11,93,82,0.15);}}
   input::placeholder{{color:#b8c2ca;}}
   .sms-note{{font-size:0.8rem;color:var(--text-dim);margin:0.75rem 0 0;line-height:1.5;}}
   button{{
     width:100%;margin-top:1rem;
-    background:linear-gradient(135deg,var(--accent),#000000);color:#fff;border:none;
+    background:linear-gradient(135deg,var(--accent),#0a3a33);color:#fff;border:none;
     padding:0.85rem;font-family:inherit;font-size:0.95rem;font-weight:600;
     border-radius:var(--radius-sm);cursor:pointer;transition:var(--transition);
   }}
-  button:hover{{transform:translateY(-2px);box-shadow:0 8px 24px rgba(23,23,23,0.25);}}
+  button:hover{{transform:translateY(-2px);box-shadow:0 8px 24px rgba(11,93,82,0.25);}}
   .msg{{margin-top:1rem;padding:0.85rem;border-radius:var(--radius-sm);font-size:0.9rem;text-align:center;}}
-  .msg.success{{background:var(--accent-tint);border:1px solid rgba(23,23,23,0.2);color:var(--accent-dark);}}
+  .msg.success{{background:var(--accent-tint);border:1px solid rgba(11,93,82,0.2);color:var(--accent-dark);}}
   .msg.error{{background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);color:#dc2626;}}
   .msg a{{color:var(--accent-dark);}}
   .alt{{text-align:center;margin-top:1.25rem;font-size:0.85rem;color:var(--text-dim);}}
@@ -5231,10 +5231,10 @@ def terms():
     --text: #0f1f2f;
     --text-muted: #5a6b7a;
     --text-dim: #8a9aa9;
-    --accent: #171717;
-    --accent-light: #525252;
-    --accent-dark: #000000;
-    --accent-tint: #F0F0EE;
+    --accent: #0b5d52;
+    --accent-light: #16806e;
+    --accent-dark: #0a3a33;
+    --accent-tint: #E7F3F1;
     --radius: 1.25rem;
     --radius-sm: 0.85rem;
     --transition: all 0.2s ease;
@@ -5503,10 +5503,10 @@ def privacy():
     --text: #0f1f2f;
     --text-muted: #5a6b7a;
     --text-dim: #8a9aa9;
-    --accent: #171717;
-    --accent-light: #525252;
-    --accent-dark: #000000;
-    --accent-tint: #F0F0EE;
+    --accent: #0b5d52;
+    --accent-light: #16806e;
+    --accent-dark: #0a3a33;
+    --accent-tint: #E7F3F1;
     --radius: 1.25rem;
     --radius-sm: 0.85rem;
     --transition: all 0.2s ease;
@@ -5734,10 +5734,10 @@ def faq():
     --text: #0f1f2f;
     --text-muted: #5a6b7a;
     --text-dim: #8a9aa9;
-    --accent: #171717;
-    --accent-light: #525252;
-    --accent-dark: #000000;
-    --accent-tint: #F0F0EE;
+    --accent: #0b5d52;
+    --accent-light: #16806e;
+    --accent-dark: #0a3a33;
+    --accent-tint: #E7F3F1;
     --radius: 1.25rem;
     --radius-sm: 0.85rem;
     --transition: all 0.2s ease;
@@ -5904,10 +5904,10 @@ def trec_changes():
     --text: #0f1f2f;
     --text-muted: #5a6b7a;
     --text-dim: #8a9aa9;
-    --accent: #171717;
-    --accent-light: #525252;
-    --accent-dark: #000000;
-    --accent-tint: #F0F0EE;
+    --accent: #0b5d52;
+    --accent-light: #16806e;
+    --accent-dark: #0a3a33;
+    --accent-tint: #E7F3F1;
     --green: #10b981;
     --green-tint: #E7F7F1;
     --radius: 1.25rem;
@@ -6131,10 +6131,10 @@ def about():
     --text: #0f1f2f;
     --text-muted: #5a6b7a;
     --text-dim: #8a9aa9;
-    --accent: #171717;
-    --accent-light: #525252;
-    --accent-dark: #000000;
-    --accent-tint: #F0F0EE;
+    --accent: #0b5d52;
+    --accent-light: #16806e;
+    --accent-dark: #0a3a33;
+    --accent-tint: #E7F3F1;
     --radius: 1.25rem;
     --transition: all 0.2s ease;
   }
@@ -6293,10 +6293,10 @@ def contact():
     --text: #0f1f2f;
     --text-muted: #5a6b7a;
     --text-dim: #8a9aa9;
-    --accent: #171717;
-    --accent-light: #525252;
-    --accent-dark: #000000;
-    --accent-tint: #F0F0EE;
+    --accent: #0b5d52;
+    --accent-light: #16806e;
+    --accent-dark: #0a3a33;
+    --accent-tint: #E7F3F1;
     --radius: 1.25rem;
     --transition: all 0.2s ease;
   }
@@ -6498,14 +6498,14 @@ def profile():
     --bg: #F5F5F7;
     --bg-card: #fff;
     --border: rgba(15,31,47,0.08);
-    --border-hover: rgba(23,23,23,0.35);
+    --border-hover: rgba(11,93,82,0.35);
     --text: #0f1f2f;
     --text-muted: #5a6b7a;
     --text-dim: #8a9aa9;
-    --accent: #171717;
-    --accent-light: #525252;
-    --accent-dark: #000000;
-    --accent-tint: #F0F0EE;
+    --accent: #0b5d52;
+    --accent-light: #16806e;
+    --accent-dark: #0a3a33;
+    --accent-tint: #E7F3F1;
     --radius: 1.25rem;
     --radius-sm: 0.85rem;
     --transition: all 0.2s ease;
@@ -6539,7 +6539,7 @@ def profile():
     font-size:0.875rem;font-weight:600;text-decoration:none;display:inline-block;
     transition:var(--transition);
   }}
-  .nav-cta:hover {{transform:scale(1.05);box-shadow:0 0 24px rgba(23,23,23,0.3);}}
+  .nav-cta:hover {{transform:scale(1.05);box-shadow:0 0 24px rgba(11,93,82,0.3);}}
   .nav-toggle {{ display: none; flex-direction: column; justify-content: center; gap: 5px; width: 34px; height: 34px; background: none; border: none; cursor: pointer; padding: 0; }}
   .nav-toggle span {{ display: block; width: 100%; height: 2px; background: var(--text); border-radius: 2px; }}
 
@@ -6576,20 +6576,20 @@ def profile():
     border-radius:var(--radius-sm);padding:0.75rem 1rem;color:var(--text);
     font-size:0.9rem;font-family:inherit;outline:none;transition:var(--transition);
   }}
-  .form-card input:focus {{border-color:var(--accent);box-shadow:0 0 0 3px rgba(23,23,23,0.15);}}
+  .form-card input:focus {{border-color:var(--accent);box-shadow:0 0 0 3px rgba(11,93,82,0.15);}}
   .form-card input::placeholder {{color:#b8c2ca;}}
   .row {{display:flex;gap:0.75rem;}}
   .row > div {{flex:1;}}
   .form-card button {{
     width:100%;margin-top:1.5rem;
-    background:linear-gradient(135deg,var(--accent),#000000);color:#fff;border:none;
+    background:linear-gradient(135deg,var(--accent),#0a3a33);color:#fff;border:none;
     border-radius:var(--radius-sm);padding:0.85rem;font-weight:600;font-size:0.95rem;
     font-family:inherit;cursor:pointer;transition:var(--transition);
   }}
-  .form-card button:hover {{transform:translateY(-2px);box-shadow:0 8px 24px rgba(23,23,23,0.25);}}
+  .form-card button:hover {{transform:translateY(-2px);box-shadow:0 8px 24px rgba(11,93,82,0.25);}}
   .success {{
     margin-top:1rem;padding:0.85rem 1rem;
-    background:var(--accent-tint);border:1px solid rgba(23,23,23,0.25);
+    background:var(--accent-tint);border:1px solid rgba(11,93,82,0.25);
     border-radius:var(--radius-sm);font-size:0.85rem;color:var(--accent-dark);text-align:center;
   }}
   .error {{
@@ -6769,12 +6769,12 @@ def review_offer(filename):
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <style>
 :root{{--bg:#F5F5F7;--bg-card:#fff;--border:rgba(15,31,47,0.08);
---text:#0f1f2f;--text-muted:#5a6b7a;--text-dim:#8a9aa9;--accent:#171717;--accent-light:#525252;
---accent-dark:#000000;--accent-tint:#F0F0EE;--radius:1.25rem;--radius-sm:0.85rem;}}
+--text:#0f1f2f;--text-muted:#5a6b7a;--text-dim:#8a9aa9;--accent:#0b5d52;--accent-light:#16806e;
+--accent-dark:#0a3a33;--accent-tint:#E7F3F1;--radius:1.25rem;--radius-sm:0.85rem;}}
 *{{margin:0;padding:0;box-sizing:border-box;}}
 body{{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;
 -webkit-font-smoothing:antialiased;}}
-.top-bar{{background:var(--accent-tint);border-bottom:1px solid rgba(23,23,23,0.2);
+.top-bar{{background:var(--accent-tint);border-bottom:1px solid rgba(11,93,82,0.2);
 padding:0.6rem 1.5rem;text-align:center;font-size:0.8rem;color:var(--accent-dark);font-weight:600;}}
 .container{{max-width:600px;margin:0 auto;padding:1.5rem 1rem;}}
 .address-card{{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
@@ -6792,8 +6792,8 @@ color:var(--text-dim);margin-bottom:0.2rem;}}
 .btn{{display:flex;align-items:center;justify-content:center;gap:0.5rem;padding:0.9rem 1rem;
 border-radius:var(--radius-sm);font-family:inherit;font-size:0.9rem;font-weight:600;
 text-decoration:none;border:none;cursor:pointer;transition:all 0.2s;}}
-.btn-primary{{background:linear-gradient(135deg,var(--accent),#000000);color:#fff;}}
-.btn-primary:hover{{transform:translateY(-1px);box-shadow:0 6px 20px rgba(23,23,23,0.25);}}
+.btn-primary{{background:linear-gradient(135deg,var(--accent),#0a3a33);color:#fff;}}
+.btn-primary:hover{{transform:translateY(-1px);box-shadow:0 6px 20px rgba(11,93,82,0.25);}}
 .btn-secondary{{background:var(--bg-card);color:var(--text);border:1px solid var(--border);}}
 .btn-secondary:hover{{border-color:var(--accent);}}
 .btn-outline{{background:transparent;color:var(--text-muted);border:1px solid var(--border);}}
@@ -6818,7 +6818,7 @@ margin-bottom:0.75rem;}}
 .email-status{{font-size:0.85rem;padding:0.5rem;border-radius:var(--radius-sm);margin-top:0.5rem;display:none;}}
 .email-status.success{{display:block;background:var(--accent-tint);color:var(--accent-dark);}}
 .email-status.error{{display:block;background:rgba(239,68,68,0.08);color:#dc2626;}}
-.sent-banner{{background:var(--accent-tint);border:1px solid rgba(23,23,23,0.25);color:var(--accent-dark);
+.sent-banner{{background:var(--accent-tint);border:1px solid rgba(11,93,82,0.25);color:var(--accent-dark);
 border-radius:var(--radius-sm);padding:0.75rem 1rem;text-align:center;font-size:0.85rem;margin-bottom:1rem;}}
 .sent-banner strong{{color:var(--text);}}
 .disclaimer{{font-size:0.75rem;color:var(--text-dim);text-align:center;padding:1rem;
@@ -7210,12 +7210,12 @@ function copyDayOneSummary(){{navigator.clipboard.writeText({_json.dumps(summary
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <style>
 :root{{--bg:#F5F5F7;--bg-card:#fff;--border:rgba(15,31,47,0.08);
---text:#0f1f2f;--text-muted:#5a6b7a;--text-dim:#8a9aa9;--accent:#171717;--accent-light:#525252;
---accent-dark:#000000;--accent-tint:#F0F0EE;--radius:1.25rem;--radius-sm:0.85rem;}}
+--text:#0f1f2f;--text-muted:#5a6b7a;--text-dim:#8a9aa9;--accent:#0b5d52;--accent-light:#16806e;
+--accent-dark:#0a3a33;--accent-tint:#E7F3F1;--radius:1.25rem;--radius-sm:0.85rem;}}
 *{{margin:0;padding:0;box-sizing:border-box;}}
 body{{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;
 -webkit-font-smoothing:antialiased;}}
-.top-bar{{background:var(--accent-tint);border-bottom:1px solid rgba(23,23,23,0.2);
+.top-bar{{background:var(--accent-tint);border-bottom:1px solid rgba(11,93,82,0.2);
 padding:0.6rem 1.5rem;text-align:center;font-size:0.8rem;color:var(--accent-dark);font-weight:600;}}
 .container{{max-width:600px;margin:0 auto;padding:1.5rem 1rem;}}
 .address-card{{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
@@ -7239,8 +7239,8 @@ color:var(--text-dim);margin-bottom:0.2rem;}}
 .btn{{display:flex;align-items:center;justify-content:center;gap:0.5rem;padding:0.9rem 1rem;
 border-radius:var(--radius-sm);font-family:inherit;font-size:0.9rem;font-weight:600;
 text-decoration:none;border:none;cursor:pointer;transition:all 0.2s;}}
-.btn-primary{{background:linear-gradient(135deg,var(--accent),#000000);color:#fff;}}
-.btn-primary:hover{{transform:translateY(-1px);box-shadow:0 6px 20px rgba(23,23,23,0.25);}}
+.btn-primary{{background:linear-gradient(135deg,var(--accent),#0a3a33);color:#fff;}}
+.btn-primary:hover{{transform:translateY(-1px);box-shadow:0 6px 20px rgba(11,93,82,0.25);}}
 .btn-outline{{background:transparent;color:var(--text-muted);border:1px solid var(--border);}}
 .btn-outline:hover{{border-color:var(--accent);color:var(--accent-dark);}}
 .pdf-frame{{width:100%;height:70vh;border:1px solid var(--border);border-radius:var(--radius-sm);
@@ -7249,9 +7249,9 @@ background:#f1f5f9;}}
 border-top:1px solid var(--border);margin-top:1rem;}}
 .notbinding{{font-size:0.78rem;color:var(--text-muted);background:var(--bg-card);border:1px solid var(--border);
 border-radius:var(--radius-sm);padding:0.75rem 1rem;margin-bottom:1.25rem;line-height:1.5;}}
-.status-panel{{background:var(--accent-tint);border:1px solid rgba(23,23,23,0.25);color:var(--accent-dark);
+.status-panel{{background:var(--accent-tint);border:1px solid rgba(11,93,82,0.25);color:var(--accent-dark);
 border-radius:var(--radius-sm);padding:0.9rem 1rem;text-align:center;font-size:0.9rem;margin-bottom:1.25rem;}}
-.recipient-cta{{background:var(--accent-tint);border:1px solid rgba(23,23,23,0.2);border-radius:var(--radius-sm);
+.recipient-cta{{background:var(--accent-tint);border:1px solid rgba(11,93,82,0.2);border-radius:var(--radius-sm);
 padding:1.1rem 1.25rem;margin-top:1.25rem;text-align:center;}}
 .recipient-cta .cta-title{{font-size:0.92rem;font-weight:700;color:var(--text);margin-bottom:0.35rem;}}
 .recipient-cta .cta-body{{font-size:0.82rem;color:var(--text-muted);line-height:1.5;margin-bottom:0.85rem;}}
@@ -7575,14 +7575,14 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
     --bg: #F5F5F7;
     --bg-card: #fff;
     --border: rgba(15,31,47,0.08);
-    --border-hover: rgba(23,23,23,0.35);
+    --border-hover: rgba(11,93,82,0.35);
     --text: #0f1f2f;
     --text-muted: #5a6b7a;
     --text-dim: #8a9aa9;
-    --accent: #171717;
-    --accent-light: #525252;
-    --accent-dark: #000000;
-    --accent-tint: #F0F0EE;
+    --accent: #0b5d52;
+    --accent-light: #16806e;
+    --accent-dark: #0a3a33;
+    --accent-tint: #E7F3F1;
     --radius: 1.25rem;
     --radius-sm: 0.85rem;
     --transition: all 0.2s ease;
@@ -7701,7 +7701,7 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
   .offer-card:hover {{border-color:var(--border-hover);box-shadow:0 4px 16px rgba(15,31,47,0.08);}}
   .offer-card:active {{transform:scale(0.99);}}
   .offer-card-bar {{width:4px;flex-shrink:0;background:linear-gradient(180deg, var(--accent), var(--accent-light));}}
-  .offer-card-bar.status-draft {{background:linear-gradient(180deg, #171717, #525252);}}
+  .offer-card-bar.status-draft {{background:linear-gradient(180deg, #0b5d52, #16806e);}}
   .offer-card-bar.status-sent {{background:linear-gradient(180deg, #f59e0b, #fbbf24);}}
   .offer-card-bar.status-expired {{background:linear-gradient(180deg, #9ca3af, #cbd5e1);}}
   .offer-card-bar.status-accepted {{background:linear-gradient(180deg, #3b82f6, #60a5fa);}}
@@ -7715,7 +7715,7 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
     font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;
     padding:0.2rem 0.55rem;border-radius:9999px;flex-shrink:0;
   }}
-  .status-badge.status-draft {{background:rgba(23,23,23,0.12);color:#000000;}}
+  .status-badge.status-draft {{background:rgba(11,93,82,0.12);color:#000000;}}
   .status-badge.status-sent {{background:rgba(245,158,11,0.14);color:#b45309;}}
   .status-badge.status-expired {{background:rgba(148,163,184,0.18);color:#64748b;}}
   .status-badge.status-accepted {{background:rgba(59,130,246,0.12);color:#2563eb;}}
@@ -7740,7 +7740,7 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
   .btn-primary {{
     display:inline-block;background:var(--accent);color:#fff;font-weight:700;
     padding:0.6rem 1.1rem;border-radius:var(--radius-sm);font-size:0.85rem;
-    box-shadow:0 2px 10px rgba(23,23,23,0.25);transition:var(--transition);
+    box-shadow:0 2px 10px rgba(11,93,82,0.25);transition:var(--transition);
   }}
   .btn-primary:hover {{background:var(--accent-dark);}}
   .btn-primary:active {{transform:scale(0.97);}}
@@ -7948,7 +7948,7 @@ def wins_page():
   .share-btn:hover {{border-color:rgba(15,31,47,0.35);background:rgba(15,31,47,0.02);}}
   .cta {{
     display:inline-block; font-size:0.85rem; font-weight:600; color:#0f1f2f;
-    border-bottom:1px solid rgba(23,23,23,0.35); padding-bottom:0.1rem;
+    border-bottom:1px solid rgba(11,93,82,0.35); padding-bottom:0.1rem;
     transition:color 0.2s ease;
   }}
   .cta:hover {{color:#000;}}
