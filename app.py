@@ -784,7 +784,7 @@ def index():
 
   <div class="main">
   <section class="hero section">
-    <div class="badge">Built for Texas Brokerages &amp; TC Teams</div>
+    <div class="badge">Built for Texas Brokerages &amp; Independent TCs</div>
     <h1>
       Catch what title kicks back<br>
       &mdash; before you send the file.
@@ -858,9 +858,9 @@ def index():
 
   <section class="steps" id="brokers" style="border-top:none;padding-top:1rem;padding-bottom:2.5rem;">
     <div class="steps-header" style="margin-bottom:1.5rem;">
-      <div class="steps-kicker">For managing brokers &amp; TC teams</div>
+      <div class="steps-kicker">For TCs &mdash; in-house, independent, or running your own roster of brokerages</div>
       <h2>What this catches before it costs you.</h2>
-      <p>Every TREC 20-19 that reaches a file with a blank field or a missing initial is a liability sitting in someone's name &mdash; and it's usually not the agent who finds out first.</p>
+      <p>Every TREC 20-19 that reaches a file with a blank field or a missing initial is a liability sitting in someone's name &mdash; and it's usually not the agent who finds out first. It's the TC's name on the file, whether that's one brokerage or six.</p>
     </div>
     <ul class="tc-checklist">
       <li><span class="tc-check">&check;</span><span><strong>Effective Date left blank</strong> &mdash; the date every other deadline counts from.</span></li>
