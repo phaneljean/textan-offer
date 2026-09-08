@@ -6118,7 +6118,7 @@ def about():
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>About — TxtAnOffer</title>
-<meta name="description" content="TxtAnOffer was built after real conversations with Texas agents about the 45 minutes lost filling out TREC paperwork. Here's why it exists.">
+<meta name="description" content="TxtAnOffer started as a faster way to text in an offer. It became TC File Check &mdash; a free tool that catches what's missing in a TREC 20-19 before title does. Here's the story.">
 <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -6232,7 +6232,7 @@ def about():
 
 <div class="container">
   <div class="avatar-lg"><img src="/static/logo.svg" alt="TxtAnOffer"></div>
-  <h1>Built After Listening to Texas Agents</h1>
+  <h1>Built After Listening to Texas Real Estate</h1>
   <div class="kicker">The story behind TxtAnOffer</div>
 
   <div class="about-body">
@@ -6240,21 +6240,23 @@ def about():
 
     <p>I'm not a real estate agent &mdash; I'm a software builder with a passion for solving real problems with simple tools. TxtAnOffer started after a conversation with a Texas REALTOR who walked me through what a bad day actually looks like: standing in a driveway or sitting in a parking lot, laptop open, manually filling 40+ fields on a TREC 20-19 while a buyer waits, because in Texas real estate the agent who gets their offer in first often gets the house.</p>
 
-    <p>That 45 minutes costs deals. So I built a way to skip it.</p>
+    <p>That 45 minutes costs deals. So I built a way to skip it. TxtAnOffer turns what used to take a laptop and 45 minutes into a text message and 10 seconds.</p>
 
-    <p>TxtAnOffer turns what used to take a laptop and 45 minutes into a text message and 10 seconds. Text the details from your phone. Get a filled PDF. Review it, then send it.</p>
+    <p><strong>That solved the first 45 minutes. It didn't solve what happens next.</strong> The more TCs and brokers I talked to, the clearer it got: the real risk in a Texas contract isn't how fast it gets written &mdash; it's what's still blank or mismatched by the time it reaches title. A missing initial. An Effective Date nobody filled in. A 40-11 that disagrees with the contract it's attached to. That's not a speed problem, it's a review problem, and it was happening on every file &mdash; not just the ones typed from a phone.</p>
+
+    <p>So TxtAnOffer became two things. <strong>Create</strong> an offer by text in seconds &mdash; still here, free to start. And <strong>Check</strong> any TREC 20-19 for exactly what's missing before title finds it &mdash; free, no login, forward a file or drop it on the site. Brokerages and TC teams that want every file checked automatically, across their whole roster, get the Brokerage Dashboard.</p>
 
     <h2>Why It's Built This Way</h2>
-    <p>Every feature exists because agents told me it mattered, not because a spec sheet said a contract tool should have it:</p>
+    <p>Every feature exists because a real TC, broker, or agent told me it mattered &mdash; not because a spec sheet said a contract tool should have it:</p>
     <ul>
-      <li><strong>SMS-first</strong> because most agents I talked to are in the field on their phone, not at a desk</li>
-      <li><strong>Auto-filled TREC forms</strong> because a blank field is where mistakes happen</li>
-      <li><strong>Email delivery</strong> because the listing agent needs the offer now, not after you're back at the office</li>
+      <li><strong>Field-by-field verification</strong> because a checklist that's just guessing from a form's field names misses the exact mistakes that get a file kicked back</li>
+      <li><strong>No login to check a file</strong> because a TC who needs an answer in the next two minutes shouldn't have to create an account first</li>
+      <li><strong>SMS-first offer drafting</strong> because most agents I talked to are in the field on their phone, not at a desk</li>
       <li><strong>Draft warnings</strong> because nothing should go out until the licensed agent sending it has actually reviewed it</li>
     </ul>
 
     <h2>The Mission</h2>
-    <p>Give every Texas agent the tools to compete with the big teams. You don't need an admin, a laptop, or 45 minutes. You need your phone and 10 seconds.</p>
+    <p>Give Texas real estate professionals &mdash; agents, TCs, and the brokers who manage them &mdash; a faster way to create a contract and a sharper way to catch what's wrong with one, before it costs a deal or a closing.</p>
   </div>
 
   <div class="signoff">
