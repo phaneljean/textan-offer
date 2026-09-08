@@ -809,6 +809,7 @@ def index():
       <div class="or-divider">or</div>
       <div class="email-forward-note"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 6 10-6"/></svg>Already have it in your inbox? Forward it to <a href="mailto:tc@check.txtanoffer.com">tc@check.txtanoffer.com</a></div>
       <div class="privacy-note"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Processed instantly and never stored &mdash; discarded the moment your results are ready.</div>
+      <div class="privacy-note">&#9203;&nbsp; Takes a minute now &mdash; saves you a callback from title tonight.</div>
       <div class="status" id="homeStatus"></div>
       <div class="result" id="homeResult"></div>
     </div>
@@ -912,7 +913,7 @@ def index():
   <section class="steps" id="trust">
     <div class="steps-header">
       <h2>Built so nothing slips through.</h2>
-      <p>The anxiety isn't "I wish this were faster" &mdash; it's "did I miss a checkbox." Here's how we handle that.</p>
+      <p>The anxiety isn't "I wish this were faster" &mdash; it's "did I miss a checkbox," re-checked from your phone after dinner. Here's how we handle that, so you can actually log off.</p>
     </div>
     <div class="steps-grid">
       <div class="step-card">
