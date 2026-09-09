@@ -932,7 +932,7 @@ def index():
       <div class="step-card">
         <div class="step-num">&check;</div>
         <h3>Checked against TREC's current form</h3>
-        <p>Every check is verified against TREC's actual published 20-19 form &mdash; not a static field list someone wrote once and forgot to update when TREC revises it. <a href="/trec-changes" style="color:var(--text);text-decoration:underline;">See what changed &rarr;</a></p>
+        <p>Every check is verified against TREC's actual published 20-19 form &mdash; not a static field list someone wrote once and forgot to update when TREC revises it. <a href="/trec-changes" style="color:var(--text);text-decoration:underline;">See what changed &rarr;</a> &middot; <a href="/tc-hub" style="color:var(--text);text-decoration:underline;">Free TC Hub &rarr;</a></p>
       </div>
       <div class="step-card">
         <div class="step-num">&check;</div>
@@ -2237,6 +2237,7 @@ DEMO_FORM = """
     </a>
     <div class="nav-links" id="navLinks">
       <a href="/#how">How it works</a>
+      <a href="/tc-hub">TC Hub</a>
       <a href="/pricing">Pricing</a>
       <a href="/faq">FAQ</a>
       <a href="/login">Log In</a>
@@ -3061,6 +3062,7 @@ border-radius:var(--radius-sm);font-family:inherit;font-size:0.85rem;font-weight
 </div>
 <p class="scope-footnote">Every check above is verified directly against TREC's actual 20-19 form fields &mdash; not guessed from field names, which routinely lie about their own position. The 40-11 can be its own separate PDF &mdash; it doesn't need to be merged into the contract file.</p>
 <p class="scope-footnote">Auditing a whole closed-file archive? <a href="/tc-check/bulk" style="color:var(--accent);font-weight:700;text-decoration:underline;text-underline-offset:2px;">Bulk-check up to 200 files at once &rarr;</a></p>
+<p class="scope-footnote">Want checklists and TREC form references instead? <a href="/tc-hub" style="color:var(--accent);font-weight:700;text-decoration:underline;text-underline-offset:2px;">Visit the free TC Hub &rarr;</a></p>
 </div>
 </div>
 <script>
@@ -6255,6 +6257,384 @@ def trec_changes():
 </body>
 </html>"""
     return html.replace("__TREC_FORM_DATE__", TREC_FORM_CURRENT_AS_OF)
+
+
+@app.route("/tc-hub")
+def tc_hub():
+    """Free reference hub for TX transaction coordinators -- not primarily
+    SEO content, a reason to come back. Three sections built from things
+    this app already knows for certain: the real TREC form data verified
+    elsewhere in this codebase, the exact field list tc_audit.py checks
+    (so the checklists match the product, not generic industry advice),
+    and live production audit data for "Common TC Mistakes" (pulled fresh
+    per request, not a hardcoded snapshot that goes stale). Deliberately
+    does NOT include a "TC Rules & Responsibilities" section (what a TC
+    can/cannot do, when it crosses into legal advice) -- that's UPL-
+    adjacent territory that needs actual TREC-rules research before
+    publishing anything under this brand, not generated from general
+    knowledge. "2026 Changes" links out to the already-built
+    /trec-changes page rather than duplicating it."""
+    summary = get_tc_check_summary(days=30)
+    mistake_rows = ""
+    for issue in summary["issue_frequency"][:8]:
+        mistake_rows += (
+            '<div class="mistake-row">'
+            f'<div class="mistake-label">{issue["label"]}</div>'
+            '<div class="mistake-bar-track"><div class="mistake-bar" style="width:' + str(min(issue["pct_of_recognized"], 100)) + '%;"></div></div>'
+            f'<div class="mistake-pct">{issue["pct_of_recognized"]}%</div>'
+            '</div>'
+        )
+    mistakes_note = (
+        f"Based on {summary['recognized']} real TREC 20-19 files run through TC Check in the last 30 days, "
+        f"updated live &mdash; not a static list."
+        if summary["recognized"] > 0 else
+        "TC Check hasn't audited enough files in the last 30 days to show a live breakdown yet -- "
+        "run one at /tc-check and this section starts filling in with real data."
+    )
+
+    html = """<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Texas TC Hub — TxtAnOffer</title>
+<meta name="description" content="Free reference material for Texas transaction coordinators: TREC form guides, file-review checklists, and the most common mistakes found across real audited closing files.">
+<link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<style>
+  :root {
+    --bg: #F5F5F7;
+    --bg-card: #fff;
+    --border: rgba(15,31,47,0.08);
+    --text: #0f1f2f;
+    --text-muted: #5a6b7a;
+    --text-dim: #8a9aa9;
+    --accent: #0b5d52;
+    --accent-light: #16806e;
+    --accent-dark: #0a3a33;
+    --accent-tint: #E7F3F1;
+    --amber: #b45309;
+    --amber-tint: #FEF3E7;
+    --radius: 1.25rem;
+    --radius-sm: 0.85rem;
+    --transition: all 0.2s ease;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+    background:var(--bg); color:var(--text); line-height:1.5;
+    -webkit-font-smoothing:antialiased; min-height:100vh;
+  }
+  a { color:inherit; text-decoration:none; }
+  .nav {
+    display:flex;align-items:center;justify-content:space-between;
+    padding:1rem 2rem;position:sticky;top:0;
+    background:rgba(255,255,255,0.85);backdrop-filter:blur(20px);
+    -webkit-backdrop-filter:blur(20px);
+    border-bottom:1px solid var(--border);z-index:100;
+  }
+  .nav-left {display:flex;align-items:center;gap:0.6rem;font-weight:700;font-size:1.1rem;letter-spacing:-0.02em;color:var(--text);}
+  .nav-logo {width:34px;height:34px;border-radius:22%;overflow:hidden;}
+  .nav-logo img {width:100%;height:100%;object-fit:contain;}
+  .nav-links {display:flex;gap:1.75rem;font-size:0.875rem;font-weight:500;color:var(--text-muted);}
+  .nav-links a {transition:var(--transition);}
+  .nav-links a:hover {color:var(--text);}
+  .nav-cta {
+    background:var(--accent);color:#fff;padding:0.55rem 1.35rem;border-radius:9999px;
+    font-size:0.875rem;font-weight:600;text-decoration:none;display:inline-block;
+    transition:var(--transition);
+  }
+  .nav-cta:hover {transform:scale(1.05);box-shadow:0 0 24px rgba(0,0,0,0.25);}
+  .nav-toggle { display: none; flex-direction: column; justify-content: center; gap: 5px; width: 34px; height: 34px; background: none; border: none; cursor: pointer; padding: 0; }
+  .nav-toggle span { display: block; width: 100%; height: 2px; background: var(--text); border-radius: 2px; }
+  .container {max-width:820px;margin:0 auto;padding:3rem 2rem 4rem;}
+  .page-header {margin-bottom:0.5rem;}
+  .page-header h1 {font-size:2.1rem;font-weight:800;letter-spacing:-0.03em;margin-bottom:0.5rem;color:var(--text);}
+  .page-header p {font-size:0.95rem;color:var(--text-muted);max-width:60ch;}
+  .hub-nav {display:flex;flex-wrap:wrap;gap:0.6rem;margin:1.75rem 0 2.75rem;}
+  .hub-nav a {font-size:0.8rem;font-weight:600;color:var(--accent-dark);background:var(--accent-tint);padding:0.45rem 0.9rem;border-radius:9999px;}
+  .hub-nav a:hover {background:var(--accent);color:#fff;}
+  .section {margin-bottom:3rem;}
+  .section h2 {font-size:1.3rem;font-weight:800;letter-spacing:-0.02em;margin-bottom:0.4rem;}
+  .section-sub {font-size:0.85rem;color:var(--text-muted);margin-bottom:1.5rem;max-width:65ch;}
+
+  .form-grid {display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;margin-bottom:1.25rem;}
+  .form-card {background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:1.25rem;box-shadow:0 1px 3px rgba(15,31,47,0.05);}
+  .form-card .form-num {font-size:0.7rem;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:var(--accent-dark);background:var(--accent-tint);display:inline-block;padding:0.2rem 0.55rem;border-radius:0.4rem;margin-bottom:0.6rem;}
+  .form-card h3 {font-size:0.95rem;font-weight:700;margin-bottom:0.4rem;}
+  .form-card p {font-size:0.8rem;color:var(--text-muted);margin-bottom:0.6rem;}
+  .form-card .form-meta {font-size:0.72rem;color:var(--text-dim);margin-bottom:0.6rem;}
+  .form-card a.form-link {font-size:0.78rem;font-weight:600;color:var(--accent-dark);text-decoration:underline;text-underline-offset:2px;}
+  .also-covered {font-size:0.8rem;color:var(--text-muted);background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:0.9rem 1.1rem;}
+
+  .checklist-grid {display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+  .checklist-card {background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem;box-shadow:0 1px 3px rgba(15,31,47,0.05);}
+  .checklist-card h3 {font-size:0.95rem;font-weight:700;margin-bottom:0.85rem;}
+  .checklist-card ul {list-style:none;}
+  .checklist-card li {font-size:0.82rem;color:var(--text-muted);padding:0.4rem 0 0.4rem 1.4rem;position:relative;border-bottom:1px solid var(--border);}
+  .checklist-card li:last-child {border-bottom:none;}
+  .checklist-card li::before {content:"";position:absolute;left:0;top:0.55rem;width:0.85rem;height:0.85rem;border:1.5px solid var(--text-dim);border-radius:0.25rem;}
+
+  .mistake-row {display:flex;align-items:center;gap:0.75rem;padding:0.55rem 0;border-bottom:1px solid var(--border);}
+  .mistake-row:last-child {border-bottom:none;}
+  .mistake-label {font-size:0.82rem;color:var(--text);flex:0 0 44%;}
+  .mistake-bar-track {flex:1;height:8px;background:var(--border);border-radius:9999px;overflow:hidden;}
+  .mistake-bar {height:100%;background:var(--amber);border-radius:9999px;}
+  .mistake-pct {font-size:0.78rem;font-weight:700;color:var(--amber);width:3.2rem;text-align:right;}
+  .mistakes-card {background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem 1.75rem;box-shadow:0 1px 3px rgba(15,31,47,0.05);}
+  .mistakes-note {font-size:0.76rem;color:var(--text-dim);margin-top:1rem;}
+
+  .cta-card {background:linear-gradient(135deg, var(--accent-dark), var(--accent));color:#fff;border-radius:var(--radius);padding:2rem;text-align:center;}
+  .cta-card .cta-kicker {font-size:0.72rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;opacity:0.75;margin-bottom:0.5rem;}
+  .cta-card h3 {font-size:1.25rem;font-weight:800;margin-bottom:0.5rem;}
+  .cta-card p {font-size:0.85rem;opacity:0.85;margin-bottom:1.25rem;}
+  .cta-buttons {display:flex;gap:0.75rem;justify-content:center;flex-wrap:wrap;}
+  .cta-buttons button, .cta-buttons a {font-size:0.85rem;font-weight:700;padding:0.7rem 1.4rem;border-radius:9999px;border:none;cursor:pointer;text-decoration:none;transition:var(--transition);}
+  .cta-primary {background:#fff;color:var(--accent-dark);}
+  .cta-primary:hover {transform:scale(1.04);}
+  .cta-secondary {background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.4) !important;}
+  .cta-secondary:hover {background:rgba(255,255,255,0.25);}
+
+  .changes-pointer {background:var(--accent-tint);border-radius:var(--radius-sm);padding:1.1rem 1.3rem;display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;}
+  .changes-pointer p {font-size:0.85rem;color:var(--accent-dark);}
+  .changes-pointer a {font-size:0.82rem;font-weight:700;color:var(--accent-dark);text-decoration:underline;text-underline-offset:2px;white-space:nowrap;}
+
+  .sources-box {background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem 1.75rem;margin-top:2.5rem;}
+  .sources-box h3 {font-size:0.95rem;font-weight:700;margin-bottom:0.6rem;}
+  .sources-box p {font-size:0.82rem;color:var(--text-muted);margin-bottom:0.75rem;}
+  .sources-box ul {padding-left:1.1rem;}
+  .sources-box li {font-size:0.82rem;color:var(--text-muted);margin-bottom:0.4rem;}
+  .sources-box a {color:var(--accent-dark);text-decoration:underline;text-underline-offset:2px;}
+  .disclaimer-box {font-size:0.76rem;color:var(--text-dim);line-height:1.7;margin-top:1.25rem;padding:1.1rem 1.3rem;background:var(--amber-tint);border-radius:var(--radius-sm);}
+  .foot {text-align:center;margin-top:2.5rem;font-size:0.8rem;color:var(--text-dim);}
+  .foot a {color:var(--accent-dark);}
+  .foot a:hover {text-decoration:underline;}
+
+  @media(max-width:700px) {
+    .container {padding:2rem 1rem 3rem;}
+    .form-grid {grid-template-columns:1fr;}
+    .checklist-grid {grid-template-columns:1fr;}
+    .mistake-label {flex-basis:38%;font-size:0.76rem;}
+    .nav-toggle { display: flex; }
+    .nav-links {
+      display: none; position: absolute; top: 100%; left: 0; right: 0;
+      flex-direction: column; gap: 0; padding: 0.5rem 1.25rem 1.25rem;
+      background: #fff; border-bottom: 1px solid rgba(15,31,47,0.08);
+    }
+    .nav-links.open { display: flex; }
+    .nav-links a { padding: 0.75rem 0; border-bottom: 1px solid rgba(15,31,47,0.08); }
+    .nav-links a:last-child { border-bottom: none; }
+  }
+</style>
+</head>
+<body>
+<nav class="nav">
+  <a href="/" class="nav-left">
+    <div class="nav-logo"><img src="/static/logo.svg" alt="TxtAnOffer"></div>
+    <span>TxtAnOffer</span>
+  </a>
+  <div class="nav-links" id="navLinks">
+    <a href="/#how">How it works</a>
+    <a href="/tc-hub">TC Hub</a>
+    <a href="/pricing">Pricing</a>
+    <a href="/faq">FAQ</a>
+    <a href="/login">Log In</a>
+  </div>
+  <a href="/tc-check" class="nav-cta">Try TC Check Free</a>
+  <button class="nav-toggle" id="navToggle" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
+</nav>
+<script>
+(function(){
+  var t=document.getElementById('navToggle'), l=document.getElementById('navLinks');
+  if(!t||!l) return;
+  t.addEventListener('click', function(){
+    var open = l.classList.toggle('open');
+    t.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+  l.querySelectorAll('a').forEach(function(a){
+    a.addEventListener('click', function(){ l.classList.remove('open'); t.setAttribute('aria-expanded','false'); });
+  });
+})();
+</script>
+
+<div class="container">
+  <div class="page-header">
+    <h1>Texas TC Hub</h1>
+    <p>Practical transaction-coordination resources for Texas -- TREC form references, file-review checklists, and what actually goes wrong on real closing files.</p>
+  </div>
+
+  <div class="hub-nav">
+    <a href="#forms">TREC Forms</a>
+    <a href="#checklists">File-Review Checklists</a>
+    <a href="#mistakes">Common TC Mistakes</a>
+    <a href="#changes">2026 Changes</a>
+    <a href="#checklist-download">Free Checklist</a>
+  </div>
+
+  <div class="section" id="forms">
+    <h2>TREC Forms</h2>
+    <p class="section-sub">The three forms most Texas resale transactions run through, with current TREC-published effective dates -- straight from trec.texas.gov, not a mirror.</p>
+    <div class="form-grid">
+      <div class="form-card">
+        <div class="form-num">TREC 20-19</div>
+        <h3>One to Four Family Residential Contract (Resale)</h3>
+        <p>The main contract for a residential resale -- single-family homes, duplexes, triplexes, and four-plexes. Not for condos, new construction, or commercial.</p>
+        <div class="form-meta">Effective """ + TREC_FORM_CURRENT_AS_OF + """</div>
+        <a class="form-link" href="https://www.trec.texas.gov/forms/one-four-family-residential-contract-resale" target="_blank" rel="noopener">Official TREC source &rarr;</a>
+      </div>
+      <div class="form-card">
+        <div class="form-num">TREC 39-11</div>
+        <h3>Amendment to Contract</h3>
+        <p>Changes or adds terms to a contract that's already been executed -- most often a price change or a closing-date extension.</p>
+        <div class="form-meta">Effective """ + TREC_FORM_CURRENT_AS_OF + """</div>
+        <a class="form-link" href="https://www.trec.texas.gov/forms/amendment" target="_blank" rel="noopener">Official TREC source &rarr;</a>
+      </div>
+      <div class="form-card">
+        <div class="form-num">TREC 40-11</div>
+        <h3>Third Party Financing Addendum</h3>
+        <p>Required whenever any part of the purchase price is financed by a third party (not seller or buyer). Not attached at all on all-cash deals.</p>
+        <div class="form-meta">Effective January 3, 2025</div>
+        <a class="form-link" href="https://www.trec.texas.gov/forms/third-party-financing-addendum-0" target="_blank" rel="noopener">Official TREC source &rarr;</a>
+      </div>
+    </div>
+    <div class="also-covered"><b>Also referenced on this site:</b> IABS 1-2 (Information About Brokerage Services), TREC 61-0 (Seller's Disclosure re: Groundwater/Surface Water Rights), and TREC 36-10 (HOA Addendum) -- see <a href="/trec-changes" style="color:var(--accent-dark);text-decoration:underline;">what changed &rarr;</a> for the full rundown of when each applies.</div>
+  </div>
+
+  <div class="section" id="checklists">
+    <h2>File-Review Checklists</h2>
+    <p class="section-sub">Organized by the point in the transaction where each check actually matters -- built from the exact fields TC Check verifies on a real file, not a generic industry list.</p>
+    <div class="checklist-grid">
+      <div class="checklist-card">
+        <h3>Before Sending an Offer</h3>
+        <ul>
+          <li>Property address, city, and county are complete</li>
+          <li>Buyer and Seller legal names are filled in</li>
+          <li>Sales Price: cash portion (3A) + financing (3B) = total (3C)</li>
+          <li>Earnest money and option fee amounts are filled in</li>
+          <li>Escrow Agent name and Title Company are filled in</li>
+          <li>Financing-type checkbox matches whether a 40-11 is attached</li>
+          <li>Closing date reflects what was actually agreed</li>
+          <li>HOA addendum attached if the property has mandatory membership</li>
+        </ul>
+      </div>
+      <div class="checklist-card">
+        <h3>After Execution</h3>
+        <ul>
+          <li>Effective Date is filled in -- the single most commonly missed field</li>
+          <li>Buyer initials present on every page that requires them</li>
+          <li>Seller initials present on every page that requires them</li>
+          <li>All required signatures are present</li>
+          <li>Any executed amendments are attached to the file</li>
+        </ul>
+      </div>
+      <div class="checklist-card">
+        <h3>Amendment Review (39-11)</h3>
+        <ul>
+          <li>Exactly one item box is checked -- not more, not zero</li>
+          <li>If price changed, the new Sales Price still reconciles (A + B = C)</li>
+          <li>Amendment correctly references the original contract's address</li>
+          <li>Both parties initialed or signed the amendment itself</li>
+        </ul>
+      </div>
+      <div class="checklist-card">
+        <h3>Closing-File Review</h3>
+        <ul>
+          <li>Every field from the "Before Sending" list above is still filled</li>
+          <li>40-11 loan amount matches Section 3B of the main contract</li>
+          <li>Third Party Financing checkbox agrees between Section 3B and Section 22</li>
+          <li>Initials present on every page, including the addendum</li>
+          <li>No conflicting terms between the contract and any amendment</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="section" id="mistakes">
+    <h2>Common TC Mistakes</h2>
+    <p class="section-sub">What actually shows up blank or inconsistent, ranked by how often TC Check has found it on real uploaded files.</p>
+    <div class="mistakes-card">
+      """ + (mistake_rows or '<p style="font-size:0.85rem;color:var(--text-muted);">No data yet -- check back after a few real files have been run through TC Check.</p>') + """
+      <p class="mistakes-note">""" + mistakes_note + """</p>
+    </div>
+  </div>
+
+  <div class="section" id="changes">
+    <h2>2026 Changes</h2>
+    <div class="changes-pointer">
+      <p>What's currently required on the TREC 20-19 -- Paragraph 12B compensation language, the mandatory Water Disclosure, the HOA addendum -- and how it's tracked.</p>
+      <a href="/trec-changes">See what changed &rarr;</a>
+    </div>
+  </div>
+
+  <div class="section" id="checklist-download" style="margin-bottom:2rem;">
+    <div class="cta-card">
+      <div class="cta-kicker">Texas TC Checklist &mdash; Free</div>
+      <h3>Before submitting a transaction, check these 12 items.</h3>
+      <p>The combined "Before Sending" + "After Execution" checklist above, as a plain-text file you can keep on hand.</p>
+      <div class="cta-buttons">
+        <button class="cta-primary" onclick="downloadHubChecklist()">Download checklist</button>
+        <a class="cta-secondary" href="/tc-check">Want the computer to check it instead? Try TC Check &rarr;</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="sources-box">
+    <h3>Verify this yourself</h3>
+    <p>This page is a courtesy summary, not the authoritative text. TREC's own rules of conduct and licensing rules live in the Texas Administrative Code.</p>
+    <ul>
+      <li><a href="https://www.trec.texas.gov/agency-information/contracts" target="_blank" rel="noopener">TREC Promulgated Contract Forms</a> -- the Commission's own forms library.</li>
+      <li><a href="https://www.trec.texas.gov/agency-information/rules-and-laws/trec-rules" target="_blank" rel="noopener">TREC Rules</a> -- the Commission's courtesy summary of Chapters 531, 533, 534, and 535.</li>
+      <li><a href="https://texreg.sos.state.tx.us/public/readtac$ext.ViewTAC?tac_view=3&amp;ti=22&amp;pt=23" target="_blank" rel="noopener">Texas Administrative Code, Title 22, Part 23</a> -- the Secretary of State's official rule text.</li>
+    </ul>
+  </div>
+
+  <div class="disclaimer-box">
+    <strong>This page is educational information only -- it is not legal advice and is not a substitute for advice from a licensed Texas real estate attorney or your managing broker.</strong> TxtAnOffer is an independent, third-party tool and is NOT affiliated with, endorsed by, or partnered with the Texas Real Estate Commission (TREC). "TREC" and the form numbers referenced above are designations of the Texas Real Estate Commission. Checklists reflect what TC Check verifies on a file; they are not a complete substitute for your own professional judgment or your broker's review requirements. See our <a href="/terms" style="color:var(--text);text-decoration:underline;">Terms of Service</a> for the full disclaimer.
+  </div>
+
+  <p class="foot">Questions? Email <a href="mailto:support@txtanoffer.com">support@txtanoffer.com</a>.<br><a href="/">&larr; Back to home</a> &middot; <a href="/trec-changes">2026 Changes</a> &middot; <a href="/faq">FAQ</a> &middot; <a href="/terms">Terms</a></p>
+</div>
+
+<script>
+function downloadHubChecklist(){
+  var lines = [
+    'Texas TC Checklist -- TxtAnOffer',
+    'txtanoffer.com/tc-hub',
+    '',
+    'BEFORE SENDING AN OFFER',
+    '[ ] Property address, city, and county are complete',
+    '[ ] Buyer and Seller legal names are filled in',
+    '[ ] Sales Price: cash portion (3A) + financing (3B) = total (3C)',
+    '[ ] Earnest money and option fee amounts are filled in',
+    '[ ] Escrow Agent name and Title Company are filled in',
+    '[ ] Financing-type checkbox matches whether a 40-11 is attached',
+    '[ ] Closing date reflects what was actually agreed',
+    '[ ] HOA addendum attached if the property has mandatory membership',
+    '',
+    'AFTER EXECUTION',
+    '[ ] Effective Date is filled in',
+    '[ ] Buyer initials present on every page that requires them',
+    '[ ] Seller initials present on every page that requires them',
+    '[ ] All required signatures are present',
+    '',
+    'Educational reference only -- not legal advice. See txtanoffer.com/tc-hub for sourcing and disclaimer.'
+  ];
+  var blob = new Blob([lines.join('\\n')], {type: 'text/plain'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'texas-tc-checklist.txt';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+</script>
+</body>
+</html>"""
+    return html
 
 
 @app.route("/about")
