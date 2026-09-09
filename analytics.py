@@ -552,6 +552,34 @@ def get_signups_by_source(days: int = 30) -> list:
         key=lambda r: -r["count"]
     )
 
+def get_signup_details(days: int = 30) -> list:
+    """Raw signup events (phone/name/email/source/timestamp), most recent
+    first -- the per-record view behind the aggregate counts in
+    get_signups_by_source(). Diagnostic use only, not shown on /analytics."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cutoff = (datetime.utcnow() - timedelta(days=days)).isoformat()
+    cursor.execute("""
+        SELECT phone, metadata, created_at FROM events
+        WHERE event_type = 'signup' AND created_at > ?
+        ORDER BY created_at DESC
+    """, (cutoff,))
+    rows = cursor.fetchall()
+    conn.close()
+
+    import json
+    results = []
+    for phone, metadata, created_at in rows:
+        m = json.loads(metadata) if metadata else {}
+        results.append({
+            "phone": phone,
+            "name": m.get("name"),
+            "email": m.get("email"),
+            "source": m.get("source") or "direct",
+            "created_at": created_at,
+        })
+    return results
+
 def get_waitlist_signups(limit: int = 200) -> list:
     """All waitlist signups, most recent first -- grouped by state on
     /analytics so demand for a specific state is visible at a glance."""

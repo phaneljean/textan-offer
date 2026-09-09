@@ -32,7 +32,7 @@ from pdf_validator import validate_offer_pdf
 from amendment import fill_amendment_pdf
 from agent_profiles import get_agent_profile, save_agent_profile, find_by_email, get_emails_for_phones
 from subscriptions import can_generate_offer, increment_offer_count, activate_subscription, deactivate_subscription, get_user, create_user, FREE_OFFER_LIMIT, is_admin_phone, has_professional_access
-from analytics import track_event, get_conversion_metrics, get_revenue_metrics, get_recent_sms, get_recent_sms_failures, get_last_blocked_state, get_waitlist_signups, get_signups_by_source, get_landing_visits_by_source, get_tc_check_summary, get_recent_tc_check_email_senders, get_tc_check_count_for_sender, get_tc_check_repeat_senders, get_tc_check_bulk_summary
+from analytics import track_event, get_conversion_metrics, get_revenue_metrics, get_recent_sms, get_recent_sms_failures, get_last_blocked_state, get_waitlist_signups, get_signups_by_source, get_signup_details, get_landing_visits_by_source, get_tc_check_summary, get_recent_tc_check_email_senders, get_tc_check_count_for_sender, get_tc_check_repeat_senders, get_tc_check_bulk_summary
 from integrations import send_offer_email, fire_webhook, save_webhook, get_webhook, delete_webhook, send_to_docusign, send_plain_email, send_html_email
 from offers_db import record_offer, get_offers_for_phone, get_offer_by_filename, record_amendment, get_amendments_for_phone, record_thread_response, record_email_sent
 from brokerages import extract_brokerage_prefix, link_user_to_brokerage, get_brokerage, get_brokerage_by_code, create_brokerage, list_brokerages, list_brokerage_agents
@@ -4680,6 +4680,45 @@ body{{font-family:system-ui;max-width:800px;margin:40px auto;padding:20px;}}
 </body></html>
 """
 
+
+@app.route("/admin/signups")
+def admin_signups():
+    """Diagnostic drill-down behind /analytics's aggregate signup counts --
+    lists the actual phone/name/email/source per signup event so a handful
+    of records can be reviewed individually (e.g. to reach out personally)
+    instead of only seeing a total."""
+    if not ANALYTICS_PASSWORD:
+        abort(503)
+    token = request.args.get("token", "")
+    if not hmac.compare_digest(token, ANALYTICS_PASSWORD):
+        abort(403)
+
+    days = request.args.get("days", "30")
+    signups = get_signup_details(days=int(days))
+
+    rows = "".join(
+        f"<tr><td style='padding:8px;'>{s['created_at'][:16].replace('T', ' ')}</td>"
+        f"<td style='padding:8px;'>{s['phone'] or '&mdash;'}</td>"
+        f"<td style='padding:8px;'>{s['name'] or '&mdash;'}</td>"
+        f"<td style='padding:8px;'>{s['email'] or '&mdash;'}</td>"
+        f"<td style='padding:8px;'>{s['source']}</td></tr>"
+        for s in signups
+    ) or "<tr><td colspan='5' style='padding:8px;color:#666;'>No signups in this window.</td></tr>"
+
+    return f"""<!DOCTYPE html>
+<html><head><title>Signups — TxtAnOffer Admin</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>body{{font-family:-apple-system,sans-serif;max-width:900px;margin:40px auto;padding:0 20px;color:#0b5d52;}}
+table{{width:100%;border-collapse:collapse;margin-top:20px;}}
+th{{text-align:left;padding:8px;border-bottom:2px solid #eee;}}
+td{{border-bottom:1px solid #eee;}}</style>
+</head><body>
+<h1>Signups (last {days} days)</h1>
+<table>
+<tr><th>Time (UTC)</th><th>Phone</th><th>Name</th><th>Email</th><th>Source</th></tr>
+{rows}
+</table>
+</body></html>"""
 
 @app.route("/admin/brokerages", methods=["GET", "POST"])
 def admin_brokerages():
