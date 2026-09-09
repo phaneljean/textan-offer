@@ -95,6 +95,28 @@ TEST_CASES = {
         },
         "phone": "+15125550100",
     },
+    "fha_financing": {
+        # Locks in the 2026-09-09 fix: non-conventional financing types
+        # (FHA here) must get BOTH their own checkbox checked AND their own
+        # principal-amount field filled -- previously only the checkbox was
+        # wired, so every FHA/VA/USDA/Texas-Veterans/Reverse-Mortgage offer
+        # generated a 40-11 with a correctly-checked box but a blank dollar
+        # amount. See financing_addendum.py's FIELD_MAP + pdf_validator.py's
+        # NON_CONVENTIONAL_AMOUNT_FIELD.
+        "parsed": {
+            "address": "200 FHA Loan Way", "city": "Austin", "county": "Travis",
+            "price": 400000, "down_payment_amount": 14000, "loan_amount": 386000,
+            "earnest_money": 3000, "option_fee": 200, "close_days": 30,
+            "financing_type": "fha",
+            "agent": {
+                "name": "Jane Smith", "license": "0654321", "brokerage": "Keller Williams",
+                "phone": "(512) 555-0147", "email": "jane@realty.com",
+                "business_address": "100 Congress Ave, Austin, TX 78701",
+                "title_company": "Independence Title",
+            },
+        },
+        "phone": "+15125550100",
+    },
 }
 
 # Overlay text isn't an AcroForm field -- these substrings must appear

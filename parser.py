@@ -19,7 +19,10 @@ CLOSE_PHRASE_RE = re.compile(r'close\s+(?:in\s+)?(\d+)\s*(?:day|days)?', re.IGNO
 # the inspection number mistaken for the closing days.
 INSPECTION_RE = re.compile(r'(\d+)[\s-]*day\s*(?:inspection|option)', re.IGNORECASE)
 
-FINANCING_RE = re.compile(r'\b(conventional|fha|va|cash)\b', re.IGNORECASE)
+FINANCING_RE = re.compile(
+    r'\b(conventional|fha|usda|texas\s*vet(?:eran)?s?(?:\s*loan)?|reverse\s*mortgage|va|cash)\b',
+    re.IGNORECASE,
+)
 HOA_RE = re.compile(r'\bhoa\b', re.IGNORECASE)
 
 MONTH_NAMES = {
@@ -117,12 +120,25 @@ def _parse_inspection_days(text):
     m = INSPECTION_RE.search(text)
     return int(m.group(1)) if m else None
 
+def _normalize_financing_type(raw: str) -> str:
+    # Collapses whatever whitespace variant matched ("texas vet", "texas
+    # veterans", "texas   veteran loan", "reverse   mortgage") to the exact
+    # keys financing_addendum.py's FIELD_MAP uses -- conventional/fha/va/
+    # usda/cash pass through unchanged since they're already single words.
+    raw = re.sub(r'\s+', ' ', raw.strip().lower())
+    if raw.startswith('texas'):
+        return 'texas_veterans'
+    if raw.startswith('reverse'):
+        return 'reverse_mortgage'
+    return raw
+
 def _parse_financing_type(text):
-    # "conventional", "FHA", "VA", "cash" -- optional; left unset (agent
-    # fills it in) rather than guessed, same policy as every other field
-    # this parser doesn't have explicit evidence for.
+    # "conventional", "FHA", "VA", "USDA", "Texas Veterans", "Reverse
+    # Mortgage", "cash" -- optional; left unset (agent fills it in) rather
+    # than guessed, same policy as every other field this parser doesn't
+    # have explicit evidence for.
     m = FINANCING_RE.search(text)
-    return m.group(1).lower() if m else None
+    return _normalize_financing_type(m.group(1)) if m else None
 
 def _parse_has_hoa(text):
     # "hoa" mentioned anywhere in the text -- deliberate, explicit signal

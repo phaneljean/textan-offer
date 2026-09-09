@@ -220,6 +220,13 @@ def validate_offer_pdf(pdf_path: str, parsed: dict) -> dict:
         "conventional": "Conventional", "texas_veterans": "Texas Veterans",
         "fha": "FHA", "usda": "USDA", "va": "VA Guaranteed", "reverse_mortgage": "Reverse Mortgage",
     }
+    # Mirrors financing_addendum.py's own NON_CONVENTIONAL_AMOUNT_FIELD --
+    # duplicated rather than imported since that dict is a local var inside
+    # fill_financing_addendum(), not a module-level constant.
+    NON_CONVENTIONAL_AMOUNT_FIELD = {
+        "fha": "fha_amount", "va": "va_amount", "usda": "usda_amount",
+        "texas_veterans": "texas_veterans_amount", "reverse_mortgage": "reverse_mortgage_amount",
+    }
     checked_type = next(
         (k for k in financing_type_labels if _is_checked(values, _fa(k))), None
     )
@@ -251,13 +258,15 @@ def validate_offer_pdf(pdf_path: str, parsed: dict) -> dict:
             if not values.get(_fa("first_loan_amount"), "").strip():
                 blocking.append("40-11 Section 1(A)(1): First mortgage principal amount")
         else:
-            # FHA/VA/USDA/Texas Veterans/Reverse Mortgage principal amounts
-            # aren't wired to a verified field yet (see financing_addendum.py) --
-            # warn instead of blocking non-conventional offers entirely.
-            warnings.append(
-                f"40-11 Section 1: {financing_type_labels[checked_type]} selected -- "
-                "principal amount isn't auto-filled for this financing type yet, add it by hand."
-            )
+            # FHA/VA/USDA/Texas Veterans/Reverse Mortgage each have their own
+            # rect-verified principal-amount field (see financing_addendum.py
+            # FIELD_MAP, fixed 2026-09-09) -- require it filled, same as the
+            # conventional branch requires first_loan_amount.
+            amount_key = NON_CONVENTIONAL_AMOUNT_FIELD.get(checked_type)
+            if not amount_key or not values.get(_fa(amount_key), "").strip():
+                blocking.append(
+                    f"40-11 Section 1: {financing_type_labels[checked_type]} principal amount"
+                )
 
         # 40-11 Section 2A: Buyer Approval -- exactly one of the pair checked.
         # Only applies when there's actually an addendum to have a Buyer
@@ -284,6 +293,12 @@ def validate_offer_pdf(pdf_path: str, parsed: dict) -> dict:
             blocking.append(
                 f"40-11 principal amount ({fa_loan}) doesn't match Section 3B (${parsed['loan_amount']:,})"
             )
+        for amount_key in NON_CONVENTIONAL_AMOUNT_FIELD.values():
+            fa_alt_loan = values.get(_fa(amount_key), "").strip()
+            if fa_alt_loan and _money_to_int(fa_alt_loan) != int(parsed["loan_amount"]):
+                blocking.append(
+                    f"40-11 principal amount ({fa_alt_loan}) doesn't match Section 3B (${parsed['loan_amount']:,})"
+                )
     if down_val and parsed.get("down_payment_amount") is not None:
         if _money_to_int(down_val) != int(parsed["down_payment_amount"]):
             blocking.append(

@@ -35,6 +35,19 @@ FIELD_MAP = {
     "first_rate_years": "per annum for the first",
     "first_origination": "shown on Buyers Loan Estimate for the loan not to exceed",
 
+    # Section 1B-1F: non-conventional principal-amount blanks. Rect-verified
+    # 2026-09-09 against 40-11.pdf -- filled distinct test strings into each
+    # candidate field and rendered the result; each landed exactly on the
+    # "$___" blank for its row (B Texas Veterans / C FHA / D VA / E USDA /
+    # F Reverse Mortgage), confirming the mapping the same way as every
+    # other field on this form (never by trusting the /T name alone -- see
+    # the checkbox comment above, which is the same underlying pattern).
+    "texas_veterans_amount": "for a period in the total amount of",
+    "fha_amount": "excluding any financed MIP amortizable monthly for not less",
+    "va_amount": "excluding_2",
+    "usda_amount": "Charges as shown on Buyers Loan Estimate for the loan not to exceed",
+    "reverse_mortgage_amount": "per annum for the first_4",
+
     # Section 2A: Buyer Approval -- another case of the mis-mapped-field pattern
     # above. The field literally named "This contract is subject to Buyer
     # obtaining Buyer Approval..." sits, by /Rect position, over the SECOND
@@ -97,13 +110,28 @@ def fill_financing_addendum(parsed: dict) -> bytes:
     # origination cap are terms nobody has agreed to yet -- left blank for
     # the agent to fill in, same as buyer/seller names and earnest money
     # elsewhere in the app.
+    #
+    # Non-conventional types (FHA/VA/USDA/Texas Veterans/Reverse Mortgage)
+    # each get their own checkbox AND their own principal-amount field filled
+    # with the same real loan_amount -- these amount fields were unmapped
+    # until 2026-09-09 (checkbox-only), which meant every non-conventional
+    # offer generated a 40-11 with a correctly-checked box but a blank
+    # dollar amount. See the FIELD_MAP entries above for the rect-verified
+    # field names.
     loan_amount = parsed.get("loan_amount", 0)
     financing_type = parsed.get("financing_type") or "conventional"
+    NON_CONVENTIONAL_AMOUNT_FIELD = {
+        "fha": "fha_amount",
+        "va": "va_amount",
+        "usda": "usda_amount",
+        "texas_veterans": "texas_veterans_amount",
+        "reverse_mortgage": "reverse_mortgage_amount",
+    }
     if loan_amount > 0:
-        if financing_type == "fha":
-            checkboxes.append(FIELD_MAP["fha"])
-        elif financing_type == "va":
-            checkboxes.append(FIELD_MAP["va"])
+        if financing_type in NON_CONVENTIONAL_AMOUNT_FIELD:
+            checkboxes.append(FIELD_MAP[financing_type])
+            amount_field = NON_CONVENTIONAL_AMOUNT_FIELD[financing_type]
+            values[FIELD_MAP[amount_field]] = f"${loan_amount:,}"
         else:
             checkboxes.append(FIELD_MAP["conventional"])
             checkboxes.append(FIELD_MAP["first_mortgage"])
