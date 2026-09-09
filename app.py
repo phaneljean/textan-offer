@@ -481,6 +481,13 @@ def index():
     .drop-zone svg { margin-bottom: 0.6rem; }
     .drop-zone .dz-title { font-weight: 700; font-size: 0.95rem; margin-bottom: 0.2rem; }
     .drop-zone .dz-sub { color: var(--text-dim); font-size: 0.8rem; }
+    .demo-check-btn { display: block; width: 100%; margin-top: 0.65rem; padding: 0.6rem 1rem; background: none;
+      border: 1px dashed rgba(15,31,47,0.18); border-radius: var(--radius-sm); font: inherit; font-size: 0.82rem;
+      color: var(--text-muted); cursor: pointer; text-align: center; transition: var(--transition); }
+    .demo-check-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-tint); }
+    .demo-check-btn:disabled { opacity: 0.6; cursor: default; }
+    .demo-banner { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.02em; color: var(--text-dim);
+      text-transform: uppercase; margin-bottom: 0.5rem; }
     .privacy-note { display: flex; align-items: center; gap: 0.45rem; margin-top: 0.9rem; font-size: 0.78rem; color: var(--text-dim); }
     .privacy-note svg { flex-shrink: 0; }
     .or-divider { display: flex; align-items: center; gap: 0.75rem; margin: 0.15rem 0; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-dim); }
@@ -801,6 +808,7 @@ def index():
         <div class="dz-sub">We'll tell you what's missing before title kicks it back.</div>
       </div>
       <input type="file" id="homeFileInput" accept="application/pdf">
+      <button type="button" class="demo-check-btn" id="homeDemoBtn">Don't have a PDF ready? Run a demo check on a sample TREC contract.</button>
       <div class="email-optin">
         <label class="email-optin-check"><input type="checkbox" id="homeEmailOptinCheckbox" checked> Email me this report + future checks for this address</label>
         <input type="email" id="homeEmailOptinInput" class="email-optin-input" placeholder="you@example.com" autocomplete="email">
@@ -965,7 +973,8 @@ def index():
       resultEl = document.getElementById('homeResult'),
       emailOptinCheckbox = document.getElementById('homeEmailOptinCheckbox'),
       emailOptinInput = document.getElementById('homeEmailOptinInput'),
-      emailOptinConfirm = document.getElementById('homeEmailOptinConfirm');
+      emailOptinConfirm = document.getElementById('homeEmailOptinConfirm'),
+      demoBtn = document.getElementById('homeDemoBtn');
   if(!dropZone) return;
 
   try{ var savedEmail = localStorage.getItem('tc_email_hint'); if(savedEmail) emailOptinInput.value = savedEmail; }catch(e){}
@@ -989,12 +998,31 @@ def index():
     if(fileInput.files.length) uploadFile(fileInput.files[0]);
   });
 
+  if(demoBtn){
+    demoBtn.addEventListener('click', function(){
+      var original = demoBtn.textContent;
+      demoBtn.disabled = true;
+      demoBtn.textContent = 'Loading sample...';
+      fetch('/static/sample_trec_20-19.pdf')
+        .then(function(r){ return r.blob(); })
+        .then(function(blob){
+          demoBtn.textContent = original;
+          demoBtn.disabled = false;
+          uploadFile(new File([blob], 'sample_trec_20-19.pdf', {type:'application/pdf'}), true);
+        })
+        .catch(function(){
+          demoBtn.textContent = original;
+          demoBtn.disabled = false;
+        });
+    });
+  }
+
   // Same perceived-progress pattern as /tc-check -- one real round trip,
   // staged labels just so the wait doesn't feel dead.
   var STATUS_STEPS = ['Reading PDF...', 'Checking required fields...', 'Checking initials & consistency...'];
   var statusTimers = [];
 
-  function uploadFile(file){
+  function uploadFile(file, isDemo){
     resultEl.classList.remove('show');
     emailOptinConfirm.classList.remove('show');
     statusTimers.forEach(clearTimeout);
@@ -1004,10 +1032,11 @@ def index():
     statusEl.textContent = STATUS_STEPS[0];
     statusEl.classList.add('show');
 
-    var email = optinEmail();
+    var email = isDemo ? '' : optinEmail();
     var formData = new FormData();
     formData.append('file', file);
     if(email) formData.append('email', email);
+    if(isDemo) formData.append('is_demo', '1');
 
     fetch('/v1/tc/check', { method: 'POST', body: formData })
       .then(function(r){ return r.json(); })
@@ -1015,7 +1044,7 @@ def index():
         statusTimers.forEach(clearTimeout);
         statusEl.classList.remove('show');
         if(data.error){ renderError(data.error); return; }
-        renderResult(data);
+        renderResult(data, isDemo);
         if(email){
           emailOptinConfirm.textContent = 'Sent to ' + email;
           emailOptinConfirm.classList.add('show');
@@ -1033,9 +1062,12 @@ def index():
     resultEl.classList.add('show');
   }
 
-  function renderResult(data){
+  function renderResult(data, isDemo){
     var issues = data.issues || [];
     var html = '';
+    if(isDemo){
+      html += '<div class="demo-banner">Demo result &mdash; sample contract, not your file.</div>';
+    }
     if(data.complete){
       html += '<div class="result-banner complete">All checked fields are filled in.</div>';
     } else {
@@ -2624,16 +2656,31 @@ def tc_check():
 
     run_tc_followup_if_due()
 
-    # Fires on every real attempt -- success, wrong file type, corrupted
-    # PDF, all of it -- unlike the 'tc_check' event below, which only fires
-    # after a file is successfully parsed. Added 2026-09-09: with only that
-    # success-only event, there was no way to tell "visitor never touched
-    # the widget" apart from "visitor tried and hit an error" -- a landing
-    # page can drive visits with zero of either signal moving. Tagged with
-    # the same ta_src first-touch cookie as landing_visit so a channel's
-    # visits -> attempts -> recognized/complete funnel is fully visible,
-    # not just the last two steps.
-    track_event("tc_check_attempted", metadata={"source": request.cookies.get("ta_src") or "direct"})
+    # "Run a demo check on a sample contract" button (homepage + /tc-check)
+    # posts here too, flagged via is_demo, so the exact same audit code runs
+    # against the same file real visitors get checked against -- an honest
+    # demo, not a canned/fabricated result. Kept OUT of every real-usage
+    # metric below (tc_check_attempted, tc_check, record_tc_use, email
+    # capture/send) for the same reason bulk-check events get their own
+    # bucket (see tc_check_bulk_submitted): one file clicked by many curious
+    # visitors would otherwise dilute the "X real closed files checked, Y%
+    # came back clean" stat that's actually used as a marketing/product
+    # claim. Its own 'tc_check_demo_used' event exists purely so demo usage
+    # is visible somewhere, not folded into either real metric.
+    is_demo = request.form.get("is_demo") == "1"
+    if is_demo:
+        track_event("tc_check_demo_used", metadata={"source": request.cookies.get("ta_src") or "direct"})
+    else:
+        # Fires on every real attempt -- success, wrong file type, corrupted
+        # PDF, all of it -- unlike the 'tc_check' event below, which only fires
+        # after a file is successfully parsed. Added 2026-09-09: with only that
+        # success-only event, there was no way to tell "visitor never touched
+        # the widget" apart from "visitor tried and hit an error" -- a landing
+        # page can drive visits with zero of either signal moving. Tagged with
+        # the same ta_src first-touch cookie as landing_visit so a channel's
+        # visits -> attempts -> recognized/complete funnel is fully visible,
+        # not just the last two steps.
+        track_event("tc_check_attempted", metadata={"source": request.cookies.get("ta_src") or "direct"})
 
     # No product gate: every upload gets the full itemized report, always.
     # Email is a non-blocking opt-in ("email me this report + future checks
@@ -2676,7 +2723,8 @@ def tc_check():
             except OSError:
                 pass
 
-    record_tc_use(cid)
+    if not is_demo:
+        record_tc_use(cid)
 
     # No product gate: the itemized report is the whole point of running a
     # check, so it's never withheld. Email is a non-blocking opt-in ("email
@@ -2685,7 +2733,7 @@ def tc_check():
     # Still worth persisting per-cid (same as before) so a returning visitor
     # is identifiable even on a check where they leave the box unchecked.
     email_just_captured = False
-    if not client["email"] and submitted_email and "@" in submitted_email:
+    if not is_demo and not client["email"] and submitted_email and "@" in submitted_email:
         save_tc_email(cid, submitted_email)
         client["email"] = submitted_email
         email_just_captured = True
@@ -2695,13 +2743,14 @@ def tc_check():
     # per file (once per page), and issue_frequency's "% of recognized
     # files" in analytics.py only means what it says if each file counts
     # once per issue type, not once per occurrence.
-    issue_keys = sorted({i["key"] for i in result["issues"] if i.get("key")})
-    track_event("tc_check", metadata={
-        "recognized": result["recognized"],
-        "complete": result["complete"],
-        "issue_keys": issue_keys,
-        "sender": (client["email"] or "").strip().lower(),
-    })
+    if not is_demo:
+        issue_keys = sorted({i["key"] for i in result["issues"] if i.get("key")})
+        track_event("tc_check", metadata={
+            "recognized": result["recognized"],
+            "complete": result["complete"],
+            "issue_keys": issue_keys,
+            "sender": (client["email"] or "").strip().lower(),
+        })
 
     resp = jsonify(result)
 
@@ -2712,7 +2761,7 @@ def tc_check():
     # experiment is trying to observe. Reuses the same channel-agnostic
     # formatters as the email-forward path so a web-upload report and a
     # forwarded-file report read identically.
-    if submitted_email and "@" in submitted_email:
+    if not is_demo and submitted_email and "@" in submitted_email:
         check_count = get_tc_check_count_for_sender(submitted_email)
 
         def _send_report(to_email=submitted_email, res=result, count=check_count):
@@ -2889,6 +2938,10 @@ text-align:center;cursor:pointer;transition:all 0.2s;}
 .drop-zone svg{margin-bottom:0.75rem;}
 .drop-zone .dz-title{font-weight:700;font-size:1rem;margin-bottom:0.25rem;}
 .drop-zone .dz-sub{color:var(--text-dim);font-size:0.85rem;}
+.demo-check-btn{display:block;width:100%;margin-top:0.65rem;padding:0.6rem 1rem;background:none;border:1px dashed rgba(15,31,47,0.18);border-radius:var(--radius-sm);font:inherit;font-size:0.85rem;color:var(--text-muted);cursor:pointer;text-align:center;transition:all 0.2s;}
+.demo-check-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-tint);}
+.demo-check-btn:disabled{opacity:0.6;cursor:default;}
+.demo-banner{font-size:0.78rem;font-weight:700;letter-spacing:0.02em;color:var(--text-dim);text-transform:uppercase;margin-bottom:0.5rem;}
 .privacy-note{display:flex;align-items:center;gap:0.45rem;margin-top:0.9rem;font-size:0.8rem;color:var(--text-dim);}
 .privacy-note svg{flex-shrink:0;}
 .or-divider{display:flex;align-items:center;gap:0.75rem;margin:0.15rem 0;font-size:0.7rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-dim);}
@@ -2976,6 +3029,7 @@ border-radius:var(--radius-sm);font-family:inherit;font-size:0.85rem;font-weight
 <span class="addendum-filename" id="addendumFileName"></span>
 <button type="button" class="addendum-clear" id="addendumClear" title="Remove">&times;</button>
 </div>
+<button type="button" class="demo-check-btn" id="demoBtn">Don't have a PDF ready? Run a demo check on a sample TREC contract.</button>
 <div class="email-optin">
 <label class="email-optin-check"><input type="checkbox" id="emailOptinCheckbox" checked> Email me this report + future checks for this address</label>
 <input type="email" id="emailOptinInput" class="email-optin-input" placeholder="you@example.com" autocomplete="email">
@@ -3022,6 +3076,7 @@ const addendumClear = document.getElementById('addendumClear');
 const emailOptinCheckbox = document.getElementById('emailOptinCheckbox');
 const emailOptinInput = document.getElementById('emailOptinInput');
 const emailOptinConfirm = document.getElementById('emailOptinConfirm');
+const demoBtn = document.getElementById('demoBtn');
 
 try { const savedEmail = localStorage.getItem('tc_email_hint'); if (savedEmail) emailOptinInput.value = savedEmail; } catch (e) {}
 
@@ -3043,6 +3098,25 @@ dropZone.addEventListener('drop', e => {
 fileInput.addEventListener('change', () => {
   if (fileInput.files.length) uploadFile(fileInput.files[0], optinEmail());
 });
+
+if (demoBtn) {
+  demoBtn.addEventListener('click', () => {
+    const original = demoBtn.textContent;
+    demoBtn.disabled = true;
+    demoBtn.textContent = 'Loading sample...';
+    fetch('/static/sample_trec_20-19.pdf')
+      .then(r => r.blob())
+      .then(blob => {
+        demoBtn.textContent = original;
+        demoBtn.disabled = false;
+        uploadFile(new File([blob], 'sample_trec_20-19.pdf', {type: 'application/pdf'}), '', true);
+      })
+      .catch(() => {
+        demoBtn.textContent = original;
+        demoBtn.disabled = false;
+      });
+  });
+}
 
 addendumToggle.addEventListener('click', () => {
   addendumToggle.hidden = true;
@@ -3072,7 +3146,7 @@ let statusTimers = [];
 let pendingFile = null;
 let pendingAddendumFile = null;
 
-function uploadFile(file, email) {
+function uploadFile(file, email, isDemo) {
   pendingFile = file;
   resultEl.classList.remove('show');
   emailOptinConfirm.classList.remove('show');
@@ -3085,8 +3159,11 @@ function uploadFile(file, email) {
 
   const formData = new FormData();
   formData.append('file', file);
-  if (pendingAddendumFile) formData.append('file', pendingAddendumFile);
+  // A real addendum picked for a prior real upload should never ride along
+  // on a demo run -- the sample file is the whole check, on its own.
+  if (pendingAddendumFile && !isDemo) formData.append('file', pendingAddendumFile);
   if (email) formData.append('email', email);
+  if (isDemo) formData.append('is_demo', '1');
 
   fetch('/v1/tc/check', { method: 'POST', body: formData })
     .then(r => r.json())
@@ -3097,7 +3174,7 @@ function uploadFile(file, email) {
         renderError(data.error);
         return;
       }
-      renderResult(data, file);
+      renderResult(data, file, isDemo);
       if (email) {
         emailOptinConfirm.textContent = 'Sent to ' + email;
         emailOptinConfirm.classList.add('show');
@@ -3159,9 +3236,10 @@ function buildUpsellCta(issues) {
   return '<div class="fixit-cta"><p>Every gap above happened because this file was filled out by hand. TxtAnOffer drafts the 20-19 by text message, so these fields are never blank to begin with.</p><a href="/pricing">See how it works &rarr;</a></div>';
 }
 
-function renderResult(data, file) {
+function renderResult(data, file, isDemo) {
   const issues = data.issues || [];
-  let html = buildMetaBar(data, file);
+  let html = isDemo ? '<div class="demo-banner">Demo result &mdash; sample contract, not your file.</div>' : '';
+  html += buildMetaBar(data, file);
 
   if (data.complete) {
     html += '<div class="result-banner complete">All checked fields are filled in.</div>';
