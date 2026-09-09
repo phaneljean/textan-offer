@@ -32,7 +32,7 @@ from pdf_validator import validate_offer_pdf
 from amendment import fill_amendment_pdf
 from agent_profiles import get_agent_profile, save_agent_profile, find_by_email, get_emails_for_phones
 from subscriptions import can_generate_offer, increment_offer_count, activate_subscription, deactivate_subscription, get_user, create_user, FREE_OFFER_LIMIT, is_admin_phone, has_professional_access
-from analytics import track_event, get_conversion_metrics, get_revenue_metrics, get_recent_sms, get_recent_sms_failures, get_last_blocked_state, get_waitlist_signups, get_signups_by_source, get_signup_details, get_landing_visits_by_source, get_tc_check_summary, get_recent_tc_check_email_senders, get_tc_check_count_for_sender, get_tc_check_repeat_senders, get_tc_check_bulk_summary
+from analytics import track_event, get_conversion_metrics, get_revenue_metrics, get_recent_sms, get_recent_sms_failures, get_last_blocked_state, get_waitlist_signups, get_signups_by_source, get_signup_details, get_landing_visits_by_source, get_tc_check_summary, get_recent_tc_check_email_senders, get_tc_check_count_for_sender, get_tc_check_repeat_senders, get_tc_check_bulk_summary, get_tc_check_attempts_by_source
 from integrations import send_offer_email, fire_webhook, save_webhook, get_webhook, delete_webhook, send_to_docusign, send_plain_email, send_html_email
 from offers_db import record_offer, get_offers_for_phone, get_offer_by_filename, record_amendment, get_amendments_for_phone, record_thread_response, record_email_sent
 from brokerages import extract_brokerage_prefix, link_user_to_brokerage, get_brokerage, get_brokerage_by_code, create_brokerage, list_brokerages, list_brokerage_agents
@@ -2624,6 +2624,17 @@ def tc_check():
 
     run_tc_followup_if_due()
 
+    # Fires on every real attempt -- success, wrong file type, corrupted
+    # PDF, all of it -- unlike the 'tc_check' event below, which only fires
+    # after a file is successfully parsed. Added 2026-09-09: with only that
+    # success-only event, there was no way to tell "visitor never touched
+    # the widget" apart from "visitor tried and hit an error" -- a landing
+    # page can drive visits with zero of either signal moving. Tagged with
+    # the same ta_src first-touch cookie as landing_visit so a channel's
+    # visits -> attempts -> recognized/complete funnel is fully visible,
+    # not just the last two steps.
+    track_event("tc_check_attempted", metadata={"source": request.cookies.get("ta_src") or "direct"})
+
     # No product gate: every upload gets the full itemized report, always.
     # Email is a non-blocking opt-in ("email me this report + future checks
     # for this address") -- tracked per-browser via an httponly client-id
@@ -4415,6 +4426,7 @@ def analytics_dashboard():
     waitlist_signups = get_waitlist_signups(limit=200)
     signups_by_source = get_signups_by_source(days=30)
     landing_visits_by_source = get_landing_visits_by_source(days=30)
+    tc_check_attempts_by_source = get_tc_check_attempts_by_source(days=30)
     tc_check_summary = get_tc_check_summary(days=30)
     recent_tc_email_senders = get_recent_tc_check_email_senders(limit=20)
     tc_repeat_senders = get_tc_check_repeat_senders(within_days=14)
@@ -4429,6 +4441,7 @@ def analytics_dashboard():
     metrics_24h = get_conversion_metrics(days=1)
     signups_by_source_24h = get_signups_by_source(days=1)
     landing_visits_by_source_24h = get_landing_visits_by_source(days=1)
+    tc_check_attempts_by_source_24h = get_tc_check_attempts_by_source(days=1)
     tc_check_summary_24h = get_tc_check_summary(days=1)
     tc_bulk_summary_24h = get_tc_check_bulk_summary(days=1)
 
@@ -4441,6 +4454,7 @@ def analytics_dashboard():
 
     signups_by_source_merged = _merge_24h_counts(signups_by_source, signups_by_source_24h, "source")
     landing_visits_by_source_merged = _merge_24h_counts(landing_visits_by_source, landing_visits_by_source_24h, "source")
+    tc_check_attempts_by_source_merged = _merge_24h_counts(tc_check_attempts_by_source, tc_check_attempts_by_source_24h, "source")
     tc_issue_frequency_merged = _merge_24h_counts(tc_check_summary["issue_frequency"], tc_check_summary_24h["issue_frequency"], "key")
 
     tc_email_sender_rows = ""
@@ -4486,6 +4500,9 @@ def analytics_dashboard():
     visit_rows = "".join(
         f"<tr><td>{v['source']}</td><td>{v['count']}</td><td>{v['count_24h']}</td></tr>" for v in landing_visits_by_source_merged
     ) or '<tr><td colspan="3" style="padding:10px;color:#666;">No tagged visits yet.</td></tr>'
+    tc_attempt_rows = "".join(
+        f"<tr><td>{a['source']}</td><td>{a['count']}</td><td>{a['count_24h']}</td></tr>" for a in tc_check_attempts_by_source_merged
+    ) or '<tr><td colspan="3" style="padding:10px;color:#666;">No attempts yet.</td></tr>'
     tc_issue_rows = "".join(
         f"<tr><td>{i['label']}</td><td>{i['count']}</td><td>{i['pct_of_recognized']}%</td><td>{i['count_24h']}</td></tr>"
         for i in tc_issue_frequency_merged
@@ -4540,6 +4557,18 @@ body{{font-family:system-ui;max-width:800px;margin:40px auto;padding:20px;}}
     {visit_rows}
   </table>
   <p class="label" style="margin-top:8px;">Raw clicks on a <code>?src=</code> link, counted even if the visitor never signs up &mdash; tells you whether a channel is being opened at all vs. opened-but-not-converting.</p>
+</div>
+<div class="metric">
+  <h3>TC File Check &mdash; Widget Attempts by Source (30 days)</h3>
+  <table style="width:100%;border-collapse:collapse;margin-top:10px;">
+    <tr style="background:#eee;text-align:left;">
+      <th style="padding:8px;">Source</th>
+      <th style="padding:8px;">30 Days</th>
+      <th style="padding:8px;">Last 24h</th>
+    </tr>
+    {tc_attempt_rows}
+  </table>
+  <p class="label" style="margin-top:8px;">Every real submission to the file checker for that source, success or error &mdash; compare against the visit count above: a big gap means visitors aren't engaging the widget at all; attempts close to visits but low recognized/complete below means they're trying and something's failing.</p>
 </div>
 <div class="metric">
   <h3>Trial Activation</h3>

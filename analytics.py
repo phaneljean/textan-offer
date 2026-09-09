@@ -244,6 +244,42 @@ def get_landing_visits_by_source(days: int = 30) -> list:
         key=lambda r: -r["count"]
     )
 
+def get_tc_check_attempts_by_source(days: int = 30) -> list:
+    """Same idea as get_landing_visits_by_source, one funnel step later:
+    counts every real submission to /v1/tc/check (success OR error --
+    wrong file type, corrupted PDF, whatever) grouped by the same ta_src
+    attribution. Added 2026-09-09 specifically to answer "LinkedIn drives
+    visits but conversions stay flat -- are visitors even touching the
+    upload widget, or trying and hitting an error?" -- neither question
+    was answerable before this, since the pre-existing 'tc_check' event
+    only fires after a file is successfully parsed. Compare this against
+    get_landing_visits_by_source's count for the same source: a big gap
+    means visitors aren't engaging the widget at all (a page/copy
+    problem); attempts close to visits but recognized/complete much
+    lower (see get_tc_check_summary) means they're trying and something
+    downstream is failing."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cutoff = (datetime.utcnow() - timedelta(days=days)).isoformat()
+    cursor.execute("""
+        SELECT metadata FROM events
+        WHERE event_type = 'tc_check_attempted' AND created_at > ?
+    """, (cutoff,))
+    rows = cursor.fetchall()
+    conn.close()
+
+    import json
+    counts = {}
+    for row in rows:
+        metadata = json.loads(row[0]) if row[0] else {}
+        source = metadata.get("source") or "direct"
+        counts[source] = counts.get(source, 0) + 1
+
+    return sorted(
+        [{"source": source, "count": count} for source, count in counts.items()],
+        key=lambda r: -r["count"]
+    )
+
 TC_ISSUE_LABELS = {
     "unrecognized": "Not a recognized TREC 20-19 template",
     "address": "Property address blank",
