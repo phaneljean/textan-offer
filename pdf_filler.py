@@ -193,16 +193,20 @@ def fill_offer_pdf(parsed: dict, agent_phone: str) -> str:
                     "addr_header_p8"):
             values[FIELD_MAP[key]] = full_addr
 
-    # Payment structure (Paragraph 3: A, B, C)
+    # Payment structure (Paragraph 3: A, B, C). No leading "$" in the value
+    # itself -- the printed form already has "$" right before each of these
+    # blanks (confirmed 2026-09-09 by rendering a real generated contract:
+    # every one of A/B/C showed "$ $400,000", doubled), same underlying
+    # pattern as the financing_addendum.py fix from the same day.
     if parsed.get("down_payment_amount") is not None:
-        values[FIELD_MAP["down_payment"]] = f"${parsed['down_payment_amount']:,}"
+        values[FIELD_MAP["down_payment"]] = f"{parsed['down_payment_amount']:,}"
     # 3B (financing sum) stays genuinely blank for an all-cash offer
     # (loan_amount == 0) rather than printing "$0" -- there's no financing
     # to describe, and the checkbox below is correspondingly left unchecked.
     if parsed.get("loan_amount"):
-        values[FIELD_MAP["loan_amount"]] = f"${parsed['loan_amount']:,}"
+        values[FIELD_MAP["loan_amount"]] = f"{parsed['loan_amount']:,}"
     if parsed.get("price") is not None:
-        values[FIELD_MAP["sales_price"]] = f"${parsed['price']:,}"
+        values[FIELD_MAP["sales_price"]] = f"{parsed['price']:,}"
 
     # Checkboxes handled separately (need /AS and /V set to /On)
     checkboxes_to_check = []
@@ -221,11 +225,12 @@ def fill_offer_pdf(parsed: dict, agent_phone: str) -> str:
     checkboxes_to_check.append(FIELD_MAP["as_is"])
     checkboxes_to_check.append(FIELD_MAP["possession_upon_closing"])
 
-    # Earnest Money & Option Fee (Paragraph 5A)
+    # Earnest Money & Option Fee (Paragraph 5A) -- same no-leading-"$" fix,
+    # the printed form already has "$" before each blank.
     if parsed.get("earnest_money") is not None:
-        values[FIELD_MAP["earnest_money_amount"]] = f"${parsed['earnest_money']:,}"
+        values[FIELD_MAP["earnest_money_amount"]] = f"{parsed['earnest_money']:,}"
     if parsed.get("option_fee") is not None:
-        values[FIELD_MAP["option_fee_amount"]] = f"${parsed['option_fee']:,}"
+        values[FIELD_MAP["option_fee_amount"]] = f"{parsed['option_fee']:,}"
 
     # Closing date (Paragraph 9A) — handled via reportlab overlay after merge
     # (form field is a parent/kid that doesn't render reliably)

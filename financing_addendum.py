@@ -118,6 +118,11 @@ def fill_financing_addendum(parsed: dict) -> bytes:
     # offer generated a 40-11 with a correctly-checked box but a blank
     # dollar amount. See the FIELD_MAP entries above for the rect-verified
     # field names.
+    #
+    # No leading "$" in any of these values -- the printed form already has
+    # "$" right before every one of these blanks (confirmed by rendering:
+    # every amount showed "$ $703,250", doubled). Fixed 2026-09-09 alongside
+    # the same bug in pdf_filler.py and amendment.py.
     loan_amount = parsed.get("loan_amount", 0)
     financing_type = parsed.get("financing_type") or "conventional"
     NON_CONVENTIONAL_AMOUNT_FIELD = {
@@ -131,11 +136,11 @@ def fill_financing_addendum(parsed: dict) -> bytes:
         if financing_type in NON_CONVENTIONAL_AMOUNT_FIELD:
             checkboxes.append(FIELD_MAP[financing_type])
             amount_field = NON_CONVENTIONAL_AMOUNT_FIELD[financing_type]
-            values[FIELD_MAP[amount_field]] = f"${loan_amount:,}"
+            values[FIELD_MAP[amount_field]] = f"{loan_amount:,}"
         else:
             checkboxes.append(FIELD_MAP["conventional"])
             checkboxes.append(FIELD_MAP["first_mortgage"])
-            values[FIELD_MAP["first_loan_amount"]] = f"${loan_amount:,}"
+            values[FIELD_MAP["first_loan_amount"]] = f"{loan_amount:,}"
 
     # Buyer Approval: default to subject to approval, 21 days
     checkboxes.append(FIELD_MAP["buyer_approval"])

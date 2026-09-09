@@ -59,7 +59,10 @@ def fill_amendment_pdf(original_offer: dict, amendment: dict) -> str:
 
     if amendment["field"] == "price":
         checkboxes.append(FIELD_MAP["price_checkbox"])
-        values[FIELD_MAP["price_total"]] = f"${amendment['value']:,}"
+        # No leading "$" -- the printed 39-11 form already has "$" before
+        # this blank (same doubled-dollar-sign bug fixed 2026-09-09 in
+        # pdf_filler.py and financing_addendum.py).
+        values[FIELD_MAP["price_total"]] = f"{amendment['value']:,}"
         suffix = f"price{amendment['value']}"
     else:
         original_close = datetime.fromisoformat(original_offer["created_at"]) + \
