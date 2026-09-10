@@ -37,6 +37,8 @@ def init_offers_table():
         "ALTER TABLE offers ADD COLUMN email_sent_at TEXT DEFAULT ''",
         "ALTER TABLE offers ADD COLUMN email_sent_to TEXT DEFAULT ''",
         "ALTER TABLE offers ADD COLUMN option_days INTEGER",
+        "ALTER TABLE offers ADD COLUMN docusign_envelope_id TEXT DEFAULT ''",
+        "ALTER TABLE offers ADD COLUMN docusign_sent_at TEXT DEFAULT ''",
     ):
         try:
             cursor.execute(ddl)
@@ -79,7 +81,7 @@ def get_offer_by_filename(filename: str) -> dict:
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT id, phone, address, price, down_pct, close_days, filename, mls_json, generator_version, financing_type, thread_status, thread_responded_at, email_sent_at, email_sent_to, created_at, option_days
+        SELECT id, phone, address, price, down_pct, close_days, filename, mls_json, generator_version, financing_type, thread_status, thread_responded_at, email_sent_at, email_sent_to, created_at, option_days, docusign_envelope_id, docusign_sent_at
         FROM offers WHERE filename = ?
     """, (filename,))
     row = cursor.fetchone()
@@ -127,12 +129,26 @@ def record_email_sent(filename: str, to_email: str):
     conn.close()
 
 
+def record_docusign_sent(filename: str, envelope_id: str):
+    """Latest-send-wins, same reasoning as record_email_sent -- an agent can
+    legitimately resend. This only means "sent for signature", never
+    "signed" -- this app doesn't poll DocuSign for envelope completion."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    now = datetime.utcnow().isoformat()
+    cursor.execute("""
+        UPDATE offers SET docusign_envelope_id=?, docusign_sent_at=? WHERE filename=?
+    """, (envelope_id, now, filename))
+    conn.commit()
+    conn.close()
+
+
 def get_offers_for_phone(phone: str, limit: int = 50) -> list:
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT id, address, price, down_pct, close_days, filename, created_at, thread_status, thread_responded_at
+        SELECT id, address, price, down_pct, close_days, filename, created_at, thread_status, thread_responded_at, option_days
         FROM offers
         WHERE phone = ?
         ORDER BY created_at DESC
