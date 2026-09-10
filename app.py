@@ -887,7 +887,7 @@ def index():
       <div class="step-card">
         <div class="step-num">1</div>
         <h3>Offer</h3>
-        <p>Text the terms in, get back a structured offer in seconds &mdash; the starting point everything else builds on.</p>
+        <p>Text the terms in, get back a structured offer in seconds &mdash; the starting point everything else builds on. Text <a href="sms:+18338970333" style="color:var(--accent-dark);font-weight:600;text-decoration:underline;">(833) 897-0333</a>, or <a href="/playground" style="color:var(--accent-dark);font-weight:600;text-decoration:underline;">try a sample text first &rarr;</a></p>
       </div>
       <div class="step-card">
         <div class="step-num">2</div>
