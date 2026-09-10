@@ -77,11 +77,20 @@ def get_user(phone: str) -> dict:
 
 
 def has_professional_access(phone: str) -> bool:
-    """DocuSign send + Webhook/Zapier automation are Professional-plan features."""
+    """DocuSign send, Webhook/Zapier automation, and the Transaction Workspace
+    (timeline/task checklist/closing checklist) are Professional-plan
+    features. A brokerage-roster agent gets this too -- the Brokerage plan
+    is priced as "everything in Professional, for your whole roster," not a
+    separate feature set, so gating this on personal is_subscribed alone
+    would silently break that promise for every roster agent."""
     if is_admin_phone(phone):
         return True
     user = get_user(phone)
-    return bool(user) and user["is_subscribed"] and user["plan"] in PROFESSIONAL_PLANS
+    if not user:
+        return False
+    if user.get("brokerage_id"):
+        return True
+    return bool(user["is_subscribed"]) and user["plan"] in PROFESSIONAL_PLANS
 
 def create_user(phone: str) -> dict:
     """Create new user record"""
@@ -178,6 +187,14 @@ def can_generate_offer(phone: str) -> tuple[bool, str, dict]:
     # Subscribed users have unlimited access
     if user["is_subscribed"]:
         return True, "subscribed", user
+
+    # An agent whose phone is linked to a paying brokerage (via join code or
+    # /signup) gets the same unlimited access as a personal subscription --
+    # that's the whole "free SMS drafting for your whole roster" pitch the
+    # Brokerage plan sells. Without this check that promise wasn't actually
+    # enforced: a roster agent could still hit the 3-free-offer wall.
+    if user.get("brokerage_id"):
+        return True, "brokerage_roster", user
 
     # Free users get 3 offers
     if user["offer_count"] < FREE_OFFER_LIMIT:
