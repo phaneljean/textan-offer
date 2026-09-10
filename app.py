@@ -777,6 +777,7 @@ def index():
     </a>
     <div class="nav-links" id="navLinks">
       <a href="#how">How it works</a>
+      <a href="#workflow">Workflow</a>
       <a href="/pricing">Pricing</a>
       <a href="/faq">FAQ</a>
       <a href="/tc-hub">TC Hub</a>
@@ -874,6 +875,52 @@ def index():
       </div>
     </div>
     <div style="text-align:center;font-size:0.75rem;color:var(--text-dim);margin-top:1rem;">Illustrative example &mdash; your real report reflects your actual file.</div>
+  </section>
+
+  <section class="steps" id="workflow" style="border-top:none;padding-top:1rem;padding-bottom:2.5rem;">
+    <div class="steps-header" style="margin-bottom:1.75rem;">
+      <div class="steps-kicker">The full picture</div>
+      <h2>From offer to closing, in one place.</h2>
+      <p>TC File Check is the part most people try first. It's one stage of a longer workflow that runs underneath it, start to finish.</p>
+    </div>
+    <div class="steps-grid">
+      <div class="step-card">
+        <div class="step-num">1</div>
+        <h3>Offer</h3>
+        <p>Text the terms in, get back a structured offer in seconds &mdash; the starting point everything else builds on.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-num">2</div>
+        <h3>TREC Documents</h3>
+        <p>The required forms are generated straight from the transaction: 20-19, 39-11, 40-11, IABS, 61-0, 36-10.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-num">3</div>
+        <h3>Compliance &mdash; TC Check</h3>
+        <p>Checked for completeness, cross-document consistency, and version-to-version comparison &mdash; before it moves forward.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-num">4</div>
+        <h3>Signature execution</h3>
+        <p>Connected to DocuSign for e-signature. Validation-gated &mdash; a contract that's still missing required fields won't go out.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-num">5</div>
+        <h3>Communication</h3>
+        <p>SMS confirmations, email notifications, and a listing-agent accept/decline thread, built in from the first text.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-num">6</div>
+        <h3>Transaction workspace</h3>
+        <p>Once accepted, a stage timeline and task checklist track the deal &mdash; option period, earnest money, title, financing, inspections, amendments, final walkthrough &mdash; alongside accept/decline status and dashboard visibility.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-num">7</div>
+        <h3>Closing</h3>
+        <p>Within 5 days of closing, a Closing Checklist pulls it together in one screen: documents complete, signature status, open tasks, and every key date.</p>
+      </div>
+    </div>
+    <div style="text-align:center;font-size:0.8rem;font-weight:600;color:var(--accent-dark);margin-top:1.75rem;">Offer &rarr; Documents &rarr; Compliance &rarr; Signatures &rarr; Communication &rarr; Transaction &rarr; Closing</div>
   </section>
 
   <section class="steps" id="brokers" style="border-top:none;padding-top:1rem;padding-bottom:2.5rem;">
