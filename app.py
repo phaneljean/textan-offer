@@ -3818,6 +3818,17 @@ border-radius:var(--radius-sm);padding:1rem;color:#b45309;font-size:0.9rem;margi
 .chip{background:rgba(15,31,47,0.03);border:1px solid var(--border);border-radius:9999px;
 padding:0.4rem 0.85rem;font-size:0.8rem;color:var(--text-muted);cursor:pointer;transition:all 0.2s;}
 .chip:hover{border-color:var(--accent);color:var(--accent-dark);}
+.pdf-demo{margin-top:1.25rem;padding-top:1.25rem;border-top:1px solid var(--border);text-align:center;}
+.pdf-btn{background:linear-gradient(135deg,var(--accent),#0a3a33);color:#fff;border:none;
+padding:0.75rem 1.75rem;border-radius:var(--radius-sm);font-family:inherit;font-size:0.85rem;
+font-weight:600;cursor:pointer;transition:all 0.2s;}
+.pdf-btn:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(11,93,82,0.25);}
+.pdf-btn:disabled{opacity:0.6;cursor:default;transform:none;box-shadow:none;}
+.pdf-result{margin-top:1rem;display:none;}
+.pdf-result.show{display:flex;align-items:center;justify-content:center;gap:0.75rem;flex-wrap:wrap;}
+.pdf-result a{background:var(--accent-tint);color:var(--accent-dark);border:1px solid rgba(11,93,82,0.2);
+padding:0.6rem 1.1rem;border-radius:9999px;font-size:0.85rem;font-weight:600;}
+.pdf-hint{font-size:0.78rem;color:var(--text-dim);margin-top:0.6rem;}
 .formats{margin-top:2.5rem;padding-top:2rem;border-top:1px solid var(--border);}
 .formats h3{font-size:1rem;font-weight:700;margin-bottom:1rem;color:var(--text);}
 .format-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
@@ -3887,12 +3898,17 @@ padding:0.4rem 0.85rem;font-size:0.8rem;color:var(--text-muted);cursor:pointer;t
 <div class="result-item"><div class="result-label">Location</div><div class="result-value" id="r-location"></div></div>
 <div class="result-item" style="grid-column:1 / -1;"><div class="result-label">Extras Detected</div><div class="result-value" id="r-extras"></div></div>
 </div>
+<div class="pdf-demo">
+<button class="pdf-btn" id="pdf-btn">Generate the real PDF &rarr;</button>
+<div class="pdf-result" id="pdf-result"></div>
+<div class="pdf-hint">This fills an actual TREC 20-19 &mdash; the same PDF you'd get back by text.</div>
+</div>
 </div>
 
 <div class="examples">
 <h3>Try these (click to load):</h3>
 <div class="example-chips">
-<span class="chip">725k 3% 21day 123 Main St</span>
+<span class="chip">725k 3% 21day 123 Main St, Austin, TX</span>
 <span class="chip">Offer 650000 3 percent close in 30 days 456 Oak St Austin</span>
 <span class="chip">500k 5 down 14days 200 Preston Rd Plano</span>
 <span class="chip">1.2m 10% 45day Travis 789 Pine Blvd</span>
@@ -3921,7 +3937,9 @@ var input=document.getElementById('offer-input'),
     btn=document.getElementById('parse-btn'),
     result=document.getElementById('result'),
     errEl=document.getElementById('error-msg'),
-    warnEl=document.getElementById('warn-msg');
+    warnEl=document.getElementById('warn-msg'),
+    pdfBtn=document.getElementById('pdf-btn'),
+    pdfResult=document.getElementById('pdf-result');
 
 document.querySelectorAll('.chip').forEach(function(c){
   c.addEventListener('click',function(){
@@ -3936,6 +3954,10 @@ btn.addEventListener('click',function(){
   result.classList.remove('show');
   errEl.classList.remove('show');
   warnEl.classList.remove('show');
+  pdfResult.classList.remove('show');
+  pdfResult.innerHTML='';
+  pdfBtn.disabled=false;
+  pdfBtn.textContent='Generate the real PDF →';
   fetch('/api/parse',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({text:text})})
   .then(function(r){return r.json();})
@@ -3963,6 +3985,41 @@ btn.addEventListener('click',function(){
 });
 
 input.addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();btn.click();}});
+
+pdfBtn.addEventListener('click',function(){
+  var text=input.value.trim();
+  if(!text)return;
+  pdfBtn.disabled=true;
+  pdfBtn.textContent='Generating…';
+  pdfResult.classList.remove('show');
+  fetch('/api/demo',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({offer_text:text})})
+  .then(function(r){return r.json();})
+  .then(function(d){
+    if(d.error){
+      pdfBtn.disabled=false;
+      pdfBtn.textContent='Generate the real PDF →';
+      errEl.textContent=d.error;
+      errEl.classList.add('show');
+      return;
+    }
+    pdfBtn.textContent='Generate another →';
+    pdfBtn.disabled=false;
+    pdfResult.innerHTML='<a href="'+d.pdf_url+'" target="_blank">View the filled TREC 20-19 &rarr;</a>';
+    pdfResult.classList.add('show');
+  })
+  .catch(function(){
+    pdfBtn.disabled=false;
+    pdfBtn.textContent='Generate the real PDF →';
+    errEl.textContent='Something went wrong generating the PDF.';
+    errEl.classList.add('show');
+  });
+});
+
+// Auto-run the classic example on load so the page demos itself immediately
+// -- text in, structured fields out, with the real PDF one click away.
+input.value='725k 3% 21day 123 Main St, Austin, TX';
+btn.click();
 })();
 </script>
 </body>
