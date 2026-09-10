@@ -770,6 +770,7 @@ def index():
       <a href="#how">How it works</a>
       <a href="/pricing">Pricing</a>
       <a href="/faq">FAQ</a>
+      <a href="/tc-hub">TC Hub</a>
       <a href="/login">Log In</a>
     </div>
     <a href="/tc-check" class="nav-cta">Try TC Check Free</a>
