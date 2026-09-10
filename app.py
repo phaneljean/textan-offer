@@ -2868,12 +2868,15 @@ def tc_compare():
     identical; there is no reliable way to infer which is which the way
     /v1/tc/check tells a 40-11 or 39-11 apart from the main contract.
 
-    Not yet linked from the /tc-check page's UI (that page only has a
-    single-contract-plus-optional-addendum upload widget) -- reachable via
-    this endpoint directly for now. Also not gated behind email capture
-    like /v1/tc/check is; that's a product decision (free vs. requires
-    email, same as the completeness check) that hasn't been made for this
-    endpoint yet, not an oversight."""
+    Linked from /tc-check/compare (added 2026-09-10 -- the logic here
+    existed since the file-check work but had no UI in front of it until
+    then). Not gated behind email capture like /v1/tc/check is; that's a
+    product decision (free vs. requires email, same as the completeness
+    check) that hasn't been made for this endpoint yet, not an oversight."""
+    client_ip = request.remote_addr or "unknown"
+    if not check_and_increment(f"tc_compare:{client_ip}", limit=20):
+        return jsonify({"error": "Too many requests. Try again in a bit."}), 429
+
     original = request.files.get("original")
     updated = request.files.get("updated")
     if not original or not original.filename or not updated or not updated.filename:
@@ -3063,6 +3066,7 @@ border-radius:var(--radius-sm);font-family:inherit;font-size:0.85rem;font-weight
 </ul>
 </div>
 <p class="scope-footnote">Every check above is verified directly against TREC's actual 20-19 form fields &mdash; not guessed from field names, which routinely lie about their own position. The 40-11 can be its own separate PDF &mdash; it doesn't need to be merged into the contract file.</p>
+<p class="scope-footnote">Comparing an original against a later version? <a href="/tc-check/compare" style="color:var(--accent);font-weight:700;text-decoration:underline;text-underline-offset:2px;">See exactly what changed &rarr;</a></p>
 <p class="scope-footnote">Auditing a whole closed-file archive? <a href="/tc-check/bulk" style="color:var(--accent);font-weight:700;text-decoration:underline;text-underline-offset:2px;">Bulk-check up to 200 files at once &rarr;</a></p>
 <p class="scope-footnote">Want checklists and TREC form references instead? <a href="/tc-hub" style="color:var(--accent);font-weight:700;text-decoration:underline;text-underline-offset:2px;">Visit the free TC Hub &rarr;</a></p>
 </div>
@@ -3547,6 +3551,147 @@ def tc_check_bulk_results(batch_id):
 </div>
 <p class="hint" style="margin-top:1.5rem;">{footer_note}</p>
 </div></body></html>"""
+    return make_response(html)
+
+
+@app.route("/tc-check/compare")
+def tc_check_compare_page():
+    """UI for the 'WHAT CHANGED' field-level diff -- the compare_contracts()
+    logic and its /v1/tc/compare endpoint have existed since the file-check
+    feature work, but nothing ever linked to them. Synchronous like the
+    single-file /tc-check widget (reading two files' field values is fast,
+    nothing like the minutes a bulk zip takes), so this reuses that same
+    instant drag-drop-and-fetch pattern rather than /tc-check/bulk's
+    email-and-wait one. Two explicit named slots (original/updated), not a
+    drop-anything zone, since the backend can't infer which upload is which
+    -- see compare_contracts()'s own docstring."""
+    html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Compare Contract Versions — TxtAnOffer</title>
+<meta name="description" content="Upload the original and an updated TREC 20-19 side by side and see exactly which fields changed, which stayed the same, and which are still blank in both.">
+<link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<style>{_BULK_PAGE_STYLE}
+.slot{{margin-bottom:1.25rem;}}
+.slot input[type=file]{{margin-bottom:0.3rem;}}
+.slot .filename{{font-size:0.78rem;color:var(--text-dim);}}
+.status-pill{{font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.03em;padding:0.12rem 0.5rem;border-radius:9999px;white-space:nowrap;}}
+.status-pill.changed{{background:rgba(245,158,11,0.12);color:#b45309;}}
+.status-pill.unchanged{{background:rgba(16,185,129,0.12);color:#047857;}}
+.status-pill.missing{{background:rgba(15,31,47,0.08);color:var(--text-dim);}}
+.diff-value{{font-size:0.8rem;color:var(--text-muted);}}
+.diff-value b{{color:var(--text);font-weight:600;}}
+</style>
+</head>
+<body>
+<div class="bulk-nav"><a href="/" class="bulk-nav-link"><img src="/static/logo.svg" alt="" class="bulk-logo">TxtAnOffer</a></div>
+<div class="container">
+<h1>Compare Contract Versions</h1>
+<p class="subtitle">Upload the original TREC 20-19 and a later version of the same file &mdash; after an amendment, a re-send, or just to double-check nothing drifted. See exactly what changed, what's unchanged, and what's still blank in both. Free, no login, nothing stored.</p>
+<div class="card">
+<div class="slot">
+<label for="original">Original file</label>
+<input type="file" id="original" accept="application/pdf">
+<div class="filename" id="originalName">No file chosen</div>
+</div>
+<div class="slot">
+<label for="updated">Updated file</label>
+<input type="file" id="updated" accept="application/pdf">
+<div class="filename" id="updatedName">No file chosen</div>
+</div>
+<button type="button" class="submit-btn" id="compareBtn">Compare</button>
+<p class="hint" id="status" style="display:none;margin-top:1rem;margin-bottom:0;"></p>
+</div>
+<div id="result"></div>
+</div>
+<script>
+var originalInput = document.getElementById('original'),
+    updatedInput = document.getElementById('updated'),
+    originalName = document.getElementById('originalName'),
+    updatedName = document.getElementById('updatedName'),
+    compareBtn = document.getElementById('compareBtn'),
+    statusEl = document.getElementById('status'),
+    resultEl = document.getElementById('result');
+
+originalInput.addEventListener('change', function(){{
+  originalName.textContent = originalInput.files.length ? originalInput.files[0].name : 'No file chosen';
+}});
+updatedInput.addEventListener('change', function(){{
+  updatedName.textContent = updatedInput.files.length ? updatedInput.files[0].name : 'No file chosen';
+}});
+
+function escapeHtml(s){{
+  var div = document.createElement('div');
+  div.textContent = s;
+  return div.innerHTML;
+}}
+
+function renderError(msg){{
+  resultEl.innerHTML = '<div class="card" style="margin-top:1.5rem;"><div class="error-box">' + escapeHtml(msg) + '</div></div>';
+}}
+
+function renderResult(data){{
+  if (data.error) {{ renderError(data.error); return; }}
+  if (!data.recognized) {{ renderError(data.message || "Didn't recognize one of those as a TREC 20-19."); return; }}
+  var changed = data.changes.filter(function(c){{ return c.status === 'changed'; }}).length;
+  var html = '<div class="card" style="margin-top:1.5rem;">';
+  html += '<div class="stat-banner">' + changed + ' field' + (changed === 1 ? '' : 's') + ' changed between versions</div>';
+  html += '<table class="file-table"><thead><tr><th>Field</th><th>Status</th><th>Detail</th></tr></thead><tbody>';
+  data.changes.forEach(function(c){{
+    var pill, detail;
+    if (c.status === 'changed') {{
+      pill = '<span class="status-pill changed">Changed</span>';
+      detail = '<span class="diff-value">' + escapeHtml(c.from) + ' &rarr; <b>' + escapeHtml(c.to) + '</b></span>';
+    }} else if (c.status === 'unchanged') {{
+      pill = '<span class="status-pill unchanged">Unchanged</span>';
+      detail = '<span class="diff-value">&mdash;</span>';
+    }} else {{
+      pill = '<span class="status-pill missing">Blank in both</span>';
+      detail = '<span class="diff-value">&mdash;</span>';
+    }}
+    html += '<tr><td>' + escapeHtml(c.field) + '</td><td>' + pill + '</td><td>' + detail + '</td></tr>';
+  }});
+  html += '</tbody></table>';
+  if (data.not_compared && data.not_compared.length) {{
+    html += '<p class="hint" style="margin-top:1rem;">Not compared: ' + data.not_compared.map(escapeHtml).join(', ') + '. ' + escapeHtml(data.not_compared_reason || '') + '</p>';
+  }}
+  html += '</div>';
+  resultEl.innerHTML = html;
+}}
+
+compareBtn.addEventListener('click', function(){{
+  if (!originalInput.files.length || !updatedInput.files.length) {{
+    renderError('Choose both an original and an updated file first.');
+    return;
+  }}
+  resultEl.innerHTML = '';
+  statusEl.style.display = 'block';
+  statusEl.textContent = 'Comparing...';
+  compareBtn.disabled = true;
+
+  var formData = new FormData();
+  formData.append('original', originalInput.files[0]);
+  formData.append('updated', updatedInput.files[0]);
+
+  fetch('/v1/tc/compare', {{ method: 'POST', body: formData }})
+    .then(function(r){{ return r.json(); }})
+    .then(function(data){{
+      statusEl.style.display = 'none';
+      compareBtn.disabled = false;
+      renderResult(data);
+    }})
+    .catch(function(){{
+      statusEl.style.display = 'none';
+      compareBtn.disabled = false;
+      renderError('Something went wrong comparing those files. Try again.');
+    }});
+}});
+</script>
+</body>
+</html>"""
     return make_response(html)
 
 
