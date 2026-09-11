@@ -1143,6 +1143,7 @@ def index():
 
   function renderResult(data, isDemo){
     var issues = data.issues || [];
+    var totalIssues = typeof data.issue_count === 'number' ? data.issue_count : issues.length;
     var html = '';
     if(isDemo){
       html += '<div class="demo-banner">Demo result &mdash; sample contract, not your file.</div>';
@@ -1150,11 +1151,12 @@ def index():
     if(data.complete){
       html += '<div class="result-banner complete">All checked fields are filled in.</div>';
     } else {
-      html += '<div class="result-banner incomplete">' + issues.length + ' issue' + (issues.length === 1 ? '' : 's') + ' found</div>';
+      html += '<div class="result-banner incomplete">' + totalIssues + ' issue' + (totalIssues === 1 ? '' : 's') + ' found</div>';
     }
     // Homepage widget shows the first few issues -- the full checklist,
-    // copy/download buttons, and blank-draft CTA live on /tc-check itself.
-    var shown = issues.slice(0, 4);
+    // email gate, copy/download buttons, and blank-draft CTA live on
+    // /tc-check itself.
+    var shown = data.gated ? issues : issues.slice(0, 4);
     if(shown.length){
       html += '<ul class="issue-list">';
       shown.forEach(function(issue){
@@ -1162,8 +1164,9 @@ def index():
       });
       html += '</ul>';
     }
-    if(issues.length > shown.length){
-      html += '<div class="result-more">+' + (issues.length - shown.length) + ' more &mdash; <a href="/tc-check">see the full checklist &rarr;</a></div>';
+    if(totalIssues > shown.length){
+      var linkText = data.gated ? 'enter your email to see the full report' : 'see the full checklist';
+      html += '<div class="result-more">+' + (totalIssues - shown.length) + ' more &mdash; <a href="/tc-check">' + linkText + ' &rarr;</a></div>';
     } else if(issues.length){
       html += '<div class="result-more"><a href="/tc-check">Copy or download this checklist &rarr;</a></div>';
     }
@@ -2806,12 +2809,14 @@ def tc_check():
     if not is_demo:
         record_tc_use(cid)
 
-    # No product gate: the itemized report is the whole point of running a
-    # check, so it's never withheld. Email is a non-blocking opt-in ("email
-    # me this report + future checks for this address") shown alongside the
-    # upload widget, default-checked -- not a condition of seeing results.
-    # Still worth persisting per-cid (same as before) so a returning visitor
-    # is identifiable even on a check where they leave the box unchecked.
+    # Email-capture gate (see tc_gate.py): the check itself always runs and
+    # is tracked in full server-side regardless of what's below -- what's
+    # gated is only what's returned to the browser. An anonymous first-time
+    # visitor gets a preview (total issue count + the single most severe
+    # issue), not the full itemized list, until an email is on file for
+    # this browser. Once captured -- this request or a prior one -- every
+    # future check for this client id is unlimited. Demo runs are never
+    # gated: the sample-file button is meant as a zero-commitment look.
     email_just_captured = False
     if not is_demo and not client["email"] and submitted_email and "@" in submitted_email:
         save_tc_email(cid, submitted_email)
@@ -2819,10 +2824,14 @@ def tc_check():
         email_just_captured = True
         track_event("tc_check_email_captured", submitted_email, {"client_id": cid})
 
+    gate_cleared = is_demo or bool(client["email"])
+
     # Deduped per file -- initials/addendum checks can fire multiple times
     # per file (once per page), and issue_frequency's "% of recognized
     # files" in analytics.py only means what it says if each file counts
-    # once per issue type, not once per occurrence.
+    # once per issue type, not once per occurrence. Tracked in full
+    # regardless of the gate above -- the gate only changes what's returned
+    # to the browser, never what's measured.
     if not is_demo:
         issue_keys = sorted({i["key"] for i in result["issues"] if i.get("key")})
         track_event("tc_check", metadata={
@@ -2830,9 +2839,24 @@ def tc_check():
             "complete": result["complete"],
             "issue_keys": issue_keys,
             "sender": (client["email"] or "").strip().lower(),
+            "gated": not gate_cleared,
         })
 
-    resp = jsonify(result)
+    payload = dict(result)
+    full_issues = payload.get("issues") or []
+    payload["issue_count"] = len(full_issues)
+    if not gate_cleared and full_issues:
+        # Worst-first so the one free preview issue is the most alarming
+        # real finding on this file, not just whichever check happened to
+        # run first.
+        severity_rank = {"blocker": 0, "warning": 1}
+        preview_issue = sorted(full_issues, key=lambda i: severity_rank.get(i.get("severity"), 2))[0]
+        payload["issues"] = [preview_issue]
+        payload["gated"] = True
+    else:
+        payload["gated"] = False
+
+    resp = jsonify(payload)
 
     # Fire the opt-in report email on every submission that carries a valid
     # email, not just the first-ever capture -- a returning visitor with the
@@ -2840,7 +2864,9 @@ def tc_check():
     # sends to the same address are exactly the signal the free-for-now
     # experiment is trying to observe. Reuses the same channel-agnostic
     # formatters as the email-forward path so a web-upload report and a
-    # forwarded-file report read identically.
+    # forwarded-file report read identically. Always built from the full,
+    # unfiltered result, not the (possibly gated) browser payload above --
+    # the emailed report is never gated.
     if not is_demo and submitted_email and "@" in submitted_email:
         check_count = get_tc_check_count_for_sender(submitted_email)
 
@@ -3056,6 +3082,17 @@ border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:s
 .fixit-cta a{background:var(--accent);color:#fff;padding:0.6rem 1.25rem;border-radius:9999px;
 font-size:0.85rem;font-weight:600;white-space:nowrap;}
 .fixit-cta a:hover{opacity:0.9;}
+.gate-box{margin-top:0.5rem;padding:1.25rem 1.4rem;background:#0f1f2f;border-radius:var(--radius);}
+.gate-headline{color:#fff;font-weight:700;font-size:1rem;margin:0 0 0.3rem;}
+.gate-sub{color:rgba(255,255,255,0.72);font-size:0.85rem;margin:0 0 0.9rem;}
+.gate-form{display:flex;gap:0.6rem;flex-wrap:wrap;}
+.gate-form input{flex:1;min-width:200px;padding:0.7rem 0.9rem;border:1px solid rgba(255,255,255,0.2);border-radius:var(--radius-sm);font-family:inherit;font-size:0.85rem;background:rgba(255,255,255,0.08);color:#fff;}
+.gate-form input::placeholder{color:rgba(255,255,255,0.45);}
+.gate-form input:focus{outline:none;border-color:var(--accent);}
+.gate-form button{background:var(--accent);color:#fff;border:none;padding:0.7rem 1.4rem;border-radius:var(--radius-sm);font-family:inherit;font-size:0.85rem;font-weight:700;cursor:pointer;white-space:nowrap;}
+.gate-form button:hover{opacity:0.9;}
+.gate-error{color:#fca5a5;font-size:0.78rem;margin-top:0.5rem;min-height:1em;}
+.gate-note{color:rgba(255,255,255,0.5);font-size:0.75rem;margin-top:0.7rem;}
 .meta-bar{display:flex;flex-wrap:wrap;gap:0.4rem 1.25rem;padding:0.85rem 1.1rem;margin-bottom:1rem;
 background:var(--accent-tint);border:1px solid var(--border);border-radius:var(--radius-sm);
 font-size:0.8rem;color:var(--text-muted);}
@@ -3323,13 +3360,14 @@ function buildUpsellCta(issues) {
 
 function renderResult(data, file, isDemo) {
   const issues = data.issues || [];
+  const totalIssues = typeof data.issue_count === 'number' ? data.issue_count : issues.length;
   let html = isDemo ? '<div class="demo-banner">Demo result &mdash; sample contract, not your file.</div>' : '';
   html += buildMetaBar(data, file);
 
   if (data.complete) {
     html += '<div class="result-banner complete">All checked fields are filled in.</div>';
   } else {
-    html += '<div class="result-banner incomplete">' + issues.length + ' issue' + (issues.length === 1 ? '' : 's') + ' found</div>';
+    html += '<div class="result-banner incomplete">' + totalIssues + ' issue' + (totalIssues === 1 ? '' : 's') + ' found</div>';
   }
   if (data.looks_like_blank_draft) {
     html += '<div class="fixit-cta"><p>This looks like an essentially blank draft &mdash; more gaps than a quick fix. It may be faster to generate a clean one from scratch.</p><a href="/demo">Generate a clean offer &rarr;</a></div>';
@@ -3340,6 +3378,17 @@ function renderResult(data, file, isDemo) {
       html += '<li class="issue-item"><span class="issue-tag ' + issue.severity + '">' + issue.severity + '</span><span>' + escapeHtml(issue.message) + '</span></li>';
     }
     html += '</ul>';
+  }
+  if (data.gated) {
+    const remaining = totalIssues - issues.length;
+    html += '<div class="gate-box">';
+    html += '<p class="gate-headline">' + (remaining > 0 ? remaining + ' more issue' + (remaining === 1 ? '' : 's') + ' found on this file' : 'See the full itemized report') + '</p>';
+    html += '<p class="gate-sub">Enter your email to see the complete list &mdash; still free, no card, no signup.</p>';
+    html += '<div class="gate-form"><input type="email" id="gateEmailInput" placeholder="you@example.com" autocomplete="email" onkeydown="if(event.key===\\'Enter\\')unlockGate()"><button type="button" onclick="unlockGate()">See full report</button></div>';
+    html += '<div class="gate-error" id="gateError"></div>';
+    html += '<div class="gate-note">We\\'ll also email you this report. Unsubscribe anytime.</div>';
+    html += '</div>';
+  } else if (issues.length) {
     html += '<button class="copy-btn" onclick="copyChecklist()">Copy checklist</button>';
     html += '<button class="download-btn" onclick="downloadReport()">Download report</button>';
     html += buildUpsellCta(issues);
@@ -3348,6 +3397,20 @@ function renderResult(data, file, isDemo) {
   resultEl.classList.add('show');
   resultEl.dataset.issues = JSON.stringify(issues);
   resultEl.dataset.filename = file.name;
+}
+
+function unlockGate() {
+  const input = document.getElementById('gateEmailInput');
+  const errorEl = document.getElementById('gateError');
+  const email = (input && input.value || '').trim();
+  if (!email || email.indexOf('@') === -1) {
+    if (errorEl) errorEl.textContent = 'Enter a valid email to see the full report.';
+    return;
+  }
+  if (errorEl) errorEl.textContent = '';
+  try { localStorage.setItem('tc_email_hint', email); } catch (e) {}
+  if (emailOptinInput) emailOptinInput.value = email;
+  if (pendingFile) uploadFile(pendingFile, email, false);
 }
 
 function checklistText() {
