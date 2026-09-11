@@ -142,7 +142,7 @@ def extract_pdf_attachments(files, form) -> list:
 _UPSELL_TEXT = (
     "\nTired of catching these by hand?\n"
     "The TxtAnOffer Brokerage Dashboard checks every agent's file "
-    "automatically, before it's ever sent -- $199/mo for your whole roster.\n"
+    "automatically, before it's ever sent -- $349/mo for your whole roster.\n"
     f"See how it works: {_UPSELL_URL}\n"
 )
 
@@ -266,7 +266,7 @@ def _issue_group_html(issues: list, heading: str, limit: int = 6) -> str:
 _UPSELL_HTML = f"""
 <div style="margin-top:24px;padding:16px 20px;background:#171717;border-radius:8px;">
   <p style="margin:0 0 6px;font-size:13px;font-weight:600;color:#ffffff;font-family:{_FONT};">Tired of catching these by hand?</p>
-  <p style="margin:0 0 14px;font-size:13px;line-height:1.5;color:#a3a3a3;font-family:{_FONT};">The TxtAnOffer Brokerage Dashboard checks every agent's file automatically, before it's ever sent &mdash; $199/mo for your whole roster.</p>
+  <p style="margin:0 0 14px;font-size:13px;line-height:1.5;color:#a3a3a3;font-family:{_FONT};">The TxtAnOffer Brokerage Dashboard checks every agent's file automatically, before it's ever sent &mdash; $349/mo for your whole roster.</p>
   <a href="{_UPSELL_URL}" style="display:inline-block;font-size:13px;font-weight:600;color:#171717;background:#ffffff;padding:8px 16px;border-radius:6px;text-decoration:none;font-family:{_FONT};">See how it works &rarr;</a>
 </div>
 """
