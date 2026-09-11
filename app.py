@@ -1657,6 +1657,27 @@ def twilio_send_sms(to, body):
     return True
 
 
+# Short field labels for the SMS alert -- tc_check_email.py has its own
+# _CONSEQUENCE_TAGS for the fuller email report, but those are sentence-length
+# ("TITLE KICKBACK RISK"); an SMS needs to fit several field names in one
+# 160-char segment, so this is deliberately terser. Keys match tc_audit.py's
+# CHECKED_FIELDS + the initials/effective-date keys it also emits.
+_SMS_SHORT_FIELD_LABELS = {
+    "address": "Address",
+    "city": "City",
+    "county": "County",
+    "buyer_name": "Buyer Name",
+    "seller_name": "Seller Name",
+    "escrow_agent_name": "Escrow Agent",
+    "earnest_money_amount": "Earnest Money",
+    "option_fee_amount": "Option Fee",
+    "title_company": "Title Co",
+    "effective_date": "Effective Date",
+    "initials_buyer": "Buyer Initials",
+    "initials_seller": "Seller Initials",
+}
+
+
 def _notify_brokerage_tc(user: dict, draft: dict, pdf_path: str, pdf_url: str):
     """The 'trojan horse' pipeline: an agent linked to a brokerage (see
     extract_brokerage_prefix) never has to do anything else -- every offer
@@ -1664,7 +1685,13 @@ def _notify_brokerage_tc(user: dict, draft: dict, pdf_path: str, pdf_url: str):
     quick compliance read, straight into an inbox they already check.
     Silent no-op for any agent not linked to a brokerage, and never lets a
     failure here (bad email, audit engine hiccup) block the agent's own
-    SMS reply -- this is a value-add on top of the core flow, not a gate."""
+    SMS reply -- this is a value-add on top of the core flow, not a gate.
+
+    Also texts brokerage["tc_phone"] when set (Brokerage Alert SMS): same
+    trigger, but only on a BLOCKER-level issue (not every warning-only
+    file) -- a broker's phone buzzing on every minor gap trains them to
+    ignore it, same reasoning as tc_audit.py's own blocking/non-blocking
+    split. Email keeps going regardless of whether tc_phone is set."""
     brokerage_id = user.get("brokerage_id") if user else None
     if not brokerage_id:
         return
@@ -1674,12 +1701,14 @@ def _notify_brokerage_tc(user: dict, draft: dict, pdf_path: str, pdf_url: str):
             return
         try:
             audit = check_tc_file([pdf_path])
-            issue_count = len(audit.get("issues") or [])
-            if issue_count:
-                audit_line = f"TC File Check flagged {issue_count} item(s) to review before this goes out."
+            issues = audit.get("issues") or []
+            blockers = [i for i in issues if i.get("severity") == "blocker"]
+            if issues:
+                audit_line = f"TC File Check flagged {len(issues)} item(s) to review before this goes out."
             else:
                 audit_line = "TC File Check found nothing missing on the fields it can verify."
         except Exception:
+            issues, blockers = [], []
             audit_line = "(TC File Check couldn't scan this file automatically -- worth a manual look.)"
 
         send_plain_email(
@@ -1695,6 +1724,21 @@ def _notify_brokerage_tc(user: dict, draft: dict, pdf_path: str, pdf_url: str):
                 f"reviews and sends the offer themselves; nothing here is sent on their behalf."
             ),
         )
+
+        if brokerage.get("tc_phone") and blockers:
+            agent_profile = get_agent_profile(user.get("phone", "")) or {}
+            agent_label = agent_profile.get("name") or user.get("phone", "an agent")
+            labels = [_SMS_SHORT_FIELD_LABELS.get(i.get("key"), i.get("key", "field")) for i in blockers]
+            shown, extra = labels[:3], len(labels) - 3
+            missing = ", ".join(shown) + (f" +{extra} more" if extra > 0 else "")
+            # Plain hyphens, not em-dashes -- keeps the message inside GSM-7
+            # so it's one Twilio segment instead of silently falling into
+            # UCS-2 (70 chars/segment) purely from a non-ASCII separator.
+            twilio_send_sms(
+                brokerage["tc_phone"],
+                f"{agent_label} - {draft.get('address', 'address unknown')} - "
+                f"Missing: {missing} - {pdf_url}",
+            )
     except Exception as e:
         print(f"[BROKERAGE_TC] notify failed for brokerage {brokerage_id}: {e}")
 
@@ -4821,10 +4865,19 @@ def stripe_webhook():
                 custom_fields = session.get('custom_fields') or []
                 name_field = next((f for f in custom_fields if f.get('key') == 'brokerage_name'), None)
                 brokerage_name = ((name_field or {}).get('text') or {}).get('value') or customer_email or "New Brokerage"
-                brokerage = create_brokerage(brokerage_name, customer_email or "")
+                # customer_phone is whoever paid for the Brokerage plan -- the
+                # managing broker or their TC, in the self-serve case -- so it
+                # doubles as the SMS alert number with no extra signup step.
+                brokerage = create_brokerage(brokerage_name, customer_email or "", customer_phone or "")
                 if customer_phone:
                     link_user_to_brokerage(customer_phone, brokerage["id"])
                 if customer_email:
+                    sms_alert_line = (
+                        f"We'll also text {customer_phone} the moment one of your agents' offers has "
+                        f"a blocker (missing county, title company, escrow agent, etc.) -- reply STOP on "
+                        f"that number anytime to turn texted alerts off; the email alerts above keep going.\n\n"
+                        if customer_phone else ""
+                    )
                     send_plain_email(
                         customer_email,
                         f"{brokerage_name} is set up on TxtAnOffer",
@@ -4834,7 +4887,8 @@ def stripe_webhook():
                             f"{brokerage['join_code']} 725k 3% 21day 123 Main St\n\n"
                             f"Or they can enter it at signup: {request.host_url.rstrip('/')}/signup\n\n"
                             f"Once linked, every offer they draft auto-emails this address with the PDF "
-                            f"and a compliance check -- no login needed. To browse the full roster and "
+                            f"and a compliance check -- no login needed. {sms_alert_line}"
+                            f"To browse the full roster and "
                             f"activity, use: {request.host_url.rstrip('/')}/broker/dashboard/{brokerage['join_code']}\n\n"
                             f"Keep this email -- the join code is also your dashboard link's access key."
                         ),
@@ -5216,19 +5270,21 @@ def admin_brokerages():
     if request.method == "POST":
         name = request.form.get("name", "").strip()
         tc_email = request.form.get("tc_email", "").strip()
+        tc_phone = request.form.get("tc_phone", "").strip()
         if not name:
             error = "Brokerage name is required."
         else:
-            created = create_brokerage(name, tc_email)
+            created = create_brokerage(name, tc_email, tc_phone)
 
     rows = "".join(
         f"<tr><td style='padding:8px;'>{b['name']}</td>"
         f"<td style='padding:8px;'>{b.get('tc_email') or '&mdash;'}</td>"
+        f"<td style='padding:8px;'>{b.get('tc_phone') or '&mdash;'}</td>"
         f"<td style='padding:8px;font-family:monospace;font-weight:700;'>{b['join_code']}</td>"
         f"<td style='padding:8px;'><a href='/broker/dashboard/{b['join_code']}?token={token}'>dashboard &rarr;</a></td>"
         f"<td style='padding:8px;color:#666;'>{b['created_at'][:10]}</td></tr>"
         for b in list_brokerages()
-    ) or "<tr><td colspan='5' style='padding:8px;color:#666;'>No brokerages yet.</td></tr>"
+    ) or "<tr><td colspan='6' style='padding:8px;color:#666;'>No brokerages yet.</td></tr>"
 
     created_banner = ""
     if created:
@@ -5260,10 +5316,11 @@ a{{color:#0b5d52;}}</style>
   <input type="hidden" name="token" value="{token}">
   <input type="text" name="name" placeholder="Brokerage name" required>
   <input type="email" name="tc_email" placeholder="TC email for auto-CC (optional)">
+  <input type="tel" name="tc_phone" placeholder="TC phone for SMS alerts (optional)">
   <button type="submit">Create</button>
 </form>
 <table>
-<tr><th>Name</th><th>TC email</th><th>Join code</th><th></th><th>Created</th></tr>
+<tr><th>Name</th><th>TC email</th><th>TC phone</th><th>Join code</th><th></th><th>Created</th></tr>
 {rows}
 </table>
 </body></html>"""

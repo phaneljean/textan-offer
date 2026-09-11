@@ -41,6 +41,14 @@ def init_brokerages_table():
             created_at TEXT NOT NULL
         )
     """)
+    # tc_phone added after the table's initial release -- ALTER TABLE has no
+    # IF NOT EXISTS guard in SQLite, so on an already-migrated DB this just
+    # fails with "duplicate column" and is ignored (same pattern as
+    # tc_gate.py's migrations).
+    try:
+        cursor.execute("ALTER TABLE brokerages ADD COLUMN tc_phone TEXT")
+    except sqlite3.OperationalError:
+        pass
     conn.commit()
     conn.close()
 
@@ -49,10 +57,15 @@ def _generate_join_code(length: int = 8) -> str:
     return "".join(secrets.choice(_CODE_ALPHABET) for _ in range(length))
 
 
-def create_brokerage(name: str, tc_email: str = "") -> dict:
+def create_brokerage(name: str, tc_email: str = "", tc_phone: str = "") -> dict:
     """Provision a new brokerage account with a fresh join code. Called by
-    hand from /admin/brokerages after a broker signs -- there's no
-    self-serve flow yet."""
+    hand from /admin/brokerages after a broker signs, or self-provisioned
+    from the Stripe webhook on a self-serve Brokerage checkout.
+
+    tc_phone is optional -- when set, _notify_brokerage_tc() in app.py texts
+    this number (in addition to emailing tc_email) the moment an agent on
+    the roster drafts an offer with blocker-level issues. Leave blank to
+    keep the alert email-only, same as before this field existed."""
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     now = datetime.utcnow().isoformat()
@@ -60,13 +73,13 @@ def create_brokerage(name: str, tc_email: str = "") -> dict:
         code = _generate_join_code()
         try:
             cursor.execute(
-                "INSERT INTO brokerages (name, tc_email, join_code, created_at) VALUES (?, ?, ?, ?)",
-                (name, tc_email, code, now),
+                "INSERT INTO brokerages (name, tc_email, tc_phone, join_code, created_at) VALUES (?, ?, ?, ?, ?)",
+                (name, tc_email, tc_phone, code, now),
             )
             conn.commit()
             brokerage_id = cursor.lastrowid
             conn.close()
-            return {"id": brokerage_id, "name": name, "tc_email": tc_email, "join_code": code, "created_at": now}
+            return {"id": brokerage_id, "name": name, "tc_email": tc_email, "tc_phone": tc_phone, "join_code": code, "created_at": now}
         except sqlite3.IntegrityError:
             continue  # extremely unlikely code collision -- retry with a new one
     conn.close()
