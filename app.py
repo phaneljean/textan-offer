@@ -252,15 +252,15 @@ def index():
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TxtAnOffer — Draft &ne; Ready</title>
-  <meta name="description" content="The compliance boundary before your file reaches title. Drop a filled TREC 20-19 (and its 40-11 addendum) and TC File Check flags what's missing or inconsistent before it costs you a callback. TxtAnOffer also drafts new offers by text message in 10 seconds.">
-  <meta property="og:title" content="TxtAnOffer — Draft &ne; Ready">
-  <meta property="og:description" content="The compliance boundary before your file reaches title. TC File Check catches blank dates, missing initials, and mismatched checkboxes before title does.">
+  <title>TxtAnOffer — Catch What Title Kicks Back</title>
+  <meta name="description" content="Built for Texas managing brokers and transaction coordinators: drop a filled TREC 20-19 (and its 40-11 addendum) and see what's missing or inconsistent before title kicks it back. TxtAnOffer also drafts new offers by text message in 10 seconds.">
+  <meta property="og:title" content="TxtAnOffer — Catch What Title Kicks Back">
+  <meta property="og:description" content="Drop a filled TREC 20-19 and see what's missing or inconsistent before title kicks it back &mdash; blank dates, missing initials, mismatched checkboxes.">
   <meta property="og:url" content="https://txtanoffer.com/">
   <meta property="og:type" content="website">
   <meta name="twitter:card" content="summary">
-  <meta name="twitter:title" content="TxtAnOffer — Draft &ne; Ready">
-  <meta name="twitter:description" content="The compliance boundary before your file reaches title. TC File Check catches blank dates, missing initials, and mismatched checkboxes before title does.">
+  <meta name="twitter:title" content="TxtAnOffer — Catch What Title Kicks Back">
+  <meta name="twitter:description" content="Drop a filled TREC 20-19 and see what's missing or inconsistent before title kicks it back &mdash; blank dates, missing initials, mismatched checkboxes.">
   <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -819,13 +819,13 @@ def index():
   <section class="hero section">
     <div class="badge">Draft &ne; Ready</div>
     <h1>
-      The compliance boundary<br>
-      before your file reaches title.
+      Catch what title kicks back<br>
+      &mdash; before you send the file.
     </h1>
     <p class="hero-sub">
-      Your AI agent can draft a <strong>TREC 20-19</strong> in seconds. It can't tell you whether that draft is authorized to go to title &mdash; TC File Check does: blank dates, missing initials, mismatched checkboxes, caught before they cost you a callback tonight.
+      Drop a filled <strong>TREC 20-19</strong> (and its 40-11 addendum, if you've got one) and see what's missing or inconsistent in seconds &mdash; blank dates, missing initials, mismatched checkboxes, all of it.
     </p>
-    <p style="font-size:0.85rem;color:var(--accent-dark);font-weight:600;margin-top:0.6rem;">Built for Texas Brokerages &amp; Independent TCs &mdash; to help you catch what's missing, not to replace what you do.</p>
+    <p style="font-size:0.85rem;color:var(--accent-dark);font-weight:600;margin-top:0.6rem;">Built to help TCs catch what's missing &mdash; not to replace what you do.</p>
 
     <div class="input-card">
       <div class="input-label">Try it now &mdash; no signup required</div>
@@ -872,7 +872,7 @@ def index():
             <span class="mock-filename">123MainSt_TREC2019.pdf</span>
             <span class="mock-badge hold">HOLD</span>
           </div>
-          <div class="verdict-sub">3 items to fix before this is authorized to send</div>
+          <div class="verdict-sub">3 items to fix before this is ready to send</div>
           <div style="display:flex;flex-direction:column;gap:0.6rem;">
             <div style="display:flex;align-items:center;gap:0.6rem;">
               <span style="width:7px;height:7px;border-radius:50%;background:#dc2626;flex-shrink:0;"></span>
@@ -891,9 +891,9 @@ def index():
       </div>
     </div>
     <div class="verdict-legend">
-      <span class="verdict-chip execute"><span class="lbl">EXECUTE</span> &mdash; clean, send to title</span>
-      <span class="verdict-chip hold"><span class="lbl">HOLD</span> &mdash; fix flagged items first</span>
-      <span class="verdict-chip stop"><span class="lbl">STOP</span> &mdash; not usable, required data missing</span>
+      <span class="verdict-chip execute"><span class="lbl">READY</span> &mdash; clean, send to title</span>
+      <span class="verdict-chip hold"><span class="lbl">HOLD</span> &mdash; fix these first</span>
+      <span class="verdict-chip stop"><span class="lbl">STOP</span> &mdash; can't send, key info missing</span>
     </div>
     <div style="text-align:center;font-size:0.75rem;color:var(--text-dim);margin-top:0.6rem;">Illustrative example &mdash; your real report reflects your actual file.</div>
   </section>
@@ -4257,13 +4257,13 @@ def pricing():
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pricing — TxtAnOffer</title>
 <meta name="description" content="TC File Check is free for Texas transaction coordinators and agents -- forward a TREC 20-19 and get back what's missing. Professional adds DocuSign e-signature and a full offer-to-closing Transaction Workspace for $79/month. Brokerages get all of that for their whole roster at $349/month.">
-<meta property="og:title" content="TxtAnOffer Pricing — Draft &ne; Ready">
-<meta property="og:description" content="TC File Check is free, always. Professional and Brokerage add e-signature and a full offer-to-closing compliance workspace.">
+<meta property="og:title" content="TxtAnOffer Pricing — Free to Check, Paid to Run the File">
+<meta property="og:description" content="TC File Check is free, always. Professional and Brokerage add e-signature and a full offer-to-closing workspace.">
 <meta property="og:url" content="https://txtanoffer.com/pricing">
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="TxtAnOffer Pricing — Draft &ne; Ready">
-<meta name="twitter:description" content="TC File Check is free, always. Professional and Brokerage add e-signature and a full offer-to-closing compliance workspace.">
+<meta name="twitter:title" content="TxtAnOffer Pricing — Free to Check, Paid to Run the File">
+<meta name="twitter:description" content="TC File Check is free, always. Professional and Brokerage add e-signature and a full offer-to-closing workspace.">
 <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -4437,8 +4437,8 @@ def pricing():
 </script>
 
 <div class="page-header">
-  <h1>Draft &ne; ready.<br><span class="gradient">TC File Check is the line between them.</span></h1>
-  <p>A filled TREC 20-19 &mdash; drafted by you, an agent, or an AI tool &mdash; isn't authorized to go to title until it clears the compliance boundary. TC File Check runs that check for free, no signup. Professional adds e-signature and a full offer-to-closing workspace for your own deals. Brokerage gives your whole roster the same thing, plus every agent's offer auto-checked before it's sent.</p>
+  <h1>Free to check.<br><span class="gradient">Paid to run the whole file.</span></h1>
+  <p>TC File Check catches what's missing in a TREC 20-19 before title does &mdash; forward a file, get a report, no signup, always free. Professional adds e-signature and a full offer-to-closing workspace for your own deals. Brokerage gives your whole roster the same thing, plus every agent's offer auto-checked before it's sent.</p>
 </div>
 
 <div class="pricing-grid">
