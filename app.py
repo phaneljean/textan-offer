@@ -570,14 +570,6 @@ def index():
     .mock-result-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; row-gap: 0.4rem; margin: 0.9rem 0 0.85rem; }
     .mock-filename { font-weight: 700; font-size: 0.85rem; color: var(--text); }
     .mock-badge { background: rgba(220,38,38,0.12); color: #dc2626; font-size: 0.68rem; font-weight: 700; padding: 0.25rem 0.6rem; border-radius: 9999px; white-space: nowrap; }
-    .mock-badge.hold { background: rgba(217,119,6,0.14); color: #d97706; }
-    .verdict-sub { font-size: 0.78rem; color: var(--text-dim); margin: -0.3rem 0 0.6rem; }
-    .verdict-legend { display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap; margin-top: 1rem; }
-    .verdict-chip { font-size: 0.72rem; font-weight: 700; padding: 0.3rem 0.65rem; border-radius: 9999px; white-space: nowrap; }
-    .verdict-chip .lbl { font-weight: 800; }
-    .verdict-chip.execute { background: rgba(16,150,90,0.12); color: #0e7a4f; }
-    .verdict-chip.hold { background: rgba(217,119,6,0.14); color: #d97706; }
-    .verdict-chip.stop { background: rgba(220,38,38,0.12); color: #dc2626; }
     .dark-card-inner {
       position: relative;
       border-radius: 1.75rem;
@@ -870,9 +862,8 @@ def index():
           </div>
           <div class="mock-result-header">
             <span class="mock-filename">123MainSt_TREC2019.pdf</span>
-            <span class="mock-badge hold">HOLD</span>
+            <span class="mock-badge">3 issues found</span>
           </div>
-          <div class="verdict-sub">3 items to fix before this is ready to send</div>
           <div style="display:flex;flex-direction:column;gap:0.6rem;">
             <div style="display:flex;align-items:center;gap:0.6rem;">
               <span style="width:7px;height:7px;border-radius:50%;background:#dc2626;flex-shrink:0;"></span>
@@ -890,12 +881,7 @@ def index():
         </div>
       </div>
     </div>
-    <div class="verdict-legend">
-      <span class="verdict-chip execute"><span class="lbl">READY</span> &mdash; clean, send to title</span>
-      <span class="verdict-chip hold"><span class="lbl">HOLD</span> &mdash; fix these first</span>
-      <span class="verdict-chip stop"><span class="lbl">STOP</span> &mdash; can't send, key info missing</span>
-    </div>
-    <div style="text-align:center;font-size:0.75rem;color:var(--text-dim);margin-top:0.6rem;">Illustrative example &mdash; your real report reflects your actual file.</div>
+    <div style="text-align:center;font-size:0.75rem;color:var(--text-dim);margin-top:1rem;">Illustrative example &mdash; your real report reflects your actual file.</div>
   </section>
 
   <section class="steps" id="workflow" style="border-top:none;padding-top:1rem;padding-bottom:2.5rem;">
