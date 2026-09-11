@@ -563,6 +563,14 @@ def index():
     .mock-result-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; row-gap: 0.4rem; margin: 0.9rem 0 0.85rem; }
     .mock-filename { font-weight: 700; font-size: 0.85rem; color: var(--text); }
     .mock-badge { background: rgba(220,38,38,0.12); color: #dc2626; font-size: 0.68rem; font-weight: 700; padding: 0.25rem 0.6rem; border-radius: 9999px; white-space: nowrap; }
+    .mock-badge.hold { background: rgba(217,119,6,0.14); color: #d97706; }
+    .verdict-sub { font-size: 0.78rem; color: var(--text-dim); margin: -0.3rem 0 0.6rem; }
+    .verdict-legend { display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap; margin-top: 1rem; }
+    .verdict-chip { font-size: 0.72rem; font-weight: 700; padding: 0.3rem 0.65rem; border-radius: 9999px; white-space: nowrap; }
+    .verdict-chip .lbl { font-weight: 800; }
+    .verdict-chip.execute { background: rgba(16,150,90,0.12); color: #0e7a4f; }
+    .verdict-chip.hold { background: rgba(217,119,6,0.14); color: #d97706; }
+    .verdict-chip.stop { background: rgba(220,38,38,0.12); color: #dc2626; }
     .dark-card-inner {
       position: relative;
       border-radius: 1.75rem;
@@ -802,15 +810,15 @@ def index():
 
   <div class="main">
   <section class="hero section">
-    <div class="badge">Built for Texas Brokerages &amp; Independent TCs</div>
+    <div class="badge">Draft &ne; Ready</div>
     <h1>
-      Catch what title kicks back<br>
-      &mdash; before you send the file.
+      The compliance boundary<br>
+      before your file reaches title.
     </h1>
     <p class="hero-sub">
-      Drop a filled <strong>TREC 20-19</strong> (and its 40-11 addendum, if you've got one) and see what's missing or inconsistent in seconds &mdash; blank dates, missing initials, mismatched checkboxes, all of it.
+      Your AI agent can draft a <strong>TREC 20-19</strong> in seconds. It can't tell you whether that draft is authorized to go to title &mdash; TC File Check does: blank dates, missing initials, mismatched checkboxes, caught before they cost you a callback tonight.
     </p>
-    <p style="font-size:0.85rem;color:var(--accent-dark);font-weight:600;margin-top:0.6rem;">Built to help TCs catch what's missing &mdash; not to replace what you do.</p>
+    <p style="font-size:0.85rem;color:var(--accent-dark);font-weight:600;margin-top:0.6rem;">Built for Texas Brokerages &amp; Independent TCs &mdash; to help you catch what's missing, not to replace what you do.</p>
 
     <div class="input-card">
       <div class="input-label">Try it now &mdash; no signup required</div>
@@ -855,8 +863,9 @@ def index():
           </div>
           <div class="mock-result-header">
             <span class="mock-filename">123MainSt_TREC2019.pdf</span>
-            <span class="mock-badge">3 issues found</span>
+            <span class="mock-badge hold">HOLD</span>
           </div>
+          <div class="verdict-sub">3 items to fix before this is authorized to send</div>
           <div style="display:flex;flex-direction:column;gap:0.6rem;">
             <div style="display:flex;align-items:center;gap:0.6rem;">
               <span style="width:7px;height:7px;border-radius:50%;background:#dc2626;flex-shrink:0;"></span>
@@ -874,7 +883,12 @@ def index():
         </div>
       </div>
     </div>
-    <div style="text-align:center;font-size:0.75rem;color:var(--text-dim);margin-top:1rem;">Illustrative example &mdash; your real report reflects your actual file.</div>
+    <div class="verdict-legend">
+      <span class="verdict-chip execute"><span class="lbl">EXECUTE</span> &mdash; clean, send to title</span>
+      <span class="verdict-chip hold"><span class="lbl">HOLD</span> &mdash; fix flagged items first</span>
+      <span class="verdict-chip stop"><span class="lbl">STOP</span> &mdash; not usable, required data missing</span>
+    </div>
+    <div style="text-align:center;font-size:0.75rem;color:var(--text-dim);margin-top:0.6rem;">Illustrative example &mdash; your real report reflects your actual file.</div>
   </section>
 
   <section class="steps" id="workflow" style="border-top:none;padding-top:1rem;padding-bottom:2.5rem;">
@@ -4409,8 +4423,8 @@ def pricing():
 </script>
 
 <div class="page-header">
-  <h1>Free to check.<br><span class="gradient">Paid to run the whole file.</span></h1>
-  <p>TC File Check catches what's missing in a TREC 20-19 before title does &mdash; forward a file, get a report, no signup, always free. Professional adds e-signature and a full offer-to-closing workspace for your own deals. Brokerage gives your whole roster the same thing, plus every agent's offer auto-checked before it's sent.</p>
+  <h1>Draft &ne; ready.<br><span class="gradient">TC File Check is the line between them.</span></h1>
+  <p>A filled TREC 20-19 &mdash; drafted by you, an agent, or an AI tool &mdash; isn't authorized to go to title until it clears the compliance boundary. TC File Check runs that check for free, no signup. Professional adds e-signature and a full offer-to-closing workspace for your own deals. Brokerage gives your whole roster the same thing, plus every agent's offer auto-checked before it's sent.</p>
 </div>
 
 <div class="pricing-grid">
