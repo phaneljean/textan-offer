@@ -818,6 +818,7 @@ def index():
       Drop a filled <strong>TREC 20-19</strong> (and its 40-11 addendum, if you've got one) and see what's missing or inconsistent in seconds &mdash; blank dates, missing initials, mismatched checkboxes, all of it.
     </p>
     <p style="font-size:0.85rem;color:var(--accent-dark);font-weight:600;margin-top:0.6rem;">Built to help TCs catch what's missing &mdash; not to replace what you do.</p>
+    <p style="font-size:0.85rem;color:var(--text-muted);margin-top:0.4rem;">Need to send an offer right now? Text terms to <a href="sms:+18338970333" style="color:var(--accent-dark);font-weight:600;">(833) 897-0333</a> to generate a TREC 20-19 PDF in 10 seconds.</p>
 
     <div class="input-card">
       <div class="input-label">Try it now &mdash; no signup required</div>
@@ -978,7 +979,7 @@ def index():
       <li><span class="tc-check">&check;</span><span>Get an itemized report back in under a minute: what's blank, what's missing an initial, what disagrees with the addendum.</span></li>
     </ul>
     <div class="secondary-cta" style="margin:1.75rem auto 0;padding-top:1.75rem;max-width:540px;text-align:center;">
-      <div class="secondary-cta-label">Free. No login. Nothing stored after your results are shown.</div>
+      <div class="secondary-cta-label">Free. No login. Your file is never stored.</div>
       <a href="/tc-check" class="input-btn" style="display:inline-block;text-decoration:none;">Try TC File Check &rarr;</a>
     </div>
   </section>
@@ -3079,6 +3080,8 @@ font-size:0.85rem;font-weight:600;white-space:nowrap;}
 .gate-form button:hover{opacity:0.9;}
 .gate-error{color:#fca5a5;font-size:0.78rem;margin-top:0.5rem;min-height:1em;}
 .gate-note{color:rgba(255,255,255,0.5);font-size:0.75rem;margin-top:0.7rem;}
+.gate-bridge{margin-top:0.85rem;font-size:0.82rem;color:var(--text-muted);text-align:center;}
+.gate-bridge a{color:var(--accent);font-weight:600;}
 .meta-bar{display:flex;flex-wrap:wrap;gap:0.4rem 1.25rem;padding:0.85rem 1.1rem;margin-bottom:1rem;
 background:var(--accent-tint);border:1px solid var(--border);border-radius:var(--radius-sm);
 font-size:0.8rem;color:var(--text-muted);}
@@ -3374,6 +3377,7 @@ function renderResult(data, file, isDemo) {
     html += '<div class="gate-error" id="gateError"></div>';
     html += '<div class="gate-note">We\\'ll also email you this report. Unsubscribe anytime.</div>';
     html += '</div>';
+    html += '<div class="gate-bridge">Leading a team? <a href="/pricing#brokerage">See how Brokerage auto-checks every agent\\'s offer before it reaches you &rarr;</a></div>';
   } else if (issues.length) {
     html += '<button class="copy-btn" onclick="copyChecklist()">Copy checklist</button>';
     html += '<button class="download-btn" onclick="downloadReport()">Download report</button>';
