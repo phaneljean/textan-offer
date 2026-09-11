@@ -252,8 +252,15 @@ def index():
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TxtAnOffer — Catch What Title Kicks Back</title>
-  <meta name="description" content="Built for Texas managing brokers and transaction coordinators: drop a filled TREC 20-19 (and its 40-11 addendum) and see what's missing or inconsistent before title kicks it back. TxtAnOffer also drafts new offers by text message in 10 seconds.">
+  <title>TxtAnOffer — Draft &ne; Ready</title>
+  <meta name="description" content="The compliance boundary before your file reaches title. Drop a filled TREC 20-19 (and its 40-11 addendum) and TC File Check flags what's missing or inconsistent before it costs you a callback. TxtAnOffer also drafts new offers by text message in 10 seconds.">
+  <meta property="og:title" content="TxtAnOffer — Draft &ne; Ready">
+  <meta property="og:description" content="The compliance boundary before your file reaches title. TC File Check catches blank dates, missing initials, and mismatched checkboxes before title does.">
+  <meta property="og:url" content="https://txtanoffer.com/">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="TxtAnOffer — Draft &ne; Ready">
+  <meta name="twitter:description" content="The compliance boundary before your file reaches title. TC File Check catches blank dates, missing initials, and mismatched checkboxes before title does.">
   <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -4250,6 +4257,13 @@ def pricing():
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pricing — TxtAnOffer</title>
 <meta name="description" content="TC File Check is free for Texas transaction coordinators and agents -- forward a TREC 20-19 and get back what's missing. Professional adds DocuSign e-signature and a full offer-to-closing Transaction Workspace for $79/month. Brokerages get all of that for their whole roster at $349/month.">
+<meta property="og:title" content="TxtAnOffer Pricing — Draft &ne; Ready">
+<meta property="og:description" content="TC File Check is free, always. Professional and Brokerage add e-signature and a full offer-to-closing compliance workspace.">
+<meta property="og:url" content="https://txtanoffer.com/pricing">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="TxtAnOffer Pricing — Draft &ne; Ready">
+<meta name="twitter:description" content="TC File Check is free, always. Professional and Brokerage add e-signature and a full offer-to-closing compliance workspace.">
 <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
