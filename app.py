@@ -5067,8 +5067,8 @@ body{{font-family:system-ui;max-width:800px;margin:40px auto;padding:20px;}}
 <div class="metric">
   <h3>TC File Check &rarr; Email Capture</h3>
   <div class="value">{tc_check_summary['email_capture_rate']}%</div>
-  <div class="label">Of web uploads (/tc-check), gave an email via the opt-in checkbox</div>
-  <p>{tc_check_summary['emails_captured']} emails / {tc_check_summary['web_count']} web checks &mdash; no gate anymore, this is every web upload</p>
+  <div class="label">Of web uploads (/tc-check), gave an email (opt-in checkbox before upload, or to unlock the full report)</div>
+  <p>{tc_check_summary['emails_captured']} emails / {tc_check_summary['web_count']} web checks &mdash; re-gated 2026-09-10: an anonymous first-time browser now only sees a preview until this happens (see tc_gate.py)</p>
   <p class="h24">Last 24h: {tc_check_summary_24h['emails_captured']} / {tc_check_summary_24h['web_count']}</p>
 </div>
 <div class="metric">
