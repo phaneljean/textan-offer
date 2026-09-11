@@ -141,10 +141,14 @@ def extract_pdf_attachments(files, form) -> list:
 
 _UPSELL_TEXT = (
     "\nTired of catching these by hand?\n"
-    "The TxtAnOffer Brokerage Dashboard checks every agent's file "
-    "automatically, before it's ever sent -- $349/mo for your whole roster.\n"
+    "Free: tell your agents to CC tc@check.txtanoffer.com on their next "
+    "offer -- it gets checked automatically as it's sent, no forwarding needed.\n"
+    "Every file, every agent, zero effort: the TxtAnOffer Brokerage "
+    "Dashboard -- $349/mo for your whole roster.\n"
     f"See how it works: {_UPSELL_URL}\n"
 )
+
+_SHARE_WITH_AGENT_TEXT = "\nShare this with your agent: just forward this email.\n"
 
 
 def _issue_group_text(issues: list, heading: str, limit: int = 6) -> str:
@@ -198,6 +202,7 @@ def format_reply_body(result: dict, check_count: int = 0) -> str:
     else:
         body += _issue_group_text(blockers, "Critical deal blockers") + "\n"
         body += _issue_group_text(warnings, "Also worth fixing") + "\n"
+        body += _SHARE_WITH_AGENT_TEXT
         body += _UPSELL_TEXT + "\n"
     body += (
         "---\n"
@@ -266,10 +271,16 @@ def _issue_group_html(issues: list, heading: str, limit: int = 6) -> str:
 _UPSELL_HTML = f"""
 <div style="margin-top:24px;padding:16px 20px;background:#171717;border-radius:8px;">
   <p style="margin:0 0 6px;font-size:13px;font-weight:600;color:#ffffff;font-family:{_FONT};">Tired of catching these by hand?</p>
-  <p style="margin:0 0 14px;font-size:13px;line-height:1.5;color:#a3a3a3;font-family:{_FONT};">The TxtAnOffer Brokerage Dashboard checks every agent's file automatically, before it's ever sent &mdash; $349/mo for your whole roster.</p>
+  <p style="margin:0 0 10px;font-size:13px;line-height:1.5;color:#a3a3a3;font-family:{_FONT};"><strong style="color:#e5e5e5;">Free:</strong> tell your agents to CC tc@check.txtanoffer.com on their next offer &mdash; it gets checked automatically as it's sent, no forwarding needed.</p>
+  <p style="margin:0 0 14px;font-size:13px;line-height:1.5;color:#a3a3a3;font-family:{_FONT};"><strong style="color:#e5e5e5;">Every file, every agent, zero effort:</strong> the TxtAnOffer Brokerage Dashboard &mdash; $349/mo for your whole roster.</p>
   <a href="{_UPSELL_URL}" style="display:inline-block;font-size:13px;font-weight:600;color:#171717;background:#ffffff;padding:8px 16px;border-radius:6px;text-decoration:none;font-family:{_FONT};">See how it works &rarr;</a>
 </div>
 """
+
+_SHARE_WITH_AGENT_HTML = (
+    f'<p style="margin:16px 0 0;font-size:13px;color:#737373;font-family:{_FONT};">'
+    f'Share this with your agent: just forward this email.</p>'
+)
 
 def _share_footer_html(check_count: int = 0) -> str:
     streak = _streak_note(check_count)
@@ -338,6 +349,7 @@ def format_reply_html(result: dict, check_count: int = 0) -> str:
     else:
         body += _issue_group_html(blockers, "Critical deal blockers")
         body += _issue_group_html(warnings, "Also worth fixing")
+        body += _SHARE_WITH_AGENT_HTML
         body += _UPSELL_HTML
     body += _share_footer_html(check_count)
     return _email_shell("TC File Check results", "On the file you forwarded", body)
