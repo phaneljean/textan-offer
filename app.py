@@ -32,7 +32,7 @@ from pdf_validator import validate_offer_pdf
 from amendment import fill_amendment_pdf
 from agent_profiles import get_agent_profile, save_agent_profile, find_by_email, get_emails_for_phones
 from subscriptions import can_generate_offer, increment_offer_count, activate_subscription, deactivate_subscription, get_user, create_user, FREE_OFFER_LIMIT, is_admin_phone, has_professional_access
-from analytics import track_event, get_conversion_metrics, get_revenue_metrics, get_recent_sms, get_recent_sms_failures, get_last_blocked_state, get_waitlist_signups, get_signups_by_source, get_signup_details, get_landing_visits_by_source, get_tc_check_summary, get_recent_tc_check_email_senders, get_tc_check_count_for_sender, get_tc_check_repeat_senders, get_tc_check_bulk_summary, get_tc_check_attempts_by_source
+from analytics import track_event, get_conversion_metrics, get_revenue_metrics, get_recent_sms, get_recent_sms_failures, get_last_blocked_state, get_waitlist_signups, get_signups_by_source, get_signup_details, get_landing_visits_by_source, get_tc_check_summary, get_recent_tc_check_email_senders, get_tc_check_count_for_sender, get_tc_check_repeat_senders, get_tc_check_bulk_summary, get_tc_check_attempts_by_source, get_brokerage_alert_delivery
 from integrations import send_offer_email, fire_webhook, save_webhook, get_webhook, delete_webhook, send_to_docusign, send_plain_email, send_html_email
 from offers_db import record_offer, get_offers_for_phone, get_offer_by_filename, record_amendment, get_amendments_for_phone, record_thread_response, record_email_sent, record_docusign_sent
 from brokerages import extract_brokerage_prefix, link_user_to_brokerage, get_brokerage, get_brokerage_by_code, create_brokerage, list_brokerages, list_brokerage_agents
@@ -1711,7 +1711,7 @@ def _notify_brokerage_tc(user: dict, draft: dict, pdf_path: str, pdf_url: str):
             issues, blockers = [], []
             audit_line = "(TC File Check couldn't scan this file automatically -- worth a manual look.)"
 
-        send_plain_email(
+        email_result = send_plain_email(
             brokerage["tc_email"],
             f"New offer drafted: {draft.get('address', 'address unknown')}",
             (
@@ -1724,8 +1724,16 @@ def _notify_brokerage_tc(user: dict, draft: dict, pdf_path: str, pdf_url: str):
                 f"reviews and sends the offer themselves; nothing here is sent on their behalf."
             ),
         )
+        email_sent = bool((email_result or {}).get("success"))
 
-        if brokerage.get("tc_phone") and blockers:
+        # sms_eligible: would this notify have texted if tc_phone were set --
+        # i.e. there's a real blocker to alert on. Tracked even when
+        # tc_phone is blank so brokerage_alert_delivery() can tell "this
+        # brokerage would benefit from adding a TC phone" apart from "this
+        # brokerage's files just haven't had a blocker yet".
+        sms_eligible = bool(blockers)
+        sms_sent = False
+        if brokerage.get("tc_phone") and sms_eligible:
             agent_profile = get_agent_profile(user.get("phone", "")) or {}
             agent_label = agent_profile.get("name") or user.get("phone", "an agent")
             labels = [_SMS_SHORT_FIELD_LABELS.get(i.get("key"), i.get("key", "field")) for i in blockers]
@@ -1734,11 +1742,27 @@ def _notify_brokerage_tc(user: dict, draft: dict, pdf_path: str, pdf_url: str):
             # Plain hyphens, not em-dashes -- keeps the message inside GSM-7
             # so it's one Twilio segment instead of silently falling into
             # UCS-2 (70 chars/segment) purely from a non-ASCII separator.
-            twilio_send_sms(
+            sms_sent = twilio_send_sms(
                 brokerage["tc_phone"],
                 f"{agent_label} - {draft.get('address', 'address unknown')} - "
                 f"Missing: {missing} - {pdf_url}",
             )
+
+        # One event per notify, denormalized with the brokerage's own
+        # source/tc_phone state rather than requiring a later join --
+        # see get_brokerage_alert_delivery() in analytics.py, added
+        # 2026-09-11 specifically to answer "are the alert-SMS-eligible
+        # brokerages (has tc_phone) actually getting texted, and which
+        # ?src= campaign brought them in" (e.g. zillow_broker_reach).
+        track_event("brokerage_alert_sent", user.get("phone"), {
+            "brokerage_id": brokerage_id,
+            "source": brokerage.get("source") or "direct",
+            "has_tc_phone": bool(brokerage.get("tc_phone")),
+            "email_sent": email_sent,
+            "sms_eligible": sms_eligible,
+            "sms_sent": bool(sms_sent),
+            "blocker_count": len(blockers),
+        })
     except Exception as e:
         print(f"[BROKERAGE_TC] notify failed for brokerage {brokerage_id}: {e}")
 
@@ -4346,7 +4370,7 @@ def api_docusign():
 
 @app.route("/pricing")
 def pricing():
-    return """
+    html = """
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -4699,6 +4723,19 @@ def pricing():
 </body>
 </html>
 """
+    # Same first-touch ?src= attribution as the homepage (see that route's
+    # comment) -- added 2026-09-11 because cold-outreach Brokerage pitches
+    # (e.g. src=zillow_broker_reach) link straight to /pricing#brokerage,
+    # never touching / or /tc-check, so without this the ta_src cookie
+    # never gets set for that traffic and every resulting checkout/signup
+    # silently misattributes as "direct" no matter how the visit is tagged.
+    import re as _re
+    src = _re.sub(r"[^a-zA-Z0-9_-]", "", request.args.get("src", ""))[:60]
+    resp = make_response(html)
+    if src and not request.cookies.get("ta_src"):
+        resp.set_cookie("ta_src", src, max_age=30 * 24 * 3600, httponly=True, samesite="Lax")
+        track_event("landing_visit", None, {"source": src})
+    return resp
 
 
 @app.route("/create-checkout-session", methods=["POST"])
@@ -4717,6 +4754,14 @@ def create_checkout_session():
     if not stripe.api_key or not price_id:
         return redirect("mailto:support@txtanoffer.com?subject=Early%20Adopter%20Signup")
 
+    # Same ta_src first-touch cookie /signup and /pricing already read --
+    # carried into Stripe's own session metadata so the webhook below can
+    # attribute a self-serve Brokerage signup back to the campaign that
+    # actually drove it (e.g. src=zillow_broker_reach), the same way
+    # get_signups_by_source() already does for the agent /signup path.
+    import re as _re
+    checkout_src = _re.sub(r"[^a-zA-Z0-9_-]", "", request.cookies.get("ta_src", "") or "")[:60]
+
     # The brokerage plan provisions a real brokerage account (see
     # brokerages.py) on successful payment -- needs a company name Stripe's
     # checkout doesn't collect by default, so ask for it here via a custom
@@ -4731,7 +4776,7 @@ def create_checkout_session():
         success_url=request.host_url + 'success?session_id={CHECKOUT_SESSION_ID}',
         cancel_url=request.host_url + 'pricing',
         allow_promotion_codes=True,
-        metadata={'plan': plan},
+        metadata={'plan': plan, 'source': checkout_src},
     )
     if plan == "brokerage":
         checkout_kwargs['custom_fields'] = [{
@@ -4846,7 +4891,9 @@ def stripe_webhook():
         customer_phone = session['customer_details'].get('phone', '')
         customer_id = session['customer']
         subscription_id = session['subscription']
-        plan = (session.get('metadata') or {}).get('plan', 'starter')
+        session_metadata = session.get('metadata') or {}
+        plan = session_metadata.get('plan', 'starter')
+        checkout_source = session_metadata.get('source') or ''
 
         # Activate subscription on agent's phone number
         if customer_phone:
@@ -4868,7 +4915,7 @@ def stripe_webhook():
                 # customer_phone is whoever paid for the Brokerage plan -- the
                 # managing broker or their TC, in the self-serve case -- so it
                 # doubles as the SMS alert number with no extra signup step.
-                brokerage = create_brokerage(brokerage_name, customer_email or "", customer_phone or "")
+                brokerage = create_brokerage(brokerage_name, customer_email or "", customer_phone or "", checkout_source)
                 if customer_phone:
                     link_user_to_brokerage(customer_phone, brokerage["id"])
                 if customer_email:
@@ -4895,6 +4942,7 @@ def stripe_webhook():
                     )
                 track_event("brokerage_created", customer_phone, {
                     "brokerage_id": brokerage["id"], "name": brokerage_name, "via": "stripe_checkout",
+                    "source": checkout_source or "direct",
                 })
             except Exception as e:
                 print(f"[WEBHOOK] brokerage auto-provision failed: {e}")
@@ -4935,6 +4983,7 @@ def analytics_dashboard():
     recent_tc_email_senders = get_recent_tc_check_email_senders(limit=20)
     tc_repeat_senders = get_tc_check_repeat_senders(within_days=14)
     tc_bulk_summary = get_tc_check_bulk_summary(days=30)
+    brokerage_alert_delivery = get_brokerage_alert_delivery(days=30)
 
     # Every 30-day metric above answers "how are we doing overall" but not
     # "did anything happen since yesterday" -- that used to require manually
@@ -4948,6 +4997,7 @@ def analytics_dashboard():
     tc_check_attempts_by_source_24h = get_tc_check_attempts_by_source(days=1)
     tc_check_summary_24h = get_tc_check_summary(days=1)
     tc_bulk_summary_24h = get_tc_check_bulk_summary(days=1)
+    brokerage_alert_delivery_24h = get_brokerage_alert_delivery(days=1)
 
     def _merge_24h_counts(rows_30, rows_24, key_field):
         """rows_24's keys are always a subset of rows_30's (see comment
@@ -5011,6 +5061,12 @@ def analytics_dashboard():
         f"<tr><td>{i['label']}</td><td>{i['count']}</td><td>{i['pct_of_recognized']}%</td><td>{i['count_24h']}</td></tr>"
         for i in tc_issue_frequency_merged
     ) or '<tr><td colspan="4" style="padding:10px;color:#666;">No checks recognized yet.</td></tr>'
+    _alerts_24h_by_source = {r["source"]: r["alerts"] for r in brokerage_alert_delivery_24h["by_source"]}
+    brokerage_alert_rows = "".join(
+        f"<tr><td>{r['source']}</td><td>{r['alerts']}</td><td>{r['sms_sent']}</td>"
+        f"<td>{r['sms_eligible_no_phone']}</td><td>{_alerts_24h_by_source.get(r['source'], 0)}</td></tr>"
+        for r in brokerage_alert_delivery["by_source"]
+    ) or '<tr><td colspan="5" style="padding:10px;color:#666;">No brokerage-linked offers drafted yet.</td></tr>'
     waitlist_rows = ""
     for w in waitlist_signups[:20]:
         from datetime import datetime
@@ -5156,6 +5212,22 @@ body{{font-family:system-ui;max-width:800px;margin:40px auto;padding:20px;}}
   <p>{tc_bulk_summary['free_batches']} free-tier batches (capped at {FREE_BULK_LIMIT} files) &middot; {tc_bulk_summary['brokerage_batches']} with a Brokerage join code (up to {MAX_BULK_FILES})</p>
   <p class="h24">Last 24h: {tc_bulk_summary_24h['batches']} batches &middot; {tc_bulk_summary_24h['total_files']} files &middot; {tc_bulk_summary_24h['brokerage_batches']} brokerage-tier</p>
 </div>
+<div class="metric">
+  <h3>Brokerage Alert Delivery by Source (30 days)</h3>
+  <div class="value">{brokerage_alert_delivery['brokerages_with_sms']} / {brokerage_alert_delivery['brokerages_with_sms'] + brokerage_alert_delivery['brokerages_missing_phone']}</div>
+  <div class="label">Linked brokerages with a TC phone on file (getting SMS alerts, not just email)</div>
+  <table style="width:100%;border-collapse:collapse;margin-top:10px;">
+    <tr style="background:#eee;text-align:left;">
+      <th style="padding:8px;">Source (?src=)</th>
+      <th style="padding:8px;">Alerts Sent</th>
+      <th style="padding:8px;">SMS Sent</th>
+      <th style="padding:8px;">SMS-Eligible, No Phone</th>
+      <th style="padding:8px;">Last 24h</th>
+    </tr>
+    {brokerage_alert_rows}
+  </table>
+  <p class="label" style="margin-top:8px;">"Alerts Sent" fires every time a brokerage-linked agent drafts an offer (email always goes out). "SMS Sent" is the subset with a blocker AND a tc_phone on file. "SMS-Eligible, No Phone" is a blocker that would have texted if the brokerage had a phone on file -- add one at /admin/brokerages to convert those.</p>
+</div>
 <h2>Revenue</h2>
 <div class="metric">
   <h3>Active Subscribers</h3>
@@ -5271,20 +5343,27 @@ def admin_brokerages():
         name = request.form.get("name", "").strip()
         tc_email = request.form.get("tc_email", "").strip()
         tc_phone = request.form.get("tc_phone", "").strip()
+        source = request.form.get("source", "").strip()
         if not name:
             error = "Brokerage name is required."
         else:
-            created = create_brokerage(name, tc_email, tc_phone)
+            created = create_brokerage(name, tc_email, tc_phone, source)
+            if created:
+                track_event("brokerage_created", tc_phone or None, {
+                    "brokerage_id": created["id"], "name": name, "via": "admin_manual",
+                    "source": source or "direct",
+                })
 
     rows = "".join(
         f"<tr><td style='padding:8px;'>{b['name']}</td>"
         f"<td style='padding:8px;'>{b.get('tc_email') or '&mdash;'}</td>"
         f"<td style='padding:8px;'>{b.get('tc_phone') or '&mdash;'}</td>"
+        f"<td style='padding:8px;'>{b.get('source') or '&mdash;'}</td>"
         f"<td style='padding:8px;font-family:monospace;font-weight:700;'>{b['join_code']}</td>"
         f"<td style='padding:8px;'><a href='/broker/dashboard/{b['join_code']}?token={token}'>dashboard &rarr;</a></td>"
         f"<td style='padding:8px;color:#666;'>{b['created_at'][:10]}</td></tr>"
         for b in list_brokerages()
-    ) or "<tr><td colspan='6' style='padding:8px;color:#666;'>No brokerages yet.</td></tr>"
+    ) or "<tr><td colspan='7' style='padding:8px;color:#666;'>No brokerages yet.</td></tr>"
 
     created_banner = ""
     if created:
@@ -5317,10 +5396,11 @@ a{{color:#0b5d52;}}</style>
   <input type="text" name="name" placeholder="Brokerage name" required>
   <input type="email" name="tc_email" placeholder="TC email for auto-CC (optional)">
   <input type="tel" name="tc_phone" placeholder="TC phone for SMS alerts (optional)">
+  <input type="text" name="source" placeholder="Campaign source, e.g. zillow_broker_reach (optional)">
   <button type="submit">Create</button>
 </form>
 <table>
-<tr><th>Name</th><th>TC email</th><th>TC phone</th><th>Join code</th><th></th><th>Created</th></tr>
+<tr><th>Name</th><th>TC email</th><th>TC phone</th><th>Source</th><th>Join code</th><th></th><th>Created</th></tr>
 {rows}
 </table>
 </body></html>"""

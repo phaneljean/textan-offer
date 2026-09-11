@@ -639,4 +639,56 @@ def get_waitlist_signups(limit: int = 200) -> list:
         })
     return results
 
+
+def get_brokerage_alert_delivery(days: int = 30) -> dict:
+    """Brokerage Alert delivery (email always, SMS on a blocker + tc_phone
+    set) grouped by ?src= attribution -- added 2026-09-11, same day the SMS
+    channel shipped, specifically to answer "are the cold-outreach leads
+    (e.g. zillow_broker_reach) that became brokerages actually getting
+    texted, or just the pre-existing email alert". Every 'brokerage_alert_sent'
+    event already carries its own source/has_tc_phone/sms_sent fields (see
+    _notify_brokerage_tc() in app.py) so this only needs to aggregate, not
+    join against the brokerages table.
+
+    Returns {"by_source": [...], "brokerages_with_sms": int,
+    "brokerages_missing_phone": int} -- the latter two are brokerage counts
+    (not event counts), since "how many distinct brokerages could add a
+    phone and start getting texted" is the more actionable number than a
+    raw event tally."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cutoff = (datetime.utcnow() - timedelta(days=days)).isoformat()
+    cursor.execute("""
+        SELECT metadata FROM events
+        WHERE event_type = 'brokerage_alert_sent' AND created_at > ?
+    """, (cutoff,))
+    rows = cursor.fetchall()
+    conn.close()
+
+    import json
+    by_source = {}
+    brokerages_seen = {}  # brokerage_id -> (source, has_tc_phone) -- last value wins, fine either way
+    for row in rows:
+        m = json.loads(row[0]) if row[0] else {}
+        source = m.get("source") or "direct"
+        bucket = by_source.setdefault(source, {
+            "source": source, "alerts": 0, "sms_sent": 0, "sms_eligible_no_phone": 0, "email_sent": 0,
+        })
+        bucket["alerts"] += 1
+        if m.get("email_sent"):
+            bucket["email_sent"] += 1
+        if m.get("sms_sent"):
+            bucket["sms_sent"] += 1
+        elif m.get("sms_eligible") and not m.get("has_tc_phone"):
+            bucket["sms_eligible_no_phone"] += 1
+        brokerage_id = m.get("brokerage_id")
+        if brokerage_id is not None:
+            brokerages_seen[brokerage_id] = bool(m.get("has_tc_phone"))
+
+    return {
+        "by_source": sorted(by_source.values(), key=lambda r: -r["alerts"]),
+        "brokerages_with_sms": sum(1 for has_phone in brokerages_seen.values() if has_phone),
+        "brokerages_missing_phone": sum(1 for has_phone in brokerages_seen.values() if not has_phone),
+    }
+
 init_analytics_tables()

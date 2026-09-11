@@ -41,14 +41,24 @@ def init_brokerages_table():
             created_at TEXT NOT NULL
         )
     """)
-    # tc_phone added after the table's initial release -- ALTER TABLE has no
-    # IF NOT EXISTS guard in SQLite, so on an already-migrated DB this just
-    # fails with "duplicate column" and is ignored (same pattern as
-    # tc_gate.py's migrations).
-    try:
-        cursor.execute("ALTER TABLE brokerages ADD COLUMN tc_phone TEXT")
-    except sqlite3.OperationalError:
-        pass
+    # tc_phone/source added after the table's initial release -- ALTER TABLE
+    # has no IF NOT EXISTS guard in SQLite, so on an already-migrated DB
+    # this just fails with "duplicate column" and is ignored (same pattern
+    # as tc_gate.py's migrations).
+    for ddl in (
+        "ALTER TABLE brokerages ADD COLUMN tc_phone TEXT",
+        # First-touch ?src= attribution (ta_src cookie, see /pricing and
+        # /create-checkout-session) at the moment this brokerage was
+        # created -- stored on the row itself, not just in the
+        # brokerage_created event, so "which campaign brought this
+        # brokerage" survives regardless of events-table retention and
+        # doesn't need a JSON-metadata join to answer later.
+        "ALTER TABLE brokerages ADD COLUMN source TEXT",
+    ):
+        try:
+            cursor.execute(ddl)
+        except sqlite3.OperationalError:
+            pass
     conn.commit()
     conn.close()
 
@@ -57,7 +67,7 @@ def _generate_join_code(length: int = 8) -> str:
     return "".join(secrets.choice(_CODE_ALPHABET) for _ in range(length))
 
 
-def create_brokerage(name: str, tc_email: str = "", tc_phone: str = "") -> dict:
+def create_brokerage(name: str, tc_email: str = "", tc_phone: str = "", source: str = "") -> dict:
     """Provision a new brokerage account with a fresh join code. Called by
     hand from /admin/brokerages after a broker signs, or self-provisioned
     from the Stripe webhook on a self-serve Brokerage checkout.
@@ -65,7 +75,11 @@ def create_brokerage(name: str, tc_email: str = "", tc_phone: str = "") -> dict:
     tc_phone is optional -- when set, _notify_brokerage_tc() in app.py texts
     this number (in addition to emailing tc_email) the moment an agent on
     the roster drafts an offer with blocker-level issues. Leave blank to
-    keep the alert email-only, same as before this field existed."""
+    keep the alert email-only, same as before this field existed.
+
+    source is the ta_src first-touch attribution (e.g. "zillow_broker_reach")
+    carried through from /pricing's checkout link -- blank for anything hand-
+    provisioned at /admin/brokerages, which has no such link to attribute."""
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     now = datetime.utcnow().isoformat()
@@ -73,13 +87,13 @@ def create_brokerage(name: str, tc_email: str = "", tc_phone: str = "") -> dict:
         code = _generate_join_code()
         try:
             cursor.execute(
-                "INSERT INTO brokerages (name, tc_email, tc_phone, join_code, created_at) VALUES (?, ?, ?, ?, ?)",
-                (name, tc_email, tc_phone, code, now),
+                "INSERT INTO brokerages (name, tc_email, tc_phone, source, join_code, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+                (name, tc_email, tc_phone, source, code, now),
             )
             conn.commit()
             brokerage_id = cursor.lastrowid
             conn.close()
-            return {"id": brokerage_id, "name": name, "tc_email": tc_email, "tc_phone": tc_phone, "join_code": code, "created_at": now}
+            return {"id": brokerage_id, "name": name, "tc_email": tc_email, "tc_phone": tc_phone, "source": source, "join_code": code, "created_at": now}
         except sqlite3.IntegrityError:
             continue  # extremely unlikely code collision -- retry with a new one
     conn.close()
