@@ -943,9 +943,10 @@ def index():
       <li><span class="tc-check">&check;</span><span><strong>40-11 addendum mismatches</strong> &mdash; loan amount or financing checkbox disagreeing with the contract.</span></li>
       <li><span class="tc-check">&check;</span><span><strong>39-11 amendment mismatches</strong> &mdash; sales price or property address disagreeing with the original contract.</span></li>
       <li><span class="tc-check">&check;</span><span><strong>Your whole closed-file backlog</strong> &mdash; free sample checks up to 20 files at once; a Brokerage join code raises that to 200, no extra charge.</span></li>
+      <li><span class="tc-check">&check;</span><span><strong>A text the moment it happens</strong> &mdash; on the Brokerage plan, a real blocker on any agent's file texts you directly, before it ever reaches title.</span></li>
     </ul>
     <div class="secondary-cta" style="margin:1.75rem auto 0;padding-top:1.75rem;max-width:560px;text-align:center;">
-      <div class="secondary-cta-label">Running a brokerage or TC team? The dashboard shows every flag across every file &mdash; not just this one.</div>
+      <div class="secondary-cta-label">Running a brokerage or TC team? Get a text the moment any agent's file has a real blocker &mdash; not just an email you have to open.</div>
       <a href="/pricing#brokerage" class="input-btn" style="display:inline-block;text-decoration:none;">See Brokerage pricing &rarr;</a>
       <div style="margin-top:0.85rem;"><a href="/tc-check/bulk" style="font-size:0.85rem;color:var(--text-muted);text-decoration:underline;text-underline-offset:2px;">Or try a free 20-file bulk sample right now &rarr;</a></div>
     </div>
@@ -4635,6 +4636,7 @@ def pricing():
       <li><span class="check">&#10003;</span> Every agent's offer auto-checked before it's even sent</li>
       <li><span class="check">&#10003;</span> DocuSign e-signature + Transaction Workspace + Closing Checklist, for every agent's accepted offers</li>
       <li><span class="check">&#10003;</span> Finished PDFs auto-emailed to your TC, no login needed</li>
+      <li><span class="check">&#10003;</span> Add a phone number and get a text the moment a real blocker shows up &mdash; missing county, title company, earnest money &mdash; before it ever costs a deal</li>
       <li><span class="check">&#10003;</span> Your TC can also forward any outside file to tc@check.txtanoffer.com for an instant check &mdash; free, no dashboard login needed</li>
       <li><span class="check">&#10003;</span> Bulk-check your whole closed-file backlog &mdash; up to 200 files per batch with your join code (the free tool caps at 20)</li>
       <li><span class="check">&#10003;</span> Brokerage roster &amp; compliance dashboard</li>
