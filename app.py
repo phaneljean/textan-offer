@@ -1137,7 +1137,7 @@ def index():
     if(data.complete){
       html += '<div class="result-banner complete">All checked fields are filled in.</div>';
     } else {
-      html += '<div class="result-banner incomplete">' + totalIssues + ' issue' + (totalIssues === 1 ? '' : 's') + ' found</div>';
+      html += '<div class="result-banner incomplete">We found ' + totalIssues + ' issue' + (totalIssues === 1 ? '' : 's') + ' on this TREC 20-19</div>';
     }
     // Homepage widget shows the first few issues -- the full checklist,
     // email gate, copy/download buttons, and blank-draft CTA live on
@@ -1151,7 +1151,7 @@ def index():
       html += '</ul>';
     }
     if(totalIssues > shown.length){
-      var linkText = data.gated ? 'enter your email to see the full report' : 'see the full checklist';
+      var linkText = data.gated ? 'enter your email to see exactly which pages and lines' : 'see the full checklist';
       html += '<div class="result-more">+' + (totalIssues - shown.length) + ' more &mdash; <a href="/tc-check">' + linkText + ' &rarr;</a></div>';
     } else if(issues.length){
       html += '<div class="result-more"><a href="/tc-check">Copy or download this checklist &rarr;</a></div>';
@@ -3353,7 +3353,7 @@ function renderResult(data, file, isDemo) {
   if (data.complete) {
     html += '<div class="result-banner complete">All checked fields are filled in.</div>';
   } else {
-    html += '<div class="result-banner incomplete">' + totalIssues + ' issue' + (totalIssues === 1 ? '' : 's') + ' found</div>';
+    html += '<div class="result-banner incomplete">We found ' + totalIssues + ' issue' + (totalIssues === 1 ? '' : 's') + ' on this TREC 20-19</div>';
   }
   if (data.looks_like_blank_draft) {
     html += '<div class="fixit-cta"><p>This looks like an essentially blank draft &mdash; more gaps than a quick fix. It may be faster to generate a clean one from scratch.</p><a href="/demo">Generate a clean offer &rarr;</a></div>';
@@ -3368,8 +3368,8 @@ function renderResult(data, file, isDemo) {
   if (data.gated) {
     const remaining = totalIssues - issues.length;
     html += '<div class="gate-box">';
-    html += '<p class="gate-headline">' + (remaining > 0 ? remaining + ' more issue' + (remaining === 1 ? '' : 's') + ' found on this file' : 'See the full itemized report') + '</p>';
-    html += '<p class="gate-sub">Enter your email to see the complete list &mdash; still free, no card, no signup.</p>';
+    html += '<p class="gate-headline">' + (remaining > 0 ? remaining + ' more issue' + (remaining === 1 ? '' : 's') + ' on this file' : 'See the full itemized report') + '</p>';
+    html += '<p class="gate-sub">Enter your email to see exactly which pages and lines are affected &mdash; still free, no card, no signup.</p>';
     html += '<div class="gate-form"><input type="email" id="gateEmailInput" placeholder="you@example.com" autocomplete="email" onkeydown="if(event.key===\\'Enter\\')unlockGate()"><button type="button" onclick="unlockGate()">See full report</button></div>';
     html += '<div class="gate-error" id="gateError"></div>';
     html += '<div class="gate-note">We\\'ll also email you this report. Unsubscribe anytime.</div>';
