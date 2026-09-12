@@ -3,9 +3,31 @@ analytics.py — Track key conversion metrics
 """
 import sqlite3
 import os
+import hmac
 from datetime import datetime, timedelta
+from flask import request, has_request_context
 
 DB_PATH = os.environ.get("DATABASE_PATH", "subscriptions.db")
+
+# Lets the site owner exclude their own testing from every metric on
+# /analytics -- deliberately NOT an IP allowlist: home wifi, phone LTE, a
+# coffee shop, a VPN all give a different IP, so a fixed IP list needs
+# constant upkeep and silently stops working the moment it's stale. A
+# cookie survives all of that; it just needs setting once per browser/
+# device via app.py's /internal-mode route. Reuses ANALYTICS_PASSWORD --
+# the same secret already needed to view /analytics at all -- rather than
+# adding a second one to manage.
+_INTERNAL_COOKIE = "ta_internal"
+
+
+def _is_internal_traffic() -> bool:
+    if not has_request_context():
+        return False
+    secret = os.environ.get("ANALYTICS_PASSWORD", "")
+    if not secret:
+        return False
+    return hmac.compare_digest(request.cookies.get(_INTERNAL_COOKIE, ""), secret)
+
 
 def init_analytics_tables():
     """Create analytics tables"""
@@ -26,7 +48,12 @@ def init_analytics_tables():
     conn.close()
 
 def track_event(event_type: str, phone: str = None, metadata: dict = None):
-    """Track an analytics event"""
+    """Track an analytics event. Silently a no-op for the site owner's own
+    browser once flagged via /internal-mode -- see _is_internal_traffic().
+    Every metric on /analytics is built from this one table, so this single
+    chokepoint is enough to keep owner testing out of all of them."""
+    if _is_internal_traffic():
+        return
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     now = datetime.utcnow().isoformat()
