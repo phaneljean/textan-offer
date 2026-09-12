@@ -44,6 +44,7 @@ from deadlines import earnest_money_deadline, option_end_date, build_day_one_sum
 import transaction_tasks
 from drafts import save_draft, get_draft, clear_draft
 from tc_audit import check_tc_file, compare_contracts
+from tc_report_pdf import generate_tc_report_pdf
 from rate_limit import check_and_increment
 from tc_gate import get_client as get_tc_client, record_use as record_tc_use, save_email as save_tc_email
 from tc_nudge import run_followup_if_due as run_tc_followup_if_due
@@ -2953,6 +2954,36 @@ def tc_check():
     return resp
 
 
+@app.route("/tc-check/report.pdf", methods=["POST"])
+def tc_check_report_pdf():
+    """Renders the already-computed TC Check result as a downloadable PDF,
+    matching the polish of the branded HTML email (tc_check_email.py)
+    instead of the old plain .txt download. Takes only the issue list the
+    browser already rendered (see downloadReport() on /tc-check) -- never
+    touches or re-reads the original uploaded file, so this can't leak
+    anything beyond what a visitor already sees on screen: a client that
+    hasn't cleared the email gate only ever has the single preview issue
+    to send here in the first place."""
+    data = request.get_json(silent=True) or {}
+    raw_name = (data.get("filename") or "file.pdf").strip()
+    safe_name = "".join(ch for ch in raw_name if ch.isprintable() and ch not in '"\\')[:150] or "file.pdf"
+    issues = data.get("issues")
+    clean_issues = [
+        {
+            "severity": i.get("severity") if i.get("severity") in ("blocker", "warning") else "warning",
+            "message": str(i.get("message") or "")[:500],
+        }
+        for i in (issues if isinstance(issues, list) else [])
+        if isinstance(i, dict) and i.get("message")
+    ]
+    pdf_bytes = generate_tc_report_pdf(safe_name, clean_issues)
+    base_name = safe_name[:-4] if safe_name.lower().endswith(".pdf") else safe_name
+    resp = make_response(pdf_bytes)
+    resp.headers["Content-Type"] = "application/pdf"
+    resp.headers["Content-Disposition"] = f'attachment; filename="{base_name}-tc-check-report.pdf"'
+    return resp
+
+
 @app.route("/v1/tc/check/email/<token>", methods=["POST"])
 def tc_check_email_inbound(token):
     """SendGrid Inbound Parse target for TC File Check by email-forward
@@ -3514,7 +3545,7 @@ function renderResult(data, file, isDemo) {
   } else {
     if (issues.length) {
       html += '<button class="copy-btn" onclick="copyChecklist()">Copy checklist</button>';
-      html += '<button class="download-btn" onclick="downloadReport()">Download report</button>';
+      html += '<button class="download-btn" onclick="downloadReport(this)">Download report</button>';
       html += buildUpsellCta(issues);
     }
     if (!isDemo) html += buildNextStepCta();
@@ -3548,22 +3579,29 @@ function copyChecklist() {
   navigator.clipboard.writeText(checklistText());
 }
 
-function downloadReport() {
+function downloadReport(btn) {
   const filename = resultEl.dataset.filename || 'file.pdf';
-  const report = 'TC File Check report\\n' +
-    'File: ' + filename + '\\n' +
-    'Checked: ' + new Date().toLocaleString() + '\\n' +
-    'txtanoffer.com/tc-check\\n\\n' +
-    checklistText() + '\\n';
-  const blob = new Blob([report], { type: 'text/plain' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename.replace(/\\.pdf$/i, '') + '-tc-check-report.txt';
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
+  const issues = JSON.parse(resultEl.dataset.issues || '[]');
+  const original = btn ? btn.textContent : null;
+  if (btn) { btn.disabled = true; btn.textContent = 'Preparing PDF...'; }
+  fetch('/tc-check/report.pdf', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ filename, issues })
+  })
+    .then(r => r.blob())
+    .then(blob => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename.replace(/\\.pdf$/i, '') + '-tc-check-report.pdf';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    })
+    .catch(() => { alert('Could not generate the PDF. Try again.'); })
+    .finally(() => { if (btn) { btn.disabled = false; btn.textContent = original; } });
 }
 
 function escapeHtml(s) {
