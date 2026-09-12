@@ -280,6 +280,36 @@ def get_tc_check_attempts_by_source(days: int = 30) -> list:
         key=lambda r: -r["count"]
     )
 
+
+def get_tc_check_attempts_by_page(days: int = 30) -> list:
+    """Same 'tc_check_attempted' events as get_tc_check_attempts_by_source,
+    grouped by source_page instead of campaign source -- homepage widget vs
+    the dedicated /tc-check page. Added 2026-09-11 to answer a different
+    question than the source breakdown: not which channel drove the visit,
+    but which UI they actually used once there. 'unknown' covers events
+    tracked before this field existed, or a request that didn't set it."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cutoff = (datetime.utcnow() - timedelta(days=days)).isoformat()
+    cursor.execute("""
+        SELECT metadata FROM events
+        WHERE event_type = 'tc_check_attempted' AND created_at > ?
+    """, (cutoff,))
+    rows = cursor.fetchall()
+    conn.close()
+
+    import json
+    counts = {}
+    for row in rows:
+        metadata = json.loads(row[0]) if row[0] else {}
+        page = metadata.get("source_page") or "unknown"
+        counts[page] = counts.get(page, 0) + 1
+
+    return sorted(
+        [{"page": page, "count": count} for page, count in counts.items()],
+        key=lambda r: -r["count"]
+    )
+
 TC_ISSUE_LABELS = {
     "unrecognized": "Not a recognized TREC 20-19 template",
     "address": "Property address blank",

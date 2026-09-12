@@ -32,7 +32,7 @@ from pdf_validator import validate_offer_pdf
 from amendment import fill_amendment_pdf
 from agent_profiles import get_agent_profile, save_agent_profile, find_by_email, get_emails_for_phones
 from subscriptions import can_generate_offer, increment_offer_count, activate_subscription, deactivate_subscription, get_user, create_user, FREE_OFFER_LIMIT, is_admin_phone, has_professional_access
-from analytics import track_event, get_conversion_metrics, get_revenue_metrics, get_recent_sms, get_recent_sms_failures, get_last_blocked_state, get_waitlist_signups, get_signups_by_source, get_signup_details, get_landing_visits_by_source, get_tc_check_summary, get_recent_tc_check_email_senders, get_tc_check_count_for_sender, get_tc_check_repeat_senders, get_tc_check_bulk_summary, get_tc_check_attempts_by_source, get_brokerage_alert_delivery
+from analytics import track_event, get_conversion_metrics, get_revenue_metrics, get_recent_sms, get_recent_sms_failures, get_last_blocked_state, get_waitlist_signups, get_signups_by_source, get_signup_details, get_landing_visits_by_source, get_tc_check_summary, get_recent_tc_check_email_senders, get_tc_check_count_for_sender, get_tc_check_repeat_senders, get_tc_check_bulk_summary, get_tc_check_attempts_by_source, get_tc_check_attempts_by_page, get_brokerage_alert_delivery
 from integrations import send_offer_email, fire_webhook, save_webhook, get_webhook, delete_webhook, send_to_docusign, send_plain_email, send_html_email
 from offers_db import record_offer, get_offers_for_phone, get_offer_by_filename, record_amendment, get_amendments_for_phone, record_thread_response, record_email_sent, record_docusign_sent
 from brokerages import extract_brokerage_prefix, link_user_to_brokerage, get_brokerage, get_brokerage_by_code, create_brokerage, list_brokerages, list_brokerage_agents
@@ -536,6 +536,12 @@ def index():
     .issue-tag.warning { background: rgba(245,158,11,0.12); color: #b45309; }
     .result-more { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem; }
     .result-more a { color: var(--text); font-weight: 600; text-decoration: underline; }
+    .individual-upsell { margin-top: 1.25rem; padding: 1.1rem 1.25rem; background: var(--accent-tint); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+    .individual-upsell-lead { font-size: 0.85rem; color: var(--text); margin: 0 0 0.85rem; line-height: 1.5; }
+    .individual-upsell-btn { background: var(--accent); color: #fff; border: none; padding: 0.7rem 1.25rem; border-radius: 9999px; font: inherit; font-size: 0.85rem; font-weight: 700; cursor: pointer; }
+    .individual-upsell-btn:hover { opacity: 0.9; }
+    .individual-upsell-alt { margin-top: 0.65rem; font-size: 0.78rem; color: var(--text-muted); }
+    .individual-upsell-alt a { color: var(--accent); font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
 
     /* Secondary CTA (SMS draft) -- demoted below the primary check widget */
     .secondary-cta { margin-top: 1.75rem; padding-top: 1.5rem; border-top: 1px solid var(--border); max-width: 540px; }
@@ -1131,6 +1137,7 @@ def index():
     var email = isDemo ? '' : optinEmail();
     var formData = new FormData();
     formData.append('file', file);
+    formData.append('source_page', 'homepage');
     if(email) formData.append('email', email);
     if(isDemo) formData.append('is_demo', '1');
 
@@ -1198,8 +1205,29 @@ def index():
     } else if(issues.length){
       html += '<div class="result-more"><a href="' + tcCheckHref + '">Copy or download this checklist &rarr;</a></div>';
     }
+    // Self-serve upgrade path for a solo agent/TC drafting these by hand --
+    // only once the email gate is already cleared (email on file, or this
+    // particular file had nothing to gate), same as /tc-check's own
+    // buildUpsellCta(). Never shown alongside the gate itself: the gate's
+    // one job is getting an email, and a second, bigger ask ($40/mo) right
+    // next to it would just split attention on the step that's already
+    // converting worst (2% capture as of 2026-09-11).
+    if(!isDemo && !data.gated && totalIssues > 0){
+      html += buildIndividualUpgradeCard();
+    }
     resultEl.innerHTML = html;
     resultEl.classList.add('show');
+  }
+
+  function buildIndividualUpgradeCard(){
+    return '<div class="individual-upsell">'
+      + '<p class="individual-upsell-lead">Filling this out by hand? TxtAnOffer drafts a TREC 20-19 by text message instead &mdash; address, price, and closing date auto-fill correctly, so there\'s nothing left for a check like this to catch.</p>'
+      + '<form action="/create-checkout-session" method="POST" style="margin:0;">'
+      +   '<input type="hidden" name="plan" value="starter">'
+      +   '<button type="submit" class="individual-upsell-btn">Upgrade to Individual &mdash; Instant Checkout ($40/mo) &rarr;</button>'
+      + '</form>'
+      + '<div class="individual-upsell-alt">Want to try it free first? <a href="/pricing">3 offers, no card required &rarr;</a></div>'
+      + '</div>';
   }
 
   function escapeHtml(s){
@@ -2867,9 +2895,20 @@ def tc_check():
     # came back clean" stat that's actually used as a marketing/product
     # claim. Its own 'tc_check_demo_used' event exists purely so demo usage
     # is visible somewhere, not folded into either real metric.
+    # Which UI this request actually came from -- homepage widget vs the
+    # dedicated /tc-check page -- set explicitly by each page's own JS
+    # rather than inferred from the Referer header (routinely missing or
+    # stripped by privacy tools/ad blockers, so it can't be trusted as the
+    # only source of truth). Added 2026-09-11: before this there was no way
+    # to tell whether the homepage's widget converts differently from
+    # /tc-check's, only a combined total.
+    source_page = request.form.get("source_page") or "unknown"
+    if source_page not in ("homepage", "tc_check_page"):
+        source_page = "unknown"
+
     is_demo = request.form.get("is_demo") == "1"
     if is_demo:
-        track_event("tc_check_demo_used", metadata={"source": request.cookies.get("ta_src") or "direct"})
+        track_event("tc_check_demo_used", metadata={"source": request.cookies.get("ta_src") or "direct", "source_page": source_page})
     else:
         # Fires on every real attempt -- success, wrong file type, corrupted
         # PDF, all of it -- unlike the 'tc_check' event below, which only fires
@@ -2880,10 +2919,12 @@ def tc_check():
         # the same ta_src first-touch cookie as landing_visit so a channel's
         # visits -> attempts -> recognized/complete funnel is fully visible,
         # not just the last two steps.
-        track_event("tc_check_attempted", metadata={"source": request.cookies.get("ta_src") or "direct"})
+        track_event("tc_check_attempted", metadata={"source": request.cookies.get("ta_src") or "direct", "source_page": source_page})
 
-    # No product gate: every upload gets the full itemized report, always.
-    # Email is a non-blocking opt-in ("email me this report + future checks
+    # Product gate re-added 2026-09-10 (see tc_gate.py's own history) --
+    # this comment previously said "no product gate," which stopped being
+    # true once the email-capture gate below was rebuilt. Email is a
+    # non-blocking opt-in ("email me this report + future checks
     # for this address") -- tracked per-browser via an httponly client-id
     # cookie (not IP, since shared offices/NAT would otherwise share one
     # visitor's state) so a returning visitor is identifiable even on a
@@ -2939,7 +2980,7 @@ def tc_check():
         save_tc_email(cid, submitted_email)
         client["email"] = submitted_email
         email_just_captured = True
-        track_event("tc_check_email_captured", submitted_email, {"client_id": cid})
+        track_event("tc_check_email_captured", submitted_email, {"client_id": cid, "source_page": source_page})
 
     gate_cleared = is_demo or bool(client["email"])
 
@@ -2957,6 +2998,7 @@ def tc_check():
             "issue_keys": issue_keys,
             "sender": (client["email"] or "").strip().lower(),
             "gated": not gate_cleared,
+            "source_page": source_page,
         })
 
     payload = dict(result)
@@ -3497,6 +3539,7 @@ function uploadFile(file, email, isDemo) {
 
   const formData = new FormData();
   formData.append('file', file);
+  formData.append('source_page', 'tc_check_page');
   // A real addendum picked for a prior real upload should never ride along
   // on a demo run -- the sample file is the whole check, on its own.
   if (pendingAddendumFile && !isDemo) formData.append('file', pendingAddendumFile);
@@ -5201,6 +5244,7 @@ def analytics_dashboard():
     signups_by_source = get_signups_by_source(days=30)
     landing_visits_by_source = get_landing_visits_by_source(days=30)
     tc_check_attempts_by_source = get_tc_check_attempts_by_source(days=30)
+    tc_check_attempts_by_page = get_tc_check_attempts_by_page(days=30)
     tc_check_summary = get_tc_check_summary(days=30)
     recent_tc_email_senders = get_recent_tc_check_email_senders(limit=20)
     tc_repeat_senders = get_tc_check_repeat_senders(within_days=14)
@@ -5217,6 +5261,7 @@ def analytics_dashboard():
     signups_by_source_24h = get_signups_by_source(days=1)
     landing_visits_by_source_24h = get_landing_visits_by_source(days=1)
     tc_check_attempts_by_source_24h = get_tc_check_attempts_by_source(days=1)
+    tc_check_attempts_by_page_24h = get_tc_check_attempts_by_page(days=1)
     tc_check_summary_24h = get_tc_check_summary(days=1)
     tc_bulk_summary_24h = get_tc_check_bulk_summary(days=1)
     brokerage_alert_delivery_24h = get_brokerage_alert_delivery(days=1)
@@ -5231,6 +5276,7 @@ def analytics_dashboard():
     signups_by_source_merged = _merge_24h_counts(signups_by_source, signups_by_source_24h, "source")
     landing_visits_by_source_merged = _merge_24h_counts(landing_visits_by_source, landing_visits_by_source_24h, "source")
     tc_check_attempts_by_source_merged = _merge_24h_counts(tc_check_attempts_by_source, tc_check_attempts_by_source_24h, "source")
+    tc_check_attempts_by_page_merged = _merge_24h_counts(tc_check_attempts_by_page, tc_check_attempts_by_page_24h, "page")
     tc_issue_frequency_merged = _merge_24h_counts(tc_check_summary["issue_frequency"], tc_check_summary_24h["issue_frequency"], "key")
 
     tc_email_sender_rows = ""
@@ -5278,6 +5324,9 @@ def analytics_dashboard():
     ) or '<tr><td colspan="3" style="padding:10px;color:#666;">No tagged visits yet.</td></tr>'
     tc_attempt_rows = "".join(
         f"<tr><td>{a['source']}</td><td>{a['count']}</td><td>{a['count_24h']}</td></tr>" for a in tc_check_attempts_by_source_merged
+    ) or '<tr><td colspan="3" style="padding:10px;color:#666;">No attempts yet.</td></tr>'
+    tc_attempt_page_rows = "".join(
+        f"<tr><td>{a['page']}</td><td>{a['count']}</td><td>{a['count_24h']}</td></tr>" for a in tc_check_attempts_by_page_merged
     ) or '<tr><td colspan="3" style="padding:10px;color:#666;">No attempts yet.</td></tr>'
     tc_issue_rows = "".join(
         f"<tr><td>{i['label']}</td><td>{i['count']}</td><td>{i['pct_of_recognized']}%</td><td>{i['count_24h']}</td></tr>"
@@ -5351,6 +5400,18 @@ body{{font-family:system-ui;max-width:800px;margin:40px auto;padding:20px;}}
     {tc_attempt_rows}
   </table>
   <p class="label" style="margin-top:8px;">Every real submission to the file checker for that source, success or error &mdash; compare against the visit count above: a big gap means visitors aren't engaging the widget at all; attempts close to visits but low recognized/complete below means they're trying and something's failing.</p>
+</div>
+<div class="metric">
+  <h3>TC File Check &mdash; Widget Attempts by Page (30 days)</h3>
+  <table style="width:100%;border-collapse:collapse;margin-top:10px;">
+    <tr style="background:#eee;text-align:left;">
+      <th style="padding:8px;">Page</th>
+      <th style="padding:8px;">30 Days</th>
+      <th style="padding:8px;">Last 24h</th>
+    </tr>
+    {tc_attempt_page_rows}
+  </table>
+  <p class="label" style="margin-top:8px;">Same submissions as above, grouped by which UI was actually used &mdash; homepage widget vs the dedicated /tc-check page &mdash; instead of which channel drove the visit. "unknown" is anything tracked before 2026-09-11 or missing the tag.</p>
 </div>
 <div class="metric">
   <h3>Trial Activation</h3>
