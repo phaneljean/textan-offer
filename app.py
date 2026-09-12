@@ -3181,6 +3181,13 @@ border-radius:var(--radius-sm);font-family:inherit;font-size:0.85rem;font-weight
 .addendum-filename{color:var(--text-muted);}
 .addendum-clear{background:none;border:none;color:var(--text-dim);font-size:1rem;cursor:pointer;line-height:1;padding:0.15rem 0.4rem;}
 .addendum-clear:hover{color:var(--text);}
+.next-step-cta{margin-top:1.25rem;padding-top:1.1rem;border-top:1px solid var(--border);}
+.next-step-lead{font-size:0.85rem;color:var(--text-muted);line-height:1.6;}
+.next-step-lead a{color:var(--accent);font-weight:600;text-decoration:underline;text-underline-offset:2px;}
+.broker-cta{margin-top:0.9rem;padding:1rem 1.25rem;background:#0f1f2f;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;}
+.broker-cta p{margin:0;font-size:0.85rem;color:rgba(255,255,255,0.85);font-weight:600;}
+.broker-cta-btn{background:var(--accent);color:#fff;padding:0.65rem 1.25rem;border-radius:9999px;font-size:0.85rem;font-weight:700;white-space:nowrap;}
+.broker-cta-btn:hover{opacity:0.9;}
 </style>
 </head>
 <body>
@@ -3415,6 +3422,29 @@ function buildUpsellCta(issues) {
   return '<div class="fixit-cta"><p>Every gap above happened because this file was filled out by hand. TxtAnOffer drafts the 20-19 by text message, so these fields are never blank to begin with.</p><a href="/pricing">See how it works &rarr;</a></div>';
 }
 
+// Shown once a report has actually been delivered (email on file, or a
+// clean/complete result) -- the point where the old flow just went dead.
+// Two guided next steps instead of a static stop: run another file right
+// here, or route the next one by email; plus a standing, always-visible
+// pitch to Managing Brokers, since there's no per-visitor role signal to
+// gate it on -- same honest tradeoff as the gate-bridge line above.
+function buildNextStepCta() {
+  return '<div class="next-step-cta">' +
+    '<p class="next-step-lead">Want to test another file? <a href="#" onclick="resetForm();return false;">Check another one &rarr;</a><br>Or forward your next deal straight to us: <a href="mailto:tc@check.txtanoffer.com">tc@check.txtanoffer.com</a></p>' +
+    '<div class="broker-cta"><p>Want your entire team&rsquo;s files checked automatically?</p><a href="/pricing#brokerage" class="broker-cta-btn">Set Up Brokerage SMS Alerts &rarr;</a></div>' +
+  '</div>';
+}
+
+function resetForm() {
+  resultEl.classList.remove('show');
+  resultEl.innerHTML = '';
+  pendingFile = null;
+  pendingAddendumFile = null;
+  fileInput.value = '';
+  if (addendumInput) addendumInput.value = '';
+  dropZone.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
 function renderResult(data, file, isDemo) {
   const issues = data.issues || [];
   const totalIssues = typeof data.issue_count === 'number' ? data.issue_count : issues.length;
@@ -3446,10 +3476,13 @@ function renderResult(data, file, isDemo) {
     html += '<div class="gate-note">We\\'ll also email you this report. Unsubscribe anytime.</div>';
     html += '</div>';
     html += '<div class="gate-bridge">Leading a team? <a href="/pricing#brokerage">See how Brokerage auto-checks every agent\\'s offer before it reaches you &rarr;</a></div>';
-  } else if (issues.length) {
-    html += '<button class="copy-btn" onclick="copyChecklist()">Copy checklist</button>';
-    html += '<button class="download-btn" onclick="downloadReport()">Download report</button>';
-    html += buildUpsellCta(issues);
+  } else {
+    if (issues.length) {
+      html += '<button class="copy-btn" onclick="copyChecklist()">Copy checklist</button>';
+      html += '<button class="download-btn" onclick="downloadReport()">Download report</button>';
+      html += buildUpsellCta(issues);
+    }
+    if (!isDemo) html += buildNextStepCta();
   }
   resultEl.innerHTML = html;
   resultEl.classList.add('show');
