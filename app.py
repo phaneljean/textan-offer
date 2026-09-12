@@ -1221,7 +1221,7 @@ def index():
 
   function buildIndividualUpgradeCard(){
     return '<div class="individual-upsell">'
-      + '<p class="individual-upsell-lead">Filling this out by hand? TxtAnOffer drafts a TREC 20-19 by text message instead &mdash; address, price, and closing date auto-fill correctly, so there\'s nothing left for a check like this to catch.</p>'
+      + '<p class="individual-upsell-lead">Filling this out by hand? TxtAnOffer drafts a TREC 20-19 by text message instead &mdash; address, price, and closing date auto-fill correctly, so there\\'s nothing left for a check like this to catch.</p>'
       + '<form action="/create-checkout-session" method="POST" style="margin:0;">'
       +   '<input type="hidden" name="plan" value="starter">'
       +   '<button type="submit" class="individual-upsell-btn">Upgrade to Individual &mdash; Instant Checkout ($40/mo) &rarr;</button>'
