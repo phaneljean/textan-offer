@@ -1151,11 +1151,16 @@ def index():
       });
       html += '</ul>';
     }
+    // Demo is a fixed static sample file, so the click-through can safely
+    // replay it on /tc-check instead of dropping the visitor on an empty
+    // form -- a real upload can't do this (never stored, by design), so
+    // that link is still a legitimate "start over" for a real file.
+    var tcCheckHref = isDemo ? '/tc-check?demo=1' : '/tc-check';
     if(totalIssues > shown.length){
       var linkText = data.gated ? 'enter your email to see exactly which pages and lines' : 'see the full checklist';
-      html += '<div class="result-more">+' + (totalIssues - shown.length) + ' more &mdash; <a href="/tc-check">' + linkText + ' &rarr;</a></div>';
+      html += '<div class="result-more">+' + (totalIssues - shown.length) + ' more &mdash; <a href="' + tcCheckHref + '">' + linkText + ' &rarr;</a></div>';
     } else if(issues.length){
-      html += '<div class="result-more"><a href="/tc-check">Copy or download this checklist &rarr;</a></div>';
+      html += '<div class="result-more"><a href="' + tcCheckHref + '">Copy or download this checklist &rarr;</a></div>';
     }
     resultEl.innerHTML = html;
     resultEl.classList.add('show');
@@ -3302,6 +3307,11 @@ if (demoBtn) {
         demoBtn.disabled = false;
       });
   });
+  // Arrived here via the homepage's "+N more -- see the full checklist"
+  // link on a demo preview: replay the same sample check immediately
+  // instead of landing on an empty form the visitor has to re-trigger by
+  // hand.
+  if (new URLSearchParams(location.search).get('demo') === '1') demoBtn.click();
 }
 
 addendumToggle.addEventListener('click', () => {
