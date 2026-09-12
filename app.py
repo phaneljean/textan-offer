@@ -502,6 +502,9 @@ def index():
       color: var(--text-muted); cursor: pointer; text-align: center; transition: var(--transition); }
     .demo-check-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-tint); }
     .demo-check-btn:disabled { opacity: 0.6; cursor: default; }
+    .zero-risk-badges { margin-top: 0.9rem; display: flex; flex-direction: column; gap: 0.35rem; }
+    .zero-risk-item { font-size: 0.78rem; font-weight: 600; color: var(--text); }
+    .zero-risk-check { color: #0f9960; font-weight: 800; margin-right: 0.3rem; }
     .demo-banner { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.02em; color: var(--text-dim);
       text-transform: uppercase; margin-bottom: 0.5rem; }
     .privacy-note { display: flex; align-items: center; gap: 0.45rem; margin-top: 0.9rem; font-size: 0.78rem; color: var(--text-dim); }
@@ -827,6 +830,11 @@ def index():
         <div class="dz-sub">We'll tell you what's missing before title kicks it back.</div>
       </div>
       <input type="file" id="homeFileInput" accept="application/pdf">
+      <div class="zero-risk-badges">
+        <div class="zero-risk-item"><span class="zero-risk-check">&check;</span>No account required to test.</div>
+        <div class="zero-risk-item"><span class="zero-risk-check">&check;</span>Files are deleted immediately after your results are ready &mdash; never stored on our servers.</div>
+        <div class="zero-risk-item"><span class="zero-risk-check">&check;</span>We never sell or share your data with third parties.</div>
+      </div>
       <button type="button" class="demo-check-btn" id="homeDemoBtn">Don't have a PDF ready? Run a demo check on a sample TREC contract.</button>
       <div class="email-optin">
         <label class="email-optin-check"><input type="checkbox" id="homeEmailOptinCheckbox" checked> Email me this report + future checks for this address</label>
@@ -3110,6 +3118,9 @@ text-align:center;cursor:pointer;transition:all 0.2s;}
 .demo-check-btn{display:block;width:100%;margin-top:0.65rem;padding:0.6rem 1rem;background:none;border:1px dashed rgba(15,31,47,0.18);border-radius:var(--radius-sm);font:inherit;font-size:0.85rem;color:var(--text-muted);cursor:pointer;text-align:center;transition:all 0.2s;}
 .demo-check-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-tint);}
 .demo-check-btn:disabled{opacity:0.6;cursor:default;}
+.zero-risk-badges{margin-top:0.9rem;display:flex;flex-direction:column;gap:0.35rem;}
+.zero-risk-item{font-size:0.8rem;font-weight:600;color:var(--text);}
+.zero-risk-check{color:#0f9960;font-weight:800;margin-right:0.3rem;}
 .demo-banner{font-size:0.78rem;font-weight:700;letter-spacing:0.02em;color:var(--text-dim);text-transform:uppercase;margin-bottom:0.5rem;}
 .privacy-note{display:flex;align-items:center;gap:0.45rem;margin-top:0.9rem;font-size:0.8rem;color:var(--text-dim);}
 .privacy-note svg{flex-shrink:0;}
@@ -3212,6 +3223,11 @@ border-radius:var(--radius-sm);font-family:inherit;font-size:0.85rem;font-weight
 <div class="dz-sub">AcroForm-fillable PDFs only &mdash; not scanned or flattened files</div>
 </div>
 <input type="file" id="fileInput" accept="application/pdf">
+<div class="zero-risk-badges">
+<div class="zero-risk-item"><span class="zero-risk-check">&check;</span>No account required to test.</div>
+<div class="zero-risk-item"><span class="zero-risk-check">&check;</span>Files are deleted immediately after your results are ready &mdash; never stored on our servers.</div>
+<div class="zero-risk-item"><span class="zero-risk-check">&check;</span>We never sell or share your data with third parties.</div>
+</div>
 <div class="addendum-toggle" id="addendumToggle">+ Also have the 40-11 Financing Addendum? Add it to check the loan amount &amp; checkboxes match, too.</div>
 <div class="addendum-row" id="addendumRow" hidden>
 <input type="file" id="addendumInput" accept="application/pdf">
