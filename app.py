@@ -2819,6 +2819,27 @@ def api_parse():
     })
 
 
+# Short chip-style labels for the anonymous gate's category teaser --
+# distinct from analytics.TC_ISSUE_LABELS, which is full-sentence and built
+# for a stats table row, not a compact "including X, Y, Z" phrase.
+TC_GATE_CATEGORY_LABELS = {
+    "address": "Property Address",
+    "city": "City",
+    "county": "County",
+    "buyer_name": "Buyer Name",
+    "seller_name": "Seller Name",
+    "escrow_agent_name": "Escrow Agent",
+    "earnest_money_amount": "Earnest Money",
+    "option_fee_amount": "Option Fee",
+    "title_company": "Title Company",
+    "effective_date": "Effective Date",
+    "initials_buyer": "Buyer Initials",
+    "initials_seller": "Seller Initials",
+    "loan_amount_mismatch": "Loan Amount Mismatch",
+    "addendum_checkbox_mismatch": "Financing Checkbox",
+}
+
+
 @app.route("/v1/tc/check", methods=["POST"])
 def tc_check():
     """Transaction-coordinator file audit: upload a TREC 20-19 AcroForm PDF,
@@ -2946,13 +2967,33 @@ def tc_check():
     # same "tell them enough to know it's real" logic as the itemized count.
     payload["blocker_count"] = sum(1 for i in full_issues if i.get("severity") == "blocker")
     if not gate_cleared and full_issues:
-        # Worst-first so the one free preview issue is the most alarming
-        # real finding on this file, not just whichever check happened to
-        # run first.
-        severity_rank = {"blocker": 0, "warning": 1}
-        preview_issue = sorted(full_issues, key=lambda i: severity_rank.get(i.get("severity"), 2))[0]
-        payload["issues"] = [preview_issue]
+        # Reveal scope, not location: how many blockers and which short
+        # categories they fall into (deduped, blockers only, in the order
+        # they were found), but never the exact section/page/message text
+        # -- that specific "where to fix it" detail is the whole reason an
+        # email is worth giving. Categories are computed from this file's
+        # own real issues, never a fixed/example list.
+        categories = []
+        for issue in full_issues:
+            if issue.get("severity") != "blocker":
+                continue
+            label = TC_GATE_CATEGORY_LABELS.get(issue.get("key"))
+            if label and label not in categories:
+                categories.append(label)
+        payload["categories"] = categories[:3]
+        payload["issues"] = []
         payload["gated"] = True
+        # Real, self-updating social proof for the gate -- same MIN_SAMPLE
+        # guard as the homepage stats (see index()): never show a stat
+        # built from too small a sample to be honest, and never a fixed
+        # string that would silently go stale as real usage changes it.
+        tc_stats = get_tc_check_summary(days=30)
+        if tc_stats["recognized"] >= 5:
+            proof = f"{tc_stats['recognized']} files checked in the last 30 days — {tc_stats['completion_rate']:g}% came back complete."
+            top_issue = tc_stats["issue_frequency"][0] if tc_stats["issue_frequency"] else None
+            if top_issue:
+                proof += f" {top_issue['label']} on {top_issue['pct_of_recognized']:g}% of them."
+            payload["social_proof"] = proof
     else:
         payload["gated"] = False
 
@@ -3229,6 +3270,7 @@ font-size:0.85rem;font-weight:600;white-space:nowrap;}
 .gate-form button:hover{opacity:0.9;}
 .gate-error{color:#fca5a5;font-size:0.78rem;margin-top:0.5rem;min-height:1em;}
 .gate-note{color:rgba(255,255,255,0.5);font-size:0.75rem;margin-top:0.7rem;}
+.gate-proof{color:rgba(255,255,255,0.65);font-size:0.78rem;margin-top:0.9rem;padding-top:0.7rem;border-top:1px solid rgba(255,255,255,0.08);}
 .gate-bridge{margin-top:0.85rem;font-size:0.82rem;color:var(--text-muted);text-align:center;}
 .gate-bridge a{color:var(--accent);font-weight:600;}
 .meta-bar{display:flex;flex-wrap:wrap;gap:0.4rem 1.25rem;padding:0.85rem 1.1rem;margin-bottom:1rem;
@@ -3584,18 +3626,33 @@ function renderResult(data, file, isDemo) {
     html += '</ul>';
   }
   if (data.gated) {
-    // Reframed from a paywall demand to a value exchange: lead with the
-    // concrete finding (what the scan actually caught), then ask where to
-    // send the report, rather than "give us your email to see more."
+    // Reveals scope (count + which categories), never location -- exact
+    // pages/lines are the specific thing an email buys. Categories come
+    // from this file's own real blockers (see /v1/tc/check), never a
+    // fixed example list, so the teaser can't say something untrue about
+    // a file it hasn't actually found those problems on.
     const blockerCount = typeof data.blocker_count === 'number' ? data.blocker_count : totalIssues;
-    const gateHeadline = blockerCount > 0
-      ? blockerCount + ' title-blocking error' + (blockerCount === 1 ? '' : 's') + ' found. Where should we send the secure audit report so you can fix ' + (blockerCount === 1 ? 'it' : 'them') + ' before your deadline?'
-      : 'Where should we send this secure audit report so you can review it before your deadline?';
+    const cats = Array.isArray(data.categories) ? data.categories : [];
+    let gateHeadline;
+    if (blockerCount > 0 && cats.length) {
+      const catText = cats.length > 1
+        ? cats.slice(0, -1).join(', ') + ' and ' + cats[cats.length - 1]
+        : cats[0];
+      gateHeadline = blockerCount + ' blocker' + (blockerCount === 1 ? '' : 's') + ' found that will bounce at Title — including ' + catText + '.';
+    } else if (blockerCount > 0) {
+      gateHeadline = blockerCount + ' title-blocking error' + (blockerCount === 1 ? '' : 's') + ' found.';
+    } else {
+      gateHeadline = 'Where should we send this secure audit report so you can review it before your deadline?';
+    }
     html += '<div class="gate-box">';
     html += '<div class="gate-shield">&#128737; Secure Audit Report</div>';
     html += '<p class="gate-headline">' + gateHeadline + '</p>';
-    html += '<div class="gate-form"><input type="email" id="gateEmailInput" placeholder="Enter your email to unlock line-by-line fixes" autocomplete="email" onkeydown="if(event.key===\\'Enter\\')unlockGate()"><button type="button" onclick="unlockGate()">Send my report</button></div>';
+    html += '<p class="gate-sub">Enter your email to see the exact pages and lines &mdash; your file is never stored.</p>';
+    html += '<div class="gate-form"><input type="email" id="gateEmailInput" placeholder="work email" autocomplete="email" onkeydown="if(event.key===\\'Enter\\')unlockGate()"><button type="button" onclick="unlockGate()">See my bounce report</button></div>';
     html += '<div class="gate-error" id="gateError"></div>';
+    if (data.social_proof) {
+      html += '<div class="gate-proof">' + escapeHtml(data.social_proof) + '</div>';
+    }
     html += '<div class="gate-note">Free, no card, no signup &mdash; unsubscribe anytime.</div>';
     html += '</div>';
     html += '<div class="gate-bridge">Leading a team? <a href="/pricing#brokerage">See how Brokerage auto-checks every agent\\'s offer before it reaches you &rarr;</a></div>';
