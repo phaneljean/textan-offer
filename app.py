@@ -1089,6 +1089,34 @@ def index():
   var STATUS_STEPS = ['Scanning TREC 20-19...', 'Checking mandatory fields...', 'Checking initials & consistency...'];
   var statusTimers = [];
 
+  var fileCarried = false;
+
+  // The click-through to /tc-check for "see the full checklist" used to
+  // land on a blank form for a real (non-demo) file -- nothing carries it
+  // across a normal navigation, since the file is never sent to our
+  // servers a second time. Stashing it as a data URL in sessionStorage
+  // (this browser's own storage, read back once on /tc-check and then
+  // cleared -- see that page's script) lets the click-through replay the
+  // same file without ever storing it server-side. Best-effort: any
+  // failure (quota, unsupported) just falls back to today's blank form.
+  function stashFileForCarry(file){
+    fileCarried = false;
+    if(!file || !window.sessionStorage || !window.FileReader) return;
+    try{
+      var reader = new FileReader();
+      reader.onload = function(){
+        try{
+          sessionStorage.setItem('tc_carry_file', JSON.stringify({
+            name: file.name, type: file.type, dataUrl: reader.result
+          }));
+          fileCarried = true;
+        }catch(e){ fileCarried = false; }
+      };
+      reader.onerror = function(){ fileCarried = false; };
+      reader.readAsDataURL(file);
+    }catch(e){ fileCarried = false; }
+  }
+
   function uploadFile(file, isDemo){
     resultEl.classList.remove('show');
     emailOptinConfirm.classList.remove('show');
@@ -1098,6 +1126,7 @@ def index():
     });
     statusEl.textContent = STATUS_STEPS[0];
     statusEl.classList.add('show');
+    if(!isDemo) stashFileForCarry(file);
 
     var email = isDemo ? '' : optinEmail();
     var formData = new FormData();
@@ -1159,11 +1188,10 @@ def index():
       });
       html += '</ul>';
     }
-    // Demo is a fixed static sample file, so the click-through can safely
-    // replay it on /tc-check instead of dropping the visitor on an empty
-    // form -- a real upload can't do this (never stored, by design), so
-    // that link is still a legitimate "start over" for a real file.
-    var tcCheckHref = isDemo ? '/tc-check?demo=1' : '/tc-check';
+    // Demo replays the fixed static sample; a real file replays from the
+    // sessionStorage stash above when it succeeded, otherwise this falls
+    // back to a plain link (today's "start over" behavior).
+    var tcCheckHref = isDemo ? '/tc-check?demo=1' : (fileCarried ? '/tc-check?carry=1' : '/tc-check');
     if(totalIssues > shown.length){
       var linkText = data.gated ? 'enter your email to see exactly which pages and lines' : 'see the full checklist';
       html += '<div class="result-more">+' + (totalIssues - shown.length) + ' more &mdash; <a href="' + tcCheckHref + '">' + linkText + ' &rarr;</a></div>';
@@ -3360,6 +3388,30 @@ if (demoBtn) {
   // instead of landing on an empty form the visitor has to re-trigger by
   // hand.
   if (new URLSearchParams(location.search).get('demo') === '1') demoBtn.click();
+}
+
+// Same idea as the demo replay above, but for a real file: the homepage
+// stashed it as a data URL in sessionStorage (see stashFileForCarry()
+// there) right before linking here, since a real upload can't otherwise
+// survive a normal navigation -- it's never sent to our servers a second
+// time on its own. Read once and clear immediately so a stale stash can
+// never replay on a later, unrelated visit to this URL.
+if (new URLSearchParams(location.search).get('carry') === '1') {
+  let carried = null;
+  try {
+    const raw = sessionStorage.getItem('tc_carry_file');
+    if (raw) carried = JSON.parse(raw);
+  } catch (e) {}
+  try { sessionStorage.removeItem('tc_carry_file'); } catch (e) {}
+  if (carried && carried.dataUrl) {
+    fetch(carried.dataUrl)
+      .then(r => r.blob())
+      .then(blob => {
+        const file = new File([blob], carried.name || 'file.pdf', { type: carried.type || 'application/pdf' });
+        uploadFile(file, optinEmail(), false);
+      })
+      .catch(() => {});
+  }
 }
 
 addendumToggle.addEventListener('click', () => {
