@@ -818,7 +818,6 @@ def index():
       Drop a filled <strong>TREC 20-19</strong> (and its 40-11 addendum, if you've got one) and see what's missing or inconsistent in seconds &mdash; blank dates, missing initials, mismatched checkboxes, all of it.
     </p>
     <p style="font-size:0.85rem;color:var(--accent-dark);font-weight:600;margin-top:0.6rem;">Built to help TCs catch what's missing &mdash; not to replace what you do.</p>
-    <p style="font-size:0.85rem;color:var(--text-muted);margin-top:0.4rem;">Need to send an offer right now? Text terms to <a href="sms:+18338970333" style="color:var(--accent-dark);font-weight:600;">(833) 897-0333</a> to generate a TREC 20-19 PDF in 10 seconds.</p>
 
     <div class="input-card">
       <div class="input-label">Try it now &mdash; no signup required</div>
