@@ -2976,7 +2976,12 @@ def tc_check_report_pdf():
         for i in (issues if isinstance(issues, list) else [])
         if isinstance(i, dict) and i.get("message")
     ]
-    pdf_bytes = generate_tc_report_pdf(safe_name, clean_issues)
+    # Same "this is your Nth file" streak line as the emailed report --
+    # only when the browser actually knows an email for this visitor (the
+    # gate-cleared email, synced into emailOptinInput by unlockGate()).
+    email = (data.get("email") or "").strip()
+    check_count = get_tc_check_count_for_sender(email) if "@" in email else 0
+    pdf_bytes = generate_tc_report_pdf(safe_name, clean_issues, check_count=check_count)
     base_name = safe_name[:-4] if safe_name.lower().endswith(".pdf") else safe_name
     resp = make_response(pdf_bytes)
     resp.headers["Content-Type"] = "application/pdf"
@@ -3582,12 +3587,13 @@ function copyChecklist() {
 function downloadReport(btn) {
   const filename = resultEl.dataset.filename || 'file.pdf';
   const issues = JSON.parse(resultEl.dataset.issues || '[]');
+  const email = (emailOptinInput && emailOptinInput.value || '').trim();
   const original = btn ? btn.textContent : null;
   if (btn) { btn.disabled = true; btn.textContent = 'Preparing PDF...'; }
   fetch('/tc-check/report.pdf', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ filename, issues })
+    body: JSON.stringify({ filename, issues, email })
   })
     .then(r => r.blob())
     .then(blob => {
