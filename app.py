@@ -1085,7 +1085,7 @@ def index():
 
   // Same perceived-progress pattern as /tc-check -- one real round trip,
   // staged labels just so the wait doesn't feel dead.
-  var STATUS_STEPS = ['Reading PDF...', 'Checking required fields...', 'Checking initials & consistency...'];
+  var STATUS_STEPS = ['Scanning TREC 20-19...', 'Checking mandatory fields...', 'Checking initials & consistency...'];
   var statusTimers = [];
 
   function uploadFile(file, isDemo){
@@ -1138,7 +1138,14 @@ def index():
     if(data.complete){
       html += '<div class="result-banner complete">All checked fields are filled in.</div>';
     } else {
-      html += '<div class="result-banner incomplete">We found ' + totalIssues + ' issue' + (totalIssues === 1 ? '' : 's') + ' on this TREC 20-19</div>';
+      // Lead with the blocking count -- the concrete "title will reject this"
+      // number -- when there is one; fall back to a plain issue count for a
+      // file whose only findings are non-blocking warnings.
+      var blockerCount = typeof data.blocker_count === 'number' ? data.blocker_count : 0;
+      var bannerText = blockerCount > 0
+        ? blockerCount + ' title-blocking error' + (blockerCount === 1 ? '' : 's') + ' found'
+        : totalIssues + ' issue' + (totalIssues === 1 ? '' : 's') + ' found';
+      html += '<div class="result-banner incomplete">' + bannerText + '</div>';
     }
     // Homepage widget shows the first few issues -- the full checklist,
     // email gate, copy/download buttons, and blank-draft CTA live on
@@ -2905,6 +2912,10 @@ def tc_check():
     payload = dict(result)
     full_issues = payload.get("issues") or []
     payload["issue_count"] = len(full_issues)
+    # Exposed ungated same as issue_count above -- the scan-reveal banner on
+    # the frontend leads with this number even before an email is on file,
+    # same "tell them enough to know it's real" logic as the itemized count.
+    payload["blocker_count"] = sum(1 for i in full_issues if i.get("severity") == "blocker")
     if not gate_cleared and full_issues:
         # Worst-first so the one free preview issue is the most alarming
         # real finding on this file, not just whichever check happened to
@@ -3143,7 +3154,8 @@ border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:s
 font-size:0.85rem;font-weight:600;white-space:nowrap;}
 .fixit-cta a:hover{opacity:0.9;}
 .gate-box{margin-top:0.5rem;padding:1.25rem 1.4rem;background:#0f1f2f;border-radius:var(--radius);}
-.gate-headline{color:#fff;font-weight:700;font-size:1rem;margin:0 0 0.3rem;}
+.gate-shield{display:inline-flex;align-items:center;gap:0.4rem;color:#6fe0c8;font-weight:700;font-size:0.7rem;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:0.6rem;}
+.gate-headline{color:#fff;font-weight:700;font-size:1rem;line-height:1.4;margin:0 0 0.9rem;}
 .gate-sub{color:rgba(255,255,255,0.72);font-size:0.85rem;margin:0 0 0.9rem;}
 .gate-form{display:flex;gap:0.6rem;flex-wrap:wrap;}
 .gate-form input{flex:1;min-width:200px;padding:0.7rem 0.9rem;border:1px solid rgba(255,255,255,0.2);border-radius:var(--radius-sm);font-family:inherit;font-size:0.85rem;background:rgba(255,255,255,0.08);color:#fff;}
@@ -3337,7 +3349,7 @@ addendumClear.addEventListener('click', () => {
 // round trip -- the backend doesn't stream distinct stages back. Labeled
 // generically (not "AI analyzing..." theater) and never blocks: whichever
 // line is showing when the real response lands, that's when it finishes.
-const STATUS_STEPS = ['Reading PDF...', 'Checking required fields...', 'Checking initials & consistency...'];
+const STATUS_STEPS = ['Scanning TREC 20-19...', 'Checking mandatory fields...', 'Checking initials & consistency...'];
 let statusTimers = [];
 let pendingFile = null;
 let pendingAddendumFile = null;
@@ -3464,7 +3476,14 @@ function renderResult(data, file, isDemo) {
   if (data.complete) {
     html += '<div class="result-banner complete">All checked fields are filled in.</div>';
   } else {
-    html += '<div class="result-banner incomplete">We found ' + totalIssues + ' issue' + (totalIssues === 1 ? '' : 's') + ' on this TREC 20-19</div>';
+    // Lead with the blocking count -- the concrete "title will reject this"
+    // number -- when there is one; fall back to a plain issue count for a
+    // file whose only findings are non-blocking warnings.
+    const blockerCount = typeof data.blocker_count === 'number' ? data.blocker_count : 0;
+    const bannerText = blockerCount > 0
+      ? blockerCount + ' title-blocking error' + (blockerCount === 1 ? '' : 's') + ' found'
+      : totalIssues + ' issue' + (totalIssues === 1 ? '' : 's') + ' found';
+    html += '<div class="result-banner incomplete">' + bannerText + '</div>';
   }
   if (data.looks_like_blank_draft) {
     html += '<div class="fixit-cta"><p>This looks like an essentially blank draft &mdash; more gaps than a quick fix. It may be faster to generate a clean one from scratch.</p><a href="/demo">Generate a clean offer &rarr;</a></div>';
@@ -3477,13 +3496,19 @@ function renderResult(data, file, isDemo) {
     html += '</ul>';
   }
   if (data.gated) {
-    const remaining = totalIssues - issues.length;
+    // Reframed from a paywall demand to a value exchange: lead with the
+    // concrete finding (what the scan actually caught), then ask where to
+    // send the report, rather than "give us your email to see more."
+    const blockerCount = typeof data.blocker_count === 'number' ? data.blocker_count : totalIssues;
+    const gateHeadline = blockerCount > 0
+      ? blockerCount + ' title-blocking error' + (blockerCount === 1 ? '' : 's') + ' found. Where should we send the secure audit report so you can fix ' + (blockerCount === 1 ? 'it' : 'them') + ' before your deadline?'
+      : 'Where should we send this secure audit report so you can review it before your deadline?';
     html += '<div class="gate-box">';
-    html += '<p class="gate-headline">' + (remaining > 0 ? remaining + ' more issue' + (remaining === 1 ? '' : 's') + ' on this file' : 'See the full itemized report') + '</p>';
-    html += '<p class="gate-sub">Enter your email to see exactly which pages and lines are affected &mdash; still free, no card, no signup.</p>';
-    html += '<div class="gate-form"><input type="email" id="gateEmailInput" placeholder="you@example.com" autocomplete="email" onkeydown="if(event.key===\\'Enter\\')unlockGate()"><button type="button" onclick="unlockGate()">See full report</button></div>';
+    html += '<div class="gate-shield">&#128737; Secure Audit Report</div>';
+    html += '<p class="gate-headline">' + gateHeadline + '</p>';
+    html += '<div class="gate-form"><input type="email" id="gateEmailInput" placeholder="Enter your email to unlock line-by-line fixes" autocomplete="email" onkeydown="if(event.key===\\'Enter\\')unlockGate()"><button type="button" onclick="unlockGate()">Send my report</button></div>';
     html += '<div class="gate-error" id="gateError"></div>';
-    html += '<div class="gate-note">We\\'ll also email you this report. Unsubscribe anytime.</div>';
+    html += '<div class="gate-note">Free, no card, no signup &mdash; unsubscribe anytime.</div>';
     html += '</div>';
     html += '<div class="gate-bridge">Leading a team? <a href="/pricing#brokerage">See how Brokerage auto-checks every agent\\'s offer before it reaches you &rarr;</a></div>';
   } else {
