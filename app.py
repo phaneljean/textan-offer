@@ -627,9 +627,6 @@ def index():
       box-shadow: 0 2px 8px rgba(15,31,47,0.10), 0 12px 40px rgba(15,31,47,0.14);
       overflow: hidden;
     }
-    .mock-result-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; row-gap: 0.4rem; margin: 0.9rem 0 0.85rem; }
-    .mock-filename { font-weight: 700; font-size: 0.85rem; color: var(--text); }
-    .mock-badge { background: rgba(220,38,38,0.12); color: #dc2626; font-size: 0.68rem; font-weight: 700; padding: 0.25rem 0.6rem; border-radius: 9999px; white-space: nowrap; }
     .dark-card-inner {
       position: relative;
       border-radius: 1.75rem;
@@ -830,8 +827,6 @@ def index():
       .input-row { flex-direction: column; }
       .input-btn { width: 100%; }
       .nav { padding: 1rem; }
-      .mock-filename { font-size: 0.78rem; }
-      .mock-badge { font-size: 0.62rem; padding: 0.2rem 0.5rem; }
     }
   </style>
 </head>
@@ -906,42 +901,6 @@ def index():
       <div><div class="stat-num">__TC_STAT2_NUM__</div><div class="stat-label">__TC_STAT2_LABEL__</div></div>
       <div><div class="stat-num">__TC_STAT3_NUM__</div><div class="stat-label">__TC_STAT3_LABEL__</div></div>
     </div>
-  </section>
-
-  <section class="steps" style="padding-top:0.5rem;padding-bottom:1.5rem;">
-    <div class="steps-header" style="margin-bottom:1.75rem;">
-      <div class="steps-kicker">This is what comes back</div>
-      <h2 style="font-size:1.9rem;">A real answer, not a maybe.</h2>
-    </div>
-    <div class="dark-card-wrap" style="max-width:440px;margin:0 auto;">
-      <div class="dark-card-inner" style="padding:0.6rem;">
-        <div class="dash-panel">
-          <div class="chrome-bar">
-            <div class="chrome-dot"></div><div class="chrome-dot"></div><div class="chrome-dot"></div>
-            <span class="chrome-title">TC File Check &mdash; Results</span>
-          </div>
-          <div class="mock-result-header">
-            <span class="mock-filename">123MainSt_TREC2019.pdf</span>
-            <span class="mock-badge">3 issues found</span>
-          </div>
-          <div style="display:flex;flex-direction:column;gap:0.6rem;">
-            <div style="display:flex;align-items:center;gap:0.6rem;">
-              <span style="width:7px;height:7px;border-radius:50%;background:#dc2626;flex-shrink:0;"></span>
-              <span style="font-size:0.82rem;color:var(--text);">Buyer initials missing &mdash; page 5</span>
-            </div>
-            <div style="display:flex;align-items:center;gap:0.6rem;">
-              <span style="width:7px;height:7px;border-radius:50%;background:#dc2626;flex-shrink:0;"></span>
-              <span style="font-size:0.82rem;color:var(--text);">Effective Date is blank &mdash; page 10</span>
-            </div>
-            <div style="display:flex;align-items:center;gap:0.6rem;">
-              <span style="width:7px;height:7px;border-radius:50%;background:#d97706;flex-shrink:0;"></span>
-              <span style="font-size:0.82rem;color:var(--text);">40-11 attached, financing checkbox not checked</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div style="text-align:center;font-size:0.75rem;color:var(--text-dim);margin-top:1rem;">Illustrative example &mdash; your real report reflects your actual file.</div>
   </section>
 
   <section class="steps" id="workflow" style="border-top:none;padding-top:1rem;padding-bottom:2.5rem;">
