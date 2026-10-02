@@ -3287,14 +3287,25 @@ position:sticky;top:0;z-index:100;}
 h1{font-size:2rem;font-weight:800;letter-spacing:-0.03em;margin-bottom:0.5rem;color:var(--text);}
 .subtitle{color:var(--text-muted);font-size:1rem;margin-bottom:2rem;}
 .card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:2rem;box-shadow:0 1px 3px rgba(15,31,47,0.05);}
-.drop-zone{border:2px dashed rgba(15,31,47,0.18);border-radius:var(--radius-sm);padding:3rem 1.5rem;
-text-align:center;cursor:pointer;transition:all 0.2s;}
-.drop-zone:hover,.drop-zone.drag{border-color:var(--accent);background:var(--accent-tint);}
-.drop-zone svg{margin-bottom:0.75rem;}
-.drop-zone .dz-title{font-weight:700;font-size:1rem;margin-bottom:0.25rem;}
-.drop-zone .dz-sub{color:var(--text-dim);font-size:0.85rem;}
-.demo-check-btn{display:block;width:100%;margin-top:0.65rem;padding:0.6rem 1rem;background:none;border:1px dashed rgba(15,31,47,0.18);border-radius:var(--radius-sm);font:inherit;font-size:0.85rem;color:var(--text-muted);cursor:pointer;text-align:center;transition:all 0.2s;}
-.demo-check-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-tint);}
+/* Same minimal drop zone as the homepage widget (see index()) */
+.drop-zone{border:1.5px dashed #d9dee3;border-radius:16px;background:#fff;padding:2.75rem 1.5rem 2.5rem;
+text-align:center;cursor:pointer;transition:border-color 0.18s ease,background 0.18s ease,box-shadow 0.18s ease;}
+.drop-zone:hover{border-color:rgba(11,93,82,0.35);background:#fbfdfc;}
+.drop-zone.drag{border-style:solid;border-color:var(--accent);background:var(--accent-tint);box-shadow:0 0 0 4px rgba(11,93,82,0.18);}
+.drop-zone.drag *{pointer-events:none;}
+.dz-icon{width:56px;height:56px;margin:0 auto 1.1rem;border-radius:14px;background:#f2f4f6;display:flex;align-items:center;justify-content:center;color:#6b7a88;transition:background 0.18s ease,color 0.18s ease;}
+.drop-zone:hover .dz-icon,.drop-zone.drag .dz-icon{background:var(--accent-tint);color:var(--accent);}
+.drop-zone .dz-title{font-weight:600;font-size:1rem;color:var(--text);margin-bottom:0.35rem;}
+.drop-zone .dz-sub{color:var(--text-muted);font-size:0.85rem;}
+.drop-zone .dz-sub u{text-decoration-color:rgba(11,93,82,0.35);text-underline-offset:3px;color:var(--accent);}
+.drop-zone .dz-touch{display:none;}
+@media (hover:none){.drop-zone .dz-mouse{display:none;}.drop-zone .dz-touch{display:inline;}}
+.drop-zone .dz-meta{color:var(--text-dim);font-size:0.75rem;margin-top:0.85rem;}
+.dz-trust{display:flex;justify-content:center;flex-wrap:wrap;gap:0.4rem 1.25rem;margin-top:0.9rem;font-size:0.8rem;color:var(--text-muted);}
+.dz-trust span{display:inline-flex;align-items:center;gap:0.35rem;}
+.dz-trust svg{color:var(--accent);flex-shrink:0;}
+.demo-check-btn{display:block;width:100%;margin-top:1.1rem;padding:0.8rem 1rem;background:#fff;border:1px solid #d9dee3;border-radius:12px;font:inherit;font-size:0.9rem;font-weight:600;color:var(--text);cursor:pointer;text-align:center;transition:all 0.2s;}
+.demo-check-btn:hover{border-color:var(--accent);color:var(--accent);box-shadow:0 4px 14px rgba(11,93,82,0.18);}
 .demo-check-btn:disabled{opacity:0.6;cursor:default;}
 .demo-banner{font-size:0.78rem;font-weight:700;letter-spacing:0.02em;color:var(--text-dim);text-transform:uppercase;margin-bottom:0.5rem;}
 .privacy-note{display:flex;align-items:center;gap:0.45rem;margin-top:0.9rem;font-size:0.8rem;color:var(--text-dim);}
@@ -3394,18 +3405,24 @@ border-radius:var(--radius-sm);font-family:inherit;font-size:0.85rem;font-weight
 <p class="subtitle">Drop a filled TREC 20-19 PDF. We'll tell you what's missing before title kicks it back.</p>
 <div class="card">
 <div class="drop-zone" id="dropZone">
-<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#8a9aa9" stroke-width="1.5"><path d="M12 16V4M12 4l-4 4M12 4l4 4" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-<div class="dz-title">Drop a TREC PDF here, or click to choose</div>
-<div class="dz-sub">AcroForm-fillable PDFs only &mdash; not scanned or flattened files</div>
+<div class="dz-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 13v8"/><path d="m8 17 4-4 4 4"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg></div>
+<div class="dz-title"><span class="dz-mouse">Drop your contract PDF here</span><span class="dz-touch">Choose your contract PDF</span></div>
+<div class="dz-sub"><span class="dz-mouse">or <u>click to browse</u></span><span class="dz-touch"><u>Tap to browse files</u></span></div>
+<div class="dz-meta">Fillable TREC 20-19 PDF &middot; not scanned or flattened files</div>
 </div>
 <input type="file" id="fileInput" accept="application/pdf">
+<div class="dz-trust">
+<span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>Never stored</span>
+<span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Free, no signup</span>
+<span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>Results in seconds</span>
+</div>
 <div class="addendum-toggle" id="addendumToggle">+ Also have the 40-11 Financing Addendum? Add it to check the loan amount &amp; checkboxes match, too.</div>
 <div class="addendum-row" id="addendumRow" hidden>
 <input type="file" id="addendumInput" accept="application/pdf">
 <span class="addendum-filename" id="addendumFileName"></span>
 <button type="button" class="addendum-clear" id="addendumClear" title="Remove">&times;</button>
 </div>
-<button type="button" class="demo-check-btn" id="demoBtn">Don't have a PDF ready? Run a demo check on a sample TREC contract.</button>
+<button type="button" class="demo-check-btn" id="demoBtn">No PDF handy? Run a sample check &rarr;</button>
 <div class="email-optin">
 <label class="email-optin-check"><input type="checkbox" id="emailOptinCheckbox" checked> Email me this report + future checks for this address</label>
 <input type="email" id="emailOptinInput" class="email-optin-input" placeholder="you@example.com" autocomplete="email">
