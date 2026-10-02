@@ -527,39 +527,32 @@ def index():
     .workflow-arrow { color: var(--text-dim); }
 
     /* TC-check upload widget (primary hero CTA) */
-    .drop-zone { position: relative; border: 2px dashed var(--border-hover); border-radius: var(--radius);
-      padding: 2.4rem 1.5rem 1.9rem; text-align: center; cursor: pointer;
-      background: radial-gradient(120% 90% at 50% 0%, #fff 0%, #fff 35%, var(--accent-tint) 100%);
-      transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease; }
-    .drop-zone:hover { border-color: var(--accent); box-shadow: 0 12px 32px var(--accent-glow); transform: translateY(-2px); }
-    .drop-zone.drag { border-style: solid; border-color: var(--accent); background: var(--accent-tint);
-      box-shadow: 0 0 0 6px var(--accent-glow), 0 16px 40px var(--accent-glow); transform: scale(1.015); }
+    .drop-zone { border: 1.5px dashed #d9dee3; border-radius: 16px; background: #fff;
+      padding: 2.75rem 1.5rem 2.5rem; text-align: center; cursor: pointer;
+      transition: border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease; }
+    .drop-zone:hover { border-color: var(--border-hover); background: #fbfdfc; }
+    .drop-zone.drag { border-style: solid; border-color: var(--accent); background: var(--accent-tint); box-shadow: 0 0 0 4px var(--accent-glow); }
     /* Children would otherwise fire dragleave on the zone as the cursor crosses them (flicker) */
     .drop-zone.drag * { pointer-events: none; }
-    .dz-doc { width: 76px; height: 92px; margin: 0 auto 1.1rem; animation: dz-float 3.2s ease-in-out infinite; transition: transform 0.2s ease; }
-    .drop-zone.drag .dz-doc { animation: none; transform: translateY(8px) scale(1.06); }
-    @keyframes dz-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
-    @media (prefers-reduced-motion: reduce) { .dz-doc { animation: none; } .drop-zone:hover { transform: none; } }
-    .drop-zone .dz-title { font-weight: 800; font-size: 1.15rem; letter-spacing: -0.01em; margin-bottom: 0.3rem; color: var(--text); }
-    .drop-zone .dz-title-touch { display: none; }
-    @media (hover: none) { .drop-zone .dz-title-mouse { display: none; } .drop-zone .dz-title-touch { display: inline; } }
+    .dz-icon { width: 56px; height: 56px; margin: 0 auto 1.1rem; border-radius: 14px; background: #f2f4f6;
+      display: flex; align-items: center; justify-content: center; color: #6b7a88; transition: background 0.18s ease, color 0.18s ease; }
+    .drop-zone:hover .dz-icon, .drop-zone.drag .dz-icon { background: var(--accent-tint); color: var(--accent); }
+    .drop-zone .dz-title { font-weight: 600; font-size: 1rem; color: var(--text); margin-bottom: 0.35rem; }
     .drop-zone .dz-sub { color: var(--text-muted); font-size: 0.85rem; }
-    .dz-btn { display: inline-flex; align-items: center; gap: 0.45rem; margin-top: 1.15rem; background: var(--accent); color: #fff;
-      font-weight: 700; font-size: 0.9rem; padding: 0.75rem 1.5rem; border-radius: 999px; box-shadow: 0 6px 18px var(--accent-glow);
-      transition: background 0.2s ease; }
-    .drop-zone:hover .dz-btn { background: var(--accent-light); }
-    .dz-chips { display: flex; justify-content: center; flex-wrap: wrap; gap: 0.4rem; margin-top: 1rem; }
-    .dz-chips span { font-size: 0.7rem; font-weight: 600; color: var(--text-muted); background: #fff; border: 1px solid var(--border);
-      border-radius: 999px; padding: 0.25rem 0.65rem; }
-    .demo-check-btn { display: block; width: 100%; margin-top: 0.9rem; padding: 0.85rem 1rem; background: #fff;
-      border: 2px solid var(--accent); border-radius: 999px; font: inherit; font-size: 0.95rem; font-weight: 700;
-      color: var(--accent); cursor: pointer; text-align: center; transition: var(--transition); }
-    .demo-check-btn:hover { background: var(--accent); color: #fff; box-shadow: 0 8px 22px var(--accent-glow); }
+    .drop-zone .dz-sub u { text-decoration-color: rgba(11,93,82,0.35); text-underline-offset: 3px; color: var(--accent); }
+    .drop-zone .dz-touch { display: none; }
+    @media (hover: none) { .drop-zone .dz-mouse { display: none; } .drop-zone .dz-touch { display: inline; } }
+    .drop-zone .dz-meta { color: var(--text-dim); font-size: 0.75rem; margin-top: 0.85rem; }
+    .dz-trust { display: flex; justify-content: center; flex-wrap: wrap; gap: 0.4rem 1.25rem; margin-top: 0.9rem;
+      font-size: 0.8rem; color: var(--text-muted); }
+    .dz-trust span { display: inline-flex; align-items: center; gap: 0.35rem; }
+    .dz-trust svg { color: var(--accent); flex-shrink: 0; }
+    .demo-check-btn { display: block; width: 100%; margin-top: 1.1rem; padding: 0.8rem 1rem; background: #fff;
+      border: 1px solid #d9dee3; border-radius: 12px; font: inherit; font-size: 0.9rem; font-weight: 600;
+      color: var(--text); cursor: pointer; text-align: center; transition: var(--transition); }
+    .demo-check-btn:hover { border-color: var(--accent); color: var(--accent); box-shadow: 0 4px 14px var(--accent-glow); }
     .demo-check-hint { text-align: center; font-size: 0.78rem; color: var(--text-dim); margin-top: 0.4rem; }
-    .dz-privacy { display: flex; align-items: center; gap: 0.6rem; margin-top: 0.85rem; padding: 0.75rem 1rem;
-      border-radius: var(--radius-sm); background: #fff; border: 1px solid var(--border); font-size: 0.85rem; color: var(--text-muted); }
-    .dz-privacy svg { flex-shrink: 0; color: var(--accent); }
-    .dz-privacy strong { color: var(--text); }
+
     .demo-check-btn:disabled { opacity: 0.6; cursor: default; }
     .demo-banner { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.02em; color: var(--text-dim);
       text-transform: uppercase; margin-bottom: 0.5rem; }
@@ -880,25 +873,17 @@ def index():
     <div class="input-card">
       <div class="input-label">Try it now &mdash; no signup required</div>
       <div class="drop-zone" id="homeDropZone">
-        <svg class="dz-doc" viewBox="0 0 76 92" fill="none" aria-hidden="true">
-          <path d="M8 4h42l18 18v62a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V8a4 4 0 0 1 4-4z" fill="#fff" stroke="#0b5d52" stroke-width="2"/>
-          <path d="M50 4v14a4 4 0 0 0 4 4h14" fill="#E7F3F1" stroke="#0b5d52" stroke-width="2" stroke-linejoin="round"/>
-          <rect x="14" y="30" width="36" height="4" rx="2" fill="#c9dcd8"/>
-          <rect x="14" y="40" width="44" height="4" rx="2" fill="#c9dcd8"/>
-          <rect x="14" y="50" width="28" height="4" rx="2" fill="#c9dcd8"/>
-          <rect x="14" y="60" width="40" height="4" rx="2" fill="#c9dcd8"/>
-          <rect x="0" y="68" width="34" height="16" rx="4" fill="#dc2626"/>
-          <text x="17" y="79.5" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="9" font-weight="800" fill="#fff">PDF</text>
-          <circle cx="60" cy="76" r="12" fill="#0b5d52"/>
-          <path d="M60 81v-10M60 71l-4 4M60 71l4 4" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        <div class="dz-title"><span class="dz-title-mouse">Drop your contract PDF here</span><span class="dz-title-touch">Tap to choose your contract PDF</span></div>
-        <div class="dz-sub">We'll flag what title would kick back &mdash; in seconds.</div>
-        <span class="dz-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M12 4l-4 4M12 4l4 4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>Choose PDF</span>
-        <div class="dz-chips"><span>TREC 20-19</span><span>40-11 addendum</span><span>Free, no signup</span></div>
+        <div class="dz-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 13v8"/><path d="m8 17 4-4 4 4"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg></div>
+        <div class="dz-title"><span class="dz-mouse">Drop your contract PDF here</span><span class="dz-touch">Choose your contract PDF</span></div>
+        <div class="dz-sub"><span class="dz-mouse">or <u>click to browse</u></span><span class="dz-touch"><u>Tap to browse files</u></span></div>
+        <div class="dz-meta">PDF only &middot; TREC 20-19, with or without the 40-11 addendum</div>
       </div>
       <input type="file" id="homeFileInput" accept="application/pdf">
-      <div class="dz-privacy"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span><strong>Never stored.</strong> Your file is processed instantly and discarded the moment your results are ready.</span></div>
+      <div class="dz-trust">
+        <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>Never stored</span>
+        <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Free, no signup</span>
+        <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>Results in seconds</span>
+      </div>
       <div class="status" id="homeStatus"></div>
       <div class="result" id="homeResult"></div>
       <button type="button" class="demo-check-btn" id="homeDemoBtn">No PDF handy? Run a sample check &rarr;</button>
