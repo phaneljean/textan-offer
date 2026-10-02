@@ -441,24 +441,6 @@ def index():
       display: flex; align-items: center; justify-content: center;
       margin-bottom: 1.5rem; color: var(--card-dark);
     }
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.4rem;
-      background: rgba(255,255,255,0.6);
-      backdrop-filter: blur(6px);
-      -webkit-backdrop-filter: blur(6px);
-      border: 1px solid rgba(15,31,47,0.4);
-      color: #0a3a33;
-      font-size: 0.7rem;
-      font-weight: 700;
-      padding: 0.35rem 0.85rem;
-      border-radius: 9999px;
-      width: fit-content;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      margin-bottom: 1.25rem;
-    }
     .hero h1 {
       font-size: 3rem;
       font-weight: 800;
@@ -545,12 +527,30 @@ def index():
     .workflow-arrow { color: var(--text-dim); }
 
     /* TC-check upload widget (primary hero CTA) */
-    .drop-zone { border: 2px dashed rgba(15,31,47,0.18); border-radius: var(--radius-sm); padding: 2rem 1.5rem;
-      text-align: center; cursor: pointer; transition: var(--transition); background: #fff; }
-    .drop-zone:hover, .drop-zone.drag { border-color: var(--accent); background: var(--accent-tint); }
-    .drop-zone svg { margin-bottom: 0.6rem; }
-    .drop-zone .dz-title { font-weight: 700; font-size: 0.95rem; margin-bottom: 0.2rem; }
-    .drop-zone .dz-sub { color: var(--text-dim); font-size: 0.8rem; }
+    .drop-zone { position: relative; border: 2px dashed var(--border-hover); border-radius: var(--radius);
+      padding: 2.4rem 1.5rem 1.9rem; text-align: center; cursor: pointer;
+      background: radial-gradient(120% 90% at 50% 0%, #fff 0%, #fff 35%, var(--accent-tint) 100%);
+      transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease; }
+    .drop-zone:hover { border-color: var(--accent); box-shadow: 0 12px 32px var(--accent-glow); transform: translateY(-2px); }
+    .drop-zone.drag { border-style: solid; border-color: var(--accent); background: var(--accent-tint);
+      box-shadow: 0 0 0 6px var(--accent-glow), 0 16px 40px var(--accent-glow); transform: scale(1.015); }
+    /* Children would otherwise fire dragleave on the zone as the cursor crosses them (flicker) */
+    .drop-zone.drag * { pointer-events: none; }
+    .dz-doc { width: 76px; height: 92px; margin: 0 auto 1.1rem; animation: dz-float 3.2s ease-in-out infinite; transition: transform 0.2s ease; }
+    .drop-zone.drag .dz-doc { animation: none; transform: translateY(8px) scale(1.06); }
+    @keyframes dz-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+    @media (prefers-reduced-motion: reduce) { .dz-doc { animation: none; } .drop-zone:hover { transform: none; } }
+    .drop-zone .dz-title { font-weight: 800; font-size: 1.15rem; letter-spacing: -0.01em; margin-bottom: 0.3rem; color: var(--text); }
+    .drop-zone .dz-title-touch { display: none; }
+    @media (hover: none) { .drop-zone .dz-title-mouse { display: none; } .drop-zone .dz-title-touch { display: inline; } }
+    .drop-zone .dz-sub { color: var(--text-muted); font-size: 0.85rem; }
+    .dz-btn { display: inline-flex; align-items: center; gap: 0.45rem; margin-top: 1.15rem; background: var(--accent); color: #fff;
+      font-weight: 700; font-size: 0.9rem; padding: 0.75rem 1.5rem; border-radius: 999px; box-shadow: 0 6px 18px var(--accent-glow);
+      transition: background 0.2s ease; }
+    .drop-zone:hover .dz-btn { background: var(--accent-light); }
+    .dz-chips { display: flex; justify-content: center; flex-wrap: wrap; gap: 0.4rem; margin-top: 1rem; }
+    .dz-chips span { font-size: 0.7rem; font-weight: 600; color: var(--text-muted); background: #fff; border: 1px solid var(--border);
+      border-radius: 999px; padding: 0.25rem 0.65rem; }
     .demo-check-btn { display: block; width: 100%; margin-top: 0.65rem; padding: 0.6rem 1rem; background: none;
       border: 1px dashed rgba(15,31,47,0.18); border-radius: var(--radius-sm); font: inherit; font-size: 0.82rem;
       color: var(--text-muted); cursor: pointer; text-align: center; transition: var(--transition); }
@@ -864,7 +864,6 @@ def index():
 
   <div class="main">
   <section class="hero section">
-    <div class="badge">Draft &ne; Ready</div>
     <h1>
       Catch what title kicks back<br>
       &mdash; before you send the file.
@@ -877,9 +876,22 @@ def index():
     <div class="input-card">
       <div class="input-label">Try it now &mdash; no signup required</div>
       <div class="drop-zone" id="homeDropZone">
-        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#8a9aa9" stroke-width="1.5"><path d="M12 16V4M12 4l-4 4M12 4l4 4" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        <div class="dz-title">Drop a filled TREC 20-19 PDF here, or click to choose</div>
-        <div class="dz-sub">We'll tell you what's missing before title kicks it back.</div>
+        <svg class="dz-doc" viewBox="0 0 76 92" fill="none" aria-hidden="true">
+          <path d="M8 4h42l18 18v62a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V8a4 4 0 0 1 4-4z" fill="#fff" stroke="#0b5d52" stroke-width="2"/>
+          <path d="M50 4v14a4 4 0 0 0 4 4h14" fill="#E7F3F1" stroke="#0b5d52" stroke-width="2" stroke-linejoin="round"/>
+          <rect x="14" y="30" width="36" height="4" rx="2" fill="#c9dcd8"/>
+          <rect x="14" y="40" width="44" height="4" rx="2" fill="#c9dcd8"/>
+          <rect x="14" y="50" width="28" height="4" rx="2" fill="#c9dcd8"/>
+          <rect x="14" y="60" width="40" height="4" rx="2" fill="#c9dcd8"/>
+          <rect x="0" y="68" width="34" height="16" rx="4" fill="#dc2626"/>
+          <text x="17" y="79.5" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="9" font-weight="800" fill="#fff">PDF</text>
+          <circle cx="60" cy="76" r="12" fill="#0b5d52"/>
+          <path d="M60 81v-10M60 71l-4 4M60 71l4 4" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <div class="dz-title"><span class="dz-title-mouse">Drop your TREC 20-19 PDF here</span><span class="dz-title-touch">Tap to choose your TREC 20-19 PDF</span></div>
+        <div class="dz-sub">We'll flag what title would kick back &mdash; in seconds.</div>
+        <span class="dz-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M12 4l-4 4M12 4l4 4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>Choose PDF</span>
+        <div class="dz-chips"><span>TREC 20-19</span><span>Free, no signup</span><span>Never stored</span></div>
       </div>
       <input type="file" id="homeFileInput" accept="application/pdf">
       <div class="status" id="homeStatus"></div>
