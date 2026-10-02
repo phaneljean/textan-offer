@@ -839,8 +839,7 @@ def index():
 
   <nav class="nav">
     <a href="/" class="nav-left">
-      <div class="nav-logo"><img src="/static/logo.svg" alt="TxtAnOffer"></div>
-      <span>TxtAnOffer</span>
+      <img src="/static/logo-wordmark.png" alt="TxtAnOffer" style="height:26px;width:auto;display:block;">
     </a>
     <div class="nav-links" id="navLinks">
       <a href="#how">How it works</a>
@@ -2467,8 +2466,7 @@ DEMO_FORM = """
 <body>
   <nav class="nav">
     <a href="/" class="nav-left">
-      <div class="nav-logo"><img src="/static/logo.svg" alt="TxtAnOffer"></div>
-      <span>TxtAnOffer</span>
+      <img src="/static/logo-wordmark.png" alt="TxtAnOffer" style="height:26px;width:auto;display:block;">
     </a>
     <div class="nav-links" id="navLinks">
       <a href="/#how">How it works</a>
@@ -3403,8 +3401,7 @@ border-radius:var(--radius-sm);font-family:inherit;font-size:0.85rem;font-weight
 <body>
 <nav class="nav">
 <a href="/" class="nav-left">
-<div class="nav-logo"><img src="/static/logo.svg" alt="TxtAnOffer"></div>
-<span>TxtAnOffer</span>
+<img src="/static/logo-wordmark.png" alt="TxtAnOffer" style="height:26px;width:auto;display:block;">
 </a>
 </nav>
 <div class="container">
@@ -3900,7 +3897,7 @@ def tc_check_bulk_page():
 <style>{_BULK_PAGE_STYLE}</style>
 </head>
 <body>
-<div class="bulk-nav"><a href="/" class="bulk-nav-link"><img src="/static/logo.svg" alt="" class="bulk-logo">TxtAnOffer</a></div>
+<div class="bulk-nav"><a href="/" class="bulk-nav-link"><img src="/static/logo-wordmark.png" alt="TxtAnOffer" style="height:24px;width:auto;display:block;"></a></div>
 <div class="container">
 <h1>Bulk TC File Check</h1>
 <p class="subtitle">Zip up to {FREE_BULK_LIMIT} closed TREC 20-19 files (contracts only, one per transaction) for a free sample report: how many had at least one issue, and which issues showed up most across the batch. Have a Brokerage join code? Check your whole backlog, up to {MAX_BULK_FILES} files, no extra charge.</p>
@@ -3932,7 +3929,7 @@ def tc_check_bulk_submit():
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Bulk TC File Check — TxtAnOffer</title>
 <style>{_BULK_PAGE_STYLE}</style></head><body>
-<div class="bulk-nav"><a href="/" class="bulk-nav-link"><img src="/static/logo.svg" alt="" class="bulk-logo">TxtAnOffer</a></div>
+<div class="bulk-nav"><a href="/" class="bulk-nav-link"><img src="/static/logo-wordmark.png" alt="TxtAnOffer" style="height:24px;width:auto;display:block;"></a></div>
 <div class="container"><h1>Bulk TC File Check</h1>
 <div class="card"><div class="error-box">{escape(message)}</div>
 <a href="/tc-check/bulk">&larr; Try again</a></div></div></body></html>"""
@@ -4013,7 +4010,7 @@ def tc_check_bulk_results(batch_id):
 <meta http-equiv="refresh" content="10">
 <title>Bulk TC File Check — TxtAnOffer</title>
 <style>{_BULK_PAGE_STYLE}</style></head><body>
-<div class="bulk-nav"><a href="/" class="bulk-nav-link"><img src="/static/logo.svg" alt="" class="bulk-logo">TxtAnOffer</a></div>
+<div class="bulk-nav"><a href="/" class="bulk-nav-link"><img src="/static/logo-wordmark.png" alt="TxtAnOffer" style="height:24px;width:auto;display:block;"></a></div>
 <div class="container"><h1>Still checking&hellip;</h1>
 <p class="subtitle">Checking {batch['file_count']} file(s). This page refreshes automatically -- we'll also email the report to {escape(batch['email'])} the moment it's ready.</p>
 </div></body></html>"""
@@ -4024,7 +4021,7 @@ def tc_check_bulk_results(batch_id):
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Bulk TC File Check — TxtAnOffer</title>
 <style>{_BULK_PAGE_STYLE}</style></head><body>
-<div class="bulk-nav"><a href="/" class="bulk-nav-link"><img src="/static/logo.svg" alt="" class="bulk-logo">TxtAnOffer</a></div>
+<div class="bulk-nav"><a href="/" class="bulk-nav-link"><img src="/static/logo-wordmark.png" alt="TxtAnOffer" style="height:24px;width:auto;display:block;"></a></div>
 <div class="container"><h1>Something went wrong</h1>
 <div class="card"><div class="error-box">{escape(batch.get('error') or 'This batch could not be processed.')}</div>
 <a href="/tc-check/bulk">&larr; Try again</a></div></div></body></html>"""
@@ -4058,7 +4055,7 @@ def tc_check_bulk_results(batch_id):
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Bulk TC File Check results — TxtAnOffer</title>
 <style>{_BULK_PAGE_STYLE}</style></head><body>
-<div class="bulk-nav"><a href="/" class="bulk-nav-link"><img src="/static/logo.svg" alt="" class="bulk-logo">TxtAnOffer</a></div>
+<div class="bulk-nav"><a href="/" class="bulk-nav-link"><img src="/static/logo-wordmark.png" alt="TxtAnOffer" style="height:24px;width:auto;display:block;"></a></div>
 <div class="container">
 <h1>Batch results</h1>
 <p class="subtitle">{result['total_files']} file(s) checked, {result['recognized_count']} recognized as a TREC 20-19.</p>
@@ -4110,7 +4107,7 @@ def tc_check_compare_page():
 </style>
 </head>
 <body>
-<div class="bulk-nav"><a href="/" class="bulk-nav-link"><img src="/static/logo.svg" alt="" class="bulk-logo">TxtAnOffer</a></div>
+<div class="bulk-nav"><a href="/" class="bulk-nav-link"><img src="/static/logo-wordmark.png" alt="TxtAnOffer" style="height:24px;width:auto;display:block;"></a></div>
 <div class="container">
 <h1>Compare Contract Versions</h1>
 <p class="subtitle">Upload the original TREC 20-19 and a later version of the same file &mdash; after an amendment, a re-send, or just to double-check nothing drifted. See exactly what changed, what's unchanged, and what's still blank in both. Free, no login, nothing stored.</p>
@@ -4315,8 +4312,7 @@ padding:0.6rem 1.1rem;border-radius:9999px;font-size:0.85rem;font-weight:600;}
 <body>
 <nav class="nav">
 <a href="/" class="nav-left">
-<div class="nav-logo"><img src="/static/logo.svg" alt="TxtAnOffer"></div>
-<span>TxtAnOffer</span>
+<img src="/static/logo-wordmark.png" alt="TxtAnOffer" style="height:26px;width:auto;display:block;">
 </a>
 <div class="nav-links" id="navLinks">
 <a href="/#how">How it works</a>
@@ -4856,8 +4852,7 @@ def pricing():
 
 <nav class="nav">
   <a href="/" class="nav-left">
-    <div class="nav-logo"><img src="/static/logo.svg" alt="TxtAnOffer"></div>
-    <span>TxtAnOffer</span>
+    <img src="/static/logo-wordmark.png" alt="TxtAnOffer" style="height:26px;width:auto;display:block;">
   </a>
   <div class="nav-links" id="navLinks">
     <a href="/#how">How it works</a>
@@ -5171,7 +5166,7 @@ def success():
 </head>
 <body>
   <div class="card">
-    <div class="logo"><a href="/"><img src="/static/logo.svg" alt="TxtAnOffer"></a></div>
+    <div class="logo"><a href="/"><img src="/static/logo-wordmark.png" alt="TxtAnOffer" style="height:30px;width:auto;"></a></div>
     <h1>Welcome aboard!</h1>
     <p class="sub">Your subscription is active. You're all set with <strong>unlimited offers</strong>.</p>
 
@@ -6146,7 +6141,7 @@ def signup():
 </head>
 <body>
   <div class="wrap">
-    <a href="/" class="nav-back"><img src="/static/logo.svg" alt=""><span>&larr; TxtAnOffer</span></a>
+    <a href="/" class="nav-back"><span>&larr;</span><img src="/static/logo-wordmark.png" alt="TxtAnOffer" style="width:auto;height:22px;border-radius:0;"></a>
     <h1>Get started with TxtAnOffer</h1>
     <p class="sub">Enter your phone number to receive offer drafts via SMS at +1 (833) 897-0333.</p>
     <div class="card">
@@ -6263,7 +6258,7 @@ def login():
 </head>
 <body>
 <div class="wrap">
-  <a href="/" class="nav-back"><img src="/static/logo.svg" alt=""><span>&larr; TxtAnOffer</span></a>
+  <a href="/" class="nav-back"><span>&larr;</span><img src="/static/logo-wordmark.png" alt="TxtAnOffer" style="width:auto;height:22px;border-radius:0;"></a>
   <h1>Log In</h1>
   <p class="sub">Enter your phone number and we'll text you a link to your dashboard.</p>
   <div class="card">
@@ -6392,8 +6387,7 @@ def terms():
 <body>
 <nav class="nav">
   <a href="/" class="nav-left">
-    <div class="nav-logo"><img src="/static/logo.svg" alt="TxtAnOffer"></div>
-    <span>TxtAnOffer</span>
+    <img src="/static/logo-wordmark.png" alt="TxtAnOffer" style="height:26px;width:auto;display:block;">
   </a>
   <div class="nav-links" id="navLinks">
     <a href="/#how">How it works</a>
@@ -6658,8 +6652,7 @@ def privacy():
 <body>
 <nav class="nav">
   <a href="/" class="nav-left">
-    <div class="nav-logo"><img src="/static/logo.svg" alt="TxtAnOffer"></div>
-    <span>TxtAnOffer</span>
+    <img src="/static/logo-wordmark.png" alt="TxtAnOffer" style="height:26px;width:auto;display:block;">
   </a>
   <div class="nav-links" id="navLinks">
     <a href="/#how">How it works</a>
@@ -6874,8 +6867,7 @@ def faq():
 <body>
 <nav class="nav">
   <a href="/" class="nav-left">
-    <div class="nav-logo"><img src="/static/logo.svg" alt="TxtAnOffer"></div>
-    <span>TxtAnOffer</span>
+    <img src="/static/logo-wordmark.png" alt="TxtAnOffer" style="height:26px;width:auto;display:block;">
   </a>
   <div class="nav-links" id="navLinks">
     <a href="/#how">How it works</a>
@@ -7087,8 +7079,7 @@ def trec_changes():
 <body>
 <nav class="nav">
   <a href="/" class="nav-left">
-    <div class="nav-logo"><img src="/static/logo.svg" alt="TxtAnOffer"></div>
-    <span>TxtAnOffer</span>
+    <img src="/static/logo-wordmark.png" alt="TxtAnOffer" style="height:26px;width:auto;display:block;">
   </a>
   <div class="nav-links" id="navLinks">
     <a href="/#how">How it works</a>
@@ -7357,8 +7348,7 @@ def tc_hub():
 <body>
 <nav class="nav">
   <a href="/" class="nav-left">
-    <div class="nav-logo"><img src="/static/logo.svg" alt="TxtAnOffer"></div>
-    <span>TxtAnOffer</span>
+    <img src="/static/logo-wordmark.png" alt="TxtAnOffer" style="height:26px;width:auto;display:block;">
   </a>
   <div class="nav-links" id="navLinks">
     <a href="/#how">How it works</a>
@@ -7656,8 +7646,7 @@ def about():
 <body>
 <nav class="nav">
   <a href="/" class="nav-left">
-    <div class="nav-logo"><img src="/static/logo.svg" alt="TxtAnOffer"></div>
-    <span>TxtAnOffer</span>
+    <img src="/static/logo-wordmark.png" alt="TxtAnOffer" style="height:26px;width:auto;display:block;">
   </a>
   <div class="nav-links" id="navLinks">
     <a href="/#how">How it works</a>
@@ -7816,8 +7805,7 @@ def contact():
 <body>
 <nav class="nav">
   <a href="/" class="nav-left">
-    <div class="nav-logo"><img src="/static/logo.svg" alt="TxtAnOffer"></div>
-    <span>TxtAnOffer</span>
+    <img src="/static/logo-wordmark.png" alt="TxtAnOffer" style="height:26px;width:auto;display:block;">
   </a>
   <div class="nav-links" id="navLinks">
     <a href="/#how">How it works</a>
@@ -8072,8 +8060,7 @@ def profile():
 <body>
 <nav class="nav">
   <a href="/" class="nav-left">
-    <div class="nav-logo"><img src="/static/logo.svg" alt="TxtAnOffer"></div>
-    <span>TxtAnOffer</span>
+    <img src="/static/logo-wordmark.png" alt="TxtAnOffer" style="height:26px;width:auto;display:block;">
   </a>
   <div class="nav-links" id="navLinks">
     <a href="/">Home</a>
@@ -9542,8 +9529,7 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
 <body>
 <nav class="nav">
   <a href="/" class="nav-left">
-    <div class="nav-logo"><img src="/static/logo.svg" alt="TxtAnOffer"></div>
-    <span>TxtAnOffer</span>
+    <img src="/static/logo-wordmark.png" alt="TxtAnOffer" style="height:26px;width:auto;display:block;">
   </a>
   <div class="nav-links" id="navLinks">
     <a href="{profile_url}">Edit Profile</a>
