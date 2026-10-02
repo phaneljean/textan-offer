@@ -551,10 +551,15 @@ def index():
     .dz-chips { display: flex; justify-content: center; flex-wrap: wrap; gap: 0.4rem; margin-top: 1rem; }
     .dz-chips span { font-size: 0.7rem; font-weight: 600; color: var(--text-muted); background: #fff; border: 1px solid var(--border);
       border-radius: 999px; padding: 0.25rem 0.65rem; }
-    .demo-check-btn { display: block; width: 100%; margin-top: 0.65rem; padding: 0.6rem 1rem; background: none;
-      border: 1px dashed rgba(15,31,47,0.18); border-radius: var(--radius-sm); font: inherit; font-size: 0.82rem;
-      color: var(--text-muted); cursor: pointer; text-align: center; transition: var(--transition); }
-    .demo-check-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-tint); }
+    .demo-check-btn { display: block; width: 100%; margin-top: 0.9rem; padding: 0.85rem 1rem; background: #fff;
+      border: 2px solid var(--accent); border-radius: 999px; font: inherit; font-size: 0.95rem; font-weight: 700;
+      color: var(--accent); cursor: pointer; text-align: center; transition: var(--transition); }
+    .demo-check-btn:hover { background: var(--accent); color: #fff; box-shadow: 0 8px 22px var(--accent-glow); }
+    .demo-check-hint { text-align: center; font-size: 0.78rem; color: var(--text-dim); margin-top: 0.4rem; }
+    .dz-privacy { display: flex; align-items: center; gap: 0.6rem; margin-top: 0.85rem; padding: 0.75rem 1rem;
+      border-radius: var(--radius-sm); background: #fff; border: 1px solid var(--border); font-size: 0.85rem; color: var(--text-muted); }
+    .dz-privacy svg { flex-shrink: 0; color: var(--accent); }
+    .dz-privacy strong { color: var(--text); }
     .demo-check-btn:disabled { opacity: 0.6; cursor: default; }
     .demo-banner { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.02em; color: var(--text-dim);
       text-transform: uppercase; margin-bottom: 0.5rem; }
@@ -869,7 +874,7 @@ def index():
       &mdash; before you send the file.
     </h1>
     <p class="hero-sub">
-      Drop a filled <strong>TREC 20-19</strong> (and its 40-11 addendum, if you've got one) and see what's missing or inconsistent in seconds &mdash; blank dates, missing initials, mismatched checkboxes, all of it.
+      Drop any filled Texas purchase contract and see what title would kick back &mdash; blank dates, missing initials, mismatched checkboxes &mdash; in seconds.
     </p>
     <p style="font-size:0.85rem;color:var(--accent-dark);font-weight:600;margin-top:0.6rem;">Built to help TCs catch what's missing &mdash; not to replace what you do.</p>
 
@@ -888,15 +893,17 @@ def index():
           <circle cx="60" cy="76" r="12" fill="#0b5d52"/>
           <path d="M60 81v-10M60 71l-4 4M60 71l4 4" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
-        <div class="dz-title"><span class="dz-title-mouse">Drop your TREC 20-19 PDF here</span><span class="dz-title-touch">Tap to choose your TREC 20-19 PDF</span></div>
+        <div class="dz-title"><span class="dz-title-mouse">Drop your contract PDF here</span><span class="dz-title-touch">Tap to choose your contract PDF</span></div>
         <div class="dz-sub">We'll flag what title would kick back &mdash; in seconds.</div>
         <span class="dz-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M12 4l-4 4M12 4l4 4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>Choose PDF</span>
-        <div class="dz-chips"><span>TREC 20-19</span><span>Free, no signup</span><span>Never stored</span></div>
+        <div class="dz-chips"><span>TREC 20-19</span><span>40-11 addendum</span><span>Free, no signup</span></div>
       </div>
       <input type="file" id="homeFileInput" accept="application/pdf">
+      <div class="dz-privacy"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span><strong>Never stored.</strong> Your file is processed instantly and discarded the moment your results are ready.</span></div>
       <div class="status" id="homeStatus"></div>
       <div class="result" id="homeResult"></div>
-      <button type="button" class="demo-check-btn" id="homeDemoBtn">Don't have a PDF ready? Run a demo check on a sample TREC contract.</button>
+      <button type="button" class="demo-check-btn" id="homeDemoBtn">No PDF handy? Run a sample check &rarr;</button>
+      <div class="demo-check-hint">See a real report on a sample TREC contract in 2 seconds.</div>
       <div class="email-optin">
         <label class="email-optin-check"><input type="checkbox" id="homeEmailOptinCheckbox" checked> Email me this report + future checks for this address</label>
         <input type="email" id="homeEmailOptinInput" class="email-optin-input" placeholder="you@example.com" autocomplete="email">
@@ -904,7 +911,6 @@ def index():
       </div>
       <div class="or-divider">or</div>
       <div class="email-forward-note"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 6 10-6"/></svg>Already have it in your inbox? Forward it to <a href="mailto:tc@check.txtanoffer.com">tc@check.txtanoffer.com</a></div>
-      <div class="privacy-note"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Processed instantly and never stored &mdash; discarded the moment your results are ready.</div>
       <div class="privacy-note">&#9203;&nbsp; Takes a minute now &mdash; saves you a callback from title tonight.</div>
     </div>
 
