@@ -949,7 +949,7 @@ def index():
 
   <section class="steps" id="brokers" style="border-top:none;padding-top:1rem;padding-bottom:2.5rem;">
     <div class="sl-row">
-      <div class="sl-media"><img src="/static/home-desk.jpg" alt="A transaction coordinator working calmly from a home office" style="object-position:left center;" loading="lazy"></div>
+      <div class="sl-media"><img src="/static/home-desk.jpg" alt="A transaction coordinator working calmly from a home office" style="object-position:62% center;" loading="lazy"></div>
       <div class="sl-copy">
         <div class="steps-kicker">For TCs &mdash; in-house, independent, or running a roster</div>
         <h2>A second set of eyes, so you can actually log off.</h2>
