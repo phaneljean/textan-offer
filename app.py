@@ -318,7 +318,7 @@ def index():
   <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&display=swap" rel="stylesheet"></noscript>
   <style>
     :root {
       --bg: #F5F5F7;
@@ -429,17 +429,54 @@ def index():
     .nav-toggle { display: none; flex-direction: column; justify-content: center; gap: 5px; width: 34px; height: 34px; background: none; border: none; cursor: pointer; padding: 0; }
     .nav-toggle span { display: block; width: 100%; height: 2px; background: var(--text); border-radius: 2px; }
 
+    /* Sun Life-style hero band: deep teal panel + full-bleed photo */
+    .sl-hero { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); min-height: 470px; position: relative; z-index: 1; }
+    .sl-hero-panel { background: #0a3f3a; color: #fff; padding: 3.5rem 3rem 3.5rem max(2rem, calc((100vw - 1100px) / 2)); display: flex; flex-direction: column; justify-content: center; }
+    .sl-hero-panel h1 { font-family: 'Source Serif 4', Georgia, 'Times New Roman', serif; font-weight: 600; font-size: 2.45rem; line-height: 1.14; letter-spacing: -0.01em; color: #fff; margin: 0; max-width: 30rem; }
+    .sl-hero-panel p { margin: 1.15rem 0 0; color: rgba(255,255,255,0.86); font-size: 1.02rem; line-height: 1.6; max-width: 27rem; }
+    .sl-cta { display: inline-block; margin-top: 1.75rem; background: #f5c242; color: #0f1f2f; font-weight: 700; font-size: 1rem; padding: 0.95rem 1.6rem; border-radius: 4px; text-decoration: none; width: fit-content; transition: background 0.18s ease; }
+    .sl-cta:hover { background: #ffd25e; }
+    .sl-hero-note { margin-top: 0.9rem; font-size: 0.82rem; color: rgba(255,255,255,0.7); }
+    .sl-hero-photo { background: #0f5a52 url('/static/home-hero.jpg') 68% center / cover no-repeat; min-height: 320px; }
+    @media (max-width: 820px) {
+      .sl-hero { grid-template-columns: 1fr; }
+      .sl-hero-photo { order: -1; min-height: 240px; }
+      .sl-hero-panel { padding: 2.25rem 1.5rem 2.5rem; }
+      .sl-hero-panel h1 { font-size: 2rem; }
+    }
+    /* Calm still-life rows (image on cream + plain headline + outlined button) */
+    .sl-row { display: grid; grid-template-columns: 1fr 1fr; gap: 2.5rem; align-items: center; margin: 0 0 2.25rem; text-align: left; }
+    .sl-row.reverse .sl-media { order: 2; }
+    .sl-media { background: #fff6dc; aspect-ratio: 16 / 11; overflow: hidden; }
+    .sl-media img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .sl-copy .steps-kicker { text-align: left; }
+    .sl-copy h2 { font-size: 1.7rem; font-weight: 500; letter-spacing: -0.01em; line-height: 1.25; margin: 0 0 0.75rem; color: var(--text); }
+    .sl-copy p { color: var(--text-muted); line-height: 1.6; margin: 0 0 1.5rem; font-size: 0.98rem; }
+    .sl-outline { display: inline-block; border: 2px solid #0a3f3a; color: #0a3f3a; font-weight: 700; font-size: 0.92rem; padding: 0.75rem 1.4rem; border-radius: 4px; text-decoration: none; transition: background 0.18s ease, color 0.18s ease; }
+    .sl-outline:hover { background: #0a3f3a; color: #fff; }
+    @media (max-width: 760px) {
+      .sl-row { grid-template-columns: 1fr; gap: 1.25rem; }
+      .sl-row.reverse .sl-media { order: 0; }
+    }
+
     /* Main column */
     .main { max-width: 840px; margin: 0 auto; padding: 0 2rem; position: relative; z-index: 1; }
     .section { padding-top: 4.5rem; }
 
     /* Hero */
-    .hero { padding-top: 4rem; padding-bottom: 1rem; }
+    .hero { padding-top: 3.25rem; padding-bottom: 1rem; }
     .icon-circle {
       width: 52px; height: 52px; border-radius: 999px;
       background: var(--accent-tint); border: 1px solid rgba(11,93,82,0.18);
       display: flex; align-items: center; justify-content: center;
       margin-bottom: 1.5rem; color: var(--card-dark);
+    }
+    .hero .check-title {
+      font-size: 2.1rem;
+      font-weight: 800;
+      line-height: 1.1;
+      letter-spacing: -0.025em;
+      max-width: 620px;
     }
     .hero h1 {
       font-size: 3rem;
@@ -860,15 +897,19 @@ def index():
   })();
   </script>
 
+  <section class="sl-hero">
+    <div class="sl-hero-panel">
+      <h1>Closing is complicated.<br>Your file doesn&rsquo;t have to be.</h1>
+      <p>Drop a filled TREC 20-19 and see exactly what title would kick back &mdash; blank dates, missing initials, mismatched checkboxes &mdash; in seconds.</p>
+      <a class="sl-cta" href="#check">Check a file free</a>
+      <div class="sl-hero-note">No signup &middot; Your file is never stored</div>
+    </div>
+    <div class="sl-hero-photo" role="img" aria-label="A father and daughter painting a room in their new home"></div>
+  </section>
+
   <div class="main">
-  <section class="hero section">
-    <h1>
-      Catch what title kicks back<br>
-      &mdash; before you send the file.
-    </h1>
-    <p class="hero-sub">
-      Drop any filled Texas purchase contract and see what title would kick back &mdash; blank dates, missing initials, mismatched checkboxes &mdash; in seconds.
-    </p>
+  <section class="hero section" id="check">
+    <h2 class="check-title">Catch what title kicks back &mdash; before you send the file.</h2>
     <p style="font-size:0.85rem;color:var(--accent-dark);font-weight:600;margin-top:0.6rem;">Built to help TCs catch what's missing &mdash; not to replace what you do.</p>
 
     <div class="input-card">
@@ -904,6 +945,48 @@ def index():
       <div><div class="stat-num">__TC_STAT2_NUM__</div><div class="stat-label">__TC_STAT2_LABEL__</div></div>
       <div><div class="stat-num">__TC_STAT3_NUM__</div><div class="stat-label">__TC_STAT3_LABEL__</div></div>
     </div>
+  </section>
+
+  <section class="steps" id="brokers" style="border-top:none;padding-top:1rem;padding-bottom:2.5rem;">
+    <div class="sl-row">
+      <div class="sl-media"><img src="/static/home-desk.jpg" alt="A transaction coordinator working calmly from a home office" style="object-position:left center;" loading="lazy"></div>
+      <div class="sl-copy">
+        <div class="steps-kicker">For TCs &mdash; in-house, independent, or running a roster</div>
+        <h2>A second set of eyes, so you can actually log off.</h2>
+        <p>You already catch nearly everything by hand. This is for the one blank that slips past even a careful TC &mdash; because it's your name on the file, whether that's one brokerage or six.</p>
+        <a class="sl-outline" href="#check">Check a file free</a>
+      </div>
+    </div>
+    <ul class="tc-checklist">
+      <li><span class="tc-check">&check;</span><span><strong>Effective Date left blank</strong> &mdash; the date every other deadline counts from.</span></li>
+      <li><span class="tc-check">&check;</span><span><strong>Missing buyer or seller initials</strong> &mdash; easy to miss page-by-page, hard to fix once closed.</span></li>
+      <li><span class="tc-check">&check;</span><span><strong>40-11 addendum mismatches</strong> &mdash; loan amount or financing checkbox disagreeing with the contract.</span></li>
+      <li><span class="tc-check">&check;</span><span><strong>39-11 amendment mismatches</strong> &mdash; sales price or property address disagreeing with the original contract.</span></li>
+      <li><span class="tc-check">&check;</span><span><strong>Your whole closed-file backlog</strong> &mdash; free sample checks up to 20 files at once; a Brokerage join code raises that to 200, no extra charge.</span></li>
+      <li><span class="tc-check">&check;</span><span><strong>A text the moment it happens</strong> &mdash; on the Brokerage plan, a real blocker on any agent's file texts you directly, before it ever reaches title.</span></li>
+    </ul>
+    <div class="secondary-cta" style="margin:1.75rem auto 0;padding-top:1.75rem;max-width:560px;text-align:center;">
+      <div class="secondary-cta-label">Running a brokerage or TC team? Get a text the moment any agent's file has a real blocker &mdash; not just an email you have to open.</div>
+      <a href="/pricing#brokerage" class="input-btn" style="display:inline-block;text-decoration:none;">See Brokerage pricing &rarr;</a>
+      <div style="margin-top:0.85rem;"><a href="/tc-check/bulk" style="font-size:0.85rem;color:var(--text-muted);text-decoration:underline;text-underline-offset:2px;">Or try a free 20-file bulk sample right now &rarr;</a></div>
+    </div>
+  </section>
+
+  <section class="steps" id="title" style="border-top:none;padding-top:1rem;padding-bottom:2.5rem;">
+    <div class="sl-row reverse">
+      <div class="sl-media"><img src="/static/home-house.jpg" alt="A home at dusk with the porch lights on" loading="lazy"></div>
+      <div class="sl-copy">
+        <div class="steps-kicker">For title companies</div>
+        <h2>Clean files reach escrow. Closings stay on schedule.</h2>
+        <p>Every broken TREC 20-19 that lands on an escrow officer's desk costs 45&ndash;90 minutes in curative emails back to the agent &mdash; before the file can even close. We'll audit your last 20 kicked-back files free, no obligation.</p>
+        <a class="sl-outline" href="mailto:support@txtanoffer.com?subject=Title%20company%20pilot">Talk to us</a>
+      </div>
+    </div>
+    <ul class="tc-checklist">
+      <li><span class="tc-check">&check;</span><span><strong>Missing signatures &amp; initials</strong> &mdash; a routine reason a file bounces back to the agent.</span></li>
+      <li><span class="tc-check">&check;</span><span><strong>Blank required fields</strong> &mdash; Effective Date, earnest money, escrow agent, and more.</span></li>
+      <li><span class="tc-check">&check;</span><span><strong>Addendum mismatches</strong> &mdash; loan amount or financing terms disagreeing with the contract.</span></li>
+    </ul>
   </section>
 
   <section class="steps" id="workflow" style="border-top:none;padding-top:1rem;padding-bottom:2.5rem;">
@@ -950,44 +1033,6 @@ def index():
       </div>
     </div>
     <div style="text-align:center;font-size:0.8rem;font-weight:600;color:var(--accent-dark);margin-top:1.75rem;">Offer &rarr; Documents &rarr; Compliance &rarr; Signatures &rarr; Communication &rarr; Transaction &rarr; Closing</div>
-  </section>
-
-  <section class="steps" id="brokers" style="border-top:none;padding-top:1rem;padding-bottom:2.5rem;">
-    <div class="steps-header" style="margin-bottom:1.5rem;">
-      <div class="steps-kicker">For TCs &mdash; in-house, independent, or running your own roster of brokerages</div>
-      <h2>What this catches before it costs you.</h2>
-      <p>You already catch nearly everything by hand, page by page. This is the second set of eyes for the one blank that gets past even a careful TC eventually &mdash; and it's usually not the agent who finds out first. It's your name on the file, whether that's one brokerage or six.</p>
-    </div>
-    <ul class="tc-checklist">
-      <li><span class="tc-check">&check;</span><span><strong>Effective Date left blank</strong> &mdash; the date every other deadline counts from.</span></li>
-      <li><span class="tc-check">&check;</span><span><strong>Missing buyer or seller initials</strong> &mdash; easy to miss page-by-page, hard to fix once closed.</span></li>
-      <li><span class="tc-check">&check;</span><span><strong>40-11 addendum mismatches</strong> &mdash; loan amount or financing checkbox disagreeing with the contract.</span></li>
-      <li><span class="tc-check">&check;</span><span><strong>39-11 amendment mismatches</strong> &mdash; sales price or property address disagreeing with the original contract.</span></li>
-      <li><span class="tc-check">&check;</span><span><strong>Your whole closed-file backlog</strong> &mdash; free sample checks up to 20 files at once; a Brokerage join code raises that to 200, no extra charge.</span></li>
-      <li><span class="tc-check">&check;</span><span><strong>A text the moment it happens</strong> &mdash; on the Brokerage plan, a real blocker on any agent's file texts you directly, before it ever reaches title.</span></li>
-    </ul>
-    <div class="secondary-cta" style="margin:1.75rem auto 0;padding-top:1.75rem;max-width:560px;text-align:center;">
-      <div class="secondary-cta-label">Running a brokerage or TC team? Get a text the moment any agent's file has a real blocker &mdash; not just an email you have to open.</div>
-      <a href="/pricing#brokerage" class="input-btn" style="display:inline-block;text-decoration:none;">See Brokerage pricing &rarr;</a>
-      <div style="margin-top:0.85rem;"><a href="/tc-check/bulk" style="font-size:0.85rem;color:var(--text-muted);text-decoration:underline;text-underline-offset:2px;">Or try a free 20-file bulk sample right now &rarr;</a></div>
-    </div>
-  </section>
-
-  <section class="steps" id="title" style="border-top:none;padding-top:1rem;padding-bottom:2.5rem;">
-    <div class="steps-header" style="margin-bottom:1.5rem;">
-      <div class="steps-kicker">For title companies</div>
-      <h2>Catch it before it reaches your escrow team.</h2>
-      <p>Every broken TREC 20-19 that lands on an escrow officer's desk costs 45&ndash;90 minutes in curative emails back to the agent &mdash; before the file can even close.</p>
-    </div>
-    <ul class="tc-checklist">
-      <li><span class="tc-check">&check;</span><span><strong>Missing signatures &amp; initials</strong> &mdash; a routine reason a file bounces back to the agent.</span></li>
-      <li><span class="tc-check">&check;</span><span><strong>Blank required fields</strong> &mdash; Effective Date, earnest money, escrow agent, and more.</span></li>
-      <li><span class="tc-check">&check;</span><span><strong>Addendum mismatches</strong> &mdash; loan amount or financing terms disagreeing with the contract.</span></li>
-    </ul>
-    <div class="secondary-cta" style="margin:1.75rem auto 0;padding-top:1.75rem;max-width:560px;text-align:center;">
-      <div class="secondary-cta-label">We'll audit your last 20 kicked-back files free, no obligation &mdash; see exactly what we'd have caught.</div>
-      <a href="mailto:support@txtanoffer.com?subject=Title%20company%20pilot" class="input-btn" style="display:inline-block;text-decoration:none;">Talk to us &rarr;</a>
-    </div>
   </section>
   </div>
 
