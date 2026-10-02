@@ -5228,6 +5228,36 @@ def stripe_webhook():
     return jsonify(success=True)
 
 
+@app.route("/internal-mode")
+def internal_mode():
+    """Flags this browser as the site owner's own traffic, silently
+    excluded from every /analytics metric from then on (see
+    analytics.py's track_event/_is_internal_traffic). Visit once per
+    browser/device: /internal-mode?token=<ANALYTICS_PASSWORD> to turn on,
+    &off=1 to turn back off (e.g. to see what a real visitor actually
+    sees). Deliberately cookie-based, not IP-based -- home wifi, phone
+    LTE, and a coffee shop are three different IPs for the same person,
+    so an IP allowlist would need constant upkeep and silently stop
+    working the moment it's stale. Reuses ANALYTICS_PASSWORD rather than
+    a second secret to manage."""
+    if not ANALYTICS_PASSWORD:
+        abort(404)
+    token = request.args.get("token", "")
+    if not hmac.compare_digest(token, ANALYTICS_PASSWORD):
+        abort(404)
+    turning_off = request.args.get("off") == "1"
+    resp = make_response(
+        "Internal mode is now OFF for this browser -- your visits will count in /analytics again."
+        if turning_off else
+        "Internal mode is now ON for this browser -- your visits will no longer count in /analytics."
+    )
+    if turning_off:
+        resp.delete_cookie("ta_internal")
+    else:
+        resp.set_cookie("ta_internal", ANALYTICS_PASSWORD, max_age=365 * 24 * 3600, httponly=True, samesite="Lax")
+    return resp
+
+
 @app.route("/analytics")
 def analytics_dashboard():
     if not ANALYTICS_PASSWORD:
