@@ -551,6 +551,7 @@ def index():
       border: 1px solid #d9dee3; border-radius: 12px; font: inherit; font-size: 0.9rem; font-weight: 600;
       color: var(--text); cursor: pointer; text-align: center; transition: var(--transition); }
     .demo-check-btn:hover { border-color: var(--accent); color: var(--accent); box-shadow: 0 4px 14px var(--accent-glow); }
+    #homeResult { scroll-margin-top: 90px; }
     .demo-check-hint { text-align: center; font-size: 0.78rem; color: var(--text-dim); margin-top: 0.4rem; }
 
     .demo-check-btn:disabled { opacity: 0.6; cursor: default; }
@@ -1086,22 +1087,31 @@ def index():
   });
 
   if(demoBtn){
+    var demoLabel = demoBtn.textContent;
     demoBtn.addEventListener('click', function(){
-      var original = demoBtn.textContent;
       demoBtn.disabled = true;
-      demoBtn.textContent = 'Loading sample...';
+      demoBtn.textContent = 'Checking the sample\u2026';
       fetch('/static/sample_trec_20-19.pdf')
         .then(function(r){ return r.blob(); })
         .then(function(blob){
-          demoBtn.textContent = original;
-          demoBtn.disabled = false;
           uploadFile(new File([blob], 'sample_trec_20-19.pdf', {type:'application/pdf'}), true);
         })
-        .catch(function(){
-          demoBtn.textContent = original;
-          demoBtn.disabled = false;
-        });
+        .catch(function(){ demoDone(false); });
     });
+  }
+  // The result renders ABOVE this button (right under the drop zone), so
+  // without this the click looked like a no-op: the button snapped back to
+  // its label instantly and scroll anchoring kept the new result off-screen.
+  function demoDone(ok){
+    if(!demoBtn) return;
+    demoBtn.textContent = ok ? '\u2713 Done \u2014 results above' : 'Couldn\u2019t load the sample. Try again \u2192';
+    setTimeout(function(){ demoBtn.textContent = demoLabel; demoBtn.disabled = false; }, ok ? 3500 : 2500);
+  }
+  function revealResult(){
+    var r = resultEl.getBoundingClientRect();
+    if(r.top < 70 || r.top > window.innerHeight * 0.6){
+      resultEl.scrollIntoView({behavior:'smooth', block:'start'});
+    }
   }
 
   // Same perceived-progress pattern as /tc-check -- one real round trip,
@@ -1160,8 +1170,10 @@ def index():
       .then(function(data){
         statusTimers.forEach(clearTimeout);
         statusEl.classList.remove('show');
-        if(data.error){ renderError(data.error); return; }
+        if(data.error){ renderError(data.error); if(isDemo) demoDone(false); revealResult(); return; }
         renderResult(data, isDemo);
+        if(isDemo) demoDone(true);
+        revealResult();
         if(email){
           emailOptinConfirm.textContent = 'Sent to ' + email;
           emailOptinConfirm.classList.add('show');
@@ -1171,6 +1183,8 @@ def index():
         statusTimers.forEach(clearTimeout);
         statusEl.classList.remove('show');
         renderError('Something went wrong checking that file. Try again.');
+        if(isDemo) demoDone(false);
+        revealResult();
       });
   }
 
@@ -3495,21 +3509,16 @@ fileInput.addEventListener('change', () => {
 });
 
 if (demoBtn) {
+  demoBtn.dataset.label = demoBtn.textContent;
   demoBtn.addEventListener('click', () => {
-    const original = demoBtn.textContent;
     demoBtn.disabled = true;
-    demoBtn.textContent = 'Loading sample...';
+    demoBtn.textContent = 'Checking the sample\u2026';
     fetch('/static/sample_trec_20-19.pdf')
       .then(r => r.blob())
       .then(blob => {
-        demoBtn.textContent = original;
-        demoBtn.disabled = false;
         uploadFile(new File([blob], 'sample_trec_20-19.pdf', {type: 'application/pdf'}), '', true);
       })
-      .catch(() => {
-        demoBtn.textContent = original;
-        demoBtn.disabled = false;
-      });
+      .catch(() => demoDone(false));
   });
   // Arrived here via the homepage's "+N more -- see the full checklist"
   // link on a demo preview: replay the same sample check immediately
@@ -3568,6 +3577,19 @@ addendumClear.addEventListener('click', () => {
 const STATUS_STEPS = ['Scanning TREC 20-19...', 'Checking mandatory fields...', 'Checking initials & consistency...'];
 let statusTimers = [];
 let pendingFile = null;
+
+// The result renders at the bottom of the card, often below the fold --
+// without this the sample button looked like it did nothing (it reset its
+// label instantly and the report appeared off-screen).
+function demoDone(ok) {
+  if (!demoBtn) return;
+  demoBtn.textContent = ok ? '\u2713 Done \u2014 results below' : 'Couldn\u2019t load the sample. Try again \u2192';
+  setTimeout(() => { demoBtn.textContent = demoBtn.dataset.label; demoBtn.disabled = false; }, ok ? 3500 : 2500);
+}
+function revealResult() {
+  const r = resultEl.getBoundingClientRect();
+  if (r.top < 20 || r.top > window.innerHeight * 0.6) resultEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
 let pendingAddendumFile = null;
 
 function uploadFile(file, email, isDemo) {
@@ -3597,9 +3619,13 @@ function uploadFile(file, email, isDemo) {
       statusEl.classList.remove('show');
       if (data.error) {
         renderError(data.error);
+        if (isDemo) demoDone(false);
+        revealResult();
         return;
       }
       renderResult(data, file, isDemo);
+      if (isDemo) demoDone(true);
+      revealResult();
       if (email) {
         emailOptinConfirm.textContent = 'Sent to ' + email;
         emailOptinConfirm.classList.add('show');
@@ -3609,6 +3635,8 @@ function uploadFile(file, email, isDemo) {
       statusTimers.forEach(clearTimeout);
       statusEl.classList.remove('show');
       renderError('Something went wrong checking that file. Try again.');
+      if (isDemo) demoDone(false);
+      revealResult();
     });
 }
 
