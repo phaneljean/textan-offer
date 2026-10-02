@@ -116,6 +116,35 @@ def extract_sender_email(from_field: str) -> str:
     return match.group(0).lower() if match else ""
 
 
+_AUTOMATED_LOCAL_RE = re.compile(r"^(no-?reply|do-?not-?reply|donotreply|mailer-daemon|postmaster|bounces?)", re.I)
+_OWN_DOMAIN = "txtanoffer.com"
+
+
+def junk_sender_reason(sender: str, form) -> str:
+    """Why this inbound message shouldn't get a reply, or "" if it should.
+    Added 2026-10-02 after the intake was found replying to a stream of
+    spam ("donotreplyus@inbox.lv", spoofed "@yale.edu", even its own
+    tc@check.txtanoffer.com address) -- every one of those got an
+    auto-reply, which is backscatter that hurts SendGrid sender reputation,
+    and padded the "files checked" stats on /analytics.
+
+    Uses SendGrid's own SPF/DKIM results ('SPF' e.g. "pass", 'dkim' e.g.
+    "{@gmail.com : pass}"): a real agent forwarding from Gmail/Outlook/a
+    brokerage domain passes at least one; a forged From address passes
+    neither. If SendGrid sent neither field, that check is skipped rather
+    than rejecting everything."""
+    local, _, domain = sender.partition("@")
+    if domain == _OWN_DOMAIN or domain.endswith("." + _OWN_DOMAIN):
+        return "own_domain"
+    if _AUTOMATED_LOCAL_RE.match(local):
+        return "automated_sender"
+    spf = (form.get("SPF") or "").strip().lower()
+    dkim = (form.get("dkim") or "").lower()
+    if (spf or dkim) and spf != "pass" and ": pass" not in dkim:
+        return "auth_failed"
+    return ""
+
+
 def extract_pdf_attachments(files, form) -> list:
     """files: request.files (werkzeug MultiDict), form: request.form.
     Returns up to MAX_ATTACHMENTS werkzeug FileStorage objects whose

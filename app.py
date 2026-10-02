@@ -20,7 +20,7 @@ import os
 import hmac
 import hashlib
 import time
-from urllib.parse import quote as _urlquote
+from urllib.parse import quote as _urlquote, urlparse as _urlparse
 import stripe
 import difflib
 import requests as http_requests
@@ -32,7 +32,7 @@ from pdf_validator import validate_offer_pdf
 from amendment import fill_amendment_pdf
 from agent_profiles import get_agent_profile, save_agent_profile, find_by_email, get_emails_for_phones
 from subscriptions import can_generate_offer, increment_offer_count, activate_subscription, deactivate_subscription, get_user, create_user, FREE_OFFER_LIMIT, is_admin_phone, has_professional_access
-from analytics import track_event, get_conversion_metrics, get_revenue_metrics, get_recent_sms, get_recent_sms_failures, get_last_blocked_state, get_waitlist_signups, get_signups_by_source, get_signup_details, get_landing_visits_by_source, get_tc_check_summary, get_recent_tc_check_email_senders, get_tc_check_count_for_sender, get_tc_check_repeat_senders, get_tc_check_bulk_summary, get_tc_check_attempts_by_source, get_tc_check_attempts_by_page, get_brokerage_alert_delivery
+from analytics import track_event, get_conversion_metrics, get_revenue_metrics, get_recent_sms, get_recent_sms_failures, get_last_blocked_state, get_waitlist_signups, get_signups_by_source, get_signup_details, get_landing_visits_by_source, get_tc_check_summary, get_recent_tc_check_email_senders, get_tc_check_count_for_sender, get_tc_check_repeat_senders, get_tc_check_bulk_summary, get_tc_check_attempts_by_source, get_tc_check_attempts_by_page, get_brokerage_alert_delivery, get_daily_funnel, get_top_referrers
 from integrations import send_offer_email, fire_webhook, save_webhook, get_webhook, delete_webhook, send_to_docusign, send_plain_email, send_html_email
 from offers_db import record_offer, get_offers_for_phone, get_offer_by_filename, record_amendment, get_amendments_for_phone, record_thread_response, record_email_sent, record_docusign_sent
 from brokerages import extract_brokerage_prefix, link_user_to_brokerage, get_brokerage, get_brokerage_by_code, create_brokerage, list_brokerages, list_brokerage_agents
@@ -49,7 +49,7 @@ from rate_limit import check_and_increment
 from tc_gate import get_client as get_tc_client, record_use as record_tc_use, save_email as save_tc_email
 from tc_nudge import run_followup_if_due as run_tc_followup_if_due
 from tc_check_email import (
-    extract_sender_email, extract_pdf_attachments,
+    extract_sender_email, extract_pdf_attachments, junk_sender_reason,
     format_reply_body, format_reply_html, subject_line,
     format_no_pdf_reply, format_no_pdf_html,
     format_unreadable_reply, format_unreadable_html,
@@ -127,6 +127,44 @@ def require_api_auth():
     if not auth.startswith("Bearer ") or not hmac.compare_digest(auth[7:], API_BEARER_TOKEN):
         return jsonify({"error": "Unauthorized"}), 401
     return None
+
+
+import re
+_BOT_UA_RE = re.compile(
+    r"bot|crawl|spider|slurp|preview|facebookexternalhit|embedly|curl|wget|"
+    r"python-requests|httpx|aiohttp|go-http-client|headless|lighthouse|uptime|monitor",
+    re.I,
+)
+
+
+def track_page_view(resp, page: str):
+    """Logs a 'page_view' for every non-bot load of a landing page, tagged
+    or not. Added 2026-10-02: 'landing_visit' only fires on first-touch
+    ?src= links, so organic/typed/shared-link traffic was invisible and
+    there was no real visits -> widget-attempts funnel. Link-preview
+    fetchers (LinkedInBot, Slackbot, iMessage previews...) are skipped by
+    User-Agent so pasting a link somewhere doesn't count as a visit.
+    A random 'ta_vid' cookie lets get_daily_funnel() count unique
+    visitors, not just page loads."""
+    ua = request.headers.get("User-Agent", "")
+    if not ua or _BOT_UA_RE.search(ua):
+        return
+    visitor = request.cookies.get("ta_vid", "")
+    if not re.fullmatch(r"[0-9a-f]{32}", visitor):
+        visitor = uuid.uuid4().hex
+        resp.set_cookie("ta_vid", visitor, max_age=365 * 24 * 3600, httponly=True, samesite="Lax")
+    referrer = (_urlparse(request.referrer or "").hostname or "").lower()
+    if referrer.startswith("www."):
+        referrer = referrer[4:]
+    if referrer == "txtanoffer.com":
+        referrer = "(internal)"
+    src = re.sub(r"[^a-zA-Z0-9_-]", "", request.args.get("src", ""))[:60]
+    track_event("page_view", None, {
+        "page": page,
+        "visitor": visitor,
+        "referrer": referrer,
+        "source": src or request.cookies.get("ta_src") or "direct",
+    })
 
 
 def require_api_or_pdf_signature_auth(pdf_filename, expires, sig):
@@ -1296,6 +1334,7 @@ def index():
     # browser during the same 30-day window don't inflate the count.
     if src and not request.cookies.get("ta_src"):
         track_event("landing_visit", None, {"source": src})
+    track_page_view(resp, "homepage")
     return resp
 
 
@@ -3129,6 +3168,14 @@ def tc_check_email_inbound(token):
     if not sender:
         return "", 200  # nothing usable to reply to or rate-limit on
 
+    # Spam/spoofed/automated senders: no reply (backscatter) and a separate
+    # event type so they stay out of every tc_check metric -- see
+    # junk_sender_reason().
+    junk_reason = junk_sender_reason(sender, request.form)
+    if junk_reason:
+        track_event("tc_check_email_rejected", metadata={"reason": junk_reason, "sender": sender})
+        return "", 200
+
     # Keyed by sender email, not IP -- this traffic is relayed through
     # SendGrid, so the request IP is SendGrid's, not the agent's.
     if not check_and_increment(f"tc_check_email:{sender}", limit=10):
@@ -3782,6 +3829,7 @@ function escapeHtml(s) {
     if src and not request.cookies.get("ta_src"):
         resp.set_cookie("ta_src", src, max_age=30 * 24 * 3600, httponly=True, samesite="Lax")
         track_event("landing_visit", None, {"source": src})
+    track_page_view(resp, "tc_check_page")
     return resp
 
 
@@ -5273,6 +5321,8 @@ def analytics_dashboard():
     waitlist_signups = get_waitlist_signups(limit=200)
     signups_by_source = get_signups_by_source(days=30)
     landing_visits_by_source = get_landing_visits_by_source(days=30)
+    daily_funnel = get_daily_funnel(days=14)
+    top_referrers = get_top_referrers(days=30)
     tc_check_attempts_by_source = get_tc_check_attempts_by_source(days=30)
     tc_check_attempts_by_page = get_tc_check_attempts_by_page(days=30)
     tc_check_summary = get_tc_check_summary(days=30)
@@ -5352,6 +5402,14 @@ def analytics_dashboard():
     visit_rows = "".join(
         f"<tr><td>{v['source']}</td><td>{v['count']}</td><td>{v['count_24h']}</td></tr>" for v in landing_visits_by_source_merged
     ) or '<tr><td colspan="3" style="padding:10px;color:#666;">No tagged visits yet.</td></tr>'
+    daily_rows = "".join(
+        f"<tr><td>{d['date'][5:]}</td><td>{d['visitors']}</td><td>{d['views']}</td><td>{d['attempts']}</td>"
+        f"<td>{d['demos']}</td><td>{d['recognized']}</td><td>{d['emails_captured']}</td><td>{d['email_checks']}</td><td>{d['email_junk']}</td></tr>"
+        for d in daily_funnel
+    )
+    referrer_rows = "".join(
+        f"<tr><td>{escape(r['referrer'])}</td><td>{r['count']}</td></tr>" for r in top_referrers
+    ) or '<tr><td colspan="2" style="padding:10px;color:#666;">No page views recorded yet.</td></tr>'
     tc_attempt_rows = "".join(
         f"<tr><td>{a['source']}</td><td>{a['count']}</td><td>{a['count_24h']}</td></tr>" for a in tc_check_attempts_by_source_merged
     ) or '<tr><td colspan="3" style="padding:10px;color:#666;">No attempts yet.</td></tr>'
@@ -5388,6 +5446,37 @@ body{{font-family:system-ui;max-width:800px;margin:40px auto;padding:20px;}}
 </style></head><body>
 <h1>TxtAnOffer Analytics</h1>
 <h2>Last 30 Days</h2>
+<div class="metric">
+  <h3>Daily Funnel (last 14 days, UTC)</h3>
+  <div style="overflow-x:auto;">
+  <table style="width:100%;border-collapse:collapse;margin-top:10px;font-size:14px;">
+    <tr style="background:#eee;text-align:left;">
+      <th style="padding:6px;">Day</th>
+      <th style="padding:6px;">Visitors</th>
+      <th style="padding:6px;">Page views</th>
+      <th style="padding:6px;">Widget attempts</th>
+      <th style="padding:6px;">Sample used</th>
+      <th style="padding:6px;">Recognized</th>
+      <th style="padding:6px;">Emails captured</th>
+      <th style="padding:6px;">Email checks</th>
+      <th style="padding:6px;">Junk filtered</th>
+    </tr>
+    {daily_rows}
+  </table>
+  </div>
+  <p class="label" style="margin-top:8px;">Visitors = unique non-bot browsers loading <code>/</code> or <code>/tc-check</code>, tagged or not (tracked from 2026-10-02; earlier days show 0). Widget attempts = real uploads on the web, excluding the sample file. Email checks exclude filtered junk senders.</p>
+</div>
+<div class="metric">
+  <h3>Top Referrers (30 days)</h3>
+  <table style="width:100%;border-collapse:collapse;margin-top:10px;">
+    <tr style="background:#eee;text-align:left;">
+      <th style="padding:8px;">Referring site</th>
+      <th style="padding:8px;">Page views</th>
+    </tr>
+    {referrer_rows}
+  </table>
+  <p class="label" style="margin-top:8px;">"(none)" = typed URL, bookmark, or an app that strips the referrer (LinkedIn's mobile app does).</p>
+</div>
 <div class="metric">
   <h3>Conversion Funnel</h3>
   <div class="value">{metrics['overall_conversion_rate']}%</div>

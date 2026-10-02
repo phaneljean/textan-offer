@@ -337,6 +337,90 @@ def get_tc_check_attempts_by_page(days: int = 30) -> list:
         key=lambda r: -r["count"]
     )
 
+
+def get_daily_funnel(days: int = 14) -> list:
+    """One row per UTC day, newest first: visitors -> widget attempts ->
+    recognized files, plus email intake. Added 2026-10-02: every other
+    metric on /analytics is a 30-day or 24h total, so "when did traffic
+    stop?" had no answer. Visitors come from 'page_view' (every non-bot
+    load of / and /tc-check, tagged or not -- unlike 'landing_visit',
+    which only fires on ?src= links); days before page_view existed show
+    0 visitors, not missing data. Every day in the window gets a row, so a
+    dead day reads as an explicit row of zeros instead of a gap."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cutoff = (datetime.utcnow() - timedelta(days=days)).isoformat()
+    cursor.execute("""
+        SELECT event_type, metadata, created_at FROM events
+        WHERE created_at > ? AND event_type IN
+            ('page_view', 'tc_check_attempted', 'tc_check_demo_used', 'tc_check', 'tc_check_email_captured', 'tc_check_email_rejected')
+    """, (cutoff,))
+    rows = cursor.fetchall()
+    conn.close()
+
+    import json
+    today = datetime.utcnow().date()
+    by_day = {}
+    for i in range(days):
+        d = (today - timedelta(days=i)).isoformat()
+        by_day[d] = {"date": d, "visitors": set(), "views": 0, "attempts": 0, "demos": 0,
+                     "recognized": 0, "emails_captured": 0, "email_checks": 0, "email_junk": 0}
+    for event_type, metadata_json, created_at in rows:
+        day = by_day.get(created_at[:10])
+        if day is None:
+            continue
+        metadata = json.loads(metadata_json) if metadata_json else {}
+        if event_type == "page_view":
+            day["views"] += 1
+            day["visitors"].add(metadata.get("visitor") or "")
+        elif event_type == "tc_check_attempted":
+            day["attempts"] += 1
+        elif event_type == "tc_check_demo_used":
+            day["demos"] += 1
+        elif event_type == "tc_check_email_rejected":
+            day["email_junk"] += 1
+        elif event_type == "tc_check_email_captured":
+            day["emails_captured"] += 1
+        elif event_type == "tc_check":
+            if metadata.get("source") == "email":
+                day["email_checks"] += 1
+            elif metadata.get("recognized"):
+                day["recognized"] += 1
+
+    result = []
+    for d in sorted(by_day, reverse=True):
+        day = by_day[d]
+        day["visitors"] = len(day["visitors"])
+        result.append(day)
+    return result
+
+
+def get_top_referrers(days: int = 30, limit: int = 15) -> list:
+    """Referring site for 'page_view' events, by host ("" -> "(none)": typed
+    URL, bookmark, or an app that strips the Referer such as LinkedIn's
+    mobile app). Complements the ?src= tables, which only see tagged links."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cutoff = (datetime.utcnow() - timedelta(days=days)).isoformat()
+    cursor.execute("""
+        SELECT metadata FROM events
+        WHERE event_type = 'page_view' AND created_at > ?
+    """, (cutoff,))
+    rows = cursor.fetchall()
+    conn.close()
+
+    import json
+    counts = {}
+    for row in rows:
+        metadata = json.loads(row[0]) if row[0] else {}
+        ref = metadata.get("referrer") or "(none)"
+        counts[ref] = counts.get(ref, 0) + 1
+
+    return sorted(
+        [{"referrer": ref, "count": count} for ref, count in counts.items()],
+        key=lambda r: -r["count"]
+    )[:limit]
+
 TC_ISSUE_LABELS = {
     "unrecognized": "Not a recognized TREC 20-19 template",
     "address": "Property address blank",
