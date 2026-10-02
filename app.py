@@ -1221,9 +1221,10 @@ def index():
     // only once the email gate is already cleared (email on file, or this
     // particular file had nothing to gate), same as /tc-check's own
     // buildUpsellCta(). Never shown alongside the gate itself: the gate's
-    // one job is getting an email, and a second, bigger ask ($40/mo) right
-    // next to it would just split attention on the step that's already
-    // converting worst (2% capture as of 2026-09-11).
+    // one job is getting an email, and a second ask right next to it would
+    // just split attention. Since 2026-10-02 the card leads with the free
+    // 3-offer trial (/signup) instead of $40/mo checkout -- the trial is
+    // the step that was getting zero traffic from TC Check.
     if(!isDemo && !data.gated && totalIssues > 0){
       html += buildIndividualUpgradeCard();
     }
@@ -1234,11 +1235,8 @@ def index():
   function buildIndividualUpgradeCard(){
     return '<div class="individual-upsell">'
       + '<p class="individual-upsell-lead">Filling this out by hand? TxtAnOffer drafts a TREC 20-19 by text message instead &mdash; address, price, and closing date auto-fill correctly, so there\\'s nothing left for a check like this to catch.</p>'
-      + '<form action="/create-checkout-session" method="POST" style="margin:0;">'
-      +   '<input type="hidden" name="plan" value="starter">'
-      +   '<button type="submit" class="individual-upsell-btn">Upgrade to Individual &mdash; Instant Checkout ($40/mo) &rarr;</button>'
-      + '</form>'
-      + '<div class="individual-upsell-alt">Want to try it free first? <a href="/pricing">3 offers, no card required &rarr;</a></div>'
+      + '<a href="/signup" class="individual-upsell-btn" style="display:block;text-align:center;text-decoration:none;">Draft your next offer free &mdash; 3 offers, no card &rarr;</a>'
+      + '<div class="individual-upsell-alt">Already sold? <a href="/pricing">See plans &rarr;</a></div>'
       + '</div>';
   }
 
@@ -3638,24 +3636,23 @@ function buildUpsellCta(issues) {
     else if (BLANK_FIELD_KEYS.has(issue.key)) blankCount++;
   }
   if (addendumCount > 0) {
-    return '<div class="fixit-cta"><p>This file&rsquo;s financing addendum doesn&rsquo;t agree with the contract itself &mdash; the kind of mismatch that only happens when a loan amount gets retyped by hand in two places. TxtAnOffer fills it once and uses it everywhere, so the 40-11 and the contract can never disagree.</p><a href="/pricing">See how it works &rarr;</a></div>';
+    return '<div class="fixit-cta"><p>This file&rsquo;s financing addendum doesn&rsquo;t agree with the contract itself &mdash; the kind of mismatch that only happens when a loan amount gets retyped by hand in two places. TxtAnOffer fills it once and uses it everywhere, so the 40-11 and the contract can never disagree.</p><a href="/signup">Draft your next offer free &mdash; 3 offers, no card &rarr;</a></div>';
   }
   if (blankCount >= 2) {
-    return '<div class="fixit-cta"><p>Tired of chasing agents to fill in blank fields? TxtAnOffer&rsquo;s review screen physically blocks emailing the listing agent until every required TREC field is filled in.</p><a href="/pricing">See how it works &rarr;</a></div>';
+    return '<div class="fixit-cta"><p>Tired of chasing agents to fill in blank fields? TxtAnOffer&rsquo;s review screen physically blocks emailing the listing agent until every required TREC field is filled in.</p><a href="/signup">Draft your next offer free &mdash; 3 offers, no card &rarr;</a></div>';
   }
-  return '<div class="fixit-cta"><p>Every gap above happened because this file was filled out by hand. TxtAnOffer drafts the 20-19 by text message, so these fields are never blank to begin with.</p><a href="/pricing">See how it works &rarr;</a></div>';
+  return '<div class="fixit-cta"><p>Every gap above happened because this file was filled out by hand. TxtAnOffer drafts the 20-19 by text message, so these fields are never blank to begin with.</p><a href="/signup">Draft your next offer free &mdash; 3 offers, no card &rarr;</a></div>';
 }
 
 // Shown once a report has actually been delivered (email on file, or a
 // clean/complete result) -- the point where the old flow just went dead.
 // Two guided next steps instead of a static stop: run another file right
-// here, or route the next one by email; plus a standing, always-visible
-// pitch to Managing Brokers, since there's no per-visitor role signal to
-// gate it on -- same honest tradeoff as the gate-bridge line above.
+// here, or route the next one by email. The Brokerage pitch that used to
+// sit here was removed 2026-10-02 so buildUpsellCta()'s free-offer signup
+// is the one sales ask after a report.
 function buildNextStepCta() {
   return '<div class="next-step-cta">' +
     '<p class="next-step-lead">Want to test another file? <a href="#" onclick="resetForm();return false;">Check another one &rarr;</a><br>Or forward your next deal straight to us: <a href="mailto:tc@check.txtanoffer.com">tc@check.txtanoffer.com</a></p>' +
-    '<div class="broker-cta"><p>Want your entire team&rsquo;s files checked automatically?</p><a href="/pricing#brokerage" class="broker-cta-btn">Set Up Brokerage SMS Alerts &rarr;</a></div>' +
   '</div>';
 }
 
