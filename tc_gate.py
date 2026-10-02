@@ -8,9 +8,10 @@ unlimited going forward. This is a lead-gen/product gate, not the abuse
 guard (that's the per-IP throttle in rate_limit.py, which still applies
 regardless of email status).
 
-use_count is no longer used to gate anything (that was the old
-3-free-checks design) -- it's kept purely as a usage metric (how many
-files a TC ran before/after giving an email).
+use_count gates again as of 2026-10-02: a browser's first
+TC_FREE_FULL_REPORTS checks (app.py) get the full itemized report, and
+only later checks without an email get the preview. It's also still the
+usage metric (how many files a TC ran before/after giving an email).
 
 Backed by the same SQLite DB as everything else in this app
 (subscriptions.db on Railway's persistent volume).

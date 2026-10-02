@@ -108,6 +108,21 @@ API_BEARER_TOKEN = os.environ.get("API_BEARER_TOKEN", "")
 # Analytics dashboard password
 ANALYTICS_PASSWORD = os.environ.get("ANALYTICS_PASSWORD", "")
 
+# Public-facing TC Check stats (homepage stat strip, upload-gate social
+# proof, /tc-hub "Common TC Mistakes"). Off as of 2026-10-02: the 30-day
+# window was almost entirely the owner's own test uploads (mostly blank
+# templates), so "N files scanned, 100% missing buyer name" was true of
+# the event log but false as a claim about real Texas contracts. Turn
+# back on only once real third-party files dominate the sample -- check
+# /analytics' Daily Funnel and Recent Email Senders first.
+PUBLIC_TC_STATS_ENABLED = False
+
+# Free full reports per browser before the email gate applies (see
+# tc_check()). 3, not 1: the homepage widget hands its file to /tc-check
+# for the full checklist, which re-runs the check, so a 1-check allowance
+# would gate the visitor on that very click-through.
+TC_FREE_FULL_REPORTS = 3
+
 # TC Check email-forward intake: SendGrid Inbound Parse has no request
 # signing, so this shared secret lives in the webhook path itself
 # (/v1/tc/check/email/<token>) -- see tc_check_email_inbound()'s docstring.
@@ -1296,7 +1311,7 @@ def index():
     # (see MIN_SAMPLE) falls back to plain, factual generic copy instead.
     MIN_SAMPLE = 5
     tc_stats = get_tc_check_summary(days=30)
-    if tc_stats["recognized"] >= MIN_SAMPLE:
+    if PUBLIC_TC_STATS_ENABLED and tc_stats["recognized"] >= MIN_SAMPLE:
         pct_incomplete = round(100 - tc_stats["completion_rate"], 1)
         top_issue = tc_stats["issue_frequency"][0] if tc_stats["issue_frequency"] else None
         stat1_num, stat1_label = str(tc_stats["recognized"]), "TREC 20-19 files scanned by TC File Check (last 30 days)"
@@ -3021,7 +3036,13 @@ def tc_check():
         email_just_captured = True
         track_event("tc_check_email_captured", submitted_email, {"client_id": cid, "source_page": source_page})
 
-    gate_cleared = is_demo or bool(client["email"])
+    # client["use_count"] was read before record_tc_use() above, so it's
+    # the number of checks this browser ran BEFORE this one. Loosened
+    # 2026-10-02 from "preview until email" (2 of 56 web checks gave one):
+    # the first TC_FREE_FULL_REPORTS checks show everything, with an
+    # optional "email me this report" ask instead of a wall.
+    free_report = not client["email"] and client["use_count"] < TC_FREE_FULL_REPORTS
+    gate_cleared = is_demo or bool(client["email"]) or free_report
 
     # Deduped per file -- initials/addendum checks can fire multiple times
     # per file (once per page), and issue_frequency's "% of recognized
@@ -3069,7 +3090,7 @@ def tc_check():
         # built from too small a sample to be honest, and never a fixed
         # string that would silently go stale as real usage changes it.
         tc_stats = get_tc_check_summary(days=30)
-        if tc_stats["recognized"] >= 5:
+        if PUBLIC_TC_STATS_ENABLED and tc_stats["recognized"] >= 5:
             proof = f"{tc_stats['recognized']} files checked in the last 30 days — {tc_stats['completion_rate']:g}% came back complete."
             top_issue = tc_stats["issue_frequency"][0] if tc_stats["issue_frequency"] else None
             if top_issue:
@@ -3077,6 +3098,8 @@ def tc_check():
             payload["social_proof"] = proof
     else:
         payload["gated"] = False
+    if not is_demo and not client["email"]:
+        payload["free_reports_left"] = max(TC_FREE_FULL_REPORTS - client["use_count"] - 1, 0)
 
     resp = jsonify(payload)
 
@@ -3677,6 +3700,21 @@ function buildNextStepCta() {
   '</div>';
 }
 
+// Optional email ask under a free full report -- never blocks anything.
+// Reuses unlockGate(), which re-runs the check with the email attached so
+// the server both saves it and sends the full report to the inbox.
+function buildEmailReportAsk(left) {
+  const leftText = left > 0
+    ? left + ' more free full report' + (left === 1 ? '' : 's') + ' on this browser, then we ask for an email.'
+    : 'That was your last free full report on this browser -- add an email to keep getting them.';
+  return '<div class="gate-box">' +
+    '<p class="gate-headline">Want this report in your inbox?</p>' +
+    '<div class="gate-form"><input type="email" id="gateEmailInput" placeholder="work email" autocomplete="email" onkeydown="if(event.key===\\'Enter\\')unlockGate()"><button type="button" onclick="unlockGate()">Email me this report</button></div>' +
+    '<div class="gate-error" id="gateError"></div>' +
+    '<div class="gate-note">' + leftText + ' Your file is never stored.</div>' +
+  '</div>';
+}
+
 function resetForm() {
   resultEl.classList.remove('show');
   resultEl.innerHTML = '';
@@ -3737,7 +3775,7 @@ function renderResult(data, file, isDemo) {
     html += '<div class="gate-box">';
     html += '<div class="gate-shield">&#128737; Secure Audit Report</div>';
     html += '<p class="gate-headline">' + gateHeadline + '</p>';
-    html += '<p class="gate-sub">Enter your email to see the exact pages and lines &mdash; your file is never stored.</p>';
+    html += '<p class="gate-sub">You&rsquo;ve used your free full reports on this browser. Enter your email to see the exact pages and lines &mdash; your file is never stored.</p>';
     html += '<div class="gate-form"><input type="email" id="gateEmailInput" placeholder="work email" autocomplete="email" onkeydown="if(event.key===\\'Enter\\')unlockGate()"><button type="button" onclick="unlockGate()">See my bounce report</button></div>';
     html += '<div class="gate-error" id="gateError"></div>';
     if (data.social_proof) {
@@ -3752,6 +3790,7 @@ function renderResult(data, file, isDemo) {
       html += '<button class="download-btn" onclick="downloadReport(this)">Download report</button>';
       html += buildUpsellCta(issues);
     }
+    if (!isDemo && typeof data.free_reports_left === 'number') html += buildEmailReportAsk(data.free_reports_left);
     if (!isDemo) html += buildNextStepCta();
   }
   resultEl.innerHTML = html;
@@ -5584,7 +5623,7 @@ body{{font-family:system-ui;max-width:800px;margin:40px auto;padding:20px;}}
   <h3>TC File Check &rarr; Email Capture</h3>
   <div class="value">{tc_check_summary['email_capture_rate']}%</div>
   <div class="label">Of web uploads (/tc-check), gave an email (opt-in checkbox before upload, or to unlock the full report)</div>
-  <p>{tc_check_summary['emails_captured']} emails / {tc_check_summary['web_count']} web checks &mdash; re-gated 2026-09-10: an anonymous first-time browser now only sees a preview until this happens (see tc_gate.py)</p>
+  <p>{tc_check_summary['emails_captured']} emails / {tc_check_summary['web_count']} web checks &mdash; since 2026-10-02 each browser gets {TC_FREE_FULL_REPORTS} free full reports before the email gate (was: preview-only from the first check, 2026-09-10)</p>
   <p class="h24">Last 24h: {tc_check_summary_24h['emails_captured']} / {tc_check_summary_24h['web_count']}</p>
 </div>
 <div class="metric">
@@ -7184,6 +7223,8 @@ def tc_hub():
     knowledge. "2026 Changes" links out to the already-built
     /trec-changes page rather than duplicating it."""
     summary = get_tc_check_summary(days=30)
+    if not PUBLIC_TC_STATS_ENABLED:
+        summary = dict(summary, recognized=0, issue_frequency=[])
     mistake_rows = ""
     for issue in summary["issue_frequency"][:8]:
         mistake_rows += (
@@ -7197,8 +7238,9 @@ def tc_hub():
         f"Based on {summary['recognized']} real TREC 20-19 files run through TC Check in the last 30 days, "
         f"updated live &mdash; not a static list."
         if summary["recognized"] > 0 else
-        "TC Check hasn't audited enough files in the last 30 days to show a live breakdown yet -- "
-        "run one at /tc-check and this section starts filling in with real data."
+        "Not enough real-world files have been audited yet to publish an honest breakdown. "
+        "The fields TC Check flags most often are blank initials, the Effective Date, and the "
+        "escrow, title and earnest-money fields -- run your own file at /tc-check to see where yours stands."
     )
 
     html = """<!DOCTYPE html>
