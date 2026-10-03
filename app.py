@@ -1172,7 +1172,7 @@ def index():
       <a href="mailto:support@txtanoffer.com">Support</a>
     </div>
     <div class="footer-copy">
-      &copy; 2026 TxtAnOffer &middot; Operated by Phanel &middot; Texas, United States &middot; Not affiliated with TREC
+      &copy; 2026 TxtAnOffer &middot; Texas, United States &middot; Not affiliated with TREC
     </div>
   </footer>
 
