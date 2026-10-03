@@ -32,7 +32,7 @@ from pdf_validator import validate_offer_pdf
 from amendment import fill_amendment_pdf
 from agent_profiles import get_agent_profile, save_agent_profile, find_by_email, get_emails_for_phones
 from subscriptions import can_generate_offer, increment_offer_count, activate_subscription, deactivate_subscription, get_user, create_user, FREE_OFFER_LIMIT, is_admin_phone, has_professional_access
-from analytics import track_event, get_conversion_metrics, get_revenue_metrics, get_recent_sms, get_recent_sms_failures, get_last_blocked_state, get_waitlist_signups, get_signups_by_source, get_signup_details, get_landing_visits_by_source, get_tc_check_summary, get_recent_tc_check_email_senders, get_tc_check_count_for_sender, get_tc_check_repeat_senders, get_tc_check_bulk_summary, get_tc_check_attempts_by_source, get_tc_check_attempts_by_page, get_brokerage_alert_delivery, get_daily_funnel, get_top_referrers
+from analytics import track_event, get_conversion_metrics, get_revenue_metrics, get_recent_sms, get_recent_sms_failures, get_last_blocked_state, get_waitlist_signups, get_signups_by_source, get_signup_details, get_landing_visits_by_source, get_tc_check_summary, get_recent_tc_check_email_senders, get_tc_check_count_for_sender, get_tc_check_repeat_senders, get_tc_check_bulk_summary, get_tc_check_attempts_by_source, get_tc_check_attempts_by_page, get_brokerage_alert_delivery, get_daily_funnel, get_top_referrers, set_internal_visitor
 from integrations import send_offer_email, fire_webhook, save_webhook, get_webhook, delete_webhook, send_to_docusign, send_plain_email, send_html_email
 from offers_db import record_offer, get_offers_for_phone, get_offer_by_filename, record_amendment, get_amendments_for_phone, record_thread_response, record_email_sent, record_docusign_sent
 from brokerages import extract_brokerage_prefix, link_user_to_brokerage, get_brokerage, get_brokerage_by_code, create_brokerage, list_brokerages, list_brokerage_agents
@@ -5386,6 +5386,11 @@ def internal_mode():
         resp.delete_cookie("ta_internal")
     else:
         resp.set_cookie("ta_internal", ANALYTICS_PASSWORD, max_age=365 * 24 * 3600, httponly=True, samesite="Lax")
+    # Also flag this browser's anonymous visitor id, so page views it logged
+    # before internal mode was turned on drop out of the Daily Funnel too.
+    visitor = request.cookies.get("ta_vid", "")
+    if re.fullmatch(r"[0-9a-f]{32}", visitor):
+        set_internal_visitor(visitor, not turning_off)
     return resp
 
 

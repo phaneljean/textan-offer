@@ -35,6 +35,13 @@ def init_analytics_tables():
     cursor = conn.cursor()
 
     cursor.execute("""
+        CREATE TABLE IF NOT EXISTS internal_visitors (
+            visitor TEXT PRIMARY KEY,
+            created_at TEXT NOT NULL
+        )
+    """)
+
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS events (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             event_type TEXT NOT NULL,
@@ -46,6 +53,29 @@ def init_analytics_tables():
 
     conn.commit()
     conn.close()
+
+def set_internal_visitor(visitor: str, internal: bool):
+    """Remembers (or forgets) a browser's ta_vid as the owner's own. The
+    ta_internal cookie already stops NEW events from that browser; this
+    also lets get_daily_funnel()/get_top_referrers() drop page views it
+    logged BEFORE /internal-mode was opened there."""
+    conn = sqlite3.connect(DB_PATH)
+    if internal:
+        conn.execute("INSERT OR IGNORE INTO internal_visitors (visitor, created_at) VALUES (?, ?)",
+                     (visitor, datetime.utcnow().isoformat()))
+    else:
+        conn.execute("DELETE FROM internal_visitors WHERE visitor = ?", (visitor,))
+    conn.commit()
+    conn.close()
+
+
+def _internal_visitor_ids() -> set:
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        return {r[0] for r in conn.execute("SELECT visitor FROM internal_visitors")}
+    finally:
+        conn.close()
+
 
 def track_event(event_type: str, phone: str = None, metadata: dict = None):
     """Track an analytics event. Silently a no-op for the site owner's own
@@ -365,11 +395,14 @@ def get_daily_funnel(days: int = 14) -> list:
         d = (today - timedelta(days=i)).isoformat()
         by_day[d] = {"date": d, "visitors": set(), "views": 0, "attempts": 0, "demos": 0,
                      "recognized": 0, "emails_captured": 0, "email_checks": 0, "email_junk": 0}
+    internal = _internal_visitor_ids()
     for event_type, metadata_json, created_at in rows:
         day = by_day.get(created_at[:10])
         if day is None:
             continue
         metadata = json.loads(metadata_json) if metadata_json else {}
+        if event_type == "page_view" and metadata.get("visitor") in internal:
+            continue
         if event_type == "page_view":
             day["views"] += 1
             day["visitors"].add(metadata.get("visitor") or "")
@@ -410,9 +443,12 @@ def get_top_referrers(days: int = 30, limit: int = 15) -> list:
     conn.close()
 
     import json
+    internal = _internal_visitor_ids()
     counts = {}
     for row in rows:
         metadata = json.loads(row[0]) if row[0] else {}
+        if metadata.get("visitor") in internal:
+            continue
         ref = metadata.get("referrer") or "(none)"
         counts[ref] = counts.get(ref, 0) + 1
 
