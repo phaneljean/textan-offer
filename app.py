@@ -152,6 +152,49 @@ _BOT_UA_RE = re.compile(
 )
 
 
+_MOBILE_UA_RE = re.compile(r"Mobi|Android|iPhone|iPad|iPod", re.I)
+_ENGAGEMENT_TYPES = ("hero_cta", "hero_sample", "dropzone_seen", "stay_10s", "stay_60s")
+
+# Tiny, cookie-less-of-its-own beacon script appended to every page that
+# track_page_view() logs. Elements opt in with data-evt="<type>" for clicks;
+# the drop zone (homepage or /tc-check) reports once when half-visible, and
+# a visible-time counter reports a 10s / 60s stay, so /analytics can tell "left in 5
+# seconds" apart from "read it but never scrolled to the drop box".
+_ENGAGEMENT_JS = """<script>
+(function(){
+  var page = document.body.getAttribute('data-page') || '';
+  var sent = {};
+  function evt(t){
+    if(sent[t]) return; sent[t] = true;
+    try{ var f = new FormData(); f.append('type', t); f.append('page', page);
+      if(!(navigator.sendBeacon && navigator.sendBeacon('/v1/evt', f))) fetch('/v1/evt', {method:'POST', body:f, keepalive:true}); }catch(e){}
+  }
+  document.addEventListener('click', function(e){
+    var el = e.target.closest && e.target.closest('[data-evt]');
+    if(el) evt(el.getAttribute('data-evt'));
+  }, true);
+  var dz = document.getElementById('homeDropZone') || document.getElementById('dropZone');
+  if(dz && 'IntersectionObserver' in window){
+    new IntersectionObserver(function(es, o){ es.forEach(function(x){ if(x.isIntersecting){ evt('dropzone_seen'); o.disconnect(); } }); }, {threshold:0.5}).observe(dz);
+  }
+  // Visible time, not wall-clock: a link opened in a background tab only
+  // starts counting once the visitor actually looks at it.
+  var visibleMs = 0, last = Date.now();
+  var tick = setInterval(function(){
+    var now = Date.now();
+    if(!document.hidden) visibleMs += now - last;
+    last = now;
+    if(visibleMs >= 10000) evt('stay_10s');
+    if(visibleMs >= 60000){ evt('stay_60s'); clearInterval(tick); }
+  }, 1000);
+})();
+</script>"""
+
+
+def _is_mobile_request() -> bool:
+    return bool(_MOBILE_UA_RE.search(request.headers.get("User-Agent", "")))
+
+
 def track_page_view(resp, page: str):
     """Logs a 'page_view' for every non-bot load of a landing page, tagged
     or not. Added 2026-10-02: 'landing_visit' only fires on first-touch
@@ -164,6 +207,9 @@ def track_page_view(resp, page: str):
     ua = request.headers.get("User-Agent", "")
     if not ua or _BOT_UA_RE.search(ua):
         return
+    html = resp.get_data(as_text=True)
+    if "</body>" in html:
+        resp.set_data(html.replace("<body>", '<body data-page="' + page + '">', 1).replace("</body>", _ENGAGEMENT_JS + "</body>", 1))
     visitor = request.cookies.get("ta_vid", "")
     if not re.fullmatch(r"[0-9a-f]{32}", visitor):
         visitor = uuid.uuid4().hex
@@ -179,7 +225,27 @@ def track_page_view(resp, page: str):
         "visitor": visitor,
         "referrer": referrer,
         "source": src or request.cookies.get("ta_src") or "direct",
+        "device": "mobile" if _is_mobile_request() else "desktop",
     })
+
+
+@app.route("/v1/evt", methods=["POST"])
+def engagement_event():
+    """Beacon target for _ENGAGEMENT_JS. Fixed whitelist of event types and
+    pages, tied to the same ta_vid as page_view so the Daily Funnel can
+    count unique visitors per step. Always 204 -- nothing for a caller to
+    act on, and nothing worth erroring about."""
+    ua = request.headers.get("User-Agent", "")
+    etype = request.form.get("type", "")
+    page = request.form.get("page", "")
+    visitor = request.cookies.get("ta_vid", "")
+    if (ua and not _BOT_UA_RE.search(ua) and etype in _ENGAGEMENT_TYPES
+            and page in ("homepage", "tc_check_page") and re.fullmatch(r"[0-9a-f]{32}", visitor)):
+        track_event("page_engagement", None, {
+            "type": etype, "page": page, "visitor": visitor,
+            "device": "mobile" if _is_mobile_request() else "desktop",
+        })
+    return "", 204
 
 
 def require_api_or_pdf_signature_auth(pdf_filename, expires, sig):
@@ -436,6 +502,14 @@ def index():
     .sl-hero-panel p { margin: 1.15rem 0 0; color: rgba(255,255,255,0.86); font-size: 1.02rem; line-height: 1.6; max-width: 27rem; }
     .sl-cta { display: inline-block; margin-top: 1.75rem; background: #f5c242; color: #0f1f2f; font-weight: 700; font-size: 1rem; padding: 0.95rem 1.6rem; border-radius: 4px; text-decoration: none; width: fit-content; transition: background 0.18s ease; }
     .sl-cta:hover { background: #ffd25e; }
+    .sl-hero-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.9rem 1.25rem; margin-top: 1.75rem; }
+    .sl-hero-actions .sl-cta { margin-top: 0; }
+    .sl-cta-secondary { background: none; border: 0; padding: 0.5rem 0; font: inherit; font-size: 0.98rem; font-weight: 600; color: #fff; text-decoration: underline; text-underline-offset: 4px; text-decoration-color: rgba(255,255,255,0.45); cursor: pointer; }
+    .sl-cta-secondary:hover { text-decoration-color: #fff; }
+    .sl-cta-secondary:disabled { opacity: 0.75; cursor: default; }
+    .sl-hero-phone { display: none; margin-top: 1rem; font-size: 0.86rem; line-height: 1.5; color: rgba(255,255,255,0.85); }
+    .sl-hero-phone a { color: #f5c242; font-weight: 600; }
+    @media (max-width: 820px), (hover: none) { .sl-hero-phone { display: block; } }
     .sl-hero-note { margin-top: 0.9rem; font-size: 0.82rem; color: rgba(255,255,255,0.7); }
     .sl-hero-photo { background: #0f5a52 url('/static/home-hero.jpg') 68% center / cover no-repeat; min-height: 320px; }
     @media (max-width: 820px) {
@@ -901,8 +975,12 @@ def index():
     <div class="sl-hero-panel">
       <h1>Closing is complicated.<br>Your file doesn&rsquo;t have to be.</h1>
       <p>Drop a filled TREC 20-19 and see exactly what title would kick back &mdash; blank dates, missing initials, mismatched checkboxes &mdash; in seconds.</p>
-      <a class="sl-cta" href="#check">Check a file free</a>
+      <div class="sl-hero-actions">
+        <a class="sl-cta" href="#check" data-evt="hero_cta">Check a file free</a>
+        <button type="button" class="sl-cta-secondary" id="heroSampleBtn" data-evt="hero_sample">See a sample report &rarr;</button>
+      </div>
       <div class="sl-hero-note">No signup &middot; Your file is never stored</div>
+      <div class="sl-hero-phone">On your phone? Forward the contract email to <a href="mailto:tc@check.txtanoffer.com">tc@check.txtanoffer.com</a> &mdash; the report comes back by email.</div>
     </div>
     <div class="sl-hero-photo" role="img" aria-label="A father and daughter painting a room in their new home"></div>
   </section>
@@ -1144,6 +1222,19 @@ def index():
         .catch(function(){ demoDone(false); });
     });
   }
+  // Hero "See a sample report" runs the same sample check as the button
+  // under the drop zone, so phone visitors (who rarely have a TREC PDF on
+  // the phone) get a real report without scrolling two screens down first.
+  var heroSampleBtn = document.getElementById('heroSampleBtn');
+  if(heroSampleBtn && demoBtn){
+    var heroSampleLabel = heroSampleBtn.textContent;
+    heroSampleBtn.addEventListener('click', function(){
+      if(demoBtn.disabled) return;
+      heroSampleBtn.disabled = true;
+      heroSampleBtn.textContent = 'Checking the sample\u2026';
+      demoBtn.click();
+    });
+  }
   // The result renders ABOVE this button (right under the drop zone), so
   // without this the click looked like a no-op: the button snapped back to
   // its label instantly and scroll anchoring kept the new result off-screen.
@@ -1151,6 +1242,7 @@ def index():
     if(!demoBtn) return;
     demoBtn.textContent = ok ? '\u2713 Done \u2014 results above' : 'Couldn\u2019t load the sample. Try again \u2192';
     setTimeout(function(){ demoBtn.textContent = demoLabel; demoBtn.disabled = false; }, ok ? 3500 : 2500);
+    if(heroSampleBtn){ heroSampleBtn.textContent = heroSampleLabel; heroSampleBtn.disabled = false; }
   }
   function revealResult(){
     var r = resultEl.getBoundingClientRect();
@@ -5491,7 +5583,8 @@ def analytics_dashboard():
         f"<tr><td>{v['source']}</td><td>{v['count']}</td><td>{v['count_24h']}</td></tr>" for v in landing_visits_by_source_merged
     ) or '<tr><td colspan="3" style="padding:10px;color:#666;">No tagged visits yet.</td></tr>'
     daily_rows = "".join(
-        f"<tr><td>{d['date'][5:]}</td><td>{d['visitors']}</td><td>{d['views']}</td><td>{d['attempts']}</td>"
+        f"<tr><td>{d['date'][5:]}</td><td>{d['visitors']}</td><td>{d['mobile']}</td><td>{d['stay_10s']}</td><td>{d['hero_cta']}</td>"
+        f"<td>{d['hero_sample']}</td><td>{d['dropzone_seen']}</td><td>{d['attempts']}</td>"
         f"<td>{d['demos']}</td><td>{d['recognized']}</td><td>{d['emails_captured']}</td><td>{d['email_checks']}</td><td>{d['email_junk']}</td></tr>"
         for d in daily_funnel
     )
@@ -5541,7 +5634,11 @@ body{{font-family:system-ui;max-width:800px;margin:40px auto;padding:20px;}}
     <tr style="background:#eee;text-align:left;">
       <th style="padding:6px;">Day</th>
       <th style="padding:6px;">Visitors</th>
-      <th style="padding:6px;">Page views</th>
+      <th style="padding:6px;">On phone</th>
+      <th style="padding:6px;">Stayed 10s+</th>
+      <th style="padding:6px;">Clicked &ldquo;Check a file&rdquo;</th>
+      <th style="padding:6px;">Hero sample</th>
+      <th style="padding:6px;">Saw drop box</th>
       <th style="padding:6px;">Widget attempts</th>
       <th style="padding:6px;">Sample used</th>
       <th style="padding:6px;">Recognized</th>
@@ -5552,7 +5649,7 @@ body{{font-family:system-ui;max-width:800px;margin:40px auto;padding:20px;}}
     {daily_rows}
   </table>
   </div>
-  <p class="label" style="margin-top:8px;">Visitors = unique non-bot browsers loading <code>/</code> or <code>/tc-check</code>, tagged or not (tracked from 2026-10-02; earlier days show 0). Widget attempts = real uploads on the web, excluding the sample file. Email checks exclude filtered junk senders.</p>
+  <p class="label" style="margin-top:8px;">Visitors = unique non-bot browsers loading <code>/</code> or <code>/tc-check</code>, tagged or not (tracked from 2026-10-02; earlier days show 0). Phone / stayed / clicked / saw drop box are unique visitors (tracked from 2026-10-03). Visitors minus &ldquo;Stayed 10s+&rdquo; &asymp; bounced. &ldquo;Sample used&rdquo; counts every sample run (hero button or the one under the drop box). Widget attempts = real uploads, excluding the sample. Email checks exclude junk senders from 2026-10-02 on.</p>
 </div>
 <div class="metric">
   <h3>Top Referrers (30 days)</h3>

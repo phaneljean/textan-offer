@@ -383,7 +383,7 @@ def get_daily_funnel(days: int = 14) -> list:
     cursor.execute("""
         SELECT event_type, metadata, created_at FROM events
         WHERE created_at > ? AND event_type IN
-            ('page_view', 'tc_check_attempted', 'tc_check_demo_used', 'tc_check', 'tc_check_email_captured', 'tc_check_email_rejected')
+            ('page_view', 'page_engagement', 'tc_check_attempted', 'tc_check_demo_used', 'tc_check', 'tc_check_email_captured', 'tc_check_email_rejected')
     """, (cutoff,))
     rows = cursor.fetchall()
     conn.close()
@@ -393,7 +393,8 @@ def get_daily_funnel(days: int = 14) -> list:
     by_day = {}
     for i in range(days):
         d = (today - timedelta(days=i)).isoformat()
-        by_day[d] = {"date": d, "visitors": set(), "views": 0, "attempts": 0, "demos": 0,
+        by_day[d] = {"date": d, "visitors": set(), "mobile": set(), "hero_cta": set(), "hero_sample": set(),
+                     "dropzone_seen": set(), "stay_10s": set(), "views": 0, "attempts": 0, "demos": 0,
                      "recognized": 0, "emails_captured": 0, "email_checks": 0, "email_junk": 0}
     internal = _internal_visitor_ids()
     for event_type, metadata_json, created_at in rows:
@@ -401,11 +402,17 @@ def get_daily_funnel(days: int = 14) -> list:
         if day is None:
             continue
         metadata = json.loads(metadata_json) if metadata_json else {}
-        if event_type == "page_view" and metadata.get("visitor") in internal:
+        if event_type in ("page_view", "page_engagement") and metadata.get("visitor") in internal:
             continue
         if event_type == "page_view":
             day["views"] += 1
             day["visitors"].add(metadata.get("visitor") or "")
+            if metadata.get("device") == "mobile":
+                day["mobile"].add(metadata.get("visitor") or "")
+        elif event_type == "page_engagement":
+            key = metadata.get("type")
+            if key in ("hero_cta", "hero_sample", "dropzone_seen", "stay_10s"):
+                day[key].add(metadata.get("visitor") or "")
         elif event_type == "tc_check_attempted":
             day["attempts"] += 1
         elif event_type == "tc_check_demo_used":
@@ -423,7 +430,8 @@ def get_daily_funnel(days: int = 14) -> list:
     result = []
     for d in sorted(by_day, reverse=True):
         day = by_day[d]
-        day["visitors"] = len(day["visitors"])
+        for key in ("visitors", "mobile", "hero_cta", "hero_sample", "dropzone_seen", "stay_10s"):
+            day[key] = len(day[key])
         result.append(day)
     return result
 
