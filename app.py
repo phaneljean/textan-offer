@@ -32,7 +32,7 @@ from pdf_validator import validate_offer_pdf
 from amendment import fill_amendment_pdf
 from agent_profiles import get_agent_profile, save_agent_profile, find_by_email, get_emails_for_phones
 from subscriptions import can_generate_offer, increment_offer_count, activate_subscription, deactivate_subscription, get_user, create_user, FREE_OFFER_LIMIT, is_admin_phone, has_professional_access
-from analytics import track_event, get_conversion_metrics, get_revenue_metrics, get_recent_sms, get_recent_sms_failures, get_last_blocked_state, get_waitlist_signups, get_signups_by_source, get_signup_details, get_landing_visits_by_source, get_tc_check_summary, get_recent_tc_check_email_senders, get_tc_check_count_for_sender, get_tc_check_repeat_senders, get_tc_check_bulk_summary, get_tc_check_attempts_by_source, get_tc_check_attempts_by_page, get_brokerage_alert_delivery, get_daily_funnel, get_top_referrers, set_internal_visitor
+from analytics import track_event, get_conversion_metrics, get_revenue_metrics, get_recent_sms, get_recent_sms_failures, get_last_blocked_state, get_waitlist_signups, get_signups_by_source, get_signup_details, get_landing_visits_by_source, get_tc_check_summary, get_recent_tc_check_email_senders, get_tc_check_count_for_sender, get_tc_check_repeat_senders, get_tc_check_bulk_summary, get_tc_check_attempts_by_source, get_tc_check_attempts_by_page, get_brokerage_alert_delivery, get_daily_funnel, get_top_referrers, set_internal_visitor, get_visitor_roles
 from integrations import send_offer_email, fire_webhook, save_webhook, get_webhook, delete_webhook, send_to_docusign, send_plain_email, send_html_email
 from offers_db import record_offer, get_offers_for_phone, get_offer_by_filename, record_amendment, get_amendments_for_phone, record_thread_response, record_email_sent, record_docusign_sent
 from brokerages import extract_brokerage_prefix, link_user_to_brokerage, get_brokerage, get_brokerage_by_code, create_brokerage, list_brokerages, list_brokerage_agents
@@ -145,6 +145,11 @@ def require_api_auth():
 
 
 import re
+# "What brings you here?" self-ID card (added 2026-10-06). An audience
+# test, not a feature: is the traffic actually TCs/brokers, or agents,
+# investors and lookers? Order here is the order shown on the card.
+_VISITOR_ROLES = ("tc", "agent", "broker", "investor", "browsing")
+
 _BOT_UA_RE = re.compile(
     r"bot|crawl|spider|slurp|preview|facebookexternalhit|embedly|curl|wget|"
     r"python-requests|httpx|aiohttp|go-http-client|headless|lighthouse|uptime|monitor",
@@ -153,7 +158,8 @@ _BOT_UA_RE = re.compile(
 
 
 _MOBILE_UA_RE = re.compile(r"Mobi|Android|iPhone|iPad|iPod", re.I)
-_ENGAGEMENT_TYPES = ("hero_cta", "hero_sample", "dropzone_seen", "stay_10s", "stay_60s")
+_ENGAGEMENT_TYPES = ("hero_cta", "hero_sample", "dropzone_seen", "stay_10s", "stay_60s",
+                     "role_shown", "role_dismissed") + tuple("role_" + r for r in _VISITOR_ROLES)
 
 # Tiny, cookie-less-of-its-own beacon script appended to every page that
 # track_page_view() logs. Elements opt in with data-evt="<type>" for clicks;
@@ -185,8 +191,37 @@ _ENGAGEMENT_JS = """<script>
     if(!document.hidden) visibleMs += now - last;
     last = now;
     if(visibleMs >= 10000) evt('stay_10s');
+    if(visibleMs >= 8000) askRole();
     if(visibleMs >= 60000){ evt('stay_60s'); clearInterval(tick); }
   }, 1000);
+  // Optional one-tap "What brings you here?" card. Once answered or
+  // closed it never comes back in this browser.
+  var asked = false;
+  function seen(){ try{ return localStorage.getItem('ta_role'); }catch(e){ return null; } }
+  function remember(v){ try{ localStorage.setItem('ta_role', v); }catch(e){} }
+  function askRole(){
+    if(asked) return; asked = true;
+    if(seen()) return;
+    var roles = [['tc','Transaction Coordinator'],['agent','Real Estate Agent'],['broker','Broker'],['investor','Investor'],['browsing','Just checking it out']];
+    var box = document.createElement('div');
+    box.setAttribute('role', 'dialog'); box.setAttribute('aria-label', 'What brings you here?');
+    box.style.cssText = 'position:fixed;right:16px;bottom:16px;left:auto;z-index:9999;width:320px;max-width:calc(100vw - 32px);background:#fff;color:#0f1f2f;border:1px solid rgba(15,31,47,0.12);border-radius:14px;box-shadow:0 10px 30px rgba(15,31,47,0.18);padding:14px 14px 10px;font:14px/1.4 Inter,-apple-system,sans-serif;';
+    var html = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><strong style="font-size:15px;">What brings you here?</strong>'
+      + '<button type="button" data-x="1" aria-label="Close" style="border:0;background:none;font-size:20px;line-height:1;color:#8a9aa9;cursor:pointer;padding:2px 6px;">&times;</button></div>'
+      + '<div style="color:#5a6b7a;font-size:12px;margin-bottom:8px;">Optional, one tap. I&rsquo;m a&hellip;</div>';
+    for(var i=0;i<roles.length;i++){
+      html += '<button type="button" data-r="' + roles[i][0] + '" style="display:inline-block;margin:0 6px 6px 0;padding:7px 11px;border:1px solid rgba(15,31,47,0.12);border-radius:999px;background:#F5F5F7;color:#0f1f2f;font:inherit;cursor:pointer;">' + roles[i][1] + '</button>';
+    }
+    box.innerHTML = html;
+    box.addEventListener('click', function(e){
+      var b = e.target.closest && e.target.closest('button'); if(!b) return;
+      var r = b.getAttribute('data-r');
+      if(r){ evt('role_' + r); remember(r); box.innerHTML = '<div style="padding:4px 2px;">Thanks!</div>'; setTimeout(function(){ box.remove(); }, 1200); }
+      else if(b.getAttribute('data-x')){ evt('role_dismissed'); remember('dismissed'); box.remove(); }
+    });
+    document.body.appendChild(box);
+    evt('role_shown');
+  }
 })();
 </script>"""
 
@@ -3071,7 +3106,8 @@ def tc_check():
 
     is_demo = request.form.get("is_demo") == "1"
     if is_demo:
-        track_event("tc_check_demo_used", metadata={"source": request.cookies.get("ta_src") or "direct", "source_page": source_page})
+        track_event("tc_check_demo_used", metadata={"source": request.cookies.get("ta_src") or "direct", "source_page": source_page,
+                                                    "visitor": request.cookies.get("ta_vid", "")})
     else:
         # Fires on every real attempt -- success, wrong file type, corrupted
         # PDF, all of it -- unlike the 'tc_check' event below, which only fires
@@ -3082,7 +3118,8 @@ def tc_check():
         # the same ta_src first-touch cookie as landing_visit so a channel's
         # visits -> attempts -> recognized/complete funnel is fully visible,
         # not just the last two steps.
-        track_event("tc_check_attempted", metadata={"source": request.cookies.get("ta_src") or "direct", "source_page": source_page})
+        track_event("tc_check_attempted", metadata={"source": request.cookies.get("ta_src") or "direct", "source_page": source_page,
+                                                    "visitor": request.cookies.get("ta_vid", "")})
 
     # Product gate re-added 2026-09-10 (see tc_gate.py's own history) --
     # this comment previously said "no product gate," which stopped being
@@ -5502,6 +5539,7 @@ def analytics_dashboard():
     signups_by_source = get_signups_by_source(days=30)
     landing_visits_by_source = get_landing_visits_by_source(days=30)
     daily_funnel = get_daily_funnel(days=14)
+    visitor_roles = get_visitor_roles()
     top_referrers = get_top_referrers(days=30)
     tc_check_attempts_by_source = get_tc_check_attempts_by_source(days=30)
     tc_check_attempts_by_page = get_tc_check_attempts_by_page(days=30)
@@ -5588,6 +5626,17 @@ def analytics_dashboard():
         f"<td>{d['demos']}</td><td>{d['recognized']}</td><td>{d['emails_captured']}</td><td>{d['email_checks']}</td><td>{d['email_junk']}</td></tr>"
         for d in daily_funnel
     )
+    role_rows = "".join(
+        f"<tr><td>{r['label']}</td><td>{r['count']}</td><td>{r['pct']}%</td><td>{r['checked']}</td><td>{r['demoed']}</td></tr>"
+        for r in visitor_roles["roles"]
+    )
+    _target = sum(r["count"] for r in visitor_roles["roles"] if r["key"] in ("tc", "broker"))
+    role_summary = (
+        f"Since {visitor_roles['since']}: {visitor_roles['visitors']} unique visitors &middot; card shown to {visitor_roles['shown']} "
+        f"&middot; {visitor_roles['answered']} answered &middot; {visitor_roles['dismissed']} closed it. "
+        f"<strong>Target audience (TC + Broker): {_target} of {visitor_roles['answered']} answers.</strong>"
+        if visitor_roles["since"] else "Card hasn't been shown to anyone yet."
+    )
     referrer_rows = "".join(
         f"<tr><td>{escape(r['referrer'])}</td><td>{r['count']}</td></tr>" for r in top_referrers
     ) or '<tr><td colspan="2" style="padding:10px;color:#666;">No page views recorded yet.</td></tr>'
@@ -5651,6 +5700,12 @@ body{{font-family:system-ui;max-width:800px;margin:40px auto;padding:20px;}}
   </div>
   <p class="label" style="margin-top:8px;">Visitors = unique non-bot browsers loading <code>/</code> or <code>/tc-check</code>, tagged or not (tracked from 2026-10-02; earlier days show 0). Phone / stayed / clicked / saw drop box are unique visitors (tracked from 2026-10-03). Visitors minus &ldquo;Stayed 10s+&rdquo; &asymp; bounced. &ldquo;Sample used&rdquo; counts every sample run (hero button or the one under the drop box). Widget attempts = real uploads, excluding the sample. Email checks exclude junk senders from 2026-10-02 on.</p>
 </div>
+<div class="metric">
+  <h3>What Brings You Here? (self-ID card)</h3>
+  <p style="color:#666;font-size:13px;">{role_summary} "Ran a check" / "Tried sample" = same browser later used the widget.</p>
+  <table><tr><th>Role</th><th>Answers</th><th>% of answers</th><th>Ran a check</th><th>Tried sample</th></tr>{role_rows}</table>
+</div>
+
 <div class="metric">
   <h3>Top Referrers (30 days)</h3>
   <table style="width:100%;border-collapse:collapse;margin-top:10px;">

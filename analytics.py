@@ -877,3 +877,61 @@ def get_brokerage_alert_delivery(days: int = 30) -> dict:
     }
 
 init_analytics_tables()
+
+
+def get_visitor_roles() -> dict:
+    """Tally for the "What brings you here?" self-ID card (added
+    2026-10-06). Counted from the moment the card first appeared to
+    anyone, so the visitor count shown next to it is apples-to-apples (not
+    weeks of pre-experiment traffic). One answer per visitor -- the latest
+    one -- and "ran a check" joins on the same ta_vid cookie, which
+    tc_check_attempted/tc_check_demo_used only started carrying the same
+    day, so that column is only meaningful from then on."""
+    import json
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        first = conn.execute("""SELECT MIN(created_at) FROM events WHERE event_type = 'page_engagement'
+                                AND metadata LIKE '%"role_shown"%'""").fetchone()[0]
+        empty = {"since": None, "visitors": 0, "shown": 0, "answered": 0, "dismissed": 0, "roles": []}
+        if not first:
+            return empty
+        rows = conn.execute("""SELECT event_type, metadata FROM events WHERE created_at >= ? AND event_type IN
+                               ('page_view', 'page_engagement', 'tc_check_attempted', 'tc_check_demo_used')
+                               ORDER BY created_at""", (first,)).fetchall()
+    finally:
+        conn.close()
+    internal = _internal_visitor_ids()
+    visitors, shown, dismissed, checked, demoed = set(), set(), set(), set(), set()
+    answer = {}
+    for event_type, metadata_json in rows:
+        m = json.loads(metadata_json) if metadata_json else {}
+        v = m.get("visitor") or ""
+        if not v or v in internal:
+            continue
+        t = m.get("type", "")
+        if event_type == "page_view":
+            visitors.add(v)
+        elif event_type == "tc_check_attempted":
+            checked.add(v)
+        elif event_type == "tc_check_demo_used":
+            demoed.add(v)
+        elif t == "role_shown":
+            shown.add(v)
+        elif t == "role_dismissed":
+            dismissed.add(v)
+        elif t.startswith("role_"):
+            answer[v] = t[5:]
+    labels = {"tc": "Transaction Coordinator", "agent": "Real Estate Agent", "broker": "Broker",
+              "investor": "Investor", "browsing": "Just checking it out"}
+    total = len(answer)
+    roles = []
+    for key, label in labels.items():
+        who = {v for v, r in answer.items() if r == key}
+        roles.append({"key": key, "label": label, "count": len(who),
+                      "pct": round(100 * len(who) / total) if total else 0,
+                      "checked": len(who & checked), "demoed": len(who & demoed)})
+    # A visitor's page_view lands ~8s before their own role_shown, so the
+    # very first one predates `first` -- count everyone who saw the card.
+    visitors |= shown
+    return {"since": first[:10], "visitors": len(visitors), "shown": len(shown), "answered": total,
+            "dismissed": len(dismissed - set(answer)), "roles": roles}
