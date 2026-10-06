@@ -32,7 +32,7 @@ from pdf_validator import validate_offer_pdf
 from amendment import fill_amendment_pdf
 from agent_profiles import get_agent_profile, save_agent_profile, find_by_email, get_emails_for_phones
 from subscriptions import can_generate_offer, increment_offer_count, activate_subscription, deactivate_subscription, get_user, create_user, FREE_OFFER_LIMIT, is_admin_phone, has_professional_access
-from analytics import track_event, get_conversion_metrics, get_revenue_metrics, get_recent_sms, get_recent_sms_failures, get_last_blocked_state, get_waitlist_signups, get_signups_by_source, get_signup_details, get_landing_visits_by_source, get_tc_check_summary, get_recent_tc_check_email_senders, get_tc_check_count_for_sender, get_tc_check_repeat_senders, get_tc_check_bulk_summary, get_tc_check_attempts_by_source, get_tc_check_attempts_by_page, get_brokerage_alert_delivery, get_daily_funnel, get_top_referrers, set_internal_visitor, get_visitor_roles
+from analytics import track_event, get_conversion_metrics, get_revenue_metrics, get_recent_sms, get_recent_sms_failures, get_last_blocked_state, get_waitlist_signups, get_signups_by_source, get_signup_details, get_landing_visits_by_source, get_tc_check_summary, get_recent_tc_check_email_senders, get_tc_check_count_for_sender, get_tc_check_repeat_senders, get_tc_check_bulk_summary, get_tc_check_attempts_by_source, get_tc_check_attempts_by_page, get_brokerage_alert_delivery, get_daily_funnel, get_top_referrers, set_internal_visitor, get_visitor_roles, get_engagement_by_device
 from integrations import send_offer_email, fire_webhook, save_webhook, get_webhook, delete_webhook, send_to_docusign, send_plain_email, send_html_email
 from offers_db import record_offer, get_offers_for_phone, get_offer_by_filename, record_amendment, get_amendments_for_phone, record_thread_response, record_email_sent, record_docusign_sent
 from brokerages import extract_brokerage_prefix, link_user_to_brokerage, get_brokerage, get_brokerage_by_code, create_brokerage, list_brokerages, list_brokerage_agents
@@ -158,7 +158,7 @@ _BOT_UA_RE = re.compile(
 
 
 _MOBILE_UA_RE = re.compile(r"Mobi|Android|iPhone|iPad|iPod", re.I)
-_ENGAGEMENT_TYPES = ("hero_cta", "hero_sample", "dropzone_seen", "stay_10s", "stay_60s",
+_ENGAGEMENT_TYPES = ("js_ok", "hero_cta", "hero_sample", "dropzone_seen", "stay_10s", "stay_60s",
                      "role_shown", "role_dismissed") + tuple("role_" + r for r in _VISITOR_ROLES)
 
 # Tiny, cookie-less-of-its-own beacon script appended to every page that
@@ -175,6 +175,9 @@ _ENGAGEMENT_JS = """<script>
     try{ var f = new FormData(); f.append('type', t); f.append('page', page);
       if(!(navigator.sendBeacon && navigator.sendBeacon('/v1/evt', f))) fetch('/v1/evt', {method:'POST', body:f, keepalive:true}); }catch(e){}
   }
+  // Fires on load: most scanners/link-preview fetchers never run JS, so
+  // page_view minus js_ok approximates "not a real browser".
+  evt('js_ok');
   document.addEventListener('click', function(e){
     var el = e.target.closest && e.target.closest('[data-evt]');
     if(el) evt(el.getAttribute('data-evt'));
@@ -191,7 +194,7 @@ _ENGAGEMENT_JS = """<script>
     if(!document.hidden) visibleMs += now - last;
     last = now;
     if(visibleMs >= 10000) evt('stay_10s');
-    if(visibleMs >= 8000) askRole();
+    if(visibleMs >= 4000) askRole();
     if(visibleMs >= 60000){ evt('stay_60s'); clearInterval(tick); }
   }, 1000);
   // Optional one-tap "What brings you here?" card. Once answered or
@@ -3205,6 +3208,7 @@ def tc_check():
             "sender": (client["email"] or "").strip().lower(),
             "gated": not gate_cleared,
             "source_page": source_page,
+            "visitor": request.cookies.get("ta_vid", ""),
         })
 
     payload = dict(result)
@@ -5540,6 +5544,7 @@ def analytics_dashboard():
     landing_visits_by_source = get_landing_visits_by_source(days=30)
     daily_funnel = get_daily_funnel(days=14)
     visitor_roles = get_visitor_roles()
+    engagement_by_device = get_engagement_by_device(days=7)
     top_referrers = get_top_referrers(days=30)
     tc_check_attempts_by_source = get_tc_check_attempts_by_source(days=30)
     tc_check_attempts_by_page = get_tc_check_attempts_by_page(days=30)
@@ -5621,21 +5626,29 @@ def analytics_dashboard():
         f"<tr><td>{v['source']}</td><td>{v['count']}</td><td>{v['count_24h']}</td></tr>" for v in landing_visits_by_source_merged
     ) or '<tr><td colspan="3" style="padding:10px;color:#666;">No tagged visits yet.</td></tr>'
     daily_rows = "".join(
-        f"<tr><td>{d['date'][5:]}</td><td>{d['visitors']}</td><td>{d['mobile']}</td><td>{d['stay_10s']}</td><td>{d['hero_cta']}</td>"
+        f"<tr><td>{d['date'][5:]}</td><td>{d['visitors']}</td><td>{d['js_ok']}</td><td>{d['mobile']}</td><td>{d['stay_10s']}</td><td>{d['hero_cta']}</td>"
         f"<td>{d['hero_sample']}</td><td>{d['dropzone_seen']}</td><td>{d['attempts']}</td>"
         f"<td>{d['demos']}</td><td>{d['recognized']}</td><td>{d['emails_captured']}</td><td>{d['email_checks']}</td><td>{d['email_junk']}</td></tr>"
         for d in daily_funnel
     )
     role_rows = "".join(
-        f"<tr><td>{r['label']}</td><td>{r['count']}</td><td>{r['pct']}%</td><td>{r['checked']}</td><td>{r['demoed']}</td></tr>"
-        for r in visitor_roles["roles"]
+        f"<tr><td>{r['label']}</td><td>{r['count']}</td><td>{'' if r['pct'] is None else str(r['pct']) + '%'}</td>"
+        f"<td>{r['dropzone']}</td><td>{r['demoed']}</td><td>{r['uploaded']}</td><td>{r['recognized']}</td><td>{r['repeat']}</td></tr>"
+        for r in visitor_roles.get("roles", [])
     )
-    _target = sum(r["count"] for r in visitor_roles["roles"] if r["key"] in ("tc", "broker"))
-    role_summary = (
-        f"Since {visitor_roles['since']}: {visitor_roles['visitors']} unique visitors &middot; card shown to {visitor_roles['shown']} "
-        f"&middot; {visitor_roles['answered']} answered &middot; {visitor_roles['dismissed']} closed it. "
-        f"<strong>Target audience (TC + Broker): {_target} of {visitor_roles['answered']} answers.</strong>"
-        if visitor_roles["since"] else "Card hasn't been shown to anyone yet."
+    if visitor_roles["since"]:
+        _target = sum(r["count"] for r in visitor_roles["roles"] if r["key"] in ("tc", "broker"))
+        role_summary = (
+            f"Since {visitor_roles['since']}: {visitor_roles['visitors']} visitors &rarr; {visitor_roles['real']} real browsers "
+            f"&rarr; card shown to {visitor_roles['shown']} &rarr; {visitor_roles['answered']} answered "
+            f"({visitor_roles['dismissed']} closed it). <strong>TC + Broker: {_target} of {visitor_roles['answered']} answers.</strong>"
+        )
+    else:
+        role_summary = "Card hasn't been shown to anyone yet."
+    device_rows = "".join(
+        f"<tr><td>{d['device']}</td><td>{d['visitors']}</td><td>{d['js_ok']}</td><td>{d['stay_10s']}</td>"
+        f"<td>{d['dropzone_seen']}</td><td>{d['hero_cta']}</td></tr>"
+        for d in engagement_by_device
     )
     referrer_rows = "".join(
         f"<tr><td>{escape(r['referrer'])}</td><td>{r['count']}</td></tr>" for r in top_referrers
@@ -5683,6 +5696,7 @@ body{{font-family:system-ui;max-width:800px;margin:40px auto;padding:20px;}}
     <tr style="background:#eee;text-align:left;">
       <th style="padding:6px;">Day</th>
       <th style="padding:6px;">Visitors</th>
+      <th style="padding:6px;">Real browser</th>
       <th style="padding:6px;">On phone</th>
       <th style="padding:6px;">Stayed 10s+</th>
       <th style="padding:6px;">Clicked &ldquo;Check a file&rdquo;</th>
@@ -5698,12 +5712,18 @@ body{{font-family:system-ui;max-width:800px;margin:40px auto;padding:20px;}}
     {daily_rows}
   </table>
   </div>
-  <p class="label" style="margin-top:8px;">Visitors = unique non-bot browsers loading <code>/</code> or <code>/tc-check</code>, tagged or not (tracked from 2026-10-02; earlier days show 0). Phone / stayed / clicked / saw drop box are unique visitors (tracked from 2026-10-03). Visitors minus &ldquo;Stayed 10s+&rdquo; &asymp; bounced. &ldquo;Sample used&rdquo; counts every sample run (hero button or the one under the drop box). Widget attempts = real uploads, excluding the sample. Email checks exclude junk senders from 2026-10-02 on.</p>
+  <p class="label" style="margin-top:8px;">Visitors = unique non-bot browsers loading <code>/</code> or <code>/tc-check</code>, tagged or not (tracked from 2026-10-02; earlier days show 0). Phone / stayed / clicked / saw drop box are unique visitors (tracked from 2026-10-03). Visitors minus &ldquo;Stayed 10s+&rdquo; &asymp; bounced. &ldquo;Real browser&rdquo; = the page's JavaScript actually ran (from 2026-10-06) &mdash; most email link scanners and preview bots never run it, so Visitors minus Real browser &asymp; bots. &ldquo;Sample used&rdquo; counts every sample run (hero button or the one under the drop box). Widget attempts = real uploads, excluding the sample. Email checks exclude junk senders from 2026-10-02 on.</p>
 </div>
 <div class="metric">
   <h3>What Brings You Here? (self-ID card)</h3>
-  <p style="color:#666;font-size:13px;">{role_summary} "Ran a check" / "Tried sample" = same browser later used the widget.</p>
-  <table><tr><th>Role</th><th>Answers</th><th>% of answers</th><th>Ran a check</th><th>Tried sample</th></tr>{role_rows}</table>
+  <p style="color:#666;font-size:13px;">{role_summary}</p>
+  <table><tr><th>Role</th><th>Visitors</th><th>% of answers</th><th>Saw drop box</th><th>Tried sample</th><th>Uploaded</th><th>Recognized 20-19</th><th>Repeat (2+)</th></tr>{role_rows}</table>
+  <p class="label" style="margin-top:8px;">One row per browser (ta_vid cookie), counted from the first time the card was shown. &ldquo;No answer&rdquo; = real browsers that never answered (left before 4s, closed it, or ignored it). Repeat = 2+ recognized uploads from the same browser.</p>
+</div>
+<div class="metric">
+  <h3>Tracking Check: Phone vs Desktop (7 days)</h3>
+  <table><tr><th>Device</th><th>Visitors</th><th>Real browser</th><th>Stayed 10s+</th><th>Saw drop box</th><th>Clicked &ldquo;Check a file&rdquo;</th></tr>{device_rows}</table>
+  <p class="label" style="margin-top:8px;">If phones show visitors but ~0 in every other column while desktop doesn't, suspect a tracking bug on mobile rather than visitor behavior.</p>
 </div>
 
 <div class="metric">

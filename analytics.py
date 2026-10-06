@@ -393,7 +393,7 @@ def get_daily_funnel(days: int = 14) -> list:
     by_day = {}
     for i in range(days):
         d = (today - timedelta(days=i)).isoformat()
-        by_day[d] = {"date": d, "visitors": set(), "mobile": set(), "hero_cta": set(), "hero_sample": set(),
+        by_day[d] = {"date": d, "visitors": set(), "mobile": set(), "js_ok": set(), "hero_cta": set(), "hero_sample": set(),
                      "dropzone_seen": set(), "stay_10s": set(), "views": 0, "attempts": 0, "demos": 0,
                      "recognized": 0, "emails_captured": 0, "email_checks": 0, "email_junk": 0}
     internal = _internal_visitor_ids()
@@ -411,7 +411,7 @@ def get_daily_funnel(days: int = 14) -> list:
                 day["mobile"].add(metadata.get("visitor") or "")
         elif event_type == "page_engagement":
             key = metadata.get("type")
-            if key in ("hero_cta", "hero_sample", "dropzone_seen", "stay_10s"):
+            if key in ("js_ok", "hero_cta", "hero_sample", "dropzone_seen", "stay_10s"):
                 day[key].add(metadata.get("visitor") or "")
         elif event_type == "tc_check_attempted":
             day["attempts"] += 1
@@ -430,7 +430,7 @@ def get_daily_funnel(days: int = 14) -> list:
     result = []
     for d in sorted(by_day, reverse=True):
         day = by_day[d]
-        for key in ("visitors", "mobile", "hero_cta", "hero_sample", "dropzone_seen", "stay_10s"):
+        for key in ("visitors", "mobile", "js_ok", "hero_cta", "hero_sample", "dropzone_seen", "stay_10s"):
             day[key] = len(day[key])
         result.append(day)
     return result
@@ -880,29 +880,28 @@ init_analytics_tables()
 
 
 def get_visitor_roles() -> dict:
-    """Tally for the "What brings you here?" self-ID card (added
-    2026-10-06). Counted from the moment the card first appeared to
-    anyone, so the visitor count shown next to it is apples-to-apples (not
-    weeks of pre-experiment traffic). One answer per visitor -- the latest
-    one -- and "ran a check" joins on the same ta_vid cookie, which
-    tc_check_attempted/tc_check_demo_used only started carrying the same
-    day, so that column is only meaningful from then on."""
+    """Per-visitor journey for the "What brings you here?" experiment
+    (added 2026-10-06): visitor -> role -> saw drop box -> upload ->
+    recognized -> repeat, one row per answered role plus "No answer".
+    Everything joins on the ta_vid cookie. Counted from the first
+    role_shown on, so it only covers the experiment window; uploads only
+    carry ta_vid from the same day. "Real browser" = ran the page's JS
+    (js_ok), which most scanners/link-preview bots never do."""
     import json
     conn = sqlite3.connect(DB_PATH)
     try:
         first = conn.execute("""SELECT MIN(created_at) FROM events WHERE event_type = 'page_engagement'
                                 AND metadata LIKE '%"role_shown"%'""").fetchone()[0]
-        empty = {"since": None, "visitors": 0, "shown": 0, "answered": 0, "dismissed": 0, "roles": []}
         if not first:
-            return empty
+            return {"since": None}
         rows = conn.execute("""SELECT event_type, metadata FROM events WHERE created_at >= ? AND event_type IN
-                               ('page_view', 'page_engagement', 'tc_check_attempted', 'tc_check_demo_used')
+                               ('page_view', 'page_engagement', 'tc_check_attempted', 'tc_check_demo_used', 'tc_check')
                                ORDER BY created_at""", (first,)).fetchall()
     finally:
         conn.close()
     internal = _internal_visitor_ids()
-    visitors, shown, dismissed, checked, demoed = set(), set(), set(), set(), set()
-    answer = {}
+    visitors, real, shown, dismissed, dropzone, demoed, uploaded = set(), set(), set(), set(), set(), set(), set()
+    answer, recognized = {}, {}
     for event_type, metadata_json in rows:
         m = json.loads(metadata_json) if metadata_json else {}
         v = m.get("visitor") or ""
@@ -912,26 +911,64 @@ def get_visitor_roles() -> dict:
         if event_type == "page_view":
             visitors.add(v)
         elif event_type == "tc_check_attempted":
-            checked.add(v)
+            uploaded.add(v)
         elif event_type == "tc_check_demo_used":
             demoed.add(v)
+        elif event_type == "tc_check":
+            if m.get("source") != "email" and m.get("recognized"):
+                recognized[v] = recognized.get(v, 0) + 1
+        elif t == "js_ok":
+            real.add(v)
+        elif t == "dropzone_seen":
+            dropzone.add(v)
         elif t == "role_shown":
             shown.add(v)
         elif t == "role_dismissed":
             dismissed.add(v)
         elif t.startswith("role_"):
             answer[v] = t[5:]
-    labels = {"tc": "Transaction Coordinator", "agent": "Real Estate Agent", "broker": "Broker",
-              "investor": "Investor", "browsing": "Just checking it out"}
+    # A visitor's page_view lands a few seconds before their own
+    # role_shown, so the very first one predates `first`.
+    visitors |= shown
+    real |= shown
+    labels = [("tc", "Transaction Coordinator"), ("agent", "Real Estate Agent"), ("broker", "Broker"),
+              ("investor", "Investor"), ("browsing", "Just checking it out"), (None, "No answer")]
     total = len(answer)
     roles = []
-    for key, label in labels.items():
-        who = {v for v, r in answer.items() if r == key}
-        roles.append({"key": key, "label": label, "count": len(who),
-                      "pct": round(100 * len(who) / total) if total else 0,
-                      "checked": len(who & checked), "demoed": len(who & demoed)})
-    # A visitor's page_view lands ~8s before their own role_shown, so the
-    # very first one predates `first` -- count everyone who saw the card.
-    visitors |= shown
-    return {"since": first[:10], "visitors": len(visitors), "shown": len(shown), "answered": total,
-            "dismissed": len(dismissed - set(answer)), "roles": roles}
+    for key, label in labels:
+        who = {v for v, r in answer.items() if r == key} if key else real - set(answer)
+        roles.append({"key": key or "none", "label": label, "count": len(who),
+                      "pct": round(100 * len(who) / total) if total and key else None,
+                      "dropzone": len(who & dropzone), "demoed": len(who & demoed),
+                      "uploaded": len(who & uploaded),
+                      "recognized": sum(1 for v in who if recognized.get(v)),
+                      "repeat": sum(1 for v in who if recognized.get(v, 0) >= 2)})
+    return {"since": first[:10], "visitors": len(visitors), "real": len(real), "shown": len(shown),
+            "answered": total, "dismissed": len(dismissed - set(answer)), "roles": roles}
+
+
+def get_engagement_by_device(days: int = 7) -> list:
+    """Sanity check that the engagement beacon fires on phones too (added
+    2026-10-06): if mobile shows page views but ~0 of every JS event while
+    desktop doesn't, it's a tracking bug, not visitor behavior."""
+    import json
+    cutoff = (datetime.utcnow() - timedelta(days=days)).isoformat()
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        rows = conn.execute("""SELECT event_type, metadata FROM events WHERE created_at > ?
+                               AND event_type IN ('page_view', 'page_engagement')""", (cutoff,)).fetchall()
+    finally:
+        conn.close()
+    internal = _internal_visitor_ids()
+    keys = ("js_ok", "stay_10s", "dropzone_seen", "hero_cta")
+    out = {d: {"device": d, "visitors": set(), **{k: set() for k in keys}} for d in ("desktop", "mobile")}
+    for event_type, metadata_json in rows:
+        m = json.loads(metadata_json) if metadata_json else {}
+        v, d = m.get("visitor") or "", out.get(m.get("device"))
+        if not v or v in internal or d is None:
+            continue
+        if event_type == "page_view":
+            d["visitors"].add(v)
+        elif m.get("type") in keys:
+            d[m["type"]].add(v)
+    return [{k: (len(x) if isinstance(x, set) else x) for k, x in row.items()} for row in out.values()]
