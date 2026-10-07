@@ -694,9 +694,9 @@ def index():
     .drop-zone.drag { border-style: solid; border-color: var(--accent); background: var(--accent-tint); box-shadow: 0 0 0 4px var(--accent-glow); }
     /* Children would otherwise fire dragleave on the zone as the cursor crosses them (flicker) */
     .drop-zone.drag * { pointer-events: none; }
-    .dz-icon { width: 56px; height: 56px; margin: 0 auto 1.1rem; border-radius: 14px; background: #f2f4f6;
-      display: flex; align-items: center; justify-content: center; color: #6b7a88; transition: background 0.18s ease, color 0.18s ease; }
-    .drop-zone:hover .dz-icon, .drop-zone.drag .dz-icon { background: var(--accent-tint); color: var(--accent); }
+    .dz-icon { width: 56px; height: 56px; margin: 0 auto 1.1rem; border-radius: 14px; background: #f5c242;
+      display: flex; align-items: center; justify-content: center; color: #0a3f3a; transition: background 0.18s ease, color 0.18s ease; }
+    .drop-zone:hover .dz-icon, .drop-zone.drag .dz-icon { background: #0b5d52; color: #f5c242; }
     .drop-zone .dz-title { font-weight: 600; font-size: 1rem; color: var(--text); margin-bottom: 0.35rem; }
     .drop-zone .dz-sub { color: var(--text-muted); font-size: 0.85rem; }
     .drop-zone .dz-sub u { text-decoration-color: rgba(11,93,82,0.35); text-underline-offset: 3px; color: var(--accent); }
@@ -1101,7 +1101,7 @@ def index():
       </div>
       <input type="file" id="homeFileInput" accept="application/pdf">
       <div class="dz-trust">
-        <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>Never stored</span>
+        <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>Not kept unless you archive it</span>
         <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Free, no signup</span>
         <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>Results in seconds</span>
       </div>
@@ -3685,8 +3685,8 @@ text-align:center;cursor:pointer;transition:border-color 0.18s ease,background 0
 .drop-zone:hover{border-color:rgba(11,93,82,0.35);background:#fbfdfc;}
 .drop-zone.drag{border-style:solid;border-color:var(--accent);background:var(--accent-tint);box-shadow:0 0 0 4px rgba(11,93,82,0.18);}
 .drop-zone.drag *{pointer-events:none;}
-.dz-icon{width:56px;height:56px;margin:0 auto 1.1rem;border-radius:14px;background:#f2f4f6;display:flex;align-items:center;justify-content:center;color:#6b7a88;transition:background 0.18s ease,color 0.18s ease;}
-.drop-zone:hover .dz-icon,.drop-zone.drag .dz-icon{background:var(--accent-tint);color:var(--accent);}
+.dz-icon{width:56px;height:56px;margin:0 auto 1.1rem;border-radius:14px;background:#f5c242;display:flex;align-items:center;justify-content:center;color:#0a3f3a;transition:background 0.18s ease,color 0.18s ease;}
+.drop-zone:hover .dz-icon,.drop-zone.drag .dz-icon{background:#0b5d52;color:#f5c242;}
 .drop-zone .dz-title{font-weight:600;font-size:1rem;color:var(--text);margin-bottom:0.35rem;}
 .drop-zone .dz-sub{color:var(--text-muted);font-size:0.85rem;}
 .drop-zone .dz-sub u{text-decoration-color:rgba(11,93,82,0.35);text-underline-offset:3px;color:var(--accent);}
@@ -3817,7 +3817,7 @@ border-radius:var(--radius-sm);font-family:inherit;font-size:0.85rem;font-weight
 </div>
 <input type="file" id="fileInput" accept="application/pdf">
 <div class="dz-trust">
-<span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>Never stored</span>
+<span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>Not kept unless you archive it</span>
 <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Free, no signup</span>
 <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>Results in seconds</span>
 </div>
@@ -3833,7 +3833,7 @@ border-radius:var(--radius-sm);font-family:inherit;font-size:0.85rem;font-weight
 <input type="email" id="emailOptinInput" class="email-optin-input" placeholder="you@example.com" autocomplete="email">
 <div class="email-optin-confirm" id="emailOptinConfirm"></div>
 </div>
-<div class="privacy-note"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Processed instantly and never stored &mdash; your file is discarded the moment your results are ready.</div>
+<div class="privacy-note"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Processed instantly and discarded the moment your results are ready &mdash; unless you save it to your brokerage archive.</div>
 <div class="status" id="status"></div>
 <div class="result" id="result"></div>
 </div>
