@@ -155,7 +155,10 @@ _BOT_UA_RE = re.compile(
     r"python-requests|httpx|aiohttp|go-http-client|headless|lighthouse|uptime|monitor|"
     # Google's URL Inspection / other fetchers don't say "bot" (added 2026-10-07
     # after "Request indexing" showed up as 16 phantom visitors).
-    r"inspectiontool|googleother|google-read-aloud|apis-google|feedfetcher",
+    r"inspectiontool|googleother|google-read-aloud|apis-google|feedfetcher|"
+    # Crawler posing as a 2019 iPhone (iOS 13.2.3 / Safari 13.0.3), hit the
+    # guides every ~10 min with no JS on 2026-10-07.
+    r"iphone os 13_2_3 like mac os x.*version/13\.0\.3",
     re.I,
 )
 
@@ -5788,7 +5791,7 @@ def analytics_dashboard():
         f"<tr><td>{v['source']}</td><td>{v['count']}</td><td>{v['count_24h']}</td></tr>" for v in landing_visits_by_source_merged
     ) or '<tr><td colspan="3" style="padding:10px;color:#666;">No tagged visits yet.</td></tr>'
     daily_rows = "".join(
-        f"<tr><td>{d['date'][5:]}</td><td>{d['visitors']}</td><td>{d['js_ok']}</td><td>{d['mobile']}</td><td>{d['stay_10s']}</td><td>{d['hero_cta']}</td>"
+        f"<tr><td>{d['date'][5:]}</td><td><strong>{d['js_ok']}</strong></td><td style='color:#999;'>{d['visitors']}</td><td>{d['mobile']}</td><td>{d['stay_10s']}</td><td>{d['hero_cta']}</td>"
         f"<td>{d['hero_sample']}</td><td>{d['dropzone_seen']}</td><td>{d['attempts']}</td>"
         f"<td>{d['demos']}</td><td>{d['recognized']}</td><td>{d['emails_captured']}</td><td>{d['email_checks']}</td><td>{d['email_junk']}</td></tr>"
         for d in daily_funnel
@@ -5840,7 +5843,7 @@ def analytics_dashboard():
     recent_real = sum(1 for v in recent_visitors if v["events"] - {""})
 
     device_rows = "".join(
-        f"<tr><td>{d['device']}</td><td>{d['visitors']}</td><td>{d['js_ok']}</td><td>{d['stay_10s']}</td>"
+        f"<tr><td>{d['device']}</td><td><strong>{d['js_ok']}</strong></td><td style='color:#999;'>{d['visitors']}</td><td>{d['stay_10s']}</td>"
         f"<td>{d['dropzone_seen']}</td><td>{d['hero_cta']}</td></tr>"
         for d in engagement_by_device
     )
@@ -5889,9 +5892,9 @@ body{{font-family:system-ui;max-width:800px;margin:40px auto;padding:20px;}}
   <table style="width:100%;border-collapse:collapse;margin-top:10px;font-size:14px;">
     <tr style="background:#eee;text-align:left;">
       <th style="padding:6px;">Day</th>
-      <th style="padding:6px;">Visitors</th>
-      <th style="padding:6px;">Real browser</th>
-      <th style="padding:6px;">On phone</th>
+      <th style="padding:6px;">Real visitors</th>
+      <th style="padding:6px;color:#999;">Page loads (incl. bots)</th>
+      <th style="padding:6px;">Loads on phone</th>
       <th style="padding:6px;">Stayed 10s+</th>
       <th style="padding:6px;">Clicked &ldquo;Check a file&rdquo;</th>
       <th style="padding:6px;">Hero sample</th>
@@ -5906,7 +5909,7 @@ body{{font-family:system-ui;max-width:800px;margin:40px auto;padding:20px;}}
     {daily_rows}
   </table>
   </div>
-  <p class="label" style="margin-top:8px;">Visitors = unique non-bot browsers loading <code>/</code> or <code>/tc-check</code>, tagged or not (tracked from 2026-10-02; earlier days show 0). Phone / stayed / clicked / saw drop box are unique visitors (tracked from 2026-10-03). Visitors minus &ldquo;Stayed 10s+&rdquo; &asymp; bounced. &ldquo;Real browser&rdquo; = the page's JavaScript actually ran (from 2026-10-06) &mdash; most email link scanners and preview bots never run it, so Visitors minus Real browser &asymp; bots. &ldquo;Sample used&rdquo; counts every sample run (hero button or the one under the drop box). Widget attempts = real uploads, excluding the sample. Email checks exclude junk senders from 2026-10-02 on.</p>
+  <p class="label" style="margin-top:8px;"><strong>Real visitors</strong> = browsers that actually ran the page (from 2026-10-06; earlier days show 0) &mdash; this is the number to watch. <strong>Page loads (incl. bots)</strong> = every load of <code>/</code> or <code>/tc-check</code> not caught by the bot filter; link scanners and crawlers that pose as browsers land here and don&rsquo;t keep cookies, so each of their hits counts again. Stayed / clicked / saw drop box are unique browsers (tracked from 2026-10-03). Real visitors minus &ldquo;Stayed 10s+&rdquo; &asymp; bounced. &ldquo;Sample used&rdquo; counts every sample run (hero button or the one under the drop box). Widget attempts = real uploads, excluding the sample. Email checks exclude junk senders from 2026-10-02 on.</p>
 </div>
 <div class="metric">
   <h3>What Brings You Here? (self-ID card)</h3>
@@ -5924,7 +5927,7 @@ body{{font-family:system-ui;max-width:800px;margin:40px auto;padding:20px;}}
 </div>
 <div class="metric">
   <h3>Tracking Check: Phone vs Desktop (7 days)</h3>
-  <table><tr><th>Device</th><th>Visitors</th><th>Real browser</th><th>Stayed 10s+</th><th>Saw drop box</th><th>Clicked &ldquo;Check a file&rdquo;</th></tr>{device_rows}</table>
+  <table><tr><th>Device</th><th>Real visitors</th><th style="color:#999;">Page loads (incl. bots)</th><th>Stayed 10s+</th><th>Saw drop box</th><th>Clicked &ldquo;Check a file&rdquo;</th></tr>{device_rows}</table>
   <p class="label" style="margin-top:8px;">If phones show visitors but ~0 in every other column while desktop doesn't, suspect a tracking bug on mobile rather than visitor behavior.</p>
 </div>
 
