@@ -8776,7 +8776,7 @@ def contact():
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Contact — TxtAnOffer</title>
-<meta name="description" content="Get in touch with TxtAnOffer support by email or text.">
+<meta name="description" content="Get in touch with TxtAnOffer support by email.">
 <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -8888,7 +8888,7 @@ def contact():
 <div class="container">
   <div class="page-header">
     <h1>Get in Touch</h1>
-    <p>Questions, feedback, or need a hand? Reach out directly &mdash; a real person reads every message.</p>
+    <p>Questions, feedback, or need a hand? Email us &mdash; a real person reads every message.</p>
   </div>
 
   <a class="contact-card" href="mailto:support@txtanoffer.com">
@@ -8902,8 +8902,9 @@ def contact():
   <a class="contact-card" href="sms:+18338970333">
     <div class="contact-icon">&#128241;</div>
     <div>
-      <div class="contact-label">Text</div>
+      <div class="contact-label">Text offers (automated)</div>
       <div class="contact-value">+1 (833) 897-0333</div>
+      <div style="font-size:0.8rem;color:var(--text-muted);margin-top:0.2rem;">This line drafts offers from your texts. It isn&rsquo;t read by a person &mdash; for help, use email. Reply HELP for commands.</div>
     </div>
   </a>
 
