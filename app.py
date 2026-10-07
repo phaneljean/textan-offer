@@ -5263,10 +5263,11 @@ def pricing():
       <li><span class="check">&#10003;</span> Compare two contract versions &mdash; see exactly what changed</li>
       <li><span class="check">&#10003;</span> Bulk-check up to 20 files at once</li>
       <li><span class="check">&#10003;</span> Results in under a minute</li>
-      <li><span class="check">&#10003;</span> No signup, no credit card, no dashboard login</li>
+      <li><span class="check">&#10003;</span> First 3 full reports: no signup, no email, no card</li>
+      <li><span class="check">&#10003;</span> After that, still free &mdash; just add your email</li>
     </ul>
     <a href="/tc-check" class="cta-btn">Try TC Check Free</a>
-    <p style="text-align:center;font-size:0.75rem;color:var(--text-dim);margin-top:0.75rem;">Free, full stop. This isn't a trial.</p>
+    <p style="text-align:center;font-size:0.75rem;color:var(--text-dim);margin-top:0.75rem;">Free, no card, no trial to expire.</p>
   </div>
 
   <div class="pricing-card" id="individual">
@@ -5386,11 +5387,11 @@ def pricing():
   <div class="value-grid">
     <div class="value-card">
       <div class="value-title">Is TC File Check really free?</div>
-      <div class="value-text">Yes, full stop. It's how we find out what actually matters to Texas TCs on real files. No trial, no expiration date on it.</div>
+      <div class="value-text">Yes. Your first 3 full reports need nothing at all &mdash; no signup, no email, no card. After that, add your email to keep getting full reports, still free. No trial, no expiration date, and you can also forward files to tc@check.txtanoffer.com anytime.</div>
     </div>
     <div class="value-card">
       <div class="value-title">Do you store my client's file?</div>
-      <div class="value-text">No. The file is parsed to generate your report, then deleted immediately after &mdash; nothing is kept.</div>
+      <div class="value-text">No. A file you upload or forward to TC Check is parsed to generate your report, then deleted right after. The one exception is on purpose: on the Brokerage plan, offers your agents text in are archived for your brokerage&rsquo;s records.</div>
     </div>
     <div class="value-card">
       <div class="value-title">What about SMS offer drafting?</div>
