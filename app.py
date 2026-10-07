@@ -1295,7 +1295,7 @@ def index():
         <span class="guide-more">Read the guide &rarr;</span>
       </a>
     </div>
-    <p style="text-align:center;margin-top:1.5rem;font-size:0.9rem;"><a href="/guides" style="color:var(--accent);font-weight:600;">See all guides &rarr;</a></p>
+    <p style="text-align:center;margin-top:1.5rem;font-size:0.9rem;"><a href="/guides/trec-deadline-calculator" style="color:var(--accent);font-weight:600;" data-evt="guide_card_cta">Free TREC deadline calculator &rarr;</a> &nbsp;&middot;&nbsp; <a href="/guides" style="color:var(--accent);font-weight:600;">See all guides &rarr;</a></p>
   </section>
 
   <section class="steps" id="trust">
@@ -8451,6 +8451,77 @@ _GUIDES = {
 <p><a href="/guides/trec-20-19-checklist">See the full TREC 20-19 pre-title checklist &rarr;</a></p>
 """,
     },
+    "trec-deadline-calculator": {
+        "title": "TREC 20-19 Deadline Calculator: Option Period and Earnest Money",
+        "description": "Free calculator for Texas TREC 20-19 deadlines: option period end (5:00 p.m., no weekend extension) and earnest money and option fee due dates with the Saturday, Sunday and Legal Holiday rule.",
+        "kicker": "Free tool for TCs and agents",
+        "h1": "TREC 20-19 deadline calculator",
+        "lede": "Enter the Effective Date and the days in the contract. You get the option period end and the earnest money and option fee due date, with the weekend and holiday rule applied the way the form says.",
+        "body": """
+<style>
+  .calc { background:#fff; border:1px solid var(--border); border-radius:1rem; padding:1.5rem; margin:1.5rem 0 1rem; }
+  .calc-row { display:grid; grid-template-columns:repeat(3, 1fr); gap:1rem; }
+  .calc label { display:block; font-size:0.8rem; font-weight:600; color:var(--text); margin-bottom:0.35rem; }
+  .calc input { width:100%; padding:0.7rem 0.8rem; border:1px solid #d5dbe0; border-radius:0.6rem; font:inherit; font-size:1rem; background:#fff; }
+  .calc .hint { font-size:0.75rem; color:var(--dim); margin-top:0.3rem; }
+  .results { margin-top:1.25rem; display:grid; gap:0.75rem; }
+  .res { border-radius:0.8rem; padding:1rem 1.1rem; background:var(--tint); }
+  .res .lbl { font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:var(--accent-dark); }
+  .res .val { font-size:1.35rem; font-weight:800; letter-spacing:-0.02em; margin:0.15rem 0; color:var(--text); }
+  .res .why { font-size:0.85rem; color:var(--muted); }
+  .res.warn { background:#FFF6E5; }
+  .res.warn .lbl { color:#8a5a00; }
+  @media (max-width:600px) { .calc-row { grid-template-columns:1fr; } }
+</style>
+<div class="calc">
+  <div class="calc-row">
+    <div><label for="ed">Effective Date</label><input type="date" id="ed"><div class="hint">Date of final acceptance (page 10)</div></div>
+    <div><label for="opt">Option period (days)</label><input type="number" id="opt" min="0" max="60" placeholder="e.g. 7"><div class="hint">Paragraph 5B</div></div>
+    <div><label for="add">Extra earnest money (days)</label><input type="number" id="add" min="0" max="120" placeholder="optional"><div class="hint">Paragraph 5A(1), if used</div></div>
+  </div>
+  <div class="results" id="results" aria-live="polite"><div class="res"><div class="why">Pick an Effective Date to see the deadlines.</div></div></div>
+</div>
+
+<h2>How these deadlines are counted</h2>
+<ul>
+  <li><strong>The Effective Date is day 0.</strong> Day 1 is the next calendar day. The contract counts calendar days, not business days.</li>
+  <li><strong>Earnest money and option fee: within 3 days after the Effective Date</strong> (Paragraph 5A). If that last day falls on a Saturday, Sunday or Legal Holiday, it moves to the end of the next day that isn't one (Paragraph 5A(2)). Additional earnest money follows the same rule.</li>
+  <li><strong>Option period: ends at 5:00 p.m. local time where the property is located</strong> on the last day (Paragraph 5B). There is <strong>no</strong> weekend or holiday extension for the option period. If it ends on a Sunday, it ends on that Sunday.</li>
+  <li><strong>"Legal Holiday"</strong> is defined by the form as the holidays in Texas Government Code &sect;662.003(a), plus June 19 and the Friday after Thanksgiving (&sect;662.003(b)(4) and (6)). Other state holidays, such as December 24 and 26, aren't included. The calculator uses the statutory dates and doesn't apply "observed" Mondays.</li>
+</ul>
+<p class="note">This calculator applies the standard TREC 20-19 language. Special provisions, addenda or amendments can change deadlines. Check the actual contract, and when a deadline is close, confirm it with the broker or a Texas real estate attorney. Not legal advice. Sources: TREC 20-19 Paragraph 5; Texas Government Code &sect;662.003; <a href="https://trerc.tamu.edu/article/Option-Period-Basics-2360/" target="_blank" rel="noopener">Texas A&amp;M Real Estate Center, &ldquo;Option Period Basics&rdquo;</a>.</p>
+
+<script src="/static/trec-deadlines.js?v=1"></script>
+<script>
+(function(){
+  var T = window.TrecDeadlines, ed = document.getElementById('ed'), opt = document.getElementById('opt'), add = document.getElementById('add'), out = document.getElementById('results');
+  function fmt(iso){ var p = iso.split('-').map(Number); return new Date(Date.UTC(p[0], p[1]-1, p[2])).toLocaleDateString('en-US', {weekday:'long', month:'long', day:'numeric', year:'numeric', timeZone:'UTC'}); }
+  function esc(t){ return String(t).replace(/[&<>]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c]; }); }
+  function card(cls, lbl, val, why){ return '<div class="res' + (cls ? ' ' + cls : '') + '"><div class="lbl">' + lbl + '</div><div class="val">' + val + '</div><div class="why">' + why + '</div></div>'; }
+  function money(label, r){
+    if (!r.extended) return card('', label, esc(fmt(r.date)), 'End of day. Not a Saturday, Sunday or Legal Holiday, so no extension.');
+    var why = 'Would have been ' + esc(fmt(r.original)) + ', but ' + r.skipped.map(function(s){ return esc(fmt(s.date).split(',')[0]) + ' is ' + (s.reason === 'Saturday' || s.reason === 'Sunday' ? 'a weekend day' : esc(s.reason)); }).join('; ') + '. Extended to the end of the next day that isn\u2019t (Paragraph 5A(2)).';
+    return card('', label, esc(fmt(r.date)), why);
+  }
+  function run(){
+    if (!ed.value) { out.innerHTML = '<div class="res"><div class="why">Pick an Effective Date to see the deadlines.</div></div>'; return; }
+    var e = T.parse(ed.value), html = money('Earnest money + option fee due', T.earnestDeadline(e, 3));
+    var od = parseInt(opt.value, 10);
+    if (od >= 0 && od <= 60) {
+      var o = T.optionDeadline(e, od);
+      html += o.fallsOn
+        ? card('warn', 'Option period ends', esc(fmt(o.date)) + ', 5:00 p.m.', 'That day is ' + (o.fallsOn === 'Saturday' || o.fallsOn === 'Sunday' ? 'a ' + o.fallsOn : esc(o.fallsOn)) + ', but the option period is <strong>not</strong> extended. Notice must be given by 5:00 p.m. local time that day (Paragraph 5B).')
+        : card('', 'Option period ends', esc(fmt(o.date)) + ', 5:00 p.m.', 'Local time where the property is located (Paragraph 5B).');
+    }
+    var ad = parseInt(add.value, 10);
+    if (ad > 0 && ad <= 120) html += money('Additional earnest money due', T.earnestDeadline(e, ad));
+    out.innerHTML = html;
+  }
+  [ed, opt, add].forEach(function(el){ el.addEventListener('input', run); el.addEventListener('change', run); });
+})();
+</script>
+""",
+    },
 }
 
 
@@ -10781,7 +10852,8 @@ _SITEMAP_PATHS = ["/", "/tc-check", "/brokers", "/pricing", "/trec-changes", "/t
                   "/contact", "/privacy", "/terms", "/guides",
                   "/guides/trec-20-19-checklist", "/guides/trec-20-19-effective-date",
                   "/guides/broker-record-retention-texas", "/guides/40-11-loan-amount-mismatch",
-                  "/guides/trec-20-19-initials", "/guides/trec-39-11-amendment-mismatch"]
+                  "/guides/trec-20-19-initials", "/guides/trec-39-11-amendment-mismatch",
+                  "/guides/trec-deadline-calculator"]
 
 
 @app.route("/robots.txt")
