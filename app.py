@@ -152,7 +152,10 @@ _VISITOR_ROLES = ("tc", "agent", "broker", "investor", "browsing")
 
 _BOT_UA_RE = re.compile(
     r"bot|crawl|spider|slurp|preview|facebookexternalhit|embedly|curl|wget|"
-    r"python-requests|httpx|aiohttp|go-http-client|headless|lighthouse|uptime|monitor",
+    r"python-requests|httpx|aiohttp|go-http-client|headless|lighthouse|uptime|monitor|"
+    # Google's URL Inspection / other fetchers don't say "bot" (added 2026-10-07
+    # after "Request indexing" showed up as 16 phantom visitors).
+    r"inspectiontool|googleother|google-read-aloud|apis-google|feedfetcher",
     re.I,
 )
 
@@ -5708,7 +5711,9 @@ def analytics_dashboard():
             return ts[5:16]
 
     def _visitor_row(v):
-        real = "js_ok" in v["events"]
+        # js_ok only exists from 2026-10-06; any engagement beacon (drop box
+        # seen, 10s stay...) also proves the page's JS ran, so older rows count.
+        real = bool(v["events"] - {""})
         engaged = [label for key, label in (("stay_10s", "10s+"), ("stay_60s", "60s+"), ("dropzone_seen", "saw drop box"),
                                             ("hero_cta", "clicked check"), ("hero_sample", "sample"))
                    if key in v["events"]]
@@ -5727,7 +5732,7 @@ def analytics_dashboard():
 
     recent_visitor_rows = "".join(_visitor_row(v) for v in recent_visitors) or \
         "<tr><td colspan='8' style='padding:6px;color:#666;'>No visitors in the last 48 hours.</td></tr>"
-    recent_real = sum(1 for v in recent_visitors if "js_ok" in v["events"])
+    recent_real = sum(1 for v in recent_visitors if v["events"] - {""})
 
     device_rows = "".join(
         f"<tr><td>{d['device']}</td><td>{d['visitors']}</td><td>{d['js_ok']}</td><td>{d['stay_10s']}</td>"

@@ -478,7 +478,7 @@ def get_recent_visitors(hours: int = 48, limit: int = 150) -> list:
             v["events"].add(metadata.get("type") or "")
     result = sorted(visitors.values(), key=lambda v: v["first"], reverse=True)[:limit]
     for v in result:
-        for key in ("referrers", "sources", "devices", "events"):
+        for key in ("referrers", "sources", "devices"):
             v[key] = sorted(v[key])
     return result
 
