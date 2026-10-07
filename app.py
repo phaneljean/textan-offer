@@ -1094,7 +1094,7 @@ def index():
       <div class="sl-copy">
         <div class="steps-kicker">For title companies</div>
         <h2>Clean files reach escrow. Closings stay on schedule.</h2>
-        <p>Every broken TREC 20-19 that lands on an escrow officer's desk costs 45&ndash;90 minutes in curative emails back to the agent &mdash; before the file can even close. We'll audit your last 20 kicked-back files free, no obligation.</p>
+        <p>Every broken TREC 20-19 that lands on an escrow officer's desk can mean an hour or more of curative emails back to the agent &mdash; before the file can even close. We'll audit your last 20 kicked-back files free, no obligation.</p>
         <a class="sl-outline" href="mailto:support@txtanoffer.com?subject=Title%20company%20pilot">Talk to us</a>
       </div>
     </div>
@@ -1181,7 +1181,7 @@ def index():
       <div class="step-card">
         <div class="step-num">&check;</div>
         <h3>Checked against TREC's current form</h3>
-        <p>Every check is verified against TREC's actual published 20-19 form &mdash; not a static field list someone wrote once and forgot to update when TREC revises it. <a href="/trec-changes" style="color:var(--text);text-decoration:underline;">See what changed &rarr;</a> &middot; <a href="/tc-hub" style="color:var(--text);text-decoration:underline;">Free TC Hub &rarr;</a></p>
+        <p>Every check is mapped field-by-field against TREC's actual published 20-19 form and re-verified when TREC revises it. <a href="/trec-changes" style="color:var(--text);text-decoration:underline;">See what changed &rarr;</a> &middot; <a href="/tc-hub" style="color:var(--text);text-decoration:underline;">Free TC Hub &rarr;</a></p>
       </div>
       <div class="step-card">
         <div class="step-num">&check;</div>
@@ -1471,7 +1471,7 @@ def index():
     else:
         stat1_num, stat1_label = "Free", "for every Texas TC &mdash; no signup required"
         stat2_num, stat2_label = "Seconds", "to scan a full TREC 20-19 + 40-11 addendum"
-        stat3_num, stat3_label = "0", "of your data stored after results are shown"
+        stat3_num, stat3_label = "0", "PDFs stored after results are shown"
     for token, value in (
         ("__TC_STAT1_NUM__", stat1_num), ("__TC_STAT1_LABEL__", stat1_label),
         ("__TC_STAT2_NUM__", stat2_num), ("__TC_STAT2_LABEL__", stat2_label),
@@ -2682,11 +2682,11 @@ DEMO_FORM = """
     <div class="card">
       <form method="POST" action="/demo">
         <label class="field-label">Offer details</label>
-        <input type="text" name="offer_text" placeholder="725k 3% 21day Harris 1234 Westheimer Rd" value="{prefill}">
+        <input type="text" name="offer_text" placeholder="725k 3% 21day Harris 123 Main St" value="{prefill}">
         <button type="submit">Generate My Contract</button>
         <div class="hint">price &middot; down % &middot; closing days &middot; county (optional) &middot; address &middot; financing type &amp; inspection days (optional)</div>
         <div class="hint">You'll get a confirmation to review first &mdash; reply <code>YES</code> to generate the PDF, <code>NO</code> to cancel, or send corrections.</div>
-        <div class="hint">Already sent one? Amend it: <code>AMEND 1234 Westheimer Rd price 730k</code> or <code>AMEND 1234 Westheimer Rd close +10</code></div>
+        <div class="hint">Already sent one? Amend it: <code>AMEND 123 Main St price 730k</code> or <code>AMEND 123 Main St close +10</code></div>
       </form>
       {result_html}
     </div>
@@ -3646,7 +3646,7 @@ border-radius:var(--radius-sm);font-family:inherit;font-size:0.85rem;font-weight
 </div>
 <p class="scope-footnote">Every check above is verified directly against TREC's actual 20-19 form fields &mdash; not guessed from field names, which routinely lie about their own position. The 40-11 can be its own separate PDF &mdash; it doesn't need to be merged into the contract file.</p>
 <p class="scope-footnote">Comparing an original against a later version? <a href="/tc-check/compare" style="color:var(--accent);font-weight:700;text-decoration:underline;text-underline-offset:2px;">See exactly what changed &rarr;</a></p>
-<p class="scope-footnote">Auditing a whole closed-file archive? <a href="/tc-check/bulk" style="color:var(--accent);font-weight:700;text-decoration:underline;text-underline-offset:2px;">Bulk-check up to 200 files at once &rarr;</a></p>
+<p class="scope-footnote">Auditing a whole closed-file archive? <a href="/tc-check/bulk" style="color:var(--accent);font-weight:700;text-decoration:underline;text-underline-offset:2px;">Bulk-check up to 20 files free (200 with a Brokerage join code) &rarr;</a></p>
 <p class="scope-footnote">Want checklists and TREC form references instead? <a href="/tc-hub" style="color:var(--accent);font-weight:700;text-decoration:underline;text-underline-offset:2px;">Visit the free TC Hub &rarr;</a></p>
 </div>
 </div>
@@ -4580,11 +4580,11 @@ padding:0.6rem 1.1rem;border-radius:9999px;font-size:0.85rem;font-weight:600;}
 <h3>Try these (click to load):</h3>
 <div class="example-chips">
 <span class="chip">725k 3% 21day 123 Main St, Austin, TX</span>
-<span class="chip">Offer 650000 3 percent close in 30 days 456 Oak St Austin</span>
-<span class="chip">500k 5 down 14days 200 Preston Rd Plano</span>
-<span class="chip">1.2m 10% 45day Travis 789 Pine Blvd</span>
-<span class="chip">825k 3% close in 14 1900 Exposition Blvd</span>
-<span class="chip">375,000 3% 30days 2100 South Congress Ave</span>
+<span class="chip">Offer 650000 3 percent close in 30 days 123 Main St Austin</span>
+<span class="chip">500k 5 down 14days 123 Main St Plano</span>
+<span class="chip">1.2m 10% 45day Travis 123 Main St</span>
+<span class="chip">825k 3% close in 14 123 Main St Houston</span>
+<span class="chip">375,000 3% 30days 123 Main St Dallas</span>
 <span class="chip">725k cash 21day 123 Main St</span>
 <span class="chip">725k 3% 21day 123 Main St HOA</span>
 </div>
@@ -5153,7 +5153,7 @@ def pricing():
   <div class="pricing-card featured" id="brokerage">
     <span class="featured-badge">For Managing Brokers</span>
     <h2 class="plan-name">Brokerage</h2>
-    <p class="plan-desc">Everything in Professional, for your whole roster &mdash; the compliance and transaction dashboard managing brokers and TCs actually pay for.</p>
+    <p class="plan-desc">Everything in Professional, for your whole roster &mdash; the compliance and transaction dashboard built for managing brokers and TC teams.</p>
     <div class="price-row">
       <span class="price-current">$349</span>
       <span class="price-period">/month</span>
@@ -7157,7 +7157,7 @@ def faq():
 
   <div class="faq-item">
     <h2>What if the parser gets a number wrong?</h2>
-    <p>Every generated PDF is a draft. You must review all fields &mdash; price, dates, address, percentages &mdash; before presenting to clients. The parser is highly accurate, but you are the final check. Fields like buyer/seller names, earnest money, and financing terms are intentionally left blank for you to complete.</p>
+    <p>Every generated PDF is a draft. You must review all fields &mdash; price, dates, address, percentages &mdash; before presenting to clients. The parser handles most phrasings, but you are the final check. Fields like buyer/seller names, earnest money, and financing terms are intentionally left blank for you to complete.</p>
   </div>
 
   <div class="faq-item">
@@ -7456,7 +7456,7 @@ def tc_hub():
         f"updated live &mdash; not a static list."
         if summary["recognized"] > 0 else
         "Not enough real-world files have been audited yet to publish an honest breakdown. "
-        "The fields TC Check flags most often are blank initials, the Effective Date, and the "
+        "TC Check is built to catch blank initials, the Effective Date, and the "
         "escrow, title and earnest-money fields -- run your own file at /tc-check to see where yours stands."
     )
 
@@ -7935,12 +7935,12 @@ def about():
 
     <p>That 45 minutes costs deals. So I built a way to skip it. TxtAnOffer turns what used to take a laptop and 45 minutes into a text message and 10 seconds.</p>
 
-    <p><strong>That solved the first 45 minutes. It didn't solve what happens next.</strong> The more TCs and brokers I talked to, the clearer it got: the real risk in a Texas contract isn't how fast it gets written &mdash; it's what's still blank or mismatched by the time it reaches title. A missing initial. An Effective Date nobody filled in. A 40-11 that disagrees with the contract it's attached to. That's not a speed problem, it's a review problem, and it was happening on every file &mdash; not just the ones typed from a phone.</p>
+    <p><strong>That solved the first 45 minutes. It didn't solve what happens next.</strong> The more I dug into how Texas files actually close, the clearer it got: the real risk in a Texas contract isn't how fast it gets written &mdash; it's what's still blank or mismatched by the time it reaches title. A missing initial. An Effective Date nobody filled in. A 40-11 that disagrees with the contract it's attached to. That's not a speed problem, it's a review problem, and it can happen on any file &mdash; not just the ones typed from a phone.</p>
 
     <p>So TxtAnOffer became two things. <strong>Create</strong> an offer by text in seconds &mdash; still here, free to start. And <strong>Check</strong> any TREC 20-19 for exactly what's missing before title finds it &mdash; free, no login, forward a file or drop it on the site. Brokerages and TC teams that want every file checked automatically, across their whole roster, get the Brokerage Dashboard.</p>
 
     <h2>Why It's Built This Way</h2>
-    <p>Every feature exists because a real TC, broker, or agent told me it mattered &mdash; not because a spec sheet said a contract tool should have it:</p>
+    <p>Every feature is built around a specific way a Texas file goes wrong &mdash; not because a spec sheet said a contract tool should have it:</p>
     <ul>
       <li><strong>Field-by-field verification</strong> because a checklist that's just guessing from a form's field names misses the exact mistakes that get a file kicked back</li>
       <li><strong>No login to check a file</strong> because a TC who needs an answer in the next two minutes shouldn't have to create an account first</li>
