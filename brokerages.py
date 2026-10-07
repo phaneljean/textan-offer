@@ -215,22 +215,27 @@ def list_brokerage_records(brokerage_id: int, query: str = "", limit: int = 500)
 
 
 def get_retained_brokerage_filenames() -> set:
-    """Filenames of every offer/amendment PDF drafted by an agent currently
-    linked to any brokerage. cleanup.py exempts these from the 30-day PDF
-    sweep so the broker's archive survives. Deliberately lets DB errors
-    raise: an empty set here would mean "no exemptions" and the sweep
-    would delete the archive."""
+    """Filenames of offer/amendment PDFs that must survive the 30-day PDF
+    sweep (kept BROKERAGE_RETENTION_DAYS, 5 years): drafted by an agent
+    linked to a brokerage, by a paying agent (is_subscribed), or by an admin
+    number (ADMIN_PHONES). Extended 2026-10-07 from brokerage-only so offers
+    on a paying agent's DASHBOARD stop disappearing after 30 days. Free-trial
+    offers keep the 30-day rule. Deliberately lets DB errors raise: an empty
+    set here would mean "no exemptions" and the sweep would delete them."""
+    admin = sorted({p.strip() for p in os.environ.get("ADMIN_PHONES", "").split(",") if p.strip()}) or [""]
+    marks = ",".join("?" * len(admin))
+    keep = f"(u.brokerage_id IS NOT NULL OR u.is_subscribed = 1 OR o.phone IN ({marks}))"
+    keep_a = f"(u.brokerage_id IS NOT NULL OR u.is_subscribed = 1 OR a.phone IN ({marks}))"
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    rows = cursor.execute("""
-        SELECT o.filename FROM offers o JOIN users u ON u.phone = o.phone
-        WHERE u.brokerage_id IS NOT NULL AND o.filename IS NOT NULL AND o.filename != ''
+    rows = cursor.execute(f"""
+        SELECT o.filename FROM offers o LEFT JOIN users u ON u.phone = o.phone
+        WHERE {keep} AND o.filename IS NOT NULL AND o.filename != ''
         UNION
-        SELECT a.filename FROM amendments a JOIN users u ON u.phone = a.phone
-        WHERE u.brokerage_id IS NOT NULL AND a.filename IS NOT NULL AND a.filename != ''
-    """).fetchall()
+        SELECT a.filename FROM amendments a LEFT JOIN users u ON u.phone = a.phone
+        WHERE {keep_a} AND a.filename IS NOT NULL AND a.filename != ''
+    """, admin + admin).fetchall()
     conn.close()
     return {r[0] for r in rows}
-
 
 init_brokerages_table()
