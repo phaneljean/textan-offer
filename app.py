@@ -159,7 +159,7 @@ _BOT_UA_RE = re.compile(
 
 _MOBILE_UA_RE = re.compile(r"Mobi|Android|iPhone|iPad|iPod", re.I)
 _ENGAGEMENT_TYPES = ("js_ok", "hero_cta", "hero_sample", "dropzone_seen", "stay_10s", "stay_60s",
-                     "role_shown", "role_dismissed") + tuple("role_" + r for r in _VISITOR_ROLES)
+                     "role_shown", "role_dismissed", "brokers_audit_cta", "brokers_email_cta", "brokers_plan_cta") + tuple("role_" + r for r in _VISITOR_ROLES)
 
 # Tiny, cookie-less-of-its-own beacon script appended to every page that
 # track_page_view() logs. Elements opt in with data-evt="<type>" for clicks;
@@ -278,7 +278,7 @@ def engagement_event():
     page = request.form.get("page", "")
     visitor = request.cookies.get("ta_vid", "")
     if (ua and not _BOT_UA_RE.search(ua) and etype in _ENGAGEMENT_TYPES
-            and page in ("homepage", "tc_check_page") and re.fullmatch(r"[0-9a-f]{32}", visitor)):
+            and page in ("homepage", "tc_check_page", "brokers_page") and re.fullmatch(r"[0-9a-f]{32}", visitor)):
         track_event("page_engagement", None, {
             "type": etype, "page": page, "visitor": visitor,
             "device": "mobile" if _is_mobile_request() else "desktop",
@@ -5173,6 +5173,7 @@ def pricing():
       <input type="hidden" name="plan" value="brokerage">
       <button type="submit" class="cta-btn">Set Up Your Brokerage</button>
     </form>
+    <p style="text-align:center;font-size:0.82rem;margin-top:0.75rem;"><a href="/brokers" style="text-decoration:underline;">Not sure yet? Audit your last 20 closed files free &rarr;</a></p>
     <p style="text-align:center;font-size:0.75rem;color:var(--text-dim);margin-top:0.75rem;">Your join code and dashboard link arrive by email right after checkout.</p>
   </div>
 
@@ -7963,6 +7964,209 @@ def about():
 </body>
 </html>"""
     return html
+
+
+@app.route("/brokers")
+def brokers():
+    """Managing-broker landing page. The offer is the free 20-file backlog
+    audit (the existing /tc-check/bulk sample tier), so a broker sees their
+    own agents' files before being asked to pay for the Brokerage plan.
+    Added 2026-10-06 after the vertical-SaaS site audit: every brokerage
+    URL 404'd and the only broker pitch was one card on /pricing."""
+    html = """<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>For Managing Brokers — TxtAnOffer</title>
+<meta name="description" content="Run your agents' last 20 closed TREC 20-19 files through TC Check, free. See which fields they leave blank before title calls you about it.">
+<link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<style>
+  :root {
+    --bg: #F5F5F7;
+    --bg-card: #fff;
+    --border: rgba(15,31,47,0.08);
+    --text: #0f1f2f;
+    --text-muted: #5a6b7a;
+    --text-dim: #8a9aa9;
+    --accent: #0b5d52;
+    --accent-light: #16806e;
+    --accent-dark: #0a3a33;
+    --accent-tint: #E7F3F1;
+    --radius: 1.25rem;
+    --transition: all 0.2s ease;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+    background:var(--bg); color:var(--text); line-height:1.6;
+    -webkit-font-smoothing:antialiased; min-height:100vh;
+  }
+  a { color:inherit; text-decoration:none; }
+  .nav {
+    display:flex;align-items:center;justify-content:space-between;
+    padding:1rem 2rem;position:sticky;top:0;
+    background:rgba(255,255,255,0.85);backdrop-filter:blur(20px);
+    -webkit-backdrop-filter:blur(20px);
+    border-bottom:1px solid var(--border);z-index:100;
+  }
+  .nav-left {display:flex;align-items:center;gap:0.6rem;font-weight:700;font-size:1.1rem;letter-spacing:-0.02em;color:var(--text);}
+  .nav-links {display:flex;gap:2rem;font-size:0.875rem;font-weight:500;color:var(--text-muted);}
+  .nav-links a {transition:var(--transition);}
+  .nav-links a:hover {color:var(--text);}
+  .nav-cta {
+    background:var(--accent);color:#fff;padding:0.55rem 1.35rem;border-radius:9999px;
+    font-size:0.875rem;font-weight:600;text-decoration:none;display:inline-block;
+    transition:var(--transition);
+  }
+  .nav-cta:hover {transform:scale(1.05);box-shadow:0 0 24px rgba(0,0,0,0.25);}
+  .nav-toggle { display: none; flex-direction: column; justify-content: center; gap: 5px; width: 34px; height: 34px; background: none; border: none; cursor: pointer; padding: 0; }
+  .nav-toggle span { display: block; width: 100%; height: 2px; background: var(--text); border-radius: 2px; }
+  .container {max-width:720px;margin:0 auto;padding:3.5rem 2rem 4rem;}
+  .kicker {font-size:0.8rem;color:var(--accent-dark);font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.75rem;}
+  h1 {font-size:2.3rem;font-weight:800;letter-spacing:-0.03em;line-height:1.15;margin-bottom:1rem;color:var(--text);}
+  .lede {font-size:1.05rem;color:var(--text-muted);margin-bottom:2rem;}
+  .lede strong {color:var(--text);font-weight:600;}
+  h2 {font-size:1.3rem;font-weight:700;letter-spacing:-0.02em;margin:2.75rem 0 1rem;color:var(--text);}
+  p {font-size:0.95rem;color:var(--text-muted);margin-bottom:1rem;}
+  .offer {
+    background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
+    padding:1.75rem;box-shadow:0 1px 3px rgba(15,31,47,0.05);border-top:4px solid var(--accent);
+  }
+  .offer h2 {margin-top:0;}
+  .offer ol {margin:0 0 1.25rem 1.2rem;color:var(--text-muted);font-size:0.95rem;}
+  .offer li {margin-bottom:0.5rem;}
+  .offer li strong {color:var(--text);}
+  .btn-row {display:flex;flex-wrap:wrap;gap:0.75rem;align-items:center;}
+  .btn {
+    background:var(--accent);color:#fff;padding:0.8rem 1.5rem;border-radius:9999px;
+    font-size:0.95rem;font-weight:600;display:inline-block;transition:var(--transition);
+  }
+  .btn:hover {background:var(--accent-light);}
+  .btn-outline {
+    border:1.5px solid var(--accent);color:var(--accent-dark);padding:0.75rem 1.4rem;border-radius:9999px;
+    font-size:0.95rem;font-weight:600;display:inline-block;transition:var(--transition);
+  }
+  .btn-outline:hover {background:var(--accent-tint);}
+  .fine {font-size:0.8rem;color:var(--text-dim);margin:1rem 0 0;}
+  .checks {list-style:none;display:grid;gap:0.6rem;}
+  .checks li {
+    background:var(--bg-card);border:1px solid var(--border);border-radius:0.9rem;
+    padding:0.85rem 1rem;font-size:0.92rem;color:var(--text-muted);display:flex;gap:0.7rem;
+  }
+  .checks li strong {color:var(--text);}
+  .tick {color:var(--accent);font-weight:800;flex-shrink:0;}
+  .plan {
+    background:var(--accent-tint);border-radius:var(--radius);padding:1.5rem 1.75rem;
+  }
+  .plan ul {margin:0 0 1.25rem 1.2rem;color:var(--text-muted);font-size:0.92rem;}
+  .plan li {margin-bottom:0.4rem;}
+  .price {font-size:1.6rem;font-weight:800;color:var(--text);letter-spacing:-0.02em;}
+  .price span {font-size:0.9rem;font-weight:500;color:var(--text-muted);}
+  .foot {text-align:center;margin-top:3rem;font-size:0.8rem;color:var(--text-dim);}
+  .foot a {color:var(--accent-dark);}
+  .foot a:hover {text-decoration:underline;}
+  @media(max-width:600px) {
+    .container {padding:2.5rem 1rem 3rem;}
+    h1 {font-size:1.8rem;}
+    .offer, .plan {padding:1.35rem 1.15rem;}
+    .btn, .btn-outline {width:100%;text-align:center;}
+    .nav {padding:1rem;}
+    .nav-cta {display:none;}
+    .nav-toggle { display: flex; }
+    .nav-links {
+      display: none; position: absolute; top: 100%; left: 0; right: 0;
+      flex-direction: column; gap: 0; padding: 0.5rem 1rem 1.25rem;
+      background: #fff; border-bottom: 1px solid rgba(15,31,47,0.08);
+    }
+    .nav-links.open { display: flex; }
+    .nav-links a { padding: 0.75rem 0; border-bottom: 1px solid rgba(15,31,47,0.08); }
+    .nav-links a:last-child { border-bottom: none; }
+  }
+</style>
+</head>
+<body>
+<nav class="nav">
+  <a href="/" class="nav-left">
+    <img src="/static/logo-wordmark.png?v=2" alt="TxtAnOffer" style="height:26px;width:auto;display:block;">
+  </a>
+  <div class="nav-links" id="navLinks">
+    <a href="/tc-check">TC Check</a>
+    <a href="/pricing">Pricing</a>
+    <a href="/faq">FAQ</a>
+    <a href="/login">Log In</a>
+  </div>
+  <a href="/tc-check/bulk?src=brokers_page" class="nav-cta" data-evt="brokers_audit_cta">Free Backlog Audit</a>
+  <button class="nav-toggle" id="navToggle" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
+</nav>
+<script>
+(function(){
+  var t=document.getElementById('navToggle'), l=document.getElementById('navLinks');
+  if(!t||!l) return;
+  t.addEventListener('click', function(){
+    var open = l.classList.toggle('open');
+    t.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+  l.querySelectorAll('a').forEach(function(a){
+    a.addEventListener('click', function(){ l.classList.remove('open'); t.setAttribute('aria-expanded','false'); });
+  });
+})();
+</script>
+
+<div class="container">
+  <div class="kicker">For managing brokers</div>
+  <h1>Find out what your agents leave blank &mdash; before title calls you about it.</h1>
+  <p class="lede">You supervise every file, but you usually only see the broken ones when title kicks them back: <strong>a blank Effective Date, a missing initial, a 40-11 that disagrees with the contract.</strong> Run your agents' last 20 closed files through TC Check and see the pattern for yourself. Free, no signup, no sales call.</p>
+
+  <div class="offer">
+    <h2>Free backlog audit: your last 20 closed files</h2>
+    <ol>
+      <li><strong>Pull 20 recent closed TREC 20-19 contracts</strong> &mdash; the executed contract PDFs, one per transaction.</li>
+      <li><strong>Zip them and upload</strong> &mdash; enter an email so you get a link to the results.</li>
+      <li><strong>Get a batch report</strong> &mdash; how many files had at least one issue, and which issues showed up most across your roster.</li>
+    </ol>
+    <div class="btn-row">
+      <a class="btn" href="/tc-check/bulk?src=brokers_page" data-evt="brokers_audit_cta">Start the free audit &rarr;</a>
+      <a class="btn-outline" href="mailto:support@txtanoffer.com?subject=Brokerage%20backlog%20audit" data-evt="brokers_email_cta">Walk me through it</a>
+    </div>
+    <p class="fine">Want to check just one file first? <a href="/tc-check" style="text-decoration:underline;">Try a single file</a>. TC Check flags what's missing or inconsistent; it isn't legal advice and doesn't replace your own review.</p>
+  </div>
+
+  <h2>What the audit looks for</h2>
+  <ul class="checks">
+    <li><span class="tick">&check;</span><span><strong>Blank required fields</strong> &mdash; Effective Date, earnest money, escrow agent, title fields.</span></li>
+    <li><span class="tick">&check;</span><span><strong>Missing initials</strong> &mdash; on every page, including the addendum.</span></li>
+    <li><span class="tick">&check;</span><span><strong>40-11 vs. contract mismatches</strong> &mdash; the loan amount in the Third Party Financing Addendum disagreeing with Section 3B.</span></li>
+    <li><span class="tick">&check;</span><span><strong>Financing checkbox conflicts</strong> &mdash; Section 3B and Section 22 telling title two different stories.</span></li>
+  </ul>
+  <p style="margin-top:1rem;">Checks are mapped field-by-field to TREC's published 20-19. <a href="/trec-changes" style="color:var(--accent-dark);text-decoration:underline;">See what changed in the current version &rarr;</a></p>
+
+  <h2>If the audit finds a pattern</h2>
+  <div class="plan">
+    <div class="price">$349<span>/month for your whole roster</span></div>
+    <ul>
+      <li>Every agent's offer checked before it's sent</li>
+      <li>Your TC can forward any outside file to tc@check.txtanoffer.com for an instant check</li>
+      <li>Bulk-check up to 200 files per batch with your join code</li>
+      <li>Roster &amp; compliance dashboard, Transaction Workspace and Closing Checklist</li>
+      <li>Agents join with one text &mdash; no per-agent setup</li>
+    </ul>
+    <a class="btn" href="/pricing#brokerage" data-evt="brokers_plan_cta">See the Brokerage plan</a>
+  </div>
+
+  <h2>Who's behind this</h2>
+  <p>TxtAnOffer is built and run in Texas by Phanel Jean Baptiste, a software builder, not a licensed agent. It's not affiliated with or endorsed by TREC. Questions go straight to me at <a href="mailto:support@txtanoffer.com" style="color:var(--accent-dark);text-decoration:underline;">support@txtanoffer.com</a>. <a href="/about" style="color:var(--accent-dark);text-decoration:underline;">The full story &rarr;</a></p>
+
+  <p class="foot"><a href="/">&larr; Back to home</a> &middot; <a href="/pricing">Pricing</a> &middot; <a href="/faq">FAQ</a> &middot; <a href="/contact">Contact</a></p>
+</div>
+</body>
+</html>"""
+    resp = make_response(html)
+    track_page_view(resp, "brokers_page")
+    return resp
 
 
 @app.route("/contact")
