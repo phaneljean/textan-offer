@@ -96,6 +96,13 @@ def run_cleanup_if_due(output_dir: str):
             # fall back to 30 days and wipe a broker's archive.
             pdfs_deleted = cleanup_old_pdfs(output_dir, retained=get_retained_brokerage_filenames())
             logs_deleted = cleanup_old_sms_logs()
+            try:
+                from archive import purge_expired
+                archive_deleted = purge_expired()
+                if archive_deleted:
+                    print(f"[cleanup] Purged {archive_deleted} archived file(s) past the 5-year retention")
+            except Exception as e:
+                print(f"[cleanup] Archive purge error: {e}")
             if pdfs_deleted or logs_deleted:
                 print(f"[cleanup] Deleted {pdfs_deleted} old PDF(s), {logs_deleted} old SMS/event log row(s)")
         except Exception as e:

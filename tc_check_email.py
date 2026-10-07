@@ -267,11 +267,11 @@ def _checked_date() -> str:
 
 
 _ARCHIVE_TEXT = (
-    "Keep every offer on file: on the Brokerage plan, every offer and amendment "
-    "your agents text in to TxtAnOffer is archived for 5 years, searchable by "
-    "address. That's longer than the 4 years TREC requires brokers to keep "
-    "transaction records (22 TAC 535.2). The archive holds the drafts created in "
-    "TxtAnOffer, so keep your executed copies too."
+    "Keep every contract on file: on the Brokerage plan, forward executed "
+    "contracts here from your brokerage email or drop them into your archive. "
+    "Each one is checked and kept 5 years, searchable by address -- longer than "
+    "the 4 years TREC requires brokers to keep transaction records (22 TAC 535.2). "
+    "https://txtanoffer.com/archive"
 )
 
 _UPSELL_TEXT = (
@@ -310,7 +310,17 @@ def _issue_group_text(issues: list, heading: str) -> str:
     return "\n".join(lines) + "\n"
 
 
-def format_reply_body(result: dict, check_count: int = 0) -> str:
+def _archived_text(archived) -> str:
+    if not archived:
+        return ""
+    n, d = archived.get("saved", 0), archived.get("duplicates", 0)
+    what = f"{n} file{'s' if n != 1 else ''} saved" if n else "Already in your archive"
+    extra = f" ({d} already there)" if n and d else ""
+    return (f"{what} to {archived.get('brokerage')}'s archive{extra} -- kept 5 years, searchable by address. "
+            "View it: https://txtanoffer.com/broker/archive\n\n")
+
+
+def format_reply_body(result: dict, check_count: int = 0, archived: dict = None) -> str:
     if not result["recognized"]:
         return (
             "We couldn't read that as a TREC 20-19 we recognize.\n\n"
@@ -330,6 +340,7 @@ def format_reply_body(result: dict, check_count: int = 0) -> str:
 
     body = (f"TC FILE CHECK REPORT\n{where}{county}\n"
             f"Checked {_checked_date()} · {_files_line(result)}\n\n"
+            + _archived_text(archived) +
             f"Status: {label}\n\n")
     if not issues:
         body += "Nothing to fix on the fields TC Check verifies. This one's ready.\n\n"
@@ -454,10 +465,10 @@ def _next_steps_html() -> str:
 
 def _archive_html() -> str:
     return (f'<div style="margin-top:16px;background:{_YELLOW_TINT};border:1px solid {_YELLOW};border-radius:10px;padding:16px 18px;">'
-            f'<p style="margin:0 0 6px;font-size:14px;font-weight:700;color:#0f1f2f;font-family:{_FONT};">Keep every offer on file</p>'
-            f'<p style="margin:0;font-size:13px;line-height:1.55;color:#3a3320;font-family:{_FONT};">On the Brokerage plan, every offer and amendment your agents text in to TxtAnOffer is '
-            f'<strong>archived for 5 years</strong>, searchable by address &mdash; longer than the 4 years TREC requires brokers to keep transaction records (22 TAC &sect;535.2). '
-            f'The archive holds the drafts created in TxtAnOffer, so keep your executed copies too.</p></div>')
+            f'<p style="margin:0 0 6px;font-size:14px;font-weight:700;color:#0f1f2f;font-family:{_FONT};">Keep every contract on file</p>'
+            f'<p style="margin:0;font-size:13px;line-height:1.55;color:#3a3320;font-family:{_FONT};">On the Brokerage plan, forward executed contracts here from your brokerage email or drop them into your archive. '
+            f'Each one is checked and <strong>kept 5 years</strong>, searchable by address &mdash; longer than the 4 years TREC requires brokers to keep transaction records (22 TAC &sect;535.2). '
+            f'<a href="https://txtanoffer.com/archive" style="color:{_GREEN};font-weight:600;">How it works &rarr;</a></p></div>')
 
 
 def _upsell_html() -> str:
@@ -476,7 +487,18 @@ def _footer_html(check_count: int = 0) -> str:
             f'<span style="font-size:11px;">{escape(_DISCLAIMER)}</span></p>')
 
 
-def format_reply_html(result: dict, check_count: int = 0) -> str:
+def _archived_html(archived) -> str:
+    if not archived:
+        return ""
+    n, d = archived.get("saved", 0), archived.get("duplicates", 0)
+    what = f"{n} file{'s' if n != 1 else ''} saved" if n else "Already in your archive"
+    extra = f" ({d} already there)" if n and d else ""
+    return (f'<div style="margin-bottom:14px;background:{_GREEN_TINT};border-radius:8px;padding:12px 16px;font-family:{_FONT};font-size:13px;color:#0f1f2f;">'
+            f'&#10003; <strong>{escape(what)} to {escape(archived.get("brokerage", "your brokerage"))}&rsquo;s archive</strong>{escape(extra)} &mdash; kept 5 years, searchable by address. '
+            f'<a href="https://txtanoffer.com/broker/archive" style="color:{_GREEN};font-weight:600;">Open the archive &rarr;</a></div>')
+
+
+def format_reply_html(result: dict, check_count: int = 0, archived: dict = None) -> str:
     if not result["recognized"]:
         body = (
             f'<p style="{_P_STYLE}">This works with AcroForm-fillable TREC 20-19 PDFs '
@@ -500,7 +522,7 @@ def format_reply_html(result: dict, check_count: int = 0) -> str:
     sub_bits.append(escape(_files_line(result)))
     subheading = " &middot; ".join(sub_bits)
 
-    body = _status_card_html(result)
+    body = _archived_html(archived) + _status_card_html(result)
     if not issues:
         body += f'<p style="{_P_STYLE}margin-top:18px;color:#15803d;">Nothing to fix on the fields TC Check verifies &mdash; this one&rsquo;s ready.</p>'
     else:

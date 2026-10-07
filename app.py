@@ -39,6 +39,8 @@ from brokerages import extract_brokerage_prefix, link_user_to_brokerage, get_bro
 from sponsors import create_sponsor, list_sponsors, set_sponsor_active
 from sms_utils import parse_incoming_sms
 from cleanup import run_cleanup_if_due
+import archive as archive_store
+import broker_auth
 from reminders import run_reminders_if_due
 from deadlines import earnest_money_deadline, option_end_date, build_day_one_summary
 import transaction_tasks
@@ -1208,7 +1210,7 @@ def index():
         <p>Search by address from your dashboard, open any PDF, or download the whole archive as a ZIP &mdash; anytime, even if you cancel.</p>
       </div>
     </div>
-    <p style="text-align:center;font-size:0.8rem;color:var(--text-dim);max-width:620px;margin:1.5rem auto 0;">The archive holds the drafts generated in TxtAnOffer, not the final signed contracts &mdash; it helps with the 4-year rule but doesn't replace your own copy of what was executed. Files stay archived while the agent is on your roster.</p>
+    <p style="text-align:center;font-size:0.8rem;color:var(--text-dim);max-width:620px;margin:1.5rem auto 0;">Executed contracts too: forward them to tc@check.txtanoffer.com from your brokerage email, or drop them into your archive &mdash; each one is checked and kept 5 years. <a href="/archive" style="color:var(--accent-dark);text-decoration:underline;">How the contract archive works &rarr;</a></p>
     <div style="text-align:center;margin-top:1.25rem;"><a class="sl-outline" href="/brokers" data-evt="records_brokers_cta">See it for your brokerage &rarr;</a></div>
   </section>
 
@@ -1322,7 +1324,7 @@ def index():
       <div class="step-card">
         <div class="step-num">&check;</div>
         <h3>Files you check aren&rsquo;t kept</h3>
-        <p>A contract you upload or forward to TC Check is processed for the report, then discarded. The one exception is on purpose: on the Brokerage plan, offers your agents text in are archived for your brokerage&rsquo;s records &mdash; <a href="#records" style="color:var(--accent-dark);text-decoration:underline;">see how that works</a>.</p>
+        <p>A contract you upload or forward to TC Check is processed for the report, then discarded. The one exception is on purpose: on the Brokerage plan, contracts your brokerage forwards or uploads to its archive, and offers your agents text in, are kept for your records &mdash; <a href="#records" style="color:var(--accent-dark);text-decoration:underline;">see how that works</a>.</p>
       </div>
     </div>
   </section>
@@ -3538,12 +3540,15 @@ def tc_check_email_inbound(token):
         return "", 200
 
     tmp_paths = []
+    archive_inputs = []  # (bytes, filename) -- kept only if the sender's brokerage archives forwards
     try:
         for f in pdfs:
             tmp = tempfile.NamedTemporaryFile(suffix=".pdf", delete=False)
             f.save(tmp.name)
             tmp.close()
             tmp_paths.append(tmp.name)
+            with open(tmp.name, "rb") as fh:
+                archive_inputs.append((fh.read(), f.filename or "contract.pdf"))
         try:
             result = check_tc_file(tmp_paths)
         except Exception:
@@ -3568,8 +3573,26 @@ def tc_check_email_inbound(token):
         "sender": sender,
     })
 
+    # Brokerage archive (2026-10-07): a forward from a brokerage's own TC/
+    # login email or a roster agent is kept, not just checked -- unless the
+    # brokerage switched forward-archiving off. Everyone else: check only.
+    archived = None
+    brokerage = archive_store.find_brokerage_for_sender(sender)
+    if brokerage and brokerage.get("archive_forwards", 1):
+        saved = dupes = 0
+        for data, name in archive_inputs:
+            try:
+                rec = archive_store.save_file(brokerage["id"], data, name, "forward", sender, result)
+                dupes += 1 if rec.get("duplicate") else 0
+                saved += 0 if rec.get("duplicate") else 1
+            except Exception as e:
+                print(f"[archive] save failed for brokerage {brokerage['id']}: {e}")
+        archived = {"brokerage": brokerage.get("name", "your brokerage"), "saved": saved, "duplicates": dupes}
+        track_event("archive_saved", None, {"brokerage_id": brokerage["id"], "source": "forward", "files": saved, "duplicates": dupes})
+
     check_count = get_tc_check_count_for_sender(sender)
-    send_html_email(sender, subject_line(result), format_reply_body(result, check_count), format_reply_html(result, check_count))
+    send_html_email(sender, subject_line(result), format_reply_body(result, check_count, archived),
+                    format_reply_html(result, check_count, archived))
     return "", 200
 
 
@@ -5355,7 +5378,7 @@ def pricing():
     <ul class="features">
       <li><span class="check">&#10003;</span> Every agent&rsquo;s offer checked before it&rsquo;s sent</li>
       <li><span class="check">&#10003;</span> Unlimited offers for all your agents</li>
-      <li><span class="check">&#10003;</span> 5-year records archive, searchable by address</li>
+      <li><span class="check">&#10003;</span> Contract archive: forward or drop executed contracts, checked and kept 5 years</li>
       <li><span class="check">&#10003;</span> DocuSign, Transaction Workspace and roster dashboard</li>
     </ul>
     <a href="/brokers" class="cta-btn" data-evt="pricing_audit_cta">Start with a free 20-file audit</a>
@@ -5378,7 +5401,7 @@ def pricing():
     </div>
     <div class="value-card">
       <div class="value-title">Do you keep my client&rsquo;s file?</div>
-      <div class="value-text">No. A file you check is deleted right after your report. The one exception is on purpose: on the Brokerage plan, offers your agents text in are archived for your records.</div>
+      <div class="value-text">No. A file you check is deleted right after your report. The one exception is on purpose: on the Brokerage plan, contracts you forward or upload to your archive, and offers your agents text in, are kept 5 years for your records.</div>
     </div>
     <div class="value-card">
       <div class="value-title">Can I cancel?</div>
@@ -6487,6 +6510,12 @@ def broker_dashboard(join_code):
   </table>
 </div>
 
+<div class="card" style="background:#0a3f3a;color:#fff;">
+  <h2 style="color:#fff;">Contract archive</h2>
+  <p style="color:#c9dcd8;font-size:0.9rem;margin:6px 0 12px;">Forward or drop your agents&rsquo; executed contracts: each one is checked and kept 5 years, searchable by address.</p>
+  <a href="/broker/login" style="display:inline-block;background:#f5c242;color:#0f1f2f;padding:9px 16px;border-radius:999px;font-weight:700;text-decoration:none;">Sign in to the archive &rarr;</a>
+</div>
+
 <div class="card" id="archive">
   <h2>Records archive</h2>
   <p style="color:#5a6b7a;font-size:0.85rem;margin-top:-6px;margin-bottom:14px;">
@@ -7040,7 +7069,7 @@ def terms():
     </ul>
     <p>We use this data solely to operate and improve the Service. We do not sell your personal information to third parties.</p>
     <p><strong>Third-party services:</strong> The Service uses Twilio (SMS delivery), Stripe (payment processing), and Railway on Google Cloud Platform (infrastructure). These services have their own privacy policies and may process your data in accordance with their terms.</p>
-    <p><strong>Data retention:</strong> Generated PDFs are stored temporarily and may be deleted after a reasonable period (currently 30 days). On the Brokerage plan, offers and amendments drafted by an agent linked to the brokerage are kept for 5 years from creation while that agent stays linked, and can be exported at any time from the brokerage dashboard. These are the drafts generated by the Service, not the executed contracts. We retain account and billing records as required by law. <strong>Outside the Brokerage plan, this is shorter than the 4-year offer/contract/addenda retention period brokers are independently required to maintain under TREC Rule &sect;535.2.</strong> Our retention does not satisfy that obligation &mdash; you are responsible for downloading and separately retaining your own copy of every offer and amendment.</p>
+    <p><strong>Data retention:</strong> Generated PDFs are stored temporarily and may be deleted after a reasonable period (currently 30 days). On the Brokerage plan, offers and amendments drafted by an agent linked to the brokerage are kept for 5 years from creation while that agent stays linked, and can be exported at any time from the brokerage dashboard. These are the drafts generated by the Service, not the executed contracts. Brokerage plan accounts may also store executed contracts in the contract archive, by forwarding them from an email linked to the brokerage or uploading them while signed in; those files are kept for 5 years from when they are added unless the brokerage deletes them sooner, are accessible only to the brokerage's signed-in users, and can be exported at any time. You are responsible for having the right to store any document you add. We retain account and billing records as required by law. <strong>Outside the Brokerage plan, this is shorter than the 4-year offer/contract/addenda retention period brokers are independently required to maintain under TREC Rule &sect;535.2.</strong> Our retention does not satisfy that obligation &mdash; you are responsible for downloading and separately retaining your own copy of every offer and amendment.</p>
     <p><strong>Security:</strong> We implement reasonable technical and organizational measures to protect your data. However, no system is perfectly secure, and we cannot guarantee absolute security of your information.</p>
 
     <h2><span class="section-num">10.</span> Acceptable Use</h2>
@@ -7265,11 +7294,12 @@ def privacy():
     <ul>
       <li>Generated PDFs: stored temporarily for download, deleted after 30 days</li>
       <li>Brokerage plan: offers and amendments drafted by an agent linked to a brokerage are kept for 5 years from creation while the agent stays linked, viewable and exportable by that brokerage</li>
+      <li>Brokerage contract archive: executed contracts a brokerage forwards from a linked email or uploads while signed in are stored for 5 years from when they are added (or until the brokerage deletes them), visible only to that brokerage's signed-in users, and exportable anytime. Files checked outside the archive are still deleted right after the report.</li>
       <li>Account data: retained while your account is active and for 90 days after cancellation</li>
       <li>Billing records: retained as required by applicable tax and accounting laws</li>
       <li>SMS logs: retained for 90 days for support and debugging purposes</li>
     </ul>
-    <p><strong>Note for licensees:</strong> TREC Rule &sect;535.2 requires brokers to independently retain offers, contracts, and related addenda for at least 4 years from closing or termination. Our 30-day PDF retention does not satisfy that requirement. The Brokerage plan's 5-year archive holds the drafts generated here, not the executed contracts, so it helps with but does not by itself satisfy that requirement &mdash; you remain responsible for retaining your own copy of every executed offer and amendment.</p>
+    <p><strong>Note for licensees:</strong> TREC Rule &sect;535.2 requires brokers to independently retain offers, contracts, and related addenda for at least 4 years from closing or termination. Our 30-day PDF retention does not satisfy that requirement. The Brokerage plan's contract archive can hold the executed contracts your brokerage forwards or uploads, plus the drafts generated here. It helps with that requirement, but it is not a guarantee of compliance &mdash; you remain responsible for keeping complete transaction records.</p>
 
     <h2>6. Data Security</h2>
     <p>We implement reasonable technical and organizational measures to protect your data:</p>
@@ -7446,7 +7476,7 @@ def faq():
 
   <div class="faq-item">
     <h2>Do you store my texts or offers?</h2>
-    <p>Generated PDFs are stored temporarily for download and deleted after 30 days &mdash; except on the Brokerage plan, where every offer and amendment your agents draft here is kept for 5 years in a searchable archive the broker can export. SMS logs are retained for 90 days for support and debugging. We do not sell or share your data. See our <a href="/privacy" style="color:var(--accent-dark);">Privacy Policy</a> for the full breakdown.</p>
+    <p>Generated PDFs are stored temporarily for download and deleted after 30 days &mdash; except on the Brokerage plan, where every offer and amendment your agents draft here, plus any executed contracts your brokerage forwards or uploads, is kept for 5 years in a searchable archive the broker can export. SMS logs are retained for 90 days for support and debugging. We do not sell or share your data. See our <a href="/privacy" style="color:var(--accent-dark);">Privacy Policy</a> for the full breakdown.</p>
     <p><strong>Important:</strong> TREC Rule &sect;535.2 requires brokers to independently retain records of offers, contracts, and related addenda for at least 4 years from closing or termination of the transaction. Our 30-day retention does not satisfy that requirement. The Brokerage archive helps, but it holds the drafts generated here, not the signed contracts &mdash; keep your own copy of every executed offer and amendment.</p>
   </div>
 
@@ -8348,7 +8378,7 @@ _GUIDES = {
 </ol>
 
 <h2>Where TxtAnOffer fits</h2>
-<p>On the Brokerage plan, every offer and amendment your agents text in to TxtAnOffer is kept for 5 years, searchable by address and exportable anytime. It holds the drafts generated in TxtAnOffer, not the final signed contracts, so it <em>helps</em> with this rule but doesn't replace your own records of what was executed.</p>
+<p>On the Brokerage plan, you can forward executed contracts to tc@check.txtanoffer.com from your brokerage email, or drop them into your archive. Each one is checked for what title kicks back and kept for 5 years, searchable by address and exportable anytime. Offers your agents text in to TxtAnOffer are archived too. It <em>helps</em> with this rule, but you remain responsible for keeping complete records.</p>
 
 <p class="note">This is general information, not legal advice. Confirm your brokerage's obligations against the current rule text or with a Texas real estate attorney. TxtAnOffer is not affiliated with TREC.</p>
 """,
@@ -8643,13 +8673,317 @@ def guide(slug):
     return resp
 
 
+# --- Brokerage archive: sign-in + archive pages (2026-10-07) -----------------
+# See archive.py (storage) and broker_auth.py (sign-in links + session).
+
+_BROKER_PAGE_CSS = """
+  :root{--bg:#F5F5F7;--text:#0f1f2f;--muted:#5a6b7a;--dim:#8a9aa9;--green:#0b5d52;--green-dark:#0a3f3a;--tint:#E7F3F1;--yellow:#f5c242;--border:rgba(15,31,47,0.08);}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:var(--bg);color:var(--text);line-height:1.55;-webkit-font-smoothing:antialiased;}
+  a{color:var(--green);}
+  .head{background:var(--green-dark);padding:16px 24px;display:flex;justify-content:space-between;align-items:center;gap:12px;}
+  .head img{height:22px;display:block;}
+  .head .who{color:#c9dcd8;font-size:0.8rem;}
+  .head .who a{color:var(--yellow);font-weight:600;margin-left:10px;}
+  .bar{height:4px;background:var(--yellow);}
+  .wrap{max-width:980px;margin:0 auto;padding:2rem 1.25rem 3rem;}
+  h1{font-size:1.7rem;letter-spacing:-0.02em;margin-bottom:0.3rem;}
+  .sub{color:var(--muted);font-size:0.92rem;margin-bottom:1.5rem;}
+  .card{background:#fff;border:1px solid var(--border);border-radius:14px;padding:1.25rem;margin-bottom:1.25rem;}
+  .card h2{font-size:1.05rem;margin-bottom:0.4rem;}
+  .card p{font-size:0.88rem;color:var(--muted);}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;}
+  input[type=text],input[type=email]{width:100%;padding:0.65rem 0.8rem;border:1px solid #d5dbe0;border-radius:10px;font:inherit;font-size:0.92rem;}
+  .btn{display:inline-block;background:var(--green);color:#fff;border:0;border-radius:999px;padding:0.65rem 1.2rem;font:inherit;font-weight:700;font-size:0.88rem;cursor:pointer;text-decoration:none;}
+  .btn.ghost{background:#fff;color:var(--green);border:1.5px solid var(--green);}
+  .btn.small{padding:0.35rem 0.8rem;font-size:0.78rem;}
+  .drop{border:2px dashed #cfd6dc;border-radius:12px;padding:1.1rem;text-align:center;margin:0.75rem 0;background:#fafbfb;}
+  .drop input{margin-top:0.5rem;}
+  code{background:var(--tint);padding:2px 6px;border-radius:6px;font-size:0.85rem;}
+  table{width:100%;border-collapse:collapse;font-size:0.86rem;}
+  th{text-align:left;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--dim);padding:8px;border-bottom:2px solid #eef0f2;}
+  td{padding:9px 8px;border-bottom:1px solid #eef0f2;vertical-align:top;}
+  .tag{display:inline-block;font-size:0.68rem;font-weight:700;padding:2px 7px;border-radius:5px;}
+  .tag.ok{background:#ecfdf5;color:#047857;}
+  .tag.bad{background:#fdecec;color:#dc2626;}
+  .tag.warn{background:#fdf3e3;color:#b45309;}
+  .tag.na{background:#eef0f2;color:var(--muted);}
+  .flash{background:var(--tint);border-radius:10px;padding:0.8rem 1rem;margin-bottom:1rem;font-size:0.9rem;}
+  .flash.err{background:#fdecec;}
+  .muted{color:var(--dim);font-size:0.78rem;}
+  .tablewrap{overflow-x:auto;}
+  @media(max-width:720px){.grid{grid-template-columns:1fr;}h1{font-size:1.4rem;}
+    .tablewrap table,.tablewrap tbody,.tablewrap tr,.tablewrap td{display:block;width:100%;}
+    .tablewrap th{display:none;}
+    .tablewrap tr{padding:10px 0;border-bottom:1px solid #eef0f2;}
+    .tablewrap td{border:0;padding:3px 0;}}
+"""
+
+
+def _broker_shell(title, body, who=""):
+    return ("""<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="robots" content="noindex">
+<title>""" + escape(title) + """ — TxtAnOffer</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>""" + _BROKER_PAGE_CSS + """</style></head><body>
+<div class="head"><a href="/"><img src="/static/logo-wordmark-white.png?v=1" alt="txtanoffer"></a><span class="who">""" + who + """</span></div>
+<div class="bar"></div><main class="wrap">""" + body + """</main></body></html>""")
+
+
+def _current_broker():
+    """(brokerage, email, cookie) for a valid session whose email is still
+    one of the brokerage's login emails, else None."""
+    raw = request.cookies.get(broker_auth.COOKIE, "")
+    sess = broker_auth.read_session(raw)
+    if not sess:
+        return None
+    bid, email = sess
+    b = get_brokerage(bid)
+    if not b or email not in archive_store.login_emails_for(b):
+        return None
+    return b, email, raw
+
+
+@app.route("/broker/login", methods=["GET", "POST"])
+def broker_login():
+    msg = ""
+    if request.method == "POST":
+        email = (request.form.get("email") or "").strip()[:120]
+        ip = request.remote_addr or "unknown"
+        if check_and_increment(f"broker_login:{ip}", limit=8) and check_and_increment(f"broker_login_e:{email.lower()}", limit=5):
+            b = archive_store.find_brokerage_for_login(email)
+            if b:
+                p = broker_auth.login_link_params(b["id"], email)
+                link = request.host_url.rstrip("/") + "/broker/login/verify?" + "&".join(f"{k}={_quote(str(v))}" for k, v in p.items())
+                send_html_email(
+                    email, "Your TxtAnOffer sign-in link",
+                    f"Sign in to {b['name']}'s archive on TxtAnOffer:\n{link}\n\nThis link works once and expires in 20 minutes. If you didn't ask for it, ignore this email.",
+                    f'<div style="font-family:Arial,sans-serif;font-size:14px;color:#0f1f2f;"><p>Sign in to <strong>{escape(b["name"])}</strong>&rsquo;s archive on TxtAnOffer:</p>'
+                    f'<p><a href="{escape(link)}" style="display:inline-block;background:#0b5d52;color:#fff;padding:10px 18px;border-radius:999px;text-decoration:none;font-weight:700;">Sign in &rarr;</a></p>'
+                    f'<p style="color:#5a6b7a;font-size:12px;">This link expires in 20 minutes. If you didn&rsquo;t ask for it, ignore this email.</p></div>',
+                )
+                track_event("broker_login_link_sent", None, {"brokerage_id": b["id"]})
+        # Same answer either way, so this page can't be used to test which emails are customers.
+        msg = '<div class="flash">If that email belongs to a TxtAnOffer brokerage, a sign-in link is on its way. Check your inbox (and spam).</div>'
+    body = ("""<div class="card" style="max-width:460px;margin:2rem auto;">
+  <h1>Sign in to your archive</h1>
+  <p class="sub">We&rsquo;ll email you a one-time sign-in link. No password needed.</p>
+  """ + msg + """
+  <form method="post"><input type="email" name="email" required placeholder="you@brokerage.com" autocomplete="email">
+  <button class="btn" style="margin-top:0.8rem;width:100%;">Email me a sign-in link</button></form>
+  <p class="muted" style="margin-top:1rem;">Use the email your brokerage signed up with. Not a customer yet? <a href="/brokers">Start with a free 20-file audit</a>.</p>
+</div>""")
+    return _broker_shell("Sign in", body)
+
+
+def _quote(v):
+    from urllib.parse import quote
+    return quote(v, safe="")
+
+
+@app.route("/broker/login/verify")
+def broker_login_verify():
+    bid = broker_auth.verify_login_link(request.args.get("b"), request.args.get("e"), request.args.get("exp"), request.args.get("sig"))
+    b = get_brokerage(bid) if bid else None
+    email = (request.args.get("e") or "").lower()
+    if not b or email not in archive_store.login_emails_for(b):
+        return _broker_shell("Link expired", '<div class="card" style="max-width:460px;margin:2rem auto;"><h1>That link has expired</h1><p class="sub">Sign-in links work for 20 minutes.</p><a class="btn" href="/broker/login">Get a new link</a></div>'), 400
+    resp = make_response(redirect("/broker/archive"))
+    resp.set_cookie(broker_auth.COOKIE, broker_auth.session_value(b["id"], email), max_age=broker_auth.SESSION_TTL,
+                    httponly=True, secure=request.is_secure or request.headers.get("X-Forwarded-Proto") == "https", samesite="Lax")
+    track_event("broker_login", None, {"brokerage_id": b["id"]})
+    return resp
+
+
+@app.route("/broker/logout")
+def broker_logout():
+    resp = make_response(redirect("/broker/login"))
+    resp.delete_cookie(broker_auth.COOKIE)
+    return resp
+
+
+def _archive_status_tag(f):
+    from tc_check_email import _display_issues
+    if not f.get("recognized"):
+        return '<span class="tag na">Stored, not checked</span>'
+    shown = _display_issues(f.get("issues") or [])  # same grouping as the report
+    nb = sum(1 for i in shown if i.get("severity") == "blocker")
+    if nb:
+        return f'<span class="tag bad">{nb} must fix</span>'
+    if shown:
+        return f'<span class="tag warn">{len(shown)} to review</span>'
+    return '<span class="tag ok">Clear</span>'
+
+
+@app.route("/broker/archive", methods=["GET", "POST"])
+def broker_archive():
+    cur = _current_broker()
+    if not cur:
+        return redirect("/broker/login")
+    b, email, raw = cur
+    csrf = broker_auth.csrf_token(raw)
+    flash = ""
+
+    if request.method == "POST":
+        if not hmac.compare_digest(request.form.get("csrf", ""), csrf):
+            abort(400)
+        action = request.form.get("action")
+        if action == "toggle_forwards":
+            archive_store.set_archive_forwards(b["id"], request.form.get("on") == "1")
+            return redirect("/broker/archive")
+        if action == "upload":
+            files = [f for f in request.files.getlist("files") if f and f.filename][:20]
+            saved = dupes = skipped = 0
+            for f in files:
+                if not f.filename.lower().endswith(".pdf"):
+                    skipped += 1
+                    continue
+                data = f.read()
+                if len(data) > archive_store.MAX_FILE_BYTES:
+                    skipped += 1
+                    continue
+                result = None
+                tmp = tempfile.NamedTemporaryFile(suffix=".pdf", delete=False)
+                try:
+                    tmp.write(data)
+                    tmp.close()
+                    try:
+                        result = check_tc_file([tmp.name])
+                    except Exception:
+                        result = None  # not a readable TREC 20-19 -- still archived, marked "not checked"
+                finally:
+                    try:
+                        os.remove(tmp.name)
+                    except OSError:
+                        pass
+                rec = archive_store.save_file(b["id"], data, f.filename, "upload", email, result)
+                dupes += 1 if rec.get("duplicate") else 0
+                saved += 0 if rec.get("duplicate") else 1
+            track_event("archive_saved", None, {"brokerage_id": b["id"], "source": "upload", "files": saved, "duplicates": dupes})
+            parts = [f"{saved} file{'s' if saved != 1 else ''} saved"]
+            if dupes:
+                parts.append(f"{dupes} already in your archive")
+            if skipped:
+                parts.append(f"{skipped} skipped (PDFs up to 25 MB only)")
+            flash = '<div class="flash">' + escape(" · ".join(parts)) + "</div>"
+
+    q = (request.args.get("q") or "").strip()[:100]
+    files = archive_store.list_files(b["id"], q)
+    rows = "".join(
+        f"<tr><td style='white-space:nowrap;'>{escape(f['created_at'][:10])}</td>"
+        f"<td><strong>{escape(f['address'] or '—')}</strong><div class='muted'>{escape(', '.join(x for x in (f['city'], (f['county'] + ' County') if f['county'] else '') if x))}</div></td>"
+        f"<td>{escape(f['original_name'] or '')}<div class='muted'>{'Forwarded by ' + escape(f['sender']) if f['source'] == 'forward' else 'Uploaded by ' + escape(f['sender'])}</div></td>"
+        f"<td>{_archive_status_tag(f)}</td>"
+        f"<td style='white-space:nowrap;'><a class='btn small ghost' href='/broker/archive/file/{f['id']}'>Download</a> "
+        f"<form method='post' action='/broker/archive/file/{f['id']}/delete' style='display:inline;' onsubmit=\"return confirm('Delete this file from your archive? This can\\'t be undone.');\">"
+        f"<input type='hidden' name='csrf' value='{csrf}'><button class='btn small ghost' style='border-color:#dc2626;color:#dc2626;'>Delete</button></form></td></tr>"
+        for f in files
+    ) or f"<tr><td colspan='5' class='muted' style='padding:14px 8px;'>{'No files match &ldquo;' + escape(q) + '&rdquo;.' if q else 'No files yet. Forward a contract or drop one above.'}</td></tr>"
+
+    drafts = list_brokerage_records(b["id"], q)
+    draft_rows = "".join(
+        f"<tr><td>{escape((r['created_at'] or '')[:10])}</td><td>{escape(r['address'] or '')}</td>"
+        f"<td>{'Offer (20-19)' if r['kind'] == 'offer' else 'Amendment (39-11)'}</td><td>{escape(r['phone'] or '')}</td></tr>"
+        for r in drafts[:200]
+    ) or "<tr><td colspan='4' class='muted'>No drafts yet.</td></tr>"
+
+    fwd_on = bool(b.get("archive_forwards", 1))
+    who = escape(email) + ' <a href="/broker/logout">Sign out</a>'
+    body = f"""
+<h1>{escape(b['name'])} &mdash; contract archive</h1>
+<p class="sub">Executed contracts kept 5 years, checked on the way in, searchable by address. Only people who sign in with your brokerage&rsquo;s email can see them.</p>
+{flash}
+<div class="grid">
+  <div class="card">
+    <h2>Forward it</h2>
+    <p>Forward any executed contract to <code>tc@check.txtanoffer.com</code> from <strong>{escape(b.get('tc_email') or 'your brokerage email')}</strong> or from an agent on your roster. You&rsquo;ll get the check report back, and the PDF lands here.</p>
+    <form method="post" style="margin-top:0.75rem;"><input type="hidden" name="csrf" value="{csrf}"><input type="hidden" name="action" value="toggle_forwards"><input type="hidden" name="on" value="{'0' if fwd_on else '1'}">
+      <span class="tag {'ok' if fwd_on else 'na'}">Saving forwards: {'On' if fwd_on else 'Off'}</span>
+      <button class="btn small ghost" style="margin-left:6px;">{'Turn off' if fwd_on else 'Turn on'}</button></form>
+  </div>
+  <div class="card">
+    <h2>Or drop it</h2>
+    <form method="post" enctype="multipart/form-data"><input type="hidden" name="csrf" value="{csrf}"><input type="hidden" name="action" value="upload">
+      <div class="drop">PDFs only &middot; up to 20 at a time, 25 MB each<br><input type="file" name="files" accept="application/pdf,.pdf" multiple required></div>
+      <button class="btn">Save to archive</button></form>
+  </div>
+</div>
+<div class="card">
+  <form method="get" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:0.8rem;">
+    <input type="text" name="q" value="{escape(q)}" placeholder="Search by address, e.g. 123 Main St" style="flex:1;min-width:200px;">
+    <button class="btn">Search</button>
+    <a class="btn ghost" href="/broker/archive/export.zip">Download all (ZIP)</a>
+  </form>
+  <div class="tablewrap"><table><tr><th>Added</th><th>Property</th><th>File</th><th>Check</th><th></th></tr>{rows}</table></div>
+</div>
+<div class="card">
+  <h2>Drafts created in TxtAnOffer</h2>
+  <p style="margin-bottom:0.6rem;">Offers and amendments your agents texted in, kept 5 years. These are drafts, not the executed contracts.</p>
+  <div class="tablewrap"><table><tr><th>Date</th><th>Address</th><th>Document</th><th>Agent</th></tr>{draft_rows}</table></div>
+</div>
+<p class="muted">Files are kept 5 years from when they&rsquo;re added &mdash; longer than the 4 years TREC requires brokers to keep transaction records (22 TAC &sect;535.2). Deleting a file removes it permanently. Keep your own copies as well. TxtAnOffer is not affiliated with TREC.</p>
+"""
+    return _broker_shell(f"{b['name']} archive", body, who)
+
+
+@app.route("/broker/archive/file/<int:file_id>")
+def broker_archive_file(file_id):
+    cur = _current_broker()
+    if not cur:
+        return redirect("/broker/login")
+    f = archive_store.get_file(file_id, cur[0]["id"])
+    if not f or not os.path.isfile(f["path"]):
+        abort(404)
+    track_event("archive_download", None, {"brokerage_id": cur[0]["id"], "file_id": file_id})
+    return send_from_directory(os.path.dirname(f["path"]), os.path.basename(f["path"]), as_attachment=True,
+                               download_name=re.sub(r"[^A-Za-z0-9._ -]", "_", f["original_name"] or "contract.pdf"))
+
+
+@app.route("/broker/archive/file/<int:file_id>/delete", methods=["POST"])
+def broker_archive_delete(file_id):
+    cur = _current_broker()
+    if not cur:
+        return redirect("/broker/login")
+    if not hmac.compare_digest(request.form.get("csrf", ""), broker_auth.csrf_token(cur[2])):
+        abort(400)
+    archive_store.delete_file(file_id, cur[0]["id"])
+    track_event("archive_delete", None, {"brokerage_id": cur[0]["id"], "file_id": file_id})
+    return redirect("/broker/archive")
+
+
+@app.route("/broker/archive/export.zip")
+def broker_archive_export():
+    """Everything this brokerage has: archived executed files + drafts."""
+    import io
+    import zipfile
+    cur = _current_broker()
+    if not cur:
+        return redirect("/broker/login")
+    b = cur[0]
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for f in archive_store.list_files(b["id"], limit=100000):
+            path = os.path.join(archive_store.ARCHIVE_DIR, str(b["id"]), f["stored_name"])
+            if os.path.isfile(path):
+                safe = re.sub(r"[^A-Za-z0-9._ -]", "_", f["original_name"] or "contract.pdf")
+                zf.write(path, arcname=f"executed/{f['created_at'][:10]}_{f['id']}_{safe}")
+        for r in list_brokerage_records(b["id"], limit=100000):
+            path = os.path.join(OUTPUT_DIR, r["filename"])
+            if "/" not in r["filename"] and os.path.isfile(path):
+                zf.write(path, arcname=f"drafts/{(r['created_at'] or '')[:10]}_{r['filename']}")
+    track_event("brokerage_archive_export", None, {"brokerage_id": b["id"], "scope": "full"})
+    safe_name = re.sub(r"[^A-Za-z0-9]+", "-", b["name"]).strip("-") or "brokerage"
+    return Response(buf.getvalue(), mimetype="application/zip",
+                    headers={"Content-Disposition": f'attachment; filename="{safe_name}-archive.zip"'})
+
+
 _ARCHIVE_EA_PAGE = """<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Contract Archive (Early Access) — TxtAnOffer</title>
-<meta name="description" content="Coming soon for Texas brokerages: forward or drop executed contracts, get each one checked for what title kicks back, and keep them 5 years, searchable by address. Join early access.">
+<title>Contract Archive — TxtAnOffer</title>
+<meta name="description" content="On the TxtAnOffer Brokerage plan: forward or drop executed contracts, get each one checked for what title kicks back, and keep them 5 years, searchable by address.">
 <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -8683,14 +9017,14 @@ _ARCHIVE_EA_PAGE = """<!DOCTYPE html>
 </style>
 </head>
 <body>
-<div class="head"><a href="/"><img src="/static/logo-wordmark-white.png?v=1" alt="txtanoffer"></a><span class="pill">Early access</span></div>
+<div class="head"><a href="/"><img src="/static/logo-wordmark-white.png?v=1" alt="txtanoffer"></a><span class="pill">Brokerage plan</span></div>
 <div class="bar"></div>
 <main class="wrap">
   <h1>Every executed contract. Checked. Kept for 5 years.</h1>
-  <p class="lede">Coming soon for Texas brokerages: send in your executed TREC contracts, get each one checked for what title kicks back, and find any file by address years later.</p>
+  <p class="lede">On the Brokerage plan: send in your executed TREC contracts, get each one checked for what title kicks back, and find any file by address years later. <a href="/broker/login" style="color:var(--green);font-weight:600;">Already a customer? Sign in &rarr;</a></p>
   <div class="ways">
-    <div class="way"><b>Forward it</b><span>Email the executed contract to your brokerage&rsquo;s archive address.</span></div>
-    <div class="way"><b>Or drop it</b><span>Upload it on txtanoffer.com, one file or a batch.</span></div>
+    <div class="way"><b>Forward it</b><span>Send the executed contract to tc@check.txtanoffer.com from your brokerage email.</span></div>
+    <div class="way"><b>Or drop it</b><span>Upload it in your archive, up to 20 files at a time.</span></div>
   </div>
   <ul>
     <li>Checked on the way in: blank fields, missing initials, 40-11 mismatches</li>
@@ -8699,21 +9033,21 @@ _ARCHIVE_EA_PAGE = """<!DOCTYPE html>
     <li>Private to your brokerage, export everything anytime</li>
   </ul>
   __FORM__
-  <p class="note">This feature is in development and not live yet. Early access members get it first and help shape it. TxtAnOffer is not affiliated with TREC. <a href="/" style="color:var(--green);">txtanoffer.com</a></p>
+  <p class="note">Included in the Brokerage plan. Files checked outside your archive are still deleted right after the report. TxtAnOffer is not affiliated with TREC. <a href="/" style="color:var(--green);">txtanoffer.com</a></p>
 </main>
 </body>
 </html>"""
 
 _ARCHIVE_EA_FORM = """<form method="post" action="/archive">
-    <h2>Join early access</h2>
-    <p>Free to join. We&rsquo;ll email you when it&rsquo;s ready &mdash; nothing else.</p>
+    <h2>Want it for your brokerage?</h2>
+    <p>Leave your email and we&rsquo;ll set you up &mdash; starting with a free audit of your last 20 closed files.</p>
     <label for="email">Work email</label>
     <input type="email" id="email" name="email" required maxlength="120" placeholder="you@brokerage.com">
     <label for="brokerage">Brokerage name (optional)</label>
     <input type="text" id="brokerage" name="brokerage" maxlength="120">
     <label for="agents">Agents on your roster (optional)</label>
     <select id="agents" name="agents"><option value="">Choose one</option><option>1&ndash;10</option><option>11&ndash;50</option><option>51&ndash;150</option><option>150+</option></select>
-    <button type="submit">Join early access</button>
+    <button type="submit">Get set up</button>
   </form>"""
 
 
@@ -8733,7 +9067,7 @@ def archive_early_access():
                 "agents": (request.form.get("agents") or "").strip()[:20],
                 "source": request.cookies.get("ta_src") or "direct",
             })
-        return _ARCHIVE_EA_PAGE.replace("__FORM__", '<div class="ok"><b>You&rsquo;re on the list.</b> We&rsquo;ll email you when the archive is ready. In the meantime you can <a href="/tc-check" style="color:#0b5d52;font-weight:600;">check a file free</a>.</div>')
+        return _ARCHIVE_EA_PAGE.replace("__FORM__", '<div class="ok"><b>Thanks &mdash; we&rsquo;ll be in touch shortly</b> to set up your brokerage. In the meantime you can <a href="/tc-check" style="color:#0b5d52;font-weight:600;">check a file free</a>.</div>')
     src = re.sub(r"[^a-zA-Z0-9_-]", "", request.args.get("src", ""))[:60]
     resp = make_response(_ARCHIVE_EA_PAGE.replace("__FORM__", _ARCHIVE_EA_FORM))
     if src and not request.cookies.get("ta_src"):
@@ -8927,7 +9261,7 @@ def brokers():
     <ul>
       <li>Every agent's offer checked before it's sent</li>
       <li>Bulk-check up to 200 files per batch with your join code</li>
-      <li>5-year records archive of every offer and amendment drafted here, searchable by address, export anytime</li>
+      <li>Contract archive: forward or drop executed contracts &mdash; checked and kept 5 years, searchable by address</li>
       <li>Roster &amp; compliance dashboard, Transaction Workspace and Closing Checklist</li>
       <li>Agents join with one text &mdash; no per-agent setup</li>
     </ul>

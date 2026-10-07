@@ -53,11 +53,11 @@ _NEXT_STEPS = [
     "2.  Check it again: forward the corrected file to tc@check.txtanoffer.com, or upload it at txtanoffer.com/tc-check.",
     "3.  Share this with your agent: just forward this report.",
 ]
-_ARCHIVE_HEADING = "Keep every offer on file"
-_ARCHIVE_TEXT = ("On the Brokerage plan, every offer and amendment your agents text in to TxtAnOffer is archived "
-                 "for 5 years, searchable by address — longer than the 4 years TREC requires brokers to keep "
-                 "transaction records (22 TAC §535.2). The archive holds the drafts created in TxtAnOffer, so "
-                 "keep your executed copies too.")
+_ARCHIVE_HEADING = "Keep every contract on file"
+_ARCHIVE_TEXT = ("On the Brokerage plan, forward executed contracts to tc@check.txtanoffer.com from your brokerage "
+                 "email or drop them into your archive. Each one is checked and kept 5 years, searchable by address "
+                 "\u2014 longer than the 4 years TREC requires brokers to keep transaction records (22 TAC \u00a7535.2). "
+                 "txtanoffer.com/archive")
 _UPSELL_HEADING = "Every file, every agent, checked automatically"
 _UPSELL_TEXT = ("The Brokerage plan checks every offer your agents send before it goes out — $349/mo for your "
                 "whole roster. Start with a free audit of your last 20 closed files.")
