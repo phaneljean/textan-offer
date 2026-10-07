@@ -162,7 +162,7 @@ _BOT_UA_RE = re.compile(
 
 _MOBILE_UA_RE = re.compile(r"Mobi|Android|iPhone|iPad|iPod", re.I)
 _ENGAGEMENT_TYPES = ("js_ok", "hero_cta", "hero_sample", "dropzone_seen", "stay_10s", "stay_60s",
-                     "role_shown", "role_dismissed", "brokers_audit_cta", "brokers_email_cta", "brokers_plan_cta", "records_brokers_cta", "guide_check_cta", "guide_brokers_cta") + tuple("role_" + r for r in _VISITOR_ROLES)
+                     "role_shown", "role_dismissed", "brokers_audit_cta", "brokers_email_cta", "brokers_plan_cta", "records_brokers_cta", "guide_check_cta", "guide_brokers_cta", "path_self_cta", "path_walkthrough_cta", "path_brokerage_cta", "guide_card_cta", "support_email_cta") + tuple("role_" + r for r in _VISITOR_ROLES)
 
 # Tiny, cookie-less-of-its-own beacon script appended to every page that
 # track_page_view() logs. Elements opt in with data-evt="<type>" for clicks;
@@ -899,6 +899,25 @@ def index():
       margin-bottom: 1.1rem;
     }
     .step-card h3 { font-size: 1.05rem; font-weight: 700; margin: 0 0 0.5rem; letter-spacing: -0.01em; }
+    /* "3 ways to get started" + guide cards + support block (2026-10-07) */
+    .path-card { display: flex; flex-direction: column; }
+    .path-card .path-kicker { font-size: 0.7rem; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 0.5rem; }
+    .path-card ul { list-style: none; margin: 0.9rem 0 1.25rem; padding: 0; }
+    .path-card li { font-size: 0.85rem; color: var(--text-muted); padding: 0.3rem 0 0.3rem 1.3rem; position: relative; }
+    .path-card li::before { content: "\\2713"; position: absolute; left: 0; color: var(--accent); font-weight: 700; }
+    .path-btn { margin-top: auto; display: block; text-align: center; padding: 0.7rem 1rem; border-radius: 9999px; font-weight: 600; font-size: 0.9rem; text-decoration: none; transition: var(--transition); }
+    .path-btn.solid { background: var(--accent); color: #fff; }
+    .path-btn.solid:hover { background: var(--accent-light); }
+    .path-btn.outline { border: 1.5px solid var(--accent); color: var(--accent); }
+    .path-btn.outline:hover { background: var(--accent-tint); }
+    a.guide-card { display: flex; flex-direction: column; text-decoration: none; color: inherit; }
+    a.guide-card .guide-tag { font-size: 0.7rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 0.6rem; }
+    a.guide-card .guide-more { margin-top: auto; padding-top: 1rem; font-size: 0.85rem; font-weight: 600; color: var(--accent); }
+    .support-box { max-width: 760px; margin: 0 auto; background: #fff; border: 1px solid var(--border); border-radius: var(--radius); padding: 2rem; display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
+    .support-box h3 { font-size: 0.95rem; font-weight: 700; margin: 0 0 0.35rem; }
+    .support-box p { font-size: 0.85rem; color: var(--text-muted); margin: 0 0 0.5rem; }
+    .support-box a { font-size: 0.85rem; font-weight: 600; color: var(--accent); }
+    @media (max-width: 700px) { .support-box { grid-template-columns: 1fr; padding: 1.5rem; } }
     .step-card p { font-size: 0.87rem; color: var(--text-muted); line-height: 1.55; margin: 0; }
     .step-caption { font-size: 0.75rem; color: var(--text-dim); margin-top: 0.5rem; }
 
@@ -1100,6 +1119,37 @@ def index():
     </div>
   </section>
 
+  <section class="steps" id="start" style="border-top:none;padding-top:2.5rem;padding-bottom:2.5rem;">
+    <div class="steps-header" style="margin-bottom:1.75rem;">
+      <div class="steps-kicker">Pick what fits</div>
+      <h2>3 ways to get started</h2>
+      <p>Check one file on your own, get a walkthrough, or set it up for your whole brokerage.</p>
+    </div>
+    <div class="steps-grid">
+      <div class="step-card path-card">
+        <div class="path-kicker">Do it yourself</div>
+        <h3>Check a file now</h3>
+        <p>Drop one filled TREC 20-19 and see what title would kick back.</p>
+        <ul><li>Free, no signup</li><li>Results in seconds</li><li>The file isn&rsquo;t kept</li></ul>
+        <a class="path-btn solid" href="/tc-check" data-evt="path_self_cta">Check a file free</a>
+      </div>
+      <div class="step-card path-card">
+        <div class="path-kicker">Get a walkthrough</div>
+        <h3>Talk it through with Phanel</h3>
+        <p>A short walkthrough of what TC Check catches, using your own files or the sample.</p>
+        <ul><li>15 minutes, by phone or video</li><li>Questions answered by the person who built it</li><li>No sales pitch</li></ul>
+        <a class="path-btn outline" href="mailto:support@txtanoffer.com?subject=TC%20Check%20walkthrough" data-evt="path_walkthrough_cta">Get a walkthrough</a>
+      </div>
+      <div class="step-card path-card">
+        <div class="path-kicker">For your whole brokerage</div>
+        <h3>Set up your roster</h3>
+        <p>Every agent&rsquo;s offer checked before it goes out, and records kept for you.</p>
+        <ul><li>Start with a free audit of 20 closed files</li><li>5-year archive, searchable by address</li><li>Agents join with one text</li></ul>
+        <a class="path-btn outline" href="/brokers" data-evt="path_brokerage_cta">Brokerage option</a>
+      </div>
+    </div>
+  </section>
+
   <section class="steps" id="brokers" style="border-top:none;padding-top:1rem;padding-bottom:2.5rem;">
     <div class="sl-row">
       <div class="sl-media"><img src="/static/home-desk.jpg" alt="A transaction coordinator working calmly from a home office" style="object-position:62% center;" loading="lazy"></div>
@@ -1219,6 +1269,35 @@ def index():
     </div>
   </section>
 
+  <section class="steps" id="guides">
+    <div class="steps-header">
+      <div class="steps-kicker">Free guides</div>
+      <h2>Guides for Texas TCs and brokers</h2>
+      <p>Plain-language answers to the questions that hold up closings.</p>
+    </div>
+    <div class="steps-grid">
+      <a class="step-card guide-card" href="/guides/trec-20-19-checklist" data-evt="guide_card_cta">
+        <div class="guide-tag">For TCs</div>
+        <h3>TREC 20-19 checklist before you send the file to title</h3>
+        <p>The blanks and mismatches to check, in order.</p>
+        <span class="guide-more">Read the guide &rarr;</span>
+      </a>
+      <a class="step-card guide-card" href="/guides/40-11-loan-amount-mismatch" data-evt="guide_card_cta">
+        <div class="guide-tag">For TCs</div>
+        <h3>40-11 loan amount doesn&rsquo;t match the contract</h3>
+        <p>Section 3B vs. the addendum, and the checkbox mistakes that go with it.</p>
+        <span class="guide-more">Read the guide &rarr;</span>
+      </a>
+      <a class="step-card guide-card" href="/guides/broker-record-retention-texas" data-evt="guide_card_cta">
+        <div class="guide-tag">For brokers</div>
+        <h3>How long Texas brokers must keep transaction records</h3>
+        <p>The 4-year TREC rule and a practical way to keep up with it.</p>
+        <span class="guide-more">Read the guide &rarr;</span>
+      </a>
+    </div>
+    <p style="text-align:center;margin-top:1.5rem;font-size:0.9rem;"><a href="/guides" style="color:var(--accent);font-weight:600;">See all guides &rarr;</a></p>
+  </section>
+
   <section class="steps" id="trust">
     <div class="steps-header">
       <h2>Built so nothing slips through.</h2>
@@ -1239,6 +1318,30 @@ def index():
         <div class="step-num">&check;</div>
         <h3>Files you check aren&rsquo;t kept</h3>
         <p>A contract you upload or forward to TC Check is processed for the report, then discarded. The one exception is on purpose: on the Brokerage plan, offers your agents text in are archived for your brokerage&rsquo;s records &mdash; <a href="#records" style="color:var(--accent-dark);text-decoration:underline;">see how that works</a>.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="steps" id="support">
+    <div class="steps-header" style="margin-bottom:1.75rem;">
+      <h2>Questions? A real person answers.</h2>
+      <p>TxtAnOffer is built and run by one person in Texas. You&rsquo;ll hear back from the person who built it, not a ticket queue.</p>
+    </div>
+    <div class="support-box">
+      <div>
+        <h3>Help yourself</h3>
+        <p>Common questions about TC Check, storage, and TREC forms.</p>
+        <a href="/faq">Read the FAQ &rarr;</a>
+      </div>
+      <div>
+        <h3>Email</h3>
+        <p>Questions, feedback, or a walkthrough request.</p>
+        <a href="mailto:support@txtanoffer.com" data-evt="support_email_cta">support@txtanoffer.com</a>
+      </div>
+      <div>
+        <h3>Forward a file</h3>
+        <p>Send a TREC 20-19 from your inbox and get the report back by email.</p>
+        <a href="mailto:tc@check.txtanoffer.com">tc@check.txtanoffer.com</a>
       </div>
     </div>
   </section>
