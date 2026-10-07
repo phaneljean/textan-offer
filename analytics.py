@@ -483,6 +483,23 @@ def get_recent_visitors(hours: int = 48, limit: int = 150) -> list:
     return result
 
 
+def get_archive_early_access(limit: int = 200) -> list:
+    """Sign-ups from /archive (contract archive early access), newest first."""
+    conn = sqlite3.connect(DB_PATH)
+    rows = conn.execute("""
+        SELECT metadata, created_at FROM events WHERE event_type = 'archive_early_access'
+        ORDER BY created_at DESC LIMIT ?
+    """, (limit,)).fetchall()
+    conn.close()
+    import json
+    out = []
+    for metadata_json, created_at in rows:
+        m = json.loads(metadata_json) if metadata_json else {}
+        out.append({"email": m.get("email", ""), "brokerage": m.get("brokerage", ""), "agents": m.get("agents", ""),
+                    "source": m.get("source", ""), "created_at": created_at})
+    return out
+
+
 def get_top_referrers(days: int = 30, limit: int = 15) -> list:
     """Referring site for 'page_view' events, by host ("" -> "(none)": typed
     URL, bookmark, or an app that strips the Referer such as LinkedIn's

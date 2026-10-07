@@ -32,7 +32,7 @@ from pdf_validator import validate_offer_pdf
 from amendment import fill_amendment_pdf
 from agent_profiles import get_agent_profile, save_agent_profile, find_by_email, get_emails_for_phones
 from subscriptions import can_generate_offer, increment_offer_count, activate_subscription, deactivate_subscription, get_user, create_user, FREE_OFFER_LIMIT, is_admin_phone, has_professional_access
-from analytics import track_event, get_conversion_metrics, get_revenue_metrics, get_recent_sms, get_recent_sms_failures, get_last_blocked_state, get_waitlist_signups, get_signups_by_source, get_signup_details, get_landing_visits_by_source, get_tc_check_summary, get_recent_tc_check_email_senders, get_tc_check_count_for_sender, get_tc_check_repeat_senders, get_tc_check_bulk_summary, get_tc_check_attempts_by_source, get_tc_check_attempts_by_page, get_brokerage_alert_delivery, get_daily_funnel, get_top_referrers, set_internal_visitor, get_visitor_roles, get_engagement_by_device, get_recent_email_send_failures, get_recent_visitors
+from analytics import track_event, get_conversion_metrics, get_revenue_metrics, get_recent_sms, get_recent_sms_failures, get_last_blocked_state, get_waitlist_signups, get_signups_by_source, get_signup_details, get_landing_visits_by_source, get_tc_check_summary, get_recent_tc_check_email_senders, get_tc_check_count_for_sender, get_tc_check_repeat_senders, get_tc_check_bulk_summary, get_tc_check_attempts_by_source, get_tc_check_attempts_by_page, get_brokerage_alert_delivery, get_daily_funnel, get_top_referrers, set_internal_visitor, get_visitor_roles, get_engagement_by_device, get_recent_email_send_failures, get_recent_visitors, get_archive_early_access
 from integrations import send_offer_email, fire_webhook, save_webhook, get_webhook, delete_webhook, send_to_docusign, send_plain_email, send_html_email
 from offers_db import record_offer, get_offers_for_phone, get_offer_by_filename, record_amendment, get_amendments_for_phone, record_thread_response, record_email_sent, record_docusign_sent
 from brokerages import extract_brokerage_prefix, link_user_to_brokerage, get_brokerage, get_brokerage_by_code, create_brokerage, list_brokerages, list_brokerage_agents, list_brokerage_records
@@ -5690,6 +5690,11 @@ def analytics_dashboard():
     visitor_roles = get_visitor_roles()
     engagement_by_device = get_engagement_by_device(days=7)
     recent_visitors = get_recent_visitors(hours=48)
+    archive_ea_rows = "".join(
+        f"<tr><td style='padding:6px;'>{escape(r['created_at'][:16].replace('T',' '))}</td><td style='padding:6px;'>{escape(r['email'])}</td>"
+        f"<td style='padding:6px;'>{escape(r['brokerage'])}</td><td style='padding:6px;'>{escape(r['agents'])}</td><td style='padding:6px;'>{escape(r['source'])}</td></tr>"
+        for r in get_archive_early_access()
+    ) or "<tr><td colspan='5' style='padding:6px;color:#999;'>No sign-ups yet.</td></tr>"
     top_referrers = get_top_referrers(days=30)
     tc_check_attempts_by_source = get_tc_check_attempts_by_source(days=30)
     tc_check_attempts_by_page = get_tc_check_attempts_by_page(days=30)
@@ -5904,6 +5909,11 @@ body{{font-family:system-ui;max-width:800px;margin:40px auto;padding:20px;}}
   <p style="color:#666;font-size:13px;">{role_summary}</p>
   <table><tr><th>Role</th><th>Visitors</th><th>% of answers</th><th>Saw drop box</th><th>Tried sample</th><th>Uploaded</th><th>Recognized 20-19</th><th>Repeat (2+)</th></tr>{role_rows}</table>
   <p class="label" style="margin-top:8px;">One row per browser (ta_vid cookie), counted from the first time the card was shown. &ldquo;No answer&rdquo; = real browsers that never answered (left before 4s, closed it, or ignored it). Repeat = 2+ recognized uploads from the same browser.</p>
+</div>
+<div class="metric">
+  <h3>Archive Early Access Sign-ups</h3>
+  <p style="color:#666;font-size:13px;">From /archive. Demand check for the drop/forward contract archive before building it.</p>
+  <table><tr><th>Time (UTC)</th><th>Email</th><th>Brokerage</th><th>Agents</th><th>Source</th></tr>{archive_ea_rows}</table>
 </div>
 <div class="metric">
   <h3>Recent Visitors (48 hours, Central time)</h3>
@@ -8633,6 +8643,106 @@ def guide(slug):
     return resp
 
 
+_ARCHIVE_EA_PAGE = """<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Contract Archive (Early Access) — TxtAnOffer</title>
+<meta name="description" content="Coming soon for Texas brokerages: forward or drop executed contracts, get each one checked for what title kicks back, and keep them 5 years, searchable by address. Join early access.">
+<link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#F5F5F7;--text:#0f1f2f;--muted:#5a6b7a;--dim:#8a9aa9;--green:#0b5d52;--green-dark:#0a3f3a;--tint:#E7F3F1;--yellow:#f5c242;--border:rgba(15,31,47,0.08);}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:var(--bg);color:var(--text);line-height:1.6;-webkit-font-smoothing:antialiased;}
+  .head{background:var(--green-dark);padding:18px 24px;display:flex;justify-content:space-between;align-items:center;}
+  .head img{height:22px;display:block;}
+  .pill{background:var(--yellow);color:var(--text);font-size:0.68rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;padding:5px 11px;border-radius:999px;}
+  .bar{height:4px;background:var(--yellow);}
+  .wrap{max-width:640px;margin:0 auto;padding:2.5rem 1.25rem 3rem;}
+  h1{font-size:2rem;line-height:1.15;letter-spacing:-0.03em;font-weight:800;margin-bottom:0.8rem;text-wrap:balance;}
+  .lede{color:var(--muted);font-size:1.02rem;margin-bottom:1.5rem;}
+  .ways{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1.25rem;}
+  .way{background:#fff;border:1px solid var(--border);border-radius:14px;padding:16px;}
+  .way b{display:block;font-size:0.98rem;margin-bottom:2px;}
+  .way span{font-size:0.85rem;color:var(--muted);}
+  ul{list-style:none;margin:0 0 1.75rem;}
+  li{padding:6px 0 6px 26px;position:relative;font-size:0.95rem;}
+  li::before{content:"\\2713";position:absolute;left:0;color:var(--green);font-weight:800;}
+  form{background:#fff;border:1px solid var(--border);border-radius:16px;padding:1.4rem;border-top:4px solid var(--yellow);}
+  form h2{font-size:1.15rem;margin-bottom:0.3rem;}
+  form p{font-size:0.85rem;color:var(--muted);margin-bottom:1rem;}
+  label{display:block;font-size:0.8rem;font-weight:600;margin:0.7rem 0 0.3rem;}
+  input,select{width:100%;padding:0.7rem 0.8rem;border:1px solid #d5dbe0;border-radius:10px;font:inherit;font-size:0.95rem;background:#fff;}
+  button{margin-top:1.1rem;width:100%;background:var(--green);color:#fff;border:0;border-radius:999px;padding:0.85rem;font:inherit;font-weight:700;font-size:0.95rem;cursor:pointer;}
+  button:hover{background:#16806e;}
+  .note{font-size:0.75rem;color:var(--dim);margin-top:1.25rem;}
+  .ok{background:var(--tint);border-radius:14px;padding:1.25rem;font-size:0.95rem;}
+  @media(max-width:520px){.ways{grid-template-columns:1fr;}h1{font-size:1.65rem;}}
+</style>
+</head>
+<body>
+<div class="head"><a href="/"><img src="/static/logo-wordmark-white.png?v=1" alt="txtanoffer"></a><span class="pill">Early access</span></div>
+<div class="bar"></div>
+<main class="wrap">
+  <h1>Every executed contract. Checked. Kept for 5 years.</h1>
+  <p class="lede">Coming soon for Texas brokerages: send in your executed TREC contracts, get each one checked for what title kicks back, and find any file by address years later.</p>
+  <div class="ways">
+    <div class="way"><b>Forward it</b><span>Email the executed contract to your brokerage&rsquo;s archive address.</span></div>
+    <div class="way"><b>Or drop it</b><span>Upload it on txtanoffer.com, one file or a batch.</span></div>
+  </div>
+  <ul>
+    <li>Checked on the way in: blank fields, missing initials, 40-11 mismatches</li>
+    <li>Searchable by property address</li>
+    <li>Kept 5 years &mdash; longer than TREC&rsquo;s 4-year record rule (22 TAC &sect;535.2)</li>
+    <li>Private to your brokerage, export everything anytime</li>
+  </ul>
+  __FORM__
+  <p class="note">This feature is in development and not live yet. Early access members get it first and help shape it. TxtAnOffer is not affiliated with TREC. <a href="/" style="color:var(--green);">txtanoffer.com</a></p>
+</main>
+</body>
+</html>"""
+
+_ARCHIVE_EA_FORM = """<form method="post" action="/archive">
+    <h2>Join early access</h2>
+    <p>Free to join. We&rsquo;ll email you when it&rsquo;s ready &mdash; nothing else.</p>
+    <label for="email">Work email</label>
+    <input type="email" id="email" name="email" required maxlength="120" placeholder="you@brokerage.com">
+    <label for="brokerage">Brokerage name (optional)</label>
+    <input type="text" id="brokerage" name="brokerage" maxlength="120">
+    <label for="agents">Agents on your roster (optional)</label>
+    <select id="agents" name="agents"><option value="">Choose one</option><option>1&ndash;10</option><option>11&ndash;50</option><option>51&ndash;150</option><option>150+</option></select>
+    <button type="submit">Join early access</button>
+  </form>"""
+
+
+@app.route("/archive", methods=["GET", "POST"])
+def archive_early_access():
+    """Early-access sign-up for the drop/forward contract archive, which is
+    NOT built yet (2026-10-07) -- the page says so plainly. Sign-ups are
+    demand validation before building it; listed on /analytics."""
+    if request.method == "POST":
+        email = (request.form.get("email") or "").strip()[:120]
+        if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email):
+            return make_response(_ARCHIVE_EA_PAGE.replace("__FORM__", '<div class="ok" style="background:#fdecec;">That email doesn&rsquo;t look right. <a href="/archive">Try again</a>.</div>'), 400)
+        if check_and_increment(f"archive_ea:{request.remote_addr or 'unknown'}", limit=5):
+            track_event("archive_early_access", None, {
+                "email": email,
+                "brokerage": (request.form.get("brokerage") or "").strip()[:120],
+                "agents": (request.form.get("agents") or "").strip()[:20],
+                "source": request.cookies.get("ta_src") or "direct",
+            })
+        return _ARCHIVE_EA_PAGE.replace("__FORM__", '<div class="ok"><b>You&rsquo;re on the list.</b> We&rsquo;ll email you when the archive is ready. In the meantime you can <a href="/tc-check" style="color:#0b5d52;font-weight:600;">check a file free</a>.</div>')
+    src = re.sub(r"[^a-zA-Z0-9_-]", "", request.args.get("src", ""))[:60]
+    resp = make_response(_ARCHIVE_EA_PAGE.replace("__FORM__", _ARCHIVE_EA_FORM))
+    if src and not request.cookies.get("ta_src"):
+        resp.set_cookie("ta_src", src, max_age=30 * 24 * 3600, httponly=True, samesite="Lax")
+        track_event("landing_visit", None, {"source": src})
+    track_page_view(resp, "archive_page")
+    return resp
+
+
 @app.route("/brokers")
 def brokers():
     """Managing-broker landing page. The offer is the free 20-file backlog
@@ -10850,7 +10960,7 @@ _SITEMAP_PATHS = ["/", "/tc-check", "/brokers", "/pricing", "/trec-changes", "/t
                   "/guides/trec-20-19-checklist", "/guides/trec-20-19-effective-date",
                   "/guides/broker-record-retention-texas", "/guides/40-11-loan-amount-mismatch",
                   "/guides/trec-20-19-initials", "/guides/trec-39-11-amendment-mismatch",
-                  "/guides/trec-deadline-calculator"]
+                  "/guides/trec-deadline-calculator", "/archive"]
 
 
 @app.route("/robots.txt")
