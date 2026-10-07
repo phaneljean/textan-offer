@@ -1049,7 +1049,7 @@ def index():
         <a class="sl-cta" href="#check" data-evt="hero_cta">Check a file free</a>
         <button type="button" class="sl-cta-secondary" id="heroSampleBtn" data-evt="hero_sample">See a sample report &rarr;</button>
       </div>
-      <div class="sl-hero-note">No signup &middot; Your file is never stored</div>
+      <div class="sl-hero-note">No signup &middot; Files you check are never stored</div>
       <div class="sl-hero-phone">On your phone? Forward the contract email to <a href="mailto:tc@check.txtanoffer.com">tc@check.txtanoffer.com</a> &mdash; the report comes back by email.</div>
     </div>
     <div class="sl-hero-photo" role="img" aria-label="A father and daughter painting a room in their new home"></div>
@@ -1209,7 +1209,7 @@ def index():
       <li><span class="tc-check">&check;</span><span>Get an itemized report back in under a minute: what's blank, what's missing an initial, what disagrees with the addendum.</span></li>
     </ul>
     <div class="secondary-cta" style="margin:1.75rem auto 0;padding-top:1.75rem;max-width:540px;text-align:center;">
-      <div class="secondary-cta-label">Free. No login. Your file is never stored.</div>
+      <div class="secondary-cta-label">Free. No login. Checked files are never stored.</div>
       <a href="/tc-check" class="input-btn" style="display:inline-block;text-decoration:none;">Try TC File Check &rarr;</a>
     </div>
   </section>
@@ -1232,15 +1232,15 @@ def index():
       </div>
       <div class="step-card">
         <div class="step-num">&check;</div>
-        <h3>Nothing is stored after your results are shown</h3>
-        <p>Your file is processed to generate the report, then discarded &mdash; on the Brokerage plan, the report reaches your TC automatically on every agent's offer, no dashboard login needed.</p>
+        <h3>Files you check aren&rsquo;t kept</h3>
+        <p>A contract you upload or forward to TC Check is processed for the report, then discarded. The one exception is on purpose: on the Brokerage plan, offers your agents text in are archived for your brokerage&rsquo;s records &mdash; <a href="#records" style="color:var(--accent-dark);text-decoration:underline;">see how that works</a>.</p>
       </div>
     </div>
   </section>
 
   <footer class="footer">
     <div class="trust-badges">
-      <span class="trust-badge"><span class="trust-icon">&#128274;</span>Your file isn't stored</span>
+      <span class="trust-badge"><span class="trust-icon">&#128274;</span>Checked files never stored</span>
       <span class="trust-badge"><span class="trust-icon">&#127775;</span>Built &amp; run in Texas</span>
       <span class="trust-badge"><span class="trust-icon">&#128179;</span>Billing by Stripe</span>
     </div>
@@ -1518,7 +1518,7 @@ def index():
     else:
         stat1_num, stat1_label = "Free", "for every Texas TC &mdash; no signup required"
         stat2_num, stat2_label = "Seconds", "to scan a full TREC 20-19 + 40-11 addendum"
-        stat3_num, stat3_label = "0", "PDFs stored after results are shown"
+        stat3_num, stat3_label = "0", "checked PDFs kept after your report"
     for token, value in (
         ("__TC_STAT1_NUM__", stat1_num), ("__TC_STAT1_LABEL__", stat1_label),
         ("__TC_STAT2_NUM__", stat2_num), ("__TC_STAT2_LABEL__", stat2_label),
