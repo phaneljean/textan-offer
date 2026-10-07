@@ -159,7 +159,7 @@ _BOT_UA_RE = re.compile(
 
 _MOBILE_UA_RE = re.compile(r"Mobi|Android|iPhone|iPad|iPod", re.I)
 _ENGAGEMENT_TYPES = ("js_ok", "hero_cta", "hero_sample", "dropzone_seen", "stay_10s", "stay_60s",
-                     "role_shown", "role_dismissed", "brokers_audit_cta", "brokers_email_cta", "brokers_plan_cta", "records_brokers_cta") + tuple("role_" + r for r in _VISITOR_ROLES)
+                     "role_shown", "role_dismissed", "brokers_audit_cta", "brokers_email_cta", "brokers_plan_cta", "records_brokers_cta", "guide_check_cta", "guide_brokers_cta") + tuple("role_" + r for r in _VISITOR_ROLES)
 
 # Tiny, cookie-less-of-its-own beacon script appended to every page that
 # track_page_view() logs. Elements opt in with data-evt="<type>" for clicks;
@@ -278,7 +278,7 @@ def engagement_event():
     page = request.form.get("page", "")
     visitor = request.cookies.get("ta_vid", "")
     if (ua and not _BOT_UA_RE.search(ua) and etype in _ENGAGEMENT_TYPES
-            and page in ("homepage", "tc_check_page", "brokers_page") and re.fullmatch(r"[0-9a-f]{32}", visitor)):
+            and page in ("homepage", "tc_check_page", "brokers_page", "guide_page") and re.fullmatch(r"[0-9a-f]{32}", visitor)):
         track_event("page_engagement", None, {
             "type": etype, "page": page, "visitor": visitor,
             "device": "mobile" if _is_mobile_request() else "desktop",
@@ -1254,6 +1254,7 @@ def index():
       <a href="/pricing">Pricing</a>
       <a href="/playground">Try a Sample Text</a>
       <a href="/tc-check">TC File Check</a>
+      <a href="/guides">Guides</a>
       <a href="mailto:support@txtanoffer.com">Support</a>
     </div>
     <div class="footer-copy">
@@ -8086,6 +8087,228 @@ def about():
     return html
 
 
+# --- SEO guides -----------------------------------------------------------
+# Teaching pages for what Texas TCs and brokers actually search. Every TREC
+# fact here comes from tc_audit.py's rect-verified field map (page/section
+# numbers checked against the printed form) or from TREC's own FAQ -- keep it
+# that way. Teach first, link to the tool second. Added 2026-10-06.
+
+_GUIDES = {
+    "trec-20-19-checklist": {
+        "title": "TREC 20-19 Checklist: What to Check Before Sending to Title",
+        "description": "A field-by-field checklist for the TREC 20-19 One to Four Family Residential Contract: the blanks and mismatches that most often get a Texas file kicked back by title.",
+        "kicker": "For transaction coordinators",
+        "h1": "TREC 20-19 checklist: what to check before you send the file to title",
+        "lede": "Most kickbacks from title aren't legal problems. They're blanks and mismatches that were easy to fix before the file left your desk. Here's the order to check them in.",
+        "body": """
+<h2>1. Property and parties (Sections 1 and 2A)</h2>
+<ul>
+  <li><strong>Property address, city and county (Section 2A).</strong> County is the one most often left blank, and title needs it to open the file.</li>
+  <li><strong>Buyer and seller legal names (Section 1).</strong> Match them to how the parties will sign at closing, not a nickname or a partial name.</li>
+</ul>
+
+<h2>2. Money and who holds it (Sections 5A and 6A)</h2>
+<ul>
+  <li><strong>Escrow agent name (Section 5A).</strong> If it's blank, nobody knows where the earnest money goes.</li>
+  <li><strong>Earnest money and option fee amounts (Section 5A).</strong> Both should be filled in, even when the option fee is small.</li>
+  <li><strong>Title company (Section 6A).</strong> Should match the escrow agent in most deals. If it doesn't, confirm that's intentional.</li>
+</ul>
+
+<h2>3. Financing: contract vs. 40-11 addendum</h2>
+<ul>
+  <li><strong>Loan amount.</strong> The third-party financing amount in Section 3B must match the principal amount on the TREC 40-11 Third Party Financing Addendum. A one-digit typo here is a common kickback.</li>
+  <li><strong>The financing checkboxes.</strong> If a 40-11 is attached, the Third Party Financing Addendum box should be checked in <em>both</em> Section 3B and the Section 22 addenda list. If it's an all-cash deal with no 40-11, neither box should be checked.</li>
+</ul>
+
+<h2>4. Initials on every page</h2>
+<p>The 20-19 has an "Initialed for identification by Buyer ___ and Seller ___" line at the bottom of pages 1, 4, 5, 6, 8 and 9 of 12, and the 40-11 has one on its first page. Check all four slots on each page (two buyers, two sellers). A single missing initial is easy to miss scrolling through, and it's a routine reason a file bounces back.</p>
+
+<h2>5. The Effective Date (page 10 of 12)</h2>
+<p>The line reads "EXECUTED the ___ day of ___, 20__ (Effective Date)," with the instruction "BROKER: FILL IN THE DATE OF FINAL ACCEPTANCE." Deadlines in the contract count from it, so a blank here creates confusion about every date that follows. <a href="/guides/trec-20-19-effective-date">More on why the Effective Date matters &rarr;</a></p>
+
+<h2>6. Amendments (TREC 39-11)</h2>
+<p>If there's an amendment, confirm its sales price matches what the deal actually is now, and that its property address matches the contract. An amendment with the wrong address usually means the wrong file got attached.</p>
+
+<h2>Make sure you're on the current form</h2>
+<p>The current TREC 20-19 has been mandatory since July 1, 2026. An old template saved on someone's computer is a quiet source of problems. <a href="/trec-changes">See what's on the current version &rarr;</a></p>
+""",
+    },
+    "trec-20-19-effective-date": {
+        "title": "TREC 20-19 Effective Date Left Blank: Why It Matters",
+        "description": "Where the Effective Date goes on the TREC 20-19, who fills it in, and why a blank Effective Date causes problems for every deadline that counts from it.",
+        "kicker": "For transaction coordinators",
+        "h1": "Effective Date left blank on a TREC 20-19: why it matters and how to catch it",
+        "lede": "It's one line near the end of a 12-page contract, it's filled in last, and it's the date the rest of the contract counts from. That's exactly why it gets missed.",
+        "body": """
+<h2>Where it is</h2>
+<p>On the TREC 20-19, the Effective Date is on <strong>page 10 of 12</strong>: "EXECUTED the ___ day of ___, 20__ (Effective Date)." The form itself says who fills it in: "BROKER: FILL IN THE DATE OF FINAL ACCEPTANCE."</p>
+
+<h2>Why it gets missed</h2>
+<ul>
+  <li>It can't be filled in when the offer is written, because final acceptance hasn't happened yet.</li>
+  <li>Once the last party signs, everyone's attention moves to the next step: earnest money, the option period, the lender.</li>
+  <li>It sits near the signature block on page 10, far from the terms people actually review.</li>
+</ul>
+
+<h2>Why it matters</h2>
+<p>The contract's timelines run from the Effective Date. Deadlines such as delivering earnest money and the option fee, and the length of the option period in Paragraph 5, are counted in days after it. With the date blank, everyone has to guess when those clocks started. Title and lenders will ask for it, and the file stalls until someone fills it in.</p>
+
+<h2>How to catch it every time</h2>
+<ol>
+  <li>Make "Effective Date filled in?" the first thing you check when an executed contract comes in, before anything else.</li>
+  <li>Confirm it matches the date of final acceptance, not the date the offer was written.</li>
+  <li>Calendar the Paragraph 5 deadlines from that date right away, while you're looking at it.</li>
+</ol>
+
+<p class="note">This is general information about the form, not legal advice. For questions about a specific deal, ask the broker or a Texas real estate attorney.</p>
+
+<p><a href="/guides/trec-20-19-checklist">See the full TREC 20-19 pre-title checklist &rarr;</a></p>
+""",
+    },
+    "broker-record-retention-texas": {
+        "title": "How Long Must Texas Brokers Keep Transaction Records? (22 TAC 535.2)",
+        "description": "Texas brokers must keep transaction records at least four years from closing or termination under TREC rule 22 TAC §535.2(h). What that means in practice and how to keep up with it.",
+        "kicker": "For managing brokers",
+        "h1": "How long do Texas brokers have to keep transaction records?",
+        "lede": "At least four years from the date of closing or termination of the contract. That's the TREC rule. The hard part isn't knowing it, it's being able to find a specific file three years later.",
+        "body": """
+<h2>The rule</h2>
+<p>TREC requires a broker to keep transaction records for <strong>at least four years from the date of closing or termination</strong> of a contract, in a format that can be made readily available to the Commission. The rule is in the Texas Administrative Code, Title 22, <strong>§535.2(h)</strong>, and TREC summarizes it in its <a href="https://www.trec.texas.gov/node/413" rel="noopener" target="_blank">license holder FAQ</a>.</p>
+
+<h2>Why it's harder than it sounds</h2>
+<ul>
+  <li><strong>The clock starts at closing, not at the offer.</strong> A contract written in January that closes in March is kept until at least March four years later.</li>
+  <li><strong>Records live with agents.</strong> Offers and amendments often sit in agents' email, phones and personal drives. When an agent leaves, so do the files.</li>
+  <li><strong>"Readily available" means findable.</strong> A file you can't locate by address when someone asks isn't much help.</li>
+</ul>
+
+<h2>A practical setup</h2>
+<ol>
+  <li>Keep one place per brokerage where every executed contract, addendum and amendment lands, searchable by property address.</li>
+  <li>File by closing (or termination) date so you know when the four years end.</li>
+  <li>When an agent leaves, make sure their transaction files stay with the brokerage.</li>
+  <li>Spot-check a few closed files each quarter: can you pull the full file in under a minute?</li>
+</ol>
+
+<h2>Where TxtAnOffer fits</h2>
+<p>On the Brokerage plan, every offer and amendment your agents text in to TxtAnOffer is kept for 5 years, searchable by address and exportable anytime. It holds the drafts generated in TxtAnOffer, not the final signed contracts, so it <em>helps</em> with this rule but doesn't replace your own records of what was executed.</p>
+
+<p class="note">This is general information, not legal advice. Confirm your brokerage's obligations against the current rule text or with a Texas real estate attorney. TxtAnOffer is not affiliated with TREC.</p>
+""",
+    },
+}
+
+
+def _guide_page(slug, g, body_html):
+    cta_brokers = g["kicker"] == "For managing brokers"
+    cta = (
+        """<div class="cta"><strong>See what your agents leave blank.</strong> Run your last 20 closed TREC 20-19s through TC Check, free.
+  <a class="btn" href="/brokers?src=seo_""" + slug + """" data-evt="guide_brokers_cta">Free 20-file audit &rarr;</a></div>"""
+        if cta_brokers else
+        """<div class="cta"><strong>Check a file in seconds.</strong> Drop a filled TREC 20-19 and get back exactly which of these are blank or mismatched. Free, no signup, and the file isn't kept.
+  <a class="btn" href="/tc-check?src=seo_""" + slug + """" data-evt="guide_check_cta">Check a file free &rarr;</a></div>"""
+    )
+    others = "".join(
+        f'<li><a href="/guides/{s}">{escape(o["h1"])}</a></li>' for s, o in _GUIDES.items() if s != slug
+    ) if slug != "index" else ""
+    return """<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>""" + escape(g["title"]) + """ — TxtAnOffer</title>
+<meta name="description" content=\"""" + escape(g["description"]) + """\">
+<link rel="canonical" href="https://txtanoffer.com/guides/""" + slug + """">
+<meta property="og:title" content=\"""" + escape(g["title"]) + """\">
+<meta property="og:description" content=\"""" + escape(g["description"]) + """\">
+<meta property="og:type" content="article">
+<link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root { --bg:#F5F5F7; --card:#fff; --border:rgba(15,31,47,0.08); --text:#0f1f2f; --muted:#5a6b7a; --dim:#8a9aa9; --accent:#0b5d52; --accent-light:#16806e; --accent-dark:#0a3a33; --tint:#E7F3F1; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif; background:var(--bg); color:var(--text); line-height:1.65; -webkit-font-smoothing:antialiased; }
+  a { color:var(--accent-dark); }
+  .nav { display:flex; align-items:center; justify-content:space-between; padding:1rem 2rem; position:sticky; top:0; background:rgba(255,255,255,0.9); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); border-bottom:1px solid var(--border); z-index:10; }
+  .nav-cta { background:var(--accent); color:#fff; padding:0.55rem 1.3rem; border-radius:9999px; font-size:0.875rem; font-weight:600; text-decoration:none; white-space:nowrap; }
+  .wrap { max-width:720px; margin:0 auto; padding:3rem 2rem 4rem; }
+  .crumbs { font-size:0.8rem; color:var(--dim); margin-bottom:1rem; }
+  .crumbs a { color:var(--dim); }
+  .kicker { font-size:0.75rem; font-weight:700; color:var(--accent-dark); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:0.6rem; }
+  h1 { font-size:2.1rem; font-weight:800; letter-spacing:-0.03em; line-height:1.15; margin-bottom:1rem; text-wrap:balance; }
+  .lede { font-size:1.08rem; color:var(--muted); margin-bottom:0.75rem; }
+  .byline { font-size:0.8rem; color:var(--dim); margin-bottom:2rem; }
+  h2 { font-size:1.25rem; font-weight:700; letter-spacing:-0.02em; margin:2.2rem 0 0.8rem; text-wrap:balance; }
+  p { margin-bottom:1rem; color:#2c3d4d; }
+  ul, ol { margin:0 0 1rem 1.3rem; color:#2c3d4d; }
+  li { margin-bottom:0.55rem; }
+  .note { font-size:0.85rem; color:var(--dim); border-left:3px solid var(--border); padding-left:0.9rem; }
+  .cta { background:var(--tint); border-radius:1rem; padding:1.4rem 1.5rem; margin:2.5rem 0 1rem; color:var(--muted); font-size:0.95rem; }
+  .cta strong { display:block; color:var(--text); font-size:1.05rem; margin-bottom:0.3rem; }
+  .btn { display:inline-block; margin-top:0.9rem; background:var(--accent); color:#fff; padding:0.75rem 1.4rem; border-radius:9999px; font-weight:600; text-decoration:none; }
+  .btn:hover { background:var(--accent-light); }
+  .more { margin-top:2.5rem; padding-top:1.5rem; border-top:1px solid var(--border); }
+  .more h3 { font-size:0.8rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--dim); margin-bottom:0.6rem; }
+  .foot { margin-top:2.5rem; font-size:0.78rem; color:var(--dim); }
+  @media (max-width:600px) {
+    .nav { padding:1rem; }
+    .wrap { padding:2rem 1rem 3rem; }
+    h1 { font-size:1.7rem; }
+    .btn { display:block; text-align:center; }
+  }
+</style>
+</head>
+<body>
+<nav class="nav">
+  <a href="/"><img src="/static/logo-wordmark.png?v=2" alt="TxtAnOffer" style="height:24px;width:auto;display:block;"></a>
+  <a class="nav-cta" href="/tc-check?src=seo_""" + slug + """_nav">Check a file free</a>
+</nav>
+<main class="wrap">
+  <div class="crumbs"><a href="/">Home</a> / <a href="/guides">Guides</a></div>
+  <div class="kicker">""" + g["kicker"] + """</div>
+  <h1>""" + g["h1"] + """</h1>
+  <p class="lede">""" + g["lede"] + """</p>
+  <div class="byline">By Phanel Jean Baptiste, builder of TxtAnOffer (a software builder, not a licensed agent) &middot; Last reviewed October 2026</div>
+""" + body_html + cta + """
+""" + ('<div class="more"><h3>More guides</h3><ul>' + others + '</ul></div>' if others else '') + """
+  <p class="foot">General information only, not legal advice. TxtAnOffer is an independent tool and is not affiliated with or endorsed by the Texas Real Estate Commission (TREC). <a href="/terms">Terms</a> &middot; <a href="/privacy">Privacy</a></p>
+</main>
+</body>
+</html>"""
+
+
+@app.route("/guides")
+def guides_index():
+    items = "".join(
+        f'<li><a href="/guides/{s}"><strong>{escape(g["h1"])}</strong></a><br><span style="color:#5a6b7a;font-size:0.9rem;">{escape(g["description"])}</span></li>'
+        for s, g in _GUIDES.items()
+    )
+    body = '<h2>All guides</h2><ul style="list-style:none;margin-left:0;">' + items + "</ul>"
+    page = _guide_page("index", {
+        "title": "Guides for Texas TCs and Brokers",
+        "description": "Plain-language guides to the TREC 20-19, the mistakes title kicks back, and Texas broker record-keeping rules.",
+        "kicker": "Guides",
+        "h1": "Guides for Texas transaction coordinators and brokers",
+        "lede": "Plain-language guides to the TREC 20-19 and the mistakes that hold up Texas closings.",
+    }, body)
+    page = page.replace('<link rel="canonical" href="https://txtanoffer.com/guides/index">', '<link rel="canonical" href="https://txtanoffer.com/guides">')
+    resp = make_response(page)
+    track_page_view(resp, "guide_page")
+    return resp
+
+
+@app.route("/guides/<slug>")
+def guide(slug):
+    g = _GUIDES.get(slug)
+    if not g:
+        abort(404)
+    resp = make_response(_guide_page(slug, g, g["body"]))
+    track_page_view(resp, "guide_page")
+    return resp
+
+
 @app.route("/brokers")
 def brokers():
     """Managing-broker landing page. The offer is the free 20-file backlog
@@ -10299,7 +10522,9 @@ def wins_page():
 # on purpose and disallowed in robots.txt.
 _SITEMAP_PATHS = ["/", "/tc-check", "/brokers", "/pricing", "/trec-changes", "/tc-hub",
                   "/tc-check/bulk", "/tc-check/compare", "/playground", "/faq", "/about",
-                  "/contact", "/privacy", "/terms"]
+                  "/contact", "/privacy", "/terms", "/guides",
+                  "/guides/trec-20-19-checklist", "/guides/trec-20-19-effective-date",
+                  "/guides/broker-record-retention-texas"]
 
 
 @app.route("/robots.txt")
