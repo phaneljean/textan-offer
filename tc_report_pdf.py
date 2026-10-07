@@ -1,293 +1,356 @@
 """
-tc_report_pdf.py -- Renders a TC File Check result as an actual downloadable
-PDF, matching the polish of the branded HTML email (see tc_check_email.py's
-format_reply_html) instead of the plain .txt file /tc-check used to hand
-back. Takes only the already-computed issue list the browser already has
-(same data the .txt download used) -- never re-reads or re-uploads the
-original TREC file, so this stays consistent with "your file is never
-stored": nothing server-side needs the PDF itself, only the check results.
+tc_report_pdf.py -- Renders a TC File Check result as a downloadable PDF.
+
+Redesigned 2026-10-07 to match the emailed report (tc_check_email.py):
+dark-green header with the white txtanoffer wordmark and a yellow accent bar,
+the property address from Section 2A as the headline, every finding listed
+with its consequence tag (per-page initials already folded into one line by
+the /v1/tc/check response), next steps, the Brokerage archive card, and the
+Brokerage audit card. Takes only the already-computed results the browser
+has -- never re-reads the original TREC file, so this stays consistent with
+"your file is never stored".
 """
 import io
+import os
 from datetime import datetime
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
 from reportlab.pdfgen import canvas
-from reportlab.lib.colors import HexColor, Color
+from reportlab.lib.colors import HexColor
 
-from cover_page import _draw_brand, _draw_rounded_rect, _wrap_text
-from tc_check_email import _streak_note, _UPSELL_URL
+from cover_page import _draw_rounded_rect, _wrap_text
+from tc_check_email import _streak_note, _UPSELL_URL, _DISCLAIMER
 
-# TC Check's own brand teal (matches --accent on /tc-check), not the offer
-# generator's black/charcoal -- this report should read as coming from the
-# TC Check product page a TC actually visited, not the contract-drafting side.
-ACCENT = HexColor("#0b5d52")
-ACCENT_TINT = HexColor("#E7F3F1")
+GREEN_DARK = HexColor("#0a3f3a")
+GREEN = HexColor("#0b5d52")
+GREEN_TINT = HexColor("#E7F3F1")
+GREEN_TEXT_LIGHT = HexColor("#c9dcd8")
+YELLOW = HexColor("#f5c242")
+YELLOW_TINT = HexColor("#FFF6DA")
+YELLOW_TEXT = HexColor("#3a3320")
 BLOCKER_COLOR = HexColor("#dc2626")
-BLOCKER_BG = HexColor("#fef2f2")
+BLOCKER_BG = HexColor("#fdecec")
 WARNING_COLOR = HexColor("#b45309")
-WARNING_BG = HexColor("#fffbeb")
+WARNING_BG = HexColor("#fdf3e3")
 COMPLETE_COLOR = HexColor("#047857")
 COMPLETE_BG = HexColor("#ecfdf5")
 TEXT_PRIMARY = HexColor("#0f1f2f")
+TEXT_BODY = HexColor("#2c3d4d")
 TEXT_MUTED = HexColor("#5a6b7a")
 TEXT_DIM = HexColor("#8a9aa9")
 DIVIDER = HexColor("#e5e7eb")
+WHITE = HexColor("#ffffff")
 
 MARGIN = 0.65 * inch
-ROW_FONT_SIZE = 9.5
-ROW_LINE_HEIGHT = 0.16 * inch
-ROW_GAP = 0.14 * inch
-BOTTOM_LIMIT = 0.9 * inch  # leave room for the footer on every page
+BOTTOM_LIMIT = 0.95 * inch  # room for the footer on every page
+ROW_FONT = ("Helvetica", 10)
+LINE_H = 0.17 * inch
 
-# Same trailing content as the emailed report's HTML (_SHARE_WITH_AGENT_HTML /
-# _UPSELL_HTML in tc_check_email.py) -- kept in sync by hand since a PDF page
-# can't share an HTML template with an email body. Only shown when there's
-# something to fix, same as the email.
-_SHARE_LINE = "Share this with your agent: just forward this report."
-_UPSELL_HEADING = "Tired of catching these by hand?"
-_UPSELL_LINE_1 = "Free: check your next file at txtanoffer.com/tc-check before it goes to title."
-_UPSELL_LINE_2 = "Every file, every agent, zero effort: the TxtAnOffer Brokerage Dashboard — $349/mo for your whole roster."
-_UPSELL_CTA = "See how it works →"
-UPSELL_BG = HexColor("#171717")
-UPSELL_TEXT_MUTED = HexColor("#a3a3a3")
+_LOGO_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "logo-wordmark-white.png")
 
-
-def _draw_header(c, width, height, page_num):
-    """Brand mark + running title, repeated on every page (page 1 gets the
-    full title block drawn separately below it -- see generate())."""
-    y = height - 0.6 * inch
-    _draw_brand(c, MARGIN, y)
-    c.setFillColor(TEXT_PRIMARY)
-    c.setFont("Helvetica-Bold", 10)
-    c.drawString(MARGIN + 30, y - 7, "TxtAnOffer")
-    if page_num > 1:
-        c.setFillColor(TEXT_DIM)
-        c.setFont("Helvetica", 8)
-        c.drawRightString(width - MARGIN, y - 3, f"TC File Check — page {page_num}")
-    return y - 0.7 * inch
+_NEXT_STEPS = [
+    "1.  Fill in or correct the items above.",
+    "2.  Check it again: forward the corrected file to tc@check.txtanoffer.com, or upload it at txtanoffer.com/tc-check.",
+    "3.  Share this with your agent: just forward this report.",
+]
+_ARCHIVE_HEADING = "Keep every offer on file"
+_ARCHIVE_TEXT = ("On the Brokerage plan, every offer and amendment your agents text in to TxtAnOffer is archived "
+                 "for 5 years, searchable by address — longer than the 4 years TREC requires brokers to keep "
+                 "transaction records (22 TAC §535.2). The archive holds the drafts created in TxtAnOffer, so "
+                 "keep your executed copies too.")
+_UPSELL_HEADING = "Every file, every agent, checked automatically"
+_UPSELL_TEXT = ("The Brokerage plan checks every offer your agents send before it goes out — $349/mo for your "
+                "whole roster. Start with a free audit of your last 20 closed files.")
+_UPSELL_CTA = "Get a free 20-file audit →"
 
 
-def _draw_footer(c, width, page_num, page_count, streak_note=""):
-    # The "this is your Nth file" streak line only makes sense once -- put
-    # it just above the divider on the last page, same spot the email
-    # version puts it in its own single footer.
+def _header(c, width, height, compact=False) -> float:
+    """Green band + white wordmark + yellow bar. Returns the y below it."""
+    band_h = 0.5 * inch if compact else 0.72 * inch
+    top = height
+    c.setFillColor(GREEN_DARK)
+    c.rect(0, top - band_h, width, band_h, fill=1, stroke=0)
+    c.setFillColor(YELLOW)
+    c.rect(0, top - band_h - 4, width, 4, fill=1, stroke=0)
+    logo_w = 1.15 * inch if compact else 1.45 * inch
+    logo_h = logo_w * 120 / 708
+    if os.path.exists(_LOGO_PATH):
+        c.drawImage(_LOGO_PATH, MARGIN, top - band_h / 2 - logo_h / 2, logo_w, logo_h, mask="auto")
+    c.setFillColor(YELLOW)
+    c.setFont("Helvetica-Bold", 7.5)
+    c.drawRightString(width - MARGIN, top - band_h / 2 - 3, "TC FILE CHECK REPORT")
+    return top - band_h - 4 - 0.42 * inch
+
+
+def _footer(c, width, page_num, page_count, streak_note=""):
     if page_num == page_count and streak_note:
         c.setFillColor(TEXT_DIM)
         c.setFont("Helvetica", 7.5)
-        c.drawCentredString(width / 2, 0.78 * inch, streak_note)
+        c.drawString(MARGIN, 0.82 * inch, streak_note)
     c.setStrokeColor(DIVIDER)
     c.setLineWidth(0.5)
-    c.line(MARGIN, 0.65 * inch, width - MARGIN, 0.65 * inch)
+    c.line(MARGIN, 0.7 * inch, width - MARGIN, 0.7 * inch)
     c.setFillColor(TEXT_DIM)
-    c.setFont("Helvetica", 7)
-    c.drawString(MARGIN, 0.48 * inch, "Checked with TC Check by TxtAnOffer · txtanoffer.com/tc-check · Not affiliated with TREC")
-    c.drawRightString(width - MARGIN, 0.48 * inch, f"Page {page_num} of {page_count}")
+    c.setFont("Helvetica", 6.5)
+    c.drawString(MARGIN, 0.52 * inch, _DISCLAIMER)
+    c.drawRightString(width - MARGIN, 0.36 * inch, f"txtanoffer.com  ·  Page {page_num} of {page_count}")
 
 
-def _status_banner(complete: bool, blocker_count: int, total_issues: int):
-    if complete:
-        return "All checked fields are filled in.", COMPLETE_COLOR, COMPLETE_BG
-    if blocker_count > 0:
-        label = f"{blocker_count} title-blocking error{'' if blocker_count == 1 else 's'} found"
-        return label, BLOCKER_COLOR, BLOCKER_BG
-    label = f"{total_issues} issue{'' if total_issues == 1 else 's'} found"
-    return label, WARNING_COLOR, WARNING_BG
-
-
-def generate_tc_report_pdf(filename: str, issues: list, generated_at=None, check_count: int = 0) -> bytes:
-    generated_at = generated_at or datetime.now()
-    blockers = [i for i in issues if i.get("severity") == "blocker"]
-    warnings = [i for i in issues if i.get("severity") == "warning"]
-    complete = not issues
-    streak_note = _streak_note(check_count).strip()
-
-    buffer = io.BytesIO()
-    c = canvas.Canvas(buffer, pagesize=letter)
-    width, height = letter
+def _title_block(c, width, height, property, files_line, filename, generated_at, issues) -> float:
+    y = _header(c, width, height)
     content_w = width - 2 * MARGIN
-
-    # Pass 1: lay out every row (with pagination) onto a list of pages so
-    # the footer's "Page X of N" is accurate -- reportlab has no way to
-    # know the final page count until everything's already been drawn.
-    def build_rows():
-        rows = []  # (kind, ...) where kind is 'section', 'issue', 'share', or 'upsell'
-        if blockers:
-            rows.append(("section", "Critical deal blockers"))
-            for issue in blockers:
-                rows.append(("issue", "BLOCKER", BLOCKER_COLOR, BLOCKER_BG, issue.get("message", "")))
-        if warnings:
-            rows.append(("section", "Also worth fixing"))
-            for issue in warnings:
-                rows.append(("issue", "WARNING", WARNING_COLOR, WARNING_BG, issue.get("message", "")))
-        # Same trailing content as the emailed report -- only when there's
-        # actually something to fix, matching the email's own condition.
-        if not complete:
-            rows.append(("share",))
-            rows.append(("upsell",))
-        return rows
-
-    rows = build_rows()
-
-    def row_height(c, kind, rest):
-        if kind == "section":
-            return ROW_LINE_HEIGHT + ROW_GAP
-        if kind == "issue":
-            return _issue_row_height(c, rest[-1], content_w)
-        if kind == "share":
-            return ROW_LINE_HEIGHT + 0.15 * inch
-        return _upsell_box_height(c, content_w)  # 'upsell'
-
-    # Render once to discover how many pages this takes, then again to draw
-    # accurate footers -- cheap for a checklist-sized document (never more
-    # than a couple dozen rows) and simpler than threading page-count state
-    # through a single pass.
-    def render(final: bool, known_page_count: int = 1) -> int:
-        page_num = 1
-        y = _draw_title_block(c, width, height, filename, generated_at, complete, len(blockers), len(issues))
-        for kind, *rest in rows:
-            row_h = row_height(c, kind, rest)
-            if y - row_h < BOTTOM_LIMIT:
-                if final:
-                    _draw_footer(c, width, page_num, known_page_count, streak_note)
-                c.showPage()
-                page_num += 1
-                y = _draw_header(c, width, height, page_num)
-            if kind == "section":
-                y = _draw_section_heading(c, rest[0], MARGIN, y)
-            elif kind == "issue":
-                tag, color, bg, message = rest
-                y = _draw_issue_row(c, tag, color, bg, message, MARGIN, y, content_w)
-            elif kind == "share":
-                y = _draw_share_line(c, MARGIN, y)
-            else:
-                y = _draw_upsell_box(c, MARGIN, y, content_w)
-        if not rows:
-            c.setFillColor(TEXT_MUTED)
-            c.setFont("Helvetica", 10)
-            c.drawString(MARGIN, y, "Nothing to fix — this file is ready.")
-        if final:
-            _draw_footer(c, width, page_num, known_page_count, streak_note)
-        return page_num
-
-    total_pages = render(final=False)
-    buffer = io.BytesIO()
-    c = canvas.Canvas(buffer, pagesize=letter)
-    render(final=True, known_page_count=total_pages)
-
-    c.save()
-    buffer.seek(0)
-    return buffer.getvalue()
-
-
-def _draw_title_block(c, width, height, filename, generated_at, complete, blocker_count, total_issues) -> float:
-    y = _draw_header(c, width, height, page_num=1)
-    cx = width / 2
-    content_w = width - 2 * MARGIN
-
-    c.setFillColor(TEXT_PRIMARY)
-    c.setFont("Helvetica-Bold", 17)
-    c.drawString(MARGIN, y, "TC File Check — Audit Report")
-    y -= 0.26 * inch
+    prop = property or {}
+    if prop.get("address"):
+        c.setFillColor(TEXT_PRIMARY)
+        c.setFont("Helvetica-Bold", 20)
+        c.drawString(MARGIN, y, prop["address"][:60])
+        bits = [b for b in (prop.get("city", ""), f"{prop['county']} County" if prop.get("county") else "") if b]
+    else:
+        c.setFillColor(HexColor("#b91c1c"))
+        c.setFont("Helvetica-Bold", 20)
+        c.drawString(MARGIN, y, "Property address not filled in")
+        bits = ["Section 2A is blank"]
+    bits.append(f"Checked {generated_at.strftime('%b %d, %Y')}")
+    if files_line:
+        bits.append(files_line)
+    y -= 0.25 * inch
     c.setFillColor(TEXT_MUTED)
     c.setFont("Helvetica", 9)
-    c.drawString(MARGIN, y, f"{filename} · Checked {generated_at.strftime('%B %d, %Y %I:%M %p')}")
-    y -= 0.35 * inch
-
-    label, color, bg = _status_banner(complete, blocker_count, total_issues)
-    banner_h = 0.4 * inch
-    _draw_rounded_rect(c, MARGIN, y - banner_h + 0.1 * inch, content_w, banner_h, r=8, fill_color=bg)
-    c.setFillColor(color)
-    c.setFont("Helvetica-Bold", 11)
-    c.drawString(MARGIN + 0.2 * inch, y - 0.13 * inch, label)
-    y -= banner_h + 0.3 * inch
-    return y
-
-
-def _issue_row_height(c, message, content_w) -> float:
-    lines = _wrap_text(c, message, "Helvetica", ROW_FONT_SIZE, content_w - 1.1 * inch)
-    return max(1, len(lines)) * ROW_LINE_HEIGHT + ROW_GAP
-
-
-def _draw_section_heading(c, heading, margin, y) -> float:
+    c.drawString(MARGIN, y, "  ·  ".join(bits))
+    y -= 0.16 * inch
     c.setFillColor(TEXT_DIM)
+    c.setFont("Helvetica", 7.5)
+    c.drawString(MARGIN, y, f"File: {filename}")
+    y -= 0.32 * inch
+
+    nb = sum(1 for i in issues if i.get("severity") == "blocker")
+    nw = len(issues) - nb
+    if not issues:
+        label, color, bg = "Clear — ready to send", COMPLETE_COLOR, COMPLETE_BG
+    elif nb:
+        label, color, bg = "Not ready — fix before this goes to title", BLOCKER_COLOR, BLOCKER_BG
+    else:
+        label, color, bg = f"{nw} item{'s' if nw != 1 else ''} to review", WARNING_COLOR, WARNING_BG
+    box_h = 0.62 * inch if issues else 0.45 * inch
+    _draw_rounded_rect(c, MARGIN, y - box_h, content_w, box_h, r=7, fill_color=bg)
+    c.setFillColor(color)
+    c.rect(MARGIN, y - box_h, 4, box_h, fill=1, stroke=0)
+    c.setFont("Helvetica-Bold", 11.5)
+    c.drawString(MARGIN + 0.22 * inch, y - 0.24 * inch, label.upper())
+    if issues:
+        x = MARGIN + 0.22 * inch
+        c.setFont("Helvetica-Bold", 9)
+        if nb:
+            t = f"{nb} must fix"
+            c.setFillColor(BLOCKER_COLOR)
+            c.drawString(x, y - 0.46 * inch, t)
+            x += c.stringWidth(t, "Helvetica-Bold", 9) + 14
+        if nw:
+            c.setFillColor(WARNING_COLOR)
+            c.drawString(x, y - 0.46 * inch, f"{nw} to review")
+    return y - box_h - 0.3 * inch
+
+
+def _wrap(c, text, font, size, width):
+    return _wrap_text(c, text, font, size, width) or [""]
+
+
+def _section_h(c, content_w):
+    return 0.36 * inch
+
+
+def _draw_section(c, heading, count, y, width):
+    c.setFillColor(GREEN)
     c.setFont("Helvetica-Bold", 8)
-    c.drawString(margin, y, heading.upper())
-    y -= 0.06 * inch
-    c.setStrokeColor(DIVIDER)
-    c.setLineWidth(0.5)
-    c.line(margin, y, letter[0] - margin, y)
+    t = heading.upper()
+    c.drawString(MARGIN, y, t)
+    c.setFillColor(TEXT_DIM)
+    c.drawString(MARGIN + c.stringWidth(t, "Helvetica-Bold", 8) + 5, y, f"({count})")
     return y - 0.22 * inch
 
 
-def _draw_issue_row(c, tag, color, bg, message, margin, y, content_w) -> float:
+def _issue_h(c, issue, content_w):
+    lines = _wrap(c, issue.get("message", ""), ROW_FONT[0], ROW_FONT[1], content_w)
+    return 0.2 * inch + len(lines) * LINE_H + 0.16 * inch
+
+
+def _draw_issue(c, issue, y, content_w, width):
+    blocker = issue.get("severity") == "blocker"
+    color, bg = (BLOCKER_COLOR, BLOCKER_BG) if blocker else (WARNING_COLOR, WARNING_BG)
+    tag = (issue.get("tag") or issue.get("severity") or "issue").upper()
     tag_w = c.stringWidth(tag, "Helvetica-Bold", 6.5) + 12
-    _draw_rounded_rect(c, margin, y - 8, tag_w, 13, r=6, fill_color=bg)
+    _draw_rounded_rect(c, MARGIN, y - 3, tag_w, 12, r=3, fill_color=bg)
     c.setFillColor(color)
     c.setFont("Helvetica-Bold", 6.5)
-    c.drawString(margin + 6, y - 4, tag)
-
-    lines = _wrap_text(c, message, "Helvetica", ROW_FONT_SIZE, content_w - 1.1 * inch)
-    text_x = margin + tag_w + 12
+    c.drawString(MARGIN + 6, y + 0.5, tag)
+    ty = y - 0.2 * inch
     c.setFillColor(TEXT_PRIMARY)
-    c.setFont("Helvetica", ROW_FONT_SIZE)
-    line_y = y
-    for line in lines:
-        c.drawString(text_x, line_y, line)
-        line_y -= ROW_LINE_HEIGHT
-    return line_y - ROW_GAP
+    c.setFont(*ROW_FONT)
+    for line in _wrap(c, issue.get("message", ""), ROW_FONT[0], ROW_FONT[1], content_w):
+        c.drawString(MARGIN, ty, line)
+        ty -= LINE_H
+    ty -= 0.02 * inch
+    c.setStrokeColor(DIVIDER)
+    c.setLineWidth(0.5)
+    c.line(MARGIN, ty + 0.06 * inch, width - MARGIN, ty + 0.06 * inch)
+    return ty - 0.12 * inch
 
 
-def _draw_share_line(c, margin, y) -> float:
-    c.setFillColor(TEXT_MUTED)
-    c.setFont("Helvetica", 8.5)
-    c.drawString(margin, y, _SHARE_LINE)
-    return y - ROW_LINE_HEIGHT - 0.15 * inch
+def _box_lines(c, paragraphs, inner_w, size=8.8):
+    return [_wrap(c, p, "Helvetica", size, inner_w) for p in paragraphs]
 
 
-def _upsell_box_lines(c, content_w):
-    inner_w = content_w - 0.4 * inch
-    return (
-        _wrap_text(c, _UPSELL_LINE_1, "Helvetica", 8.5, inner_w),
-        _wrap_text(c, _UPSELL_LINE_2, "Helvetica", 8.5, inner_w),
-    )
+def _next_h(c, content_w):
+    lines = _box_lines(c, _NEXT_STEPS, content_w - 0.4 * inch)
+    return 0.42 * inch + sum(len(l) for l in lines) * 0.155 * inch + len(lines) * 0.05 * inch + 0.12 * inch + 0.2 * inch
 
 
-def _upsell_box_height(c, content_w) -> float:
-    lines_1, lines_2 = _upsell_box_lines(c, content_w)
-    body_lines = len(lines_1) + len(lines_2)
-    # heading + two wrapped paragraphs + CTA, each on its own line-height,
-    # plus fixed padding top/bottom.
-    return 0.24 * inch + body_lines * 0.16 * inch + 0.3 * inch + 0.3 * inch
+def _draw_next(c, y, content_w, width):
+    h = _next_h(c, content_w) - 0.2 * inch
+    _draw_rounded_rect(c, MARGIN, y - h, content_w, h, r=8, fill_color=GREEN_TINT)
+    x = MARGIN + 0.2 * inch
+    ty = y - 0.26 * inch
+    c.setFillColor(GREEN)
+    c.setFont("Helvetica-Bold", 7.5)
+    c.drawString(x, ty, "WHAT TO DO NEXT")
+    ty -= 0.22 * inch
+    c.setFillColor(TEXT_BODY)
+    c.setFont("Helvetica", 8.8)
+    for para in _box_lines(c, _NEXT_STEPS, content_w - 0.4 * inch):
+        for line in para:
+            c.drawString(x, ty, line)
+            ty -= 0.155 * inch
+        ty -= 0.05 * inch
+    return y - h - 0.2 * inch
 
 
-def _draw_upsell_box(c, margin, y, content_w) -> float:
-    lines_1, lines_2 = _upsell_box_lines(c, content_w)
-    box_h = _upsell_box_height(c, content_w)
-    _draw_rounded_rect(c, margin, y - box_h, content_w, box_h, r=8, fill_color=UPSELL_BG)
+def _archive_h(c, content_w):
+    lines = _wrap(c, _ARCHIVE_TEXT, "Helvetica", 8.8, content_w - 0.4 * inch)
+    return 0.46 * inch + len(lines) * 0.155 * inch + 0.14 * inch + 0.2 * inch
 
-    inner_x = margin + 0.2 * inch
-    inner_w = content_w - 0.4 * inch
-    ty = y - 0.24 * inch
-    c.setFillColor(HexColor("#ffffff"))
-    c.setFont("Helvetica-Bold", 9.5)
-    c.drawString(inner_x, ty, _UPSELL_HEADING)
-    ty -= 0.2 * inch
 
-    c.setFillColor(UPSELL_TEXT_MUTED)
-    c.setFont("Helvetica", 8.5)
-    for line in lines_1:
-        c.drawString(inner_x, ty, line)
-        ty -= 0.16 * inch
-    ty -= 0.04 * inch
-    for line in lines_2:
-        c.drawString(inner_x, ty, line)
-        ty -= 0.16 * inch
-    ty -= 0.06 * inch
+def _draw_archive(c, y, content_w, width):
+    h = _archive_h(c, content_w) - 0.2 * inch
+    _draw_rounded_rect(c, MARGIN, y - h, content_w, h, r=8, fill_color=YELLOW_TINT, stroke_color=YELLOW)
+    x = MARGIN + 0.2 * inch
+    ty = y - 0.26 * inch
+    c.setFillColor(TEXT_PRIMARY)
+    c.setFont("Helvetica-Bold", 10.5)
+    c.drawString(x, ty, _ARCHIVE_HEADING)
+    ty -= 0.21 * inch
+    c.setFillColor(YELLOW_TEXT)
+    c.setFont("Helvetica", 8.8)
+    for line in _wrap(c, _ARCHIVE_TEXT, "Helvetica", 8.8, content_w - 0.4 * inch):
+        c.drawString(x, ty, line)
+        ty -= 0.155 * inch
+    return y - h - 0.2 * inch
 
-    c.setFillColor(HexColor("#ffffff"))
-    c.setFont("Helvetica-Bold", 8.5)
-    c.drawString(inner_x, ty, _UPSELL_CTA)
-    cta_w = c.stringWidth(_UPSELL_CTA, "Helvetica-Bold", 8.5)
-    c.linkURL(_UPSELL_URL, (inner_x, ty - 3, inner_x + cta_w, ty + 10), relative=0, thickness=0)
 
-    return y - box_h - 0.3 * inch
+def _upsell_h(c, content_w):
+    lines = _wrap(c, _UPSELL_TEXT, "Helvetica", 8.8, content_w - 0.4 * inch)
+    return 0.48 * inch + len(lines) * 0.155 * inch + 0.48 * inch + 0.2 * inch
+
+
+def _draw_upsell(c, y, content_w, width):
+    h = _upsell_h(c, content_w) - 0.2 * inch
+    _draw_rounded_rect(c, MARGIN, y - h, content_w, h, r=8, fill_color=GREEN_DARK)
+    x = MARGIN + 0.2 * inch
+    ty = y - 0.28 * inch
+    c.setFillColor(WHITE)
+    c.setFont("Helvetica-Bold", 11)
+    c.drawString(x, ty, _UPSELL_HEADING)
+    ty -= 0.21 * inch
+    c.setFillColor(GREEN_TEXT_LIGHT)
+    c.setFont("Helvetica", 8.8)
+    for line in _wrap(c, _UPSELL_TEXT, "Helvetica", 8.8, content_w - 0.4 * inch):
+        c.drawString(x, ty, line)
+        ty -= 0.155 * inch
+    ty -= 0.1 * inch
+    pill_w = c.stringWidth(_UPSELL_CTA, "Helvetica-Bold", 9) + 26
+    pill_h = 0.3 * inch
+    _draw_rounded_rect(c, x, ty - pill_h + 0.06 * inch, pill_w, pill_h, r=pill_h / 2, fill_color=YELLOW)
+    c.setFillColor(TEXT_PRIMARY)
+    c.setFont("Helvetica-Bold", 9)
+    c.drawString(x + 13, ty - pill_h / 2 + 0.03 * inch, _UPSELL_CTA)
+    c.linkURL(_UPSELL_URL, (x, ty - pill_h + 0.06 * inch, x + pill_w, ty + 0.06 * inch), relative=0, thickness=0)
+    return y - h - 0.2 * inch
+
+
+def generate_tc_report_pdf(filename: str, issues: list, generated_at=None, check_count: int = 0,
+                           property: dict = None, files_line: str = "") -> bytes:
+    """issues: report-ready list from /v1/tc/check's display_issues
+    (severity, tag, message). Older callers that pass raw issues without a
+    tag still work -- the severity is shown in its place."""
+    generated_at = generated_at or datetime.now()
+    streak_note = _streak_note(check_count).strip()
+    blockers = [i for i in issues if i.get("severity") == "blocker"]
+    warnings = [i for i in issues if i.get("severity") == "warning"]
+    width, height = letter
+    content_w = width - 2 * MARGIN
+
+    rows = []
+    if blockers:
+        rows.append(("section", "Fix before this goes to title", len(blockers)))
+        rows += [("issue", i) for i in blockers]
+    if warnings:
+        rows.append(("section", "Worth fixing", len(warnings)))
+        rows += [("issue", i) for i in warnings]
+    if issues:
+        rows.append(("next",))
+    rows.append(("archive",))
+    rows.append(("upsell",))
+
+    def height_of(c, row):
+        kind = row[0]
+        if kind == "section":
+            return _section_h(c, content_w)
+        if kind == "issue":
+            return _issue_h(c, row[1], content_w)
+        if kind == "next":
+            return _next_h(c, content_w)
+        if kind == "archive":
+            return _archive_h(c, content_w)
+        return _upsell_h(c, content_w)
+
+    def render(c, final: bool, page_count: int = 1) -> int:
+        page = 1
+        y = _title_block(c, width, height, property, files_line, filename, generated_at, issues)
+        if not issues:
+            c.setFillColor(COMPLETE_COLOR)
+            c.setFont("Helvetica", 10)
+            c.drawString(MARGIN, y, "Nothing to fix on the fields TC Check verifies — this one is ready.")
+            y -= 0.4 * inch
+        for row in rows:
+            h = height_of(c, row)
+            # Keep a section heading with its first row.
+            if row[0] == "section":
+                nxt = rows[rows.index(row) + 1]
+                h += height_of(c, nxt)
+            if y - h < BOTTOM_LIMIT:
+                if final:
+                    _footer(c, width, page, page_count, streak_note)
+                c.showPage()
+                page += 1
+                y = _header(c, width, height, compact=True)
+            kind = row[0]
+            if kind == "section":
+                y = _draw_section(c, row[1], row[2], y, width)
+            elif kind == "issue":
+                y = _draw_issue(c, row[1], y, content_w, width)
+            elif kind == "next":
+                y = _draw_next(c, y - 0.08 * inch, content_w, width)
+            elif kind == "archive":
+                y = _draw_archive(c, y, content_w, width)
+            else:
+                y = _draw_upsell(c, y, content_w, width)
+        if final:
+            _footer(c, width, page, page_count, streak_note)
+        return page
+
+    pages = render(canvas.Canvas(io.BytesIO(), pagesize=letter), final=False)
+    buffer = io.BytesIO()
+    c = canvas.Canvas(buffer, pagesize=letter)
+    c.setTitle("TC File Check report" + (f" — {property['address']}" if property and property.get("address") else ""))
+    render(c, final=True, page_count=pages)
+    c.save()
+    return buffer.getvalue()

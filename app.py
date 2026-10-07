@@ -3409,6 +3409,17 @@ def tc_check():
             payload["social_proof"] = proof
     else:
         payload["gated"] = False
+    # Report-ready view of the same findings (2026-10-07): per-page initials
+    # folded into one line, each with its consequence tag -- the exact list
+    # the emailed report shows, so the on-screen report and the downloaded
+    # PDF match it. Empty while gated, same as "issues".
+    from tc_check_email import _display_issues, _consequence_tag, _clean, _files_line
+    payload["display_issues"] = sorted(
+        ({"severity": i.get("severity"), "tag": _consequence_tag(i), "message": _clean(i.get("message", ""))}
+         for i in _display_issues(payload.get("issues") or [])),
+        key=lambda i: i["severity"] != "blocker",  # must-fix first, same order as the email/PDF
+    )
+    payload["files_line"] = _files_line(result) if result.get("recognized") else ""
     if not is_demo and not client["email"]:
         payload["free_reports_left"] = max(TC_FREE_FULL_REPORTS - client["use_count"] - 1, 0)
 
@@ -3455,6 +3466,7 @@ def tc_check_report_pdf():
     clean_issues = [
         {
             "severity": i.get("severity") if i.get("severity") in ("blocker", "warning") else "warning",
+            "tag": str(i.get("tag") or "")[:40],
             "message": str(i.get("message") or "")[:500],
         }
         for i in (issues if isinstance(issues, list) else [])
@@ -3465,7 +3477,11 @@ def tc_check_report_pdf():
     # gate-cleared email, synced into emailOptinInput by unlockGate()).
     email = (data.get("email") or "").strip()
     check_count = get_tc_check_count_for_sender(email) if "@" in email else 0
-    pdf_bytes = generate_tc_report_pdf(safe_name, clean_issues, check_count=check_count)
+    raw_prop = data.get("property") if isinstance(data.get("property"), dict) else {}
+    prop = {k: str(raw_prop.get(k) or "")[:120] for k in ("address", "city", "county")}
+    files_line = str(data.get("files_line") or "")[:80]
+    pdf_bytes = generate_tc_report_pdf(safe_name, clean_issues, check_count=check_count,
+                                       property=prop, files_line=files_line)
     base_name = safe_name[:-4] if safe_name.lower().endswith(".pdf") else safe_name
     resp = make_response(pdf_bytes)
     resp.headers["Content-Type"] = "application/pdf"
@@ -3676,6 +3692,19 @@ input[type=file]{display:none;}
 .result-banner{border-radius:var(--radius-sm);padding:1rem 1.25rem;font-weight:700;margin-bottom:1rem;}
 .result-banner.complete{background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.25);color:#047857;}
 .result-banner.incomplete{background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);color:#dc2626;}
+.rep-head{background:#0a3f3a;border-radius:12px 12px 0 0;padding:16px 18px;display:flex;justify-content:space-between;align-items:center;gap:12px;}
+.rep-head img{height:20px;width:auto;display:block;}
+.rep-head .rep-kick{font-size:0.62rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#f5c242;}
+.rep-head .rep-kick{white-space:nowrap;}
+@media(max-width:480px){.rep-head{padding:12px 14px;}.rep-head img{height:16px;}.rep-head .rep-kick{font-size:0.55rem;letter-spacing:0.08em;}}
+.rep-bar{height:4px;background:#f5c242;margin-bottom:16px;}
+.rep-addr{font-size:1.35rem;font-weight:800;letter-spacing:-0.02em;color:var(--text);line-height:1.25;}
+.rep-addr.blank{color:#b91c1c;}
+.rep-sub{font-size:0.82rem;color:var(--text-muted);margin:4px 0 14px;}
+.rep-counts{margin-top:4px;font-size:0.8rem;font-weight:700;}
+.rep-counts .must{color:#dc2626;margin-right:10px;}
+.rep-counts .review{color:#b45309;}
+.issue-item .issue-body{display:flex;flex-direction:column;gap:3px;}
 .issue-list{list-style:none;margin-bottom:1.25rem;}
 .issue-item{display:flex;gap:0.6rem;padding:0.65rem 0;border-bottom:1px solid var(--border);font-size:0.9rem;}
 .issue-item:last-child{border-bottom:none;}
@@ -3690,7 +3719,7 @@ font-family:inherit;font-size:0.85rem;font-weight:600;cursor:pointer;}
 border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;}
 .fixit-cta p{font-size:0.85rem;color:var(--text-muted);margin:0;}
 .fixit-cta a{background:var(--accent);color:#fff;padding:0.6rem 1.25rem;border-radius:9999px;
-font-size:0.85rem;font-weight:600;white-space:nowrap;}
+font-size:0.85rem;font-weight:600;display:inline-block;max-width:100%;text-align:center;}
 .fixit-cta a:hover{opacity:0.9;}
 .gate-box{margin-top:0.5rem;padding:1.25rem 1.4rem;background:#0f1f2f;border-radius:var(--radius);}
 .gate-shield{display:inline-flex;align-items:center;gap:0.4rem;color:#6fe0c8;font-weight:700;font-size:0.7rem;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:0.6rem;}
@@ -4063,10 +4092,26 @@ function resetForm() {
   dropZone.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
+function buildReportHead(data) {
+  if (!data.recognized) return '';
+  const p = data.property || {};
+  let html = '<div class="rep-head"><img src="/static/logo-wordmark-white.png?v=1" alt="txtanoffer"><span class="rep-kick">TC File Check report</span></div><div class="rep-bar"></div>';
+  html += p.address
+    ? '<div class="rep-addr">' + escapeHtml(p.address) + '</div>'
+    : '<div class="rep-addr blank">Property address not filled in</div>';
+  const bits = [];
+  if (p.address) { if (p.city) bits.push(escapeHtml(p.city)); if (p.county) bits.push(escapeHtml(p.county) + ' County'); }
+  else bits.push('Section 2A is blank');
+  if (data.files_line) bits.push(escapeHtml(data.files_line));
+  html += '<div class="rep-sub">' + bits.join(' &middot; ') + '</div>';
+  return html;
+}
+
 function renderResult(data, file, isDemo) {
-  const issues = data.issues || [];
+  const issues = (data.display_issues && data.display_issues.length) ? data.display_issues : (data.issues || []);
   const totalIssues = typeof data.issue_count === 'number' ? data.issue_count : issues.length;
   let html = isDemo ? '<div class="demo-banner">Demo result &mdash; sample contract, not your file.</div>' : '';
+  html += buildReportHead(data);
   html += buildMetaBar(data, file);
 
   if (data.complete) {
@@ -4079,7 +4124,15 @@ function renderResult(data, file, isDemo) {
     const bannerText = blockerCount > 0
       ? blockerCount + ' title-blocking error' + (blockerCount === 1 ? '' : 's') + ' found'
       : totalIssues + ' issue' + (totalIssues === 1 ? '' : 's') + ' found';
-    html += '<div class="result-banner incomplete">' + bannerText + '</div>';
+    let counts = '';
+    if (data.display_issues && data.display_issues.length) {
+      const nb = data.display_issues.filter(i => i.severity === 'blocker').length;
+      const nw = data.display_issues.length - nb;
+      counts = '<div class="rep-counts">' + (nb ? '<span class="must">' + nb + ' must fix</span>' : '') + (nw ? '<span class="review">' + nw + ' to review</span>' : '') + '</div>';
+      html += '<div class="result-banner incomplete">' + (nb ? 'Not ready &mdash; fix before this goes to title' : nw + ' item' + (nw === 1 ? '' : 's') + ' to review') + counts + '</div>';
+    } else {
+      html += '<div class="result-banner incomplete">' + bannerText + '</div>';
+    }
   }
   if (data.looks_like_blank_draft) {
     html += '<div class="fixit-cta"><p>This looks like an essentially blank draft &mdash; more gaps than a quick fix. It may be faster to generate a clean one from scratch.</p><a href="/demo">Generate a clean offer &rarr;</a></div>';
@@ -4087,7 +4140,7 @@ function renderResult(data, file, isDemo) {
   if (issues.length) {
     html += '<ul class="issue-list">';
     for (const issue of issues) {
-      html += '<li class="issue-item"><span class="issue-tag ' + issue.severity + '">' + issue.severity + '</span><span>' + escapeHtml(issue.message) + '</span></li>';
+      html += '<li class="issue-item"><span class="issue-body"><span><span class="issue-tag ' + issue.severity + '">' + escapeHtml(issue.tag || issue.severity) + '</span></span><span>' + escapeHtml(issue.message) + '</span></span></li>';
     }
     html += '</ul>';
   }
@@ -4135,6 +4188,8 @@ function renderResult(data, file, isDemo) {
   resultEl.classList.add('show');
   resultEl.dataset.issues = JSON.stringify(issues);
   resultEl.dataset.filename = file.name;
+  resultEl.dataset.property = JSON.stringify(data.property || {});
+  resultEl.dataset.filesLine = data.files_line || '';
 }
 
 function unlockGate() {
@@ -4163,13 +4218,15 @@ function copyChecklist() {
 function downloadReport(btn) {
   const filename = resultEl.dataset.filename || 'file.pdf';
   const issues = JSON.parse(resultEl.dataset.issues || '[]');
+  const property = JSON.parse(resultEl.dataset.property || '{}');
+  const files_line = resultEl.dataset.filesLine || '';
   const email = (emailOptinInput && emailOptinInput.value || '').trim();
   const original = btn ? btn.textContent : null;
   if (btn) { btn.disabled = true; btn.textContent = 'Preparing PDF...'; }
   fetch('/tc-check/report.pdf', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ filename, issues, email })
+    body: JSON.stringify({ filename, issues, email, property, files_line })
   })
     .then(r => r.blob())
     .then(blob => {
