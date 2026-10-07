@@ -40,6 +40,7 @@ from sponsors import create_sponsor, list_sponsors, set_sponsor_active
 from sms_utils import parse_incoming_sms
 from cleanup import run_cleanup_if_due
 import archive as archive_store
+import crm
 import broker_auth
 from reminders import run_reminders_if_due
 from deadlines import earnest_money_deadline, option_end_date, build_day_one_summary
@@ -8672,6 +8673,214 @@ def guide(slug):
     resp = make_response(_guide_page(slug, g, g["body"]))
     track_page_view(resp, "guide_page")
     return resp
+
+
+# --- Sign-up CRM (/admin/crm, 2026-10-07) -------------------------------------
+# See crm.py. Auth: ?token=<ANALYTICS_PASSWORD> or the ta_internal cookie that
+# /internal-mode (and this page's sign-in form) sets -- same secret as /analytics.
+
+def _crm_authed():
+    if not ANALYTICS_PASSWORD:
+        return False
+    tok = request.args.get("token", "") or request.cookies.get("ta_internal", "")
+    return hmac.compare_digest(tok, ANALYTICS_PASSWORD)
+
+
+_CRM_CSS = """
+:root{--bg:#F5F5F7;--text:#0f1f2f;--muted:#5a6b7a;--dim:#8a9aa9;--green:#0b5d52;--gd:#0a3f3a;--tint:#E7F3F1;--y:#f5c242;--yt:#FFF6DA;--border:rgba(15,31,47,0.08);}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:var(--bg);color:var(--text);line-height:1.5;font-size:14px;-webkit-font-smoothing:antialiased;}
+a{color:var(--green);}
+.head{background:var(--gd);border-bottom:4px solid var(--y);padding:14px 24px;display:flex;justify-content:space-between;align-items:center;}
+.head img{height:22px;display:block;}
+.head span{color:var(--y);font-weight:800;font-size:0.72rem;letter-spacing:0.12em;text-transform:uppercase;}
+.wrap{max-width:1180px;margin:0 auto;padding:1.5rem 1.25rem 4rem;}
+h1{font-size:1.5rem;letter-spacing:-0.02em;}
+h2{font-size:1.05rem;margin:0 0 0.6rem;}
+.sub{color:var(--muted);margin:0.2rem 0 1.25rem;}
+.card{background:#fff;border:1px solid var(--border);border-radius:14px;padding:1.1rem 1.2rem;margin-bottom:1.1rem;}
+.funnel{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;}
+.fstep{background:#fff;border:1px solid var(--border);border-top:4px solid var(--y);border-radius:12px;padding:10px 12px;text-decoration:none;color:var(--text);}
+.fstep b{display:block;font-size:1.4rem;color:var(--green);}
+.fstep span{font-size:0.7rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--dim);font-weight:700;}
+.fstep.goal{background:var(--gd);border-top-color:var(--y);}
+.fstep.goal b{color:var(--y);} .fstep.goal span{color:#c9dcd8;}
+.kpi{margin-top:10px;font-size:0.9rem;color:var(--muted);}
+.kpi b{color:var(--text);}
+table{width:100%;border-collapse:collapse;}
+th{text-align:left;font-size:0.68rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--dim);padding:7px 8px;border-bottom:2px solid #eef0f2;}
+td{padding:9px 8px;border-bottom:1px solid #eef0f2;vertical-align:top;}
+.pill{display:inline-block;font-size:0.68rem;font-weight:700;padding:2px 8px;border-radius:999px;background:#eef0f2;color:var(--muted);white-space:nowrap;}
+.pill.contacted{background:#e8eef7;color:#2c5282;} .pill.replied{background:var(--yt);color:#8a5a00;}
+.pill.engaged{background:#fdf3e3;color:#b45309;} .pill.trial{background:var(--tint);color:var(--green);}
+.pill.signed_up,.pill.paying{background:var(--gd);color:var(--y);} .pill.lost{background:#f3f4f6;color:#9ca3af;}
+.why{font-size:0.78rem;color:var(--green);font-weight:600;}
+.muted{color:var(--dim);font-size:0.78rem;}
+input[type=text],input[type=email],input[type=date],select,textarea{width:100%;padding:7px 9px;border:1px solid #d5dbe0;border-radius:8px;font:inherit;font-size:0.85rem;background:#fff;}
+textarea{min-height:70px;}
+.btn{display:inline-block;background:var(--green);color:#fff;border:0;border-radius:999px;padding:6px 13px;font:inherit;font-weight:700;font-size:0.78rem;cursor:pointer;text-decoration:none;}
+.btn.y{background:var(--y);color:var(--text);} .btn.ghost{background:#fff;color:var(--green);border:1.5px solid var(--green);}
+.btn.red{background:#fff;color:#dc2626;border:1.5px solid #dc2626;}
+.row{display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:1.1rem;}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+details summary{cursor:pointer;list-style:none;}
+details summary::-webkit-details-marker{display:none;}
+.flash{background:var(--tint);border-radius:10px;padding:0.7rem 1rem;margin-bottom:1rem;}
+.today td:first-child{border-left:4px solid var(--y);}
+@media(max-width:860px){.funnel{grid-template-columns:repeat(auto-fill,minmax(96px,1fr));}.fstep span{font-size:0.62rem;}.grid2,.grid4{grid-template-columns:1fr;}
+ .tw table,.tw tbody,.tw tr,.tw td{display:block;width:100%;} .tw th{display:none;} .tw tr{border-bottom:1px solid #eef0f2;padding:8px 0;} .tw td{border:0;padding:3px 0;}}
+"""
+
+
+def _crm_page(body):
+    return ("""<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex"><title>Sign-up CRM — TxtAnOffer</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>""" + _CRM_CSS + """</style></head><body>
+<div class="head"><a href="/"><img src="/static/logo-wordmark-white.png?v=1" alt="txtanoffer"></a><span>Sign-up CRM</span></div>
+<main class="wrap">""" + body + "</main></body></html>")
+
+
+@app.route("/admin/crm", methods=["GET", "POST"])
+def admin_crm():
+    if not _crm_authed():
+        if request.method == "POST" and request.form.get("password"):
+            if ANALYTICS_PASSWORD and hmac.compare_digest(request.form["password"], ANALYTICS_PASSWORD):
+                resp = make_response(redirect("/admin/crm"))
+                resp.set_cookie("ta_internal", ANALYTICS_PASSWORD, max_age=365 * 24 * 3600, httponly=True,
+                                secure=request.is_secure or request.headers.get("X-Forwarded-Proto") == "https", samesite="Lax")
+                return resp
+        return _crm_page('<div class="card" style="max-width:420px;margin:3rem auto;"><h1>Sign in</h1><p class="sub">Same password as /analytics.</p>'
+                         '<form method="post"><input type="password" name="password" required style="width:100%;padding:8px;border:1px solid #d5dbe0;border-radius:8px;">'
+                         '<button class="btn" style="margin-top:10px;width:100%;">Open the CRM</button></form></div>'), 401
+
+    flash = ""
+    if request.method == "POST":
+        a = request.form.get("action", "")
+        lid = request.form.get("lead_id", type=int)
+        if a == "add":
+            crm.add_lead(**{k: request.form.get(k, "") for k in ("name", "firm", "email", "phone", "market", "role", "source", "src_tag", "stage", "next_action", "next_due", "notes")})
+            flash = "Lead added."
+        elif a == "import":
+            r = crm.import_csv(request.form.get("csv", ""))
+            flash = f"Imported: {r['added']} added, {r['merged']} merged with existing, {r['skipped']} skipped."
+        elif a == "update" and lid:
+            crm.update_lead(lid, **{k: request.form.get(k) for k in ("name", "firm", "email", "phone", "market", "src_tag", "stage", "next_action", "next_due", "notes")})
+            flash = "Saved."
+        elif a == "touch" and lid:
+            crm.log_touch(lid, request.form.get("kind", "note"), request.form.get("note", ""))
+            if request.form.get("next_due") or request.form.get("next_action"):
+                crm.update_lead(lid, next_due=request.form.get("next_due") or None, next_action=request.form.get("next_action") or None)
+            flash = "Logged."
+        elif a == "delete" and lid:
+            crm.delete_lead(lid)
+            flash = "Lead deleted."
+        elif a == "add_inbound":
+            crm.add_lead(email=request.form.get("email", ""), source="inbound", stage="trial",
+                         next_action="Reach out: offer to walk through their report", next_due=datetime.utcnow().date().isoformat())
+            flash = "Added to the CRM."
+        elif a == "dismiss_inbound":
+            crm.dismiss_inbound(request.form.get("email", ""))
+            flash = "Dismissed."
+        return redirect("/admin/crm?flash=" + _urlquote(flash) + ("&q=" + _urlquote(request.form.get("q", "")) if request.form.get("q") else ""))
+
+    flash = request.args.get("flash", "")
+    q = (request.args.get("q") or "").strip()[:100]
+    stage_f = request.args.get("stage", "")
+    every = crm.list_leads()
+    leads = crm.list_leads(q, stage_f) if (q or stage_f) else every
+
+    counts = {s: 0 for s in crm.STAGES}
+    for l in every:
+        counts[l["stage"]] += 1
+    reached = sum(counts[s] for s in crm.STAGES if s not in ("new", "lost"))
+    won = counts["signed_up"] + counts["paying"]
+    rate = f"{(won / reached * 100):.0f}%" if reached else "—"
+    funnel = "".join(
+        f'<a class="fstep{" goal" if s == "signed_up" else ""}" href="/admin/crm?stage={s}"><b>{counts[s]}</b><span>{crm.STAGE_LABELS[s]}</span></a>'
+        for s in crm.STAGES if s != "lost")
+
+    today = sorted([l for l in every if l["score"] > 0], key=lambda l: (-l["score"], l["next_due"] or "9999"))[:12]
+
+    def quick_forms(l):
+        return "".join(
+            f'<form method="post" style="display:inline;"><input type="hidden" name="action" value="touch"><input type="hidden" name="lead_id" value="{l["id"]}">'
+            f'<input type="hidden" name="kind" value="{k}"><button class="btn {cls}">{lbl}</button></form> '
+            for k, lbl, cls in (("call", "Called", "ghost"), ("email", "Emailed", "ghost"), ("reply", "They replied", "y")))
+
+    today_rows = "".join(
+        f'<tr class="today"><td><b>{escape(l["name"] or l["email"])}</b><div class="muted">{escape(l["firm"])}{" · " + escape(l["market"]) if l["market"] else ""}</div></td>'
+        f'<td><span class="pill {l["stage"]}">{crm.STAGE_LABELS[l["stage"]]}</span><div class="why">{escape(", ".join(l["reasons"]))}</div></td>'
+        f'<td>{escape(l["next_action"] or "Ask for a 10-minute walkthrough of their report")}<div class="muted">{("due " + escape(l["next_due"])) if l["next_due"] else ""}</div></td>'
+        f'<td>{("<a href=" + chr(39) + "tel:" + escape(l["phone"]) + chr(39) + ">" + escape(l["phone"]) + "</a><br>") if l["phone"] else ""}{("<a href=" + chr(39) + "mailto:" + escape(l["email"]) + chr(39) + ">" + escape(l["email"]) + "</a>") if l["email"] else ""}</td>'
+        f'<td class="row">{quick_forms(l)}</td></tr>'
+        for l in today) or '<tr><td colspan="5" class="muted" style="padding:14px 8px;">Nobody needs action right now. Add leads below, or log calls and replies as they happen.</td></tr>'
+
+    inbound = crm.inbound_not_in_crm()[:20]
+    inbound_rows = "".join(
+        f'<tr><td><b>{escape(i["email"])}</b><div class="why">{escape(i["why"])}</div></td><td class="muted">{escape(i["last"][:10])}</td>'
+        f'<td class="row"><form method="post" style="display:inline;"><input type="hidden" name="action" value="add_inbound"><input type="hidden" name="email" value="{escape(i["email"])}"><button class="btn y">Add to CRM</button></form> '
+        f'<form method="post" style="display:inline;"><input type="hidden" name="action" value="dismiss_inbound"><input type="hidden" name="email" value="{escape(i["email"])}"><button class="btn ghost">Dismiss</button></form></td></tr>'
+        for i in inbound) or '<tr><td colspan="3" class="muted">No new intent signals.</td></tr>'
+
+    def stage_opts(cur):
+        return "".join(f'<option value="{s}"{" selected" if s == cur else ""}>{crm.STAGE_LABELS[s]}</option>' for s in crm.STAGES)
+
+    def lead_row(l):
+        hist = "".join(f'<div class="muted">{escape(t["created_at"][:10])} · <b>{escape(t["kind"])}</b> {escape(t["note"])}</div>' for t in l["touches"][:8]) or '<div class="muted">No touches logged yet.</div>'
+        return f"""<tr><td><details><summary><b>{escape(l['name'] or l['email'] or l['phone'])}</b><div class="muted">{escape(l['firm'])}{' · ' + escape(l['market']) if l['market'] else ''}</div></summary>
+<div style="margin-top:10px;" class="grid2">
+ <form method="post"><input type="hidden" name="action" value="update"><input type="hidden" name="lead_id" value="{l['id']}">
+  <div class="grid4"><input type="text" name="name" value="{escape(l['name'])}" placeholder="Name"><input type="text" name="firm" value="{escape(l['firm'])}" placeholder="Firm">
+  <input type="email" name="email" value="{escape(l['email'])}" placeholder="Email"><input type="text" name="phone" value="{escape(l['phone'])}" placeholder="Phone">
+  <input type="text" name="market" value="{escape(l['market'])}" placeholder="Market"><input type="text" name="src_tag" value="{escape(l['src_tag'])}" placeholder="Link tag (src)">
+  <select name="stage">{stage_opts(l['stage'] if l['stage'] in crm.STAGES else 'new')}</select><input type="date" name="next_due" value="{escape(l['next_due'])}"></div>
+  <input type="text" name="next_action" value="{escape(l['next_action'])}" placeholder="Next action" style="margin-top:8px;">
+  <textarea name="notes" placeholder="Notes" style="margin-top:8px;">{escape(l['notes'])}</textarea>
+  <div class="row" style="margin-top:8px;"><button class="btn">Save</button></div></form>
+ <div><form method="post"><input type="hidden" name="action" value="touch"><input type="hidden" name="lead_id" value="{l['id']}">
+  <div class="row"><select name="kind" style="width:auto;">{''.join(f'<option>{k}</option>' for k in crm.TOUCH_KINDS)}</select><input type="text" name="note" placeholder="What happened?" style="flex:1;width:auto;"></div>
+  <div class="row" style="margin-top:6px;"><input type="text" name="next_action" placeholder="Next action (optional)" style="flex:1;width:auto;"><input type="date" name="next_due" style="width:auto;"><button class="btn y">Log it</button></div></form>
+  <div style="margin-top:10px;">{hist}</div>
+  <form method="post" style="margin-top:10px;" onsubmit="return confirm('Delete this lead?');"><input type="hidden" name="action" value="delete"><input type="hidden" name="lead_id" value="{l['id']}"><button class="btn red">Delete lead</button></form></div>
+</div></details></td>
+<td><span class="pill {l['stage']}">{crm.STAGE_LABELS[l['stage']]}</span>{'<div class="why">' + escape(', '.join(l['reasons'])) + '</div>' if l['reasons'] else ''}</td>
+<td>{escape(l['next_action'])}<div class="muted">{escape(l['next_due'])}</div></td>
+<td class="muted">{escape(l['source'])}{'<br>src=' + escape(l['src_tag']) if l['src_tag'] else ''}</td></tr>"""
+
+    all_rows = "".join(lead_row(l) for l in leads) or '<tr><td colspan="4" class="muted">No leads match.</td></tr>'
+    filt = f'Showing {len(leads)} of {len(every)}' + (f' · <a href="/admin/crm">clear filter</a>' if (q or stage_f) else '')
+
+    body = f"""
+<h1>Sign-up CRM</h1>
+<p class="sub">Every lead, ranked by how close they are to signing up. Product activity (checked a file, clicked their link, joined the archive list, signed up) moves them forward automatically.</p>
+{('<div class="flash">' + escape(flash) + '</div>') if flash else ''}
+<div class="card"><div class="funnel">{funnel}</div>
+<div class="kpi">Reached: <b>{reached}</b> · Signed up or paying: <b>{won}</b> · Sign-up rate from reached: <b>{rate}</b> · Not a fit: {counts['lost']}</div></div>
+
+<div class="card"><h2>Do these today</h2><p class="muted" style="margin:-0.3rem 0 0.6rem;">Highest intent first. Strongest signals: tried the product, replied, clicked their link, follow-up due.</p>
+<div class="tw"><table><tr><th>Lead</th><th>Why now</th><th>Next action</th><th>Contact</th><th>Log</th></tr>{today_rows}</table></div></div>
+
+<div class="card"><h2>New intent, not in the CRM yet</h2><p class="muted" style="margin:-0.3rem 0 0.6rem;">People who used TC Check with an email or joined the archive list. Add them, or dismiss tests and spam.</p>
+<div class="tw"><table><tr><th>Email</th><th>Last</th><th></th></tr>{inbound_rows}</table></div></div>
+
+<div class="card"><div class="row" style="justify-content:space-between;margin-bottom:0.6rem;"><h2 style="margin:0;">All leads</h2>
+<form method="get" class="row"><input type="text" name="q" value="{escape(q)}" placeholder="Search name, firm, email, market" style="width:260px;"><button class="btn">Search</button></form></div>
+<p class="muted" style="margin-bottom:0.5rem;">{filt} · Click a name to edit it or log a touch.</p>
+<div class="tw"><table><tr><th>Lead</th><th>Stage</th><th>Next action</th><th>Source</th></tr>{all_rows}</table></div></div>
+
+<div class="grid2">
+<div class="card"><h2>Add a lead</h2><form method="post"><input type="hidden" name="action" value="add">
+<div class="grid4"><input type="text" name="name" placeholder="Name"><input type="text" name="firm" placeholder="Firm"><input type="email" name="email" placeholder="Email"><input type="text" name="phone" placeholder="Phone">
+<input type="text" name="market" placeholder="Market"><input type="text" name="source" placeholder="Source (e.g. zillow)"><input type="text" name="src_tag" placeholder="Link tag (src)"><select name="stage">{stage_opts('new')}</select></div>
+<input type="text" name="next_action" placeholder="Next action" style="margin-top:8px;"><button class="btn" style="margin-top:8px;">Add lead</button></form></div>
+<div class="card"><h2>Import (CSV)</h2><form method="post"><input type="hidden" name="action" value="import">
+<textarea name="csv" placeholder="name,firm,email,phone,market,source,src_tag,stage,next_action,next_due"></textarea>
+<p class="muted" style="margin:6px 0;">Header row required. Same email = merged, not duplicated.</p><button class="btn">Import</button></form></div>
+</div>
+"""
+    return _crm_page(body)
 
 
 # --- Brokerage archive: sign-in + archive pages (2026-10-07) -----------------
