@@ -962,7 +962,6 @@ def index():
     .footer-links a:hover { color: var(--text); }
     .trust-badges { display: flex; justify-content: center; align-items: center; gap: 1.5rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
     .trust-badge { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.76rem; font-weight: 600; color: var(--text-dim); }
-    .trust-badge .trust-icon { font-size: 0.9rem; }
     .footer-copy { color: var(--text-dim); font-size: 0.8rem; }
 
     @media (max-width: 700px) {
@@ -1246,9 +1245,9 @@ def index():
 
   <footer class="footer">
     <div class="trust-badges">
-      <span class="trust-badge"><span class="trust-icon">&#128274;</span>Checked files never stored</span>
-      <span class="trust-badge"><span class="trust-icon">&#127775;</span>Built &amp; run in Texas</span>
-      <span class="trust-badge"><span class="trust-icon">&#128179;</span>Billing by Stripe</span>
+      <span class="trust-badge">Checked files never stored</span>
+      <span class="trust-badge">Built &amp; run in Texas</span>
+      <span class="trust-badge">Billing by Stripe</span>
     </div>
     <div class="footer-links">
       <a href="/about">About</a>
