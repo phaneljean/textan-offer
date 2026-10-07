@@ -517,19 +517,19 @@ def index():
     .nav-links a { transition: var(--transition); }
     .nav-links a:hover { color: var(--text); }
     .nav-cta {
-      background: rgba(15,31,47,0.06);
-      color: var(--text);
+      background: var(--accent);
+      color: #fff;
       padding: 0.55rem 1.35rem;
       border-radius: 9999px;
       font-size: 0.875rem;
       font-weight: 600;
-      border: 1px solid rgba(15,31,47,0.12);
+      border: 1px solid var(--accent);
       cursor: pointer;
       transition: var(--transition);
       display: inline-block;
       text-decoration: none;
     }
-    .nav-cta:hover { background: rgba(15,31,47,0.1); }
+    .nav-cta:hover { background: var(--accent-light); border-color: var(--accent-light); }
     .nav-toggle { display: none; flex-direction: column; justify-content: center; gap: 5px; width: 34px; height: 34px; background: none; border: none; cursor: pointer; padding: 0; }
     .nav-toggle span { display: block; width: 100%; height: 2px; background: var(--text); border-radius: 2px; }
 
@@ -8196,6 +8196,112 @@ _GUIDES = {
 <p class="note">This is general information, not legal advice. Confirm your brokerage's obligations against the current rule text or with a Texas real estate attorney. TxtAnOffer is not affiliated with TREC.</p>
 """,
     },
+    "40-11-loan-amount-mismatch": {
+        "title": "TREC 40-11 Loan Amount Doesn't Match the Contract (Section 3B)",
+        "description": "Why the loan amount on the TREC 40-11 Third Party Financing Addendum must match Section 3B of the TREC 20-19, and the checkbox mistakes that go with it.",
+        "kicker": "For transaction coordinators",
+        "h1": "40-11 loan amount doesn't match the contract: how to catch it before title does",
+        "lede": "When a deal is financed, the loan amount is written in two places: Section 3B of the TREC 20-19 and the TREC 40-11 Third Party Financing Addendum. If the two disagree, the file stops until someone fixes it.",
+        "body": """
+<h2>The two numbers that must match</h2>
+<ul>
+  <li><strong>TREC 20-19, Section 3B:</strong> the sum of all financing described in the attached Third Party Financing Addendum.</li>
+  <li><strong>TREC 40-11:</strong> the principal amount of the loan the buyer is applying for.</li>
+</ul>
+<p>For a deal with a single loan, those should be the same dollar amount. A typo, a number carried over from an earlier draft, or a price change that only got updated in one place is all it takes. Example: Section 3B says $360,000 and the 40-11 says $36,000 on a 123 Main St purchase. Easy to type, easy to miss when you're skimming.</p>
+
+<h2>The checkbox half of the same problem</h2>
+<p>The 20-19 also has to say that a 40-11 is attached, in two places:</p>
+<ul>
+  <li>The <strong>Third Party Financing Addendum</strong> box in <strong>Section 3B</strong></li>
+  <li>The same addendum in the <strong>Section 22</strong> list of attached addenda</li>
+</ul>
+<p>If a 40-11 is attached, both should be checked. If the deal is all cash and there's no 40-11, neither should be. A checked box with no addendum, or an addendum with an unchecked box, both cause questions.</p>
+
+<h2>Don't forget the 40-11's own initials</h2>
+<p>The 40-11 has its own "Initialed for identification by Buyer ___ and Seller ___" line on its first page. It's a separate document, so it's easy to check every page of the 20-19 and forget this one.</p>
+
+<h2>A 30-second check</h2>
+<ol>
+  <li>Put Section 3B and the 40-11 principal amount side by side. Same number?</li>
+  <li>Section 3B box and Section 22 box: both checked if there's a 40-11, neither if there isn't.</li>
+  <li>40-11 initials: all four slots filled.</li>
+</ol>
+<p>If the contract is already signed and the numbers disagree, fixing it usually means getting both parties to sign a correction. Catching it before it goes out is much cheaper. When the sales price changes later, remember the financing amount often needs to change with it.</p>
+
+<p class="note">General information about the forms, not legal or lending advice.</p>
+<p><a href="/guides/trec-20-19-checklist">See the full TREC 20-19 pre-title checklist &rarr;</a></p>
+""",
+    },
+    "trec-20-19-initials": {
+        "title": "TREC 20-19 Initials: Which Pages Need Buyer and Seller Initials",
+        "description": "The TREC 20-19 has an initials line on pages 1, 4, 5, 6, 8 and 9 of 12, plus one on the 40-11 addendum. Here's where they are and how to check them fast.",
+        "kicker": "For transaction coordinators",
+        "h1": "TREC 20-19 initials: which pages need them, and how to check fast",
+        "lede": "A missing initial is one of the most routine reasons a Texas file bounces back. It's not hard to fix. It's just easy to miss when you're scrolling 12 pages.",
+        "body": """
+<h2>Where the initials lines are</h2>
+<p>At the bottom of these pages of the TREC 20-19 (the page numbers are printed in each page's footer as "Page X of 12"):</p>
+<ul>
+  <li>Page 1 of 12</li>
+  <li>Page 4 of 12</li>
+  <li>Page 5 of 12</li>
+  <li>Page 6 of 12</li>
+  <li>Page 8 of 12</li>
+  <li>Page 9 of 12</li>
+</ul>
+<p>Each line reads "Initialed for identification by Buyer ___ ___ and Seller ___ ___", which gives <strong>four slots per page</strong>: two for buyers and two for sellers. If a TREC 40-11 Third Party Financing Addendum is attached, it has the same line on its first page.</p>
+
+<h2>Why they get missed</h2>
+<ul>
+  <li>The line is small and sits in the footer, where eyes skip.</li>
+  <li>E-signature tools sometimes place initials on some pages but not others, especially when a template was built on an older version of the form.</li>
+  <li>With two buyers, it's common for one buyer to initial and the other to be skipped.</li>
+</ul>
+
+<h2>How to check fast</h2>
+<ol>
+  <li>Jump straight to the six page numbers above instead of reading page by page.</li>
+  <li>Count the slots on each one: one per buyer and one per seller who's party to the contract.</li>
+  <li>Then check the 40-11's first page if it's attached.</li>
+  <li>If your e-sign template is older than the current form (mandatory since July 1, 2026), rebuild it so the initials fields land on the right pages.</li>
+</ol>
+
+<p class="note">General information about the form, not legal advice.</p>
+<p><a href="/guides/trec-20-19-checklist">See the full TREC 20-19 pre-title checklist &rarr;</a></p>
+""",
+    },
+    "trec-39-11-amendment-mismatch": {
+        "title": "TREC 39-11 Amendment: Checking Price and Address Against the Contract",
+        "description": "Before a TREC 39-11 Amendment goes into the file, check that its sales price and property address match the contract it amends. Here's what to look for.",
+        "kicker": "For transaction coordinators",
+        "h1": "TREC 39-11 amendment: check the price and address against the contract",
+        "lede": "An amendment changes the deal, so it has to clearly belong to the right contract and say the right numbers. Two quick comparisons catch most of the problems.",
+        "body": """
+<h2>1. Does it belong to this contract?</h2>
+<p>Compare the property address on the 39-11 with the address in Section 2A of the TREC 20-19. A different address almost always means the wrong amendment got attached, which is a bigger problem than a typo: the change you think is in the file isn't.</p>
+
+<h2>2. Is the sales price right?</h2>
+<p>If the amendment changes the sales price, check that the new total is what the parties actually agreed to, and that the rest of the file reflects it. An amendment used only to change the closing date can leave the price section blank, and that's fine. A blank price section on a closing-date amendment isn't a mistake.</p>
+
+<h2>3. What else usually moves with a price change</h2>
+<ul>
+  <li><strong>Financing.</strong> If there's a TREC 40-11, the loan amount may need to change too. Check it against the new price. <a href="/guides/40-11-loan-amount-mismatch">How the 40-11 and Section 3B have to match &rarr;</a></li>
+  <li><strong>Signatures.</strong> An amendment isn't effective until the parties sign it. Make sure the executed version is what's in the file, not the draft.</li>
+</ul>
+
+<h2>A quick routine for every amendment</h2>
+<ol>
+  <li>Address on the 39-11 = address on the 20-19.</li>
+  <li>If the price changed: the new total matches what was agreed, and financing was updated to match.</li>
+  <li>Executed copy, not the draft.</li>
+  <li>Calendar any new dates right away.</li>
+</ol>
+
+<p class="note">General information about the forms, not legal advice. For questions about a specific change, ask the broker or a Texas real estate attorney.</p>
+<p><a href="/guides/trec-20-19-checklist">See the full TREC 20-19 pre-title checklist &rarr;</a></p>
+""",
+    },
 }
 
 
@@ -10524,7 +10630,8 @@ _SITEMAP_PATHS = ["/", "/tc-check", "/brokers", "/pricing", "/trec-changes", "/t
                   "/tc-check/bulk", "/tc-check/compare", "/playground", "/faq", "/about",
                   "/contact", "/privacy", "/terms", "/guides",
                   "/guides/trec-20-19-checklist", "/guides/trec-20-19-effective-date",
-                  "/guides/broker-record-retention-texas"]
+                  "/guides/broker-record-retention-texas", "/guides/40-11-loan-amount-mismatch",
+                  "/guides/trec-20-19-initials", "/guides/trec-39-11-amendment-mismatch"]
 
 
 @app.route("/robots.txt")
