@@ -134,13 +134,24 @@ def junk_sender_reason(sender: str, form) -> str:
     neither. If SendGrid sent neither field, that check is skipped rather
     than rejecting everything."""
     local, _, domain = sender.partition("@")
-    if domain == _OWN_DOMAIN or domain.endswith("." + _OWN_DOMAIN):
-        return "own_domain"
-    if _AUTOMATED_LOCAL_RE.match(local):
-        return "automated_sender"
     spf = (form.get("SPF") or "").strip().lower()
     dkim = (form.get("dkim") or "").lower()
-    if (spf or dkim) and spf != "pass" and ": pass" not in dkim:
+    auth_known = bool(spf or dkim)
+    auth_ok = spf == "pass" or ": pass" in dkim
+    # The intake address itself (and anything @check.) is never a real
+    # forwarder -- replying would loop.
+    intake = "check." + _OWN_DOMAIN
+    if domain == intake or domain.endswith("." + intake):
+        return "own_intake"
+    # Other @txtanoffer.com senders (e.g. support@, sent via Gmail's "send
+    # as") are allowed when SPF or DKIM passes. Changed 2026-10-07: this used
+    # to reject the whole domain, which silently dropped the owner's own
+    # test forwards; forged copies still fail authentication.
+    if (domain == _OWN_DOMAIN or domain.endswith("." + _OWN_DOMAIN)) and not auth_ok:
+        return "own_domain_unverified"
+    if _AUTOMATED_LOCAL_RE.match(local):
+        return "automated_sender"
+    if auth_known and not auth_ok:
         return "auth_failed"
     return ""
 

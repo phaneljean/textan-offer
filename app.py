@@ -5754,9 +5754,13 @@ def analytics_dashboard():
         time_str = dt.strftime("%m/%d %H:%M")
         known_str = "known" if entry['known_sender'] else "new"
         recognized_str = "yes" if entry['recognized'] else "no"
+        if entry.get("dropped"):
+            result_str = f"<span style='color:#b45309;'>dropped, no reply ({escape(entry['reason'])})</span>"
+        else:
+            result_str = ("recognized" if entry['recognized'] else f"replied, not recognized ({escape(entry['reason'])})" if entry['reason'] else "replied, not recognized")
         tc_email_sender_rows += (
-            f"<tr><td>{time_str}</td><td>{entry['sender']}</td>"
-            f"<td>{known_str}</td><td>{recognized_str}</td></tr>"
+            f"<tr><td>{time_str}</td><td>{escape(entry['sender'])}</td>"
+            f"<td>{known_str}</td><td>{result_str}</td></tr>"
         )
 
     sms_rows = ""
@@ -6040,7 +6044,7 @@ body{{font-family:system-ui;max-width:800px;margin:40px auto;padding:20px;}}
       <th style="padding:8px;">Time</th>
       <th style="padding:8px;">Sender</th>
       <th style="padding:8px;">Known?</th>
-      <th style="padding:8px;">Recognized?</th>
+      <th style="padding:8px;">Result</th>
     </tr>
     {tc_email_sender_rows if tc_email_sender_rows else '<tr><td colspan="4" style="padding:8px;color:#999;">No email forwards yet.</td></tr>'}
   </table>

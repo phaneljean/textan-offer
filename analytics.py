@@ -722,8 +722,8 @@ def get_recent_tc_check_email_senders(limit: int = 20) -> list:
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT metadata, created_at FROM events
-        WHERE event_type = 'tc_check'
+        SELECT metadata, created_at, event_type FROM events
+        WHERE event_type IN ('tc_check', 'tc_check_email_rejected')
         ORDER BY created_at DESC
         LIMIT 200
     """)
@@ -732,14 +732,17 @@ def get_recent_tc_check_email_senders(limit: int = 20) -> list:
 
     import json
     out = []
-    for metadata_json, created_at in rows:
+    for metadata_json, created_at, event_type in rows:
         metadata = json.loads(metadata_json) if metadata_json else {}
-        if metadata.get("source") != "email":
+        dropped = event_type == "tc_check_email_rejected"
+        if not dropped and metadata.get("source") != "email":
             continue
         out.append({
             "sender": metadata.get("sender", "(not recorded)"),
             "known_sender": metadata.get("known_sender", False),
             "recognized": metadata.get("recognized"),
+            "reason": metadata.get("reason") or "",
+            "dropped": dropped,
             "created_at": created_at,
         })
         if len(out) >= limit:
