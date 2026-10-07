@@ -10294,6 +10294,40 @@ def wins_page():
     return html
 
 
+# Public pages search engines should index. Signed/private routes (/review,
+# /offers, /transaction, /broker/dashboard, /admin, /analytics) are left out
+# on purpose and disallowed in robots.txt.
+_SITEMAP_PATHS = ["/", "/tc-check", "/brokers", "/pricing", "/trec-changes", "/tc-hub",
+                  "/tc-check/bulk", "/tc-check/compare", "/playground", "/faq", "/about",
+                  "/contact", "/privacy", "/terms"]
+
+
+@app.route("/robots.txt")
+def robots_txt():
+    body = (
+        "User-agent: *\n"
+        "Disallow: /admin\n"
+        "Disallow: /analytics\n"
+        "Disallow: /broker/dashboard/\n"
+        "Disallow: /review/\n"
+        "Disallow: /offers/\n"
+        "Disallow: /transaction/\n"
+        "Disallow: /thread/\n"
+        "Disallow: /dashboard\n"
+        "Disallow: /profile\n"
+        "Sitemap: https://txtanoffer.com/sitemap.xml\n"
+    )
+    return Response(body, mimetype="text/plain")
+
+
+@app.route("/sitemap.xml")
+def sitemap_xml():
+    urls = "".join(f"<url><loc>https://txtanoffer.com{p}</loc></url>" for p in _SITEMAP_PATHS)
+    return Response('<?xml version="1.0" encoding="UTF-8"?>'
+                    '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' + urls + '</urlset>',
+                    mimetype="application/xml")
+
+
 @app.route("/health")
 def health():
     """Health check for uptime monitoring and Railway restart."""
