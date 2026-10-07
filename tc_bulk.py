@@ -38,7 +38,7 @@ import zipfile
 from html import escape
 
 from tc_audit import check_tc_file
-from tc_check_email import _email_shell, _P_STYLE, _UPSELL_HTML
+from tc_check_email import _email_shell, _P_STYLE, _upsell_html
 from integrations import send_html_email
 from analytics import track_event
 
@@ -349,5 +349,5 @@ def format_batch_email_html(batch_id: str, result: dict) -> str:
         brokerage_name = escape(result.get("brokerage_name") or "Brokerage")
         body += f'<p style="{_P_STYLE}color:#737373;">Checked under your {brokerage_name} account &mdash; no file cap.</p>'
     else:
-        body += _UPSELL_HTML
+        body += _upsell_html()
     return _email_shell("Your batch results are ready", f"{total} files checked", body)

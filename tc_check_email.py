@@ -27,7 +27,11 @@ MAX_ATTACHMENTS = 3  # contract + optional 40-11 addendum + optional 39-11 amend
 # Same brand colors as the web TC Check page's .issue-tag.blocker/.warning
 # (see app.py) -- kept in sync by eye, not shared code, since one lives in
 # a CSS block and the other in inline-styled HTML email markup.
-_LOGO_URL = "https://txtanoffer.com/static/logo.png"
+# White wordmark on the dark-green header (replaced the old black icon logo
+# 2026-10-07 to match the site's green/yellow redesign).
+_LOGO_URL = "https://txtanoffer.com/static/logo-wordmark-white.png?v=1"
+_GREEN_DARK, _GREEN, _GREEN_TINT = "#0a3f3a", "#0b5d52", "#E7F3F1"
+_YELLOW, _YELLOW_TINT = "#f5c242", "#FFF6DA"
 _BLOCKER_COLOR, _BLOCKER_BG = "#dc2626", "rgba(239,68,68,0.10)"
 _WARNING_COLOR, _WARNING_BG = "#b45309", "rgba(245,158,11,0.10)"
 _CLEAR_COLOR, _CLEAR_BG = "#15803d", "rgba(21,128,61,0.10)"
@@ -54,8 +58,8 @@ _CONSEQUENCE_TAGS = {
     "option_fee_amount": "DEAL TERMS INCOMPLETE",
     "title_company": "NO TITLE COMPANY NAMED",
     "effective_date": "DEADLINES UNANCHORED",  # option/financing/closing dates all run off this one field
-    "initials_buyer": "PAGE NOT INITIALED",
-    "initials_seller": "PAGE NOT INITIALED",
+    "initials_buyer": "PAGES NOT INITIALED",
+    "initials_seller": "PAGES NOT INITIALED",
     "loan_amount_mismatch": "FINANCING TERMS DISAGREE",
     "addendum_checkbox_mismatch": "ADDENDUM CHECKBOX WRONG",
     "amendment_price_mismatch": "PRICE TERMS DISAGREE",
@@ -63,11 +67,63 @@ _CONSEQUENCE_TAGS = {
     "extra_file_unrecognized": "ATTACHMENT NOT VERIFIED",
 }
 
-_UPSELL_URL = "https://txtanoffer.com/pricing#brokerage"
+_UPSELL_URL = "https://txtanoffer.com/brokers?src=report_email"
 
 
 def _consequence_tag(issue: dict) -> str:
     return _CONSEQUENCE_TAGS.get(issue.get("key"), issue.get("severity", "issue").upper())
+
+
+def _join_pages(labels: list) -> str:
+    """['Page 1 of 12', 'Page 4 of 12', '40-11 addendum'] ->
+    'pages 1 and 4 of 12, plus the 40-11 addendum'."""
+    import re as _re
+    nums = [m.group(1) for l in labels for m in [_re.match(r"Page (\d+) of (\d+)", l)] if m]
+    totals = {m.group(2) for l in labels for m in [_re.match(r"Page (\d+) of (\d+)", l)] if m}
+    others = [l for l in labels if not _re.match(r"Page \d+ of \d+", l)]
+    parts = []
+    if nums:
+        word = "page" if len(nums) == 1 else "pages"
+        joined = nums[0] if len(nums) == 1 else ", ".join(nums[:-1]) + " and " + nums[-1]
+        parts.append(f"{word} {joined}" + (f" of {totals.pop()}" if len(totals) == 1 else ""))
+    for o in others:
+        parts.append(f"the {o}")
+    if len(parts) == 1:
+        return parts[0]
+    return ", ".join(parts[:-1]) + ", plus " + parts[-1]
+
+
+def _display_issues(issues: list) -> list:
+    """Same issues, but the per-page initials findings (up to 14 rows on a
+    blank file) folded into one or two readable lines. Everything else
+    passes through unchanged and in order. Counts shown in the report and
+    subject come from this list, so they match what the reader sees."""
+    pages = {"initials_buyer": [], "initials_seller": []}
+    out, placeholder_at = [], None
+    for issue in issues:
+        key = issue.get("key")
+        if key in pages:
+            pages[key].append((issue.get("message", "").split(":")[0]).strip())
+            if placeholder_at is None:
+                placeholder_at = len(out)
+                out.append(None)
+            continue
+        out.append(issue)
+    if placeholder_at is not None:
+        b, sl = pages["initials_buyer"], pages["initials_seller"]
+        merged = []
+        if b and b == sl:
+            merged.append({"severity": "blocker", "key": "initials_buyer",
+                           "message": f"Buyer and seller initials missing on {_join_pages(b)}"})
+        else:
+            if b:
+                merged.append({"severity": "blocker", "key": "initials_buyer",
+                               "message": f"Buyer initials missing on {_join_pages(b)}"})
+            if sl:
+                merged.append({"severity": "blocker", "key": "initials_seller",
+                               "message": f"Seller initials missing on {_join_pages(sl)}"})
+        out[placeholder_at:placeholder_at + 1] = merged
+    return out
 
 
 def _status_headline(result: dict) -> tuple:
@@ -76,7 +132,7 @@ def _status_headline(result: dict) -> tuple:
     actually back with a real, already-documented consequence; every other
     blocker case gets a still-serious but non-specific label instead of a
     made-up universal claim."""
-    issues = result.get("issues") or []
+    issues = _display_issues(result.get("issues") or [])
     blockers = [i for i in issues if i.get("severity") == "blocker"]
     if not issues:
         return ("CLEAR — Ready to send", _CLEAR_COLOR, _CLEAR_BG)
@@ -89,17 +145,25 @@ def _status_headline(result: dict) -> tuple:
     return (f"{n} item{'s' if n != 1 else ''} to review", _WARNING_COLOR, _WARNING_BG)
 
 
+def _property_line(result: dict) -> str:
+    """'123 Main St, Austin' as written in Section 2A, or '' if blank."""
+    prop = result.get("property") or {}
+    return ", ".join(x for x in (prop.get("address", ""), prop.get("city", "")) if x)
+
+
 def subject_line(result: dict) -> str:
     if not result.get("recognized", True):
         return "TC File Check: file not recognized"
-    issues = result.get("issues") or []
+    issues = _display_issues(result.get("issues") or [])
     blockers = sum(1 for i in issues if i.get("severity") == "blocker")
+    where = _property_line(result)
+    prefix = f"TC File Check: {where} — " if where else "TC File Check: "
     if not issues:
-        return "TC File Check: ready to send"
+        return prefix + "ready to send"
     if blockers:
-        return f"TC File Check: {blockers} blocker{'s' if blockers != 1 else ''} found — action needed"
+        return prefix + f"{blockers} blocker{'s' if blockers != 1 else ''} found"
     n = len(issues)
-    return f"TC File Check: {n} item{'s' if n != 1 else ''} to review"
+    return prefix + f"{n} item{'s' if n != 1 else ''} to review"
 
 # RFC 5322 is a much bigger grammar than this, but every real mail client
 # sends "From" as either a bare address or "Display Name <addr>" -- this
@@ -179,27 +243,46 @@ def extract_pdf_attachments(files, form) -> list:
     return pdfs
 
 
-_UPSELL_TEXT = (
-    "\nTired of catching these by hand?\n"
-    "Free: tell your agents to CC tc@check.txtanoffer.com on their next "
-    "offer -- it gets checked automatically as it's sent, no forwarding needed.\n"
-    "Every file, every agent, zero effort: the TxtAnOffer Brokerage "
-    "Dashboard -- $349/mo for your whole roster.\n"
-    f"See how it works: {_UPSELL_URL}\n"
+def _clean(msg: str) -> str:
+    return (msg or "").replace(" -- ", " — ")
+
+
+def _files_line(result: dict) -> str:
+    parts = ["TREC 20-19"]
+    if result.get("has_addendum"):
+        parts.append("40-11 addendum")
+    if result.get("has_amendment"):
+        parts.append("39-11 amendment")
+    return " + ".join(parts)
+
+
+def _checked_date() -> str:
+    from datetime import datetime
+    try:
+        from zoneinfo import ZoneInfo
+        now = datetime.now(ZoneInfo("America/Chicago"))
+    except Exception:
+        now = datetime.utcnow()
+    return now.strftime("%b %-d, %Y")
+
+
+_ARCHIVE_TEXT = (
+    "Keep every offer on file: on the Brokerage plan, every offer and amendment "
+    "your agents text in to TxtAnOffer is archived for 5 years, searchable by "
+    "address. That's longer than the 4 years TREC requires brokers to keep "
+    "transaction records (22 TAC 535.2). The archive holds the drafts created in "
+    "TxtAnOffer, so keep your executed copies too."
 )
 
-_SHARE_WITH_AGENT_TEXT = "\nShare this with your agent: just forward this email.\n"
+_UPSELL_TEXT = (
+    "Every file, every agent, checked automatically: the Brokerage plan, "
+    "$349/mo for your whole roster. Start with a free audit of your last 20 "
+    f"closed files: {_UPSELL_URL}"
+)
 
-
-def _issue_group_text(issues: list, heading: str, limit: int = 6) -> str:
-    if not issues:
-        return ""
-    lines = [f"{heading}:"]
-    for issue in issues[:limit]:
-        lines.append(f"- [{_consequence_tag(issue)}] {issue.get('message', '')}")
-    if len(issues) > limit:
-        lines.append(f"...and {len(issues) - limit} more.")
-    return "\n".join(lines) + "\n"
+_DISCLAIMER = ("TC Check flags blanks and mismatches on the fields it can verify. "
+               "It isn't legal advice and doesn't replace your review. "
+               "TxtAnOffer is not affiliated with TREC.")
 
 
 def _ordinal(n: int) -> str:
@@ -211,14 +294,20 @@ def _ordinal(n: int) -> str:
 
 
 def _streak_note(check_count: int) -> str:
-    """A quiet 'this is your Nth file' line -- the cheapest version of the
-    habit-forming usage messaging idea in the GTM roadmap, now that every
-    check's sender is tracked. Silent on a first-ever check (nothing to
-    brag about yet) and on an unknown count (0, e.g. no sender to key
-    off), so it only ever appears once it's actually true."""
+    """A quiet 'this is your Nth file' line. Silent on a first-ever check
+    and on an unknown count (0), so it only appears once it's true."""
     if check_count and check_count >= 2:
         return f"This is your {_ordinal(check_count)} file checked with TC Check. "
     return ""
+
+
+def _issue_group_text(issues: list, heading: str) -> str:
+    if not issues:
+        return ""
+    lines = [f"{heading} ({len(issues)}):"]
+    for issue in issues:
+        lines.append(f"- [{_consequence_tag(issue)}] {_clean(issue.get('message', ''))}")
+    return "\n".join(lines) + "\n"
 
 
 def format_reply_body(result: dict, check_count: int = 0) -> str:
@@ -231,24 +320,31 @@ def format_reply_body(result: dict, check_count: int = 0) -> str:
             "-- TxtAnOffer TC Check"
         )
 
-    issues = result.get("issues") or []
+    issues = _display_issues(result.get("issues") or [])
     blockers = [i for i in issues if i.get("severity") == "blocker"]
     warnings = [i for i in issues if i.get("severity") == "warning"]
     label, _, _ = _status_headline(result)
+    prop = result.get("property") or {}
+    where = _property_line(result) or "Property address not filled in (Section 2A)"
+    county = f" · {prop['county']} County" if prop.get("county") else ""
 
-    body = f"Status: {label}\n\n"
+    body = (f"TC FILE CHECK REPORT\n{where}{county}\n"
+            f"Checked {_checked_date()} · {_files_line(result)}\n\n"
+            f"Status: {label}\n\n")
     if not issues:
-        body += "Nothing to fix -- this one's ready.\n\n"
+        body += "Nothing to fix on the fields TC Check verifies. This one's ready.\n\n"
     else:
-        body += _issue_group_text(blockers, "Critical deal blockers") + "\n"
-        body += _issue_group_text(warnings, "Also worth fixing") + "\n"
-        body += _SHARE_WITH_AGENT_TEXT
-        body += _UPSELL_TEXT + "\n"
-    body += (
-        "---\n"
-        "Checked with TC Check by TxtAnOffer\n"
-        f"{_streak_note(check_count)}Want to check another file? tc@check.txtanoffer.com"
-    )
+        body += _issue_group_text(blockers, "Fix before this goes to title") + "\n"
+        body += _issue_group_text(warnings, "Worth fixing") + "\n"
+        body += ("What to do next:\n"
+                 "1. Fill in or correct the items above.\n"
+                 "2. Check it again: forward the corrected file to tc@check.txtanoffer.com, "
+                 "or upload it at txtanoffer.com/tc-check.\n"
+                 "3. Share this with your agent: just forward this email.\n\n")
+    body += _ARCHIVE_TEXT + "\n\n" + _UPSELL_TEXT + "\n\n"
+    body += ("---\n"
+             f"{_streak_note(check_count)}Check another file: tc@check.txtanoffer.com "
+             "or txtanoffer.com/tc-check\n" + _DISCLAIMER)
     return body
 
 
@@ -270,86 +366,58 @@ def format_unreadable_reply() -> str:
 
 
 # --- HTML counterparts -------------------------------------------------
-# SendGrid requires text/plain to accompany text/html (see
-# integrations.send_html_email) -- these render the same content the
-# _reply functions above already produce as plain text, just with the
-# logo and issue-severity badges a plain-text email can't have. Inline
-# styles only, table-based layout: the usual constraints for HTML email,
-# where external stylesheets and modern CSS often get stripped by the
-# receiving client.
+# Inline styles + table layout only: the usual constraints for HTML email,
+# where stylesheets and modern CSS get stripped by many clients. Redesigned
+# 2026-10-07 to the site's green/yellow look, with the property address as
+# the headline and every issue listed (no "...and N more" cutoff).
 
 _FONT = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif"
+_P_STYLE = f"margin:0 0 16px;font-size:14px;line-height:1.6;color:#2c3d4d;font-family:{_FONT};"
 
 
-def _issue_group_html(issues: list, heading: str, limit: int = 6) -> str:
+def _issue_group_html(issues: list, heading: str) -> str:
     if not issues:
         return ""
     rows = []
-    for issue in issues[:limit]:
-        severity = issue.get("severity", "issue")
-        color, bg = (_BLOCKER_COLOR, _BLOCKER_BG) if severity == "blocker" else (_WARNING_COLOR, _WARNING_BG)
-        tag = _consequence_tag(issue)
+    for issue in issues:
+        blocker = issue.get("severity") == "blocker"
+        color, bg = (_BLOCKER_COLOR, _BLOCKER_BG) if blocker else (_WARNING_COLOR, _WARNING_BG)
         rows.append(f"""
-          <tr>
-            <td style="padding:9px 0;border-bottom:1px solid #f0f0ee;font-family:{_FONT};">
-              <span style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.03em;color:{color};background:{bg};border-radius:4px;padding:2px 8px;margin-right:8px;white-space:nowrap;">{escape(tag)}</span>
-              <span style="font-size:14px;color:#171717;">{escape(issue.get('message', ''))}</span>
-            </td>
-          </tr>""")
-    if len(issues) > limit:
-        rows.append(f"""
-          <tr><td style="padding:9px 0;font-size:13px;color:#737373;font-family:{_FONT};">
-            &hellip;and {len(issues) - limit} more.
+          <tr><td style="padding:11px 0;border-bottom:1px solid #eef0f2;font-family:{_FONT};">
+            <div style="font-size:10px;font-weight:700;letter-spacing:0.06em;color:{color};margin-bottom:3px;">
+              <span style="display:inline-block;background:{bg};border-radius:4px;padding:2px 7px;">{escape(_consequence_tag(issue))}</span>
+            </div>
+            <div style="font-size:14px;line-height:1.5;color:#0f1f2f;">{escape(_clean(issue.get('message', '')))}</div>
           </td></tr>""")
     return (
-        f'<p style="margin:20px 0 8px;font-size:11px;font-weight:700;letter-spacing:0.05em;'
-        f'text-transform:uppercase;color:#737373;font-family:{_FONT};">{escape(heading)}</p>'
+        f'<p style="margin:26px 0 4px;font-size:11px;font-weight:700;letter-spacing:0.07em;'
+        f'text-transform:uppercase;color:{_GREEN};font-family:{_FONT};">{escape(heading)} '
+        f'<span style="color:#8a9aa9;">({len(issues)})</span></p>'
         f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0">{"".join(rows)}</table>'
     )
 
 
-_UPSELL_HTML = f"""
-<div style="margin-top:24px;padding:16px 20px;background:#171717;border-radius:8px;">
-  <p style="margin:0 0 6px;font-size:13px;font-weight:600;color:#ffffff;font-family:{_FONT};">Tired of catching these by hand?</p>
-  <p style="margin:0 0 10px;font-size:13px;line-height:1.5;color:#a3a3a3;font-family:{_FONT};"><strong style="color:#e5e5e5;">Free:</strong> tell your agents to CC tc@check.txtanoffer.com on their next offer &mdash; it gets checked automatically as it's sent, no forwarding needed.</p>
-  <p style="margin:0 0 14px;font-size:13px;line-height:1.5;color:#a3a3a3;font-family:{_FONT};"><strong style="color:#e5e5e5;">Every file, every agent, zero effort:</strong> the TxtAnOffer Brokerage Dashboard &mdash; $349/mo for your whole roster.</p>
-  <a href="{_UPSELL_URL}" style="display:inline-block;font-size:13px;font-weight:600;color:#171717;background:#ffffff;padding:8px 16px;border-radius:6px;text-decoration:none;font-family:{_FONT};">See how it works &rarr;</a>
-</div>
-"""
-
-_SHARE_WITH_AGENT_HTML = (
-    f'<p style="margin:16px 0 0;font-size:13px;color:#737373;font-family:{_FONT};">'
-    f'Share this with your agent: just forward this email.</p>'
-)
-
-def _share_footer_html(check_count: int = 0) -> str:
-    streak = _streak_note(check_count)
-    streak_html = f"{escape(streak)}<br>" if streak else ""
-    return f"""
-<p style="margin:20px 0 0;padding-top:16px;border-top:1px solid #eeeeee;font-size:12px;line-height:1.6;color:#a3a3a3;font-family:{_FONT};">
-  Checked with TC Check by TxtAnOffer<br>
-  {streak_html}Want to check another file? <a href="mailto:tc@check.txtanoffer.com" style="color:#525252;">tc@check.txtanoffer.com</a>
-</p>
-"""
-
-
-def _email_shell(heading: str, subheading: str, body_html: str) -> str:
+def _email_shell(heading: str, subheading: str, body_html: str, kicker: str = "TC File Check") -> str:
     return f"""<!DOCTYPE html>
 <html>
-<body style="margin:0;padding:0;background:#F0F0EE;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F0F0EE;padding:32px 16px;">
+<body style="margin:0;padding:0;background:#F5F5F7;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F5F5F7;padding:28px 12px;">
     <tr><td align="center">
-      <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;max-width:480px;width:100%;">
-        <tr><td style="padding:24px 32px;border-bottom:1px solid #eeeeee;">
-          <img src="{_LOGO_URL}" width="32" height="32" alt="TxtAnOffer" style="border-radius:22%;display:block;">
+      <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:14px;max-width:560px;width:100%;overflow:hidden;border:1px solid #e6e9ec;">
+        <tr><td style="background:{_GREEN_DARK};padding:22px 32px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+            <td><img src="{_LOGO_URL}" width="150" height="25" alt="txtanoffer" style="display:block;border:0;"></td>
+            <td align="right" style="font-family:{_FONT};font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:{_YELLOW};">{escape(kicker)}</td>
+          </tr></table>
         </td></tr>
-        <tr><td style="padding:28px 32px 8px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
-          <h1 style="margin:0 0 4px;font-size:18px;color:#171717;">{escape(heading)}</h1>
-          <p style="margin:0 0 20px;font-size:13px;color:#737373;">{escape(subheading)}</p>
+        <tr><td style="background:{_YELLOW};height:4px;line-height:4px;font-size:0;">&nbsp;</td></tr>
+        <tr><td style="padding:28px 32px 8px;font-family:{_FONT};">
+          <h1 style="margin:0 0 6px;font-size:22px;line-height:1.25;color:#0f1f2f;font-family:{_FONT};">{heading}</h1>
+          <p style="margin:0 0 22px;font-size:13px;color:#5a6b7a;font-family:{_FONT};">{subheading}</p>
           {body_html}
         </td></tr>
-        <tr><td style="padding:18px 32px;background:#F0F0EE;border-radius:0 0 12px 12px;text-align:center;">
-          <a href="https://txtanoffer.com" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#525252;font-size:12px;text-decoration:none;">txtanoffer.com</a>
+        <tr><td style="padding:18px 32px;background:#F5F5F7;text-align:center;">
+          <a href="https://txtanoffer.com" style="font-family:{_FONT};color:{_GREEN};font-size:12px;font-weight:600;text-decoration:none;">txtanoffer.com</a>
         </td></tr>
       </table>
     </td></tr>
@@ -358,16 +426,54 @@ def _email_shell(heading: str, subheading: str, body_html: str) -> str:
 </html>"""
 
 
-_P_STYLE = "margin:0 0 16px;font-size:14px;line-height:1.6;color:#404040;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;"
-
-
-def _status_banner_html(result: dict) -> str:
+def _status_card_html(result: dict) -> str:
     label, color, bg = _status_headline(result)
-    return (
-        f'<div style="background:{bg};border-radius:8px;padding:12px 16px;margin-bottom:20px;">'
-        f'<span style="font-size:13px;font-weight:700;letter-spacing:0.02em;color:{color};'
-        f'text-transform:uppercase;font-family:{_FONT};">{escape(label)}</span></div>'
-    )
+    issues = _display_issues(result.get("issues") or [])
+    nb = sum(1 for i in issues if i.get("severity") == "blocker")
+    nw = sum(1 for i in issues if i.get("severity") == "warning")
+    chips = ""
+    if nb:
+        chips += f'<span style="display:inline-block;margin:8px 8px 0 0;font-size:12px;font-weight:700;color:{_BLOCKER_COLOR};">{nb} must fix</span>'
+    if nw:
+        chips += f'<span style="display:inline-block;margin:8px 8px 0 0;font-size:12px;font-weight:700;color:{_WARNING_COLOR};">{nw} to review</span>'
+    return (f'<div style="background:{bg};border-left:4px solid {color};border-radius:8px;padding:14px 16px;">'
+            f'<div style="font-size:14px;font-weight:800;letter-spacing:0.02em;color:{color};text-transform:uppercase;font-family:{_FONT};">{escape(label)}</div>'
+            f'<div style="font-family:{_FONT};">{chips}</div></div>')
+
+
+def _next_steps_html() -> str:
+    step = f"margin:0 0 8px;font-size:13px;line-height:1.55;color:#2c3d4d;font-family:{_FONT};"
+    return (f'<div style="margin-top:26px;background:{_GREEN_TINT};border-radius:10px;padding:16px 18px;">'
+            f'<p style="margin:0 0 10px;font-size:11px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:{_GREEN};font-family:{_FONT};">What to do next</p>'
+            f'<p style="{step}"><strong>1.</strong> Fill in or correct the items above.</p>'
+            f'<p style="{step}"><strong>2.</strong> Check it again: forward the corrected file to '
+            f'<a href="mailto:tc@check.txtanoffer.com" style="color:{_GREEN};font-weight:600;">tc@check.txtanoffer.com</a> or '
+            f'<a href="https://txtanoffer.com/tc-check" style="color:{_GREEN};font-weight:600;">upload it</a>.</p>'
+            f'<p style="{step}margin-bottom:0;"><strong>3.</strong> Share this with your agent: just forward this email.</p></div>')
+
+
+def _archive_html() -> str:
+    return (f'<div style="margin-top:16px;background:{_YELLOW_TINT};border:1px solid {_YELLOW};border-radius:10px;padding:16px 18px;">'
+            f'<p style="margin:0 0 6px;font-size:14px;font-weight:700;color:#0f1f2f;font-family:{_FONT};">Keep every offer on file</p>'
+            f'<p style="margin:0;font-size:13px;line-height:1.55;color:#3a3320;font-family:{_FONT};">On the Brokerage plan, every offer and amendment your agents text in to TxtAnOffer is '
+            f'<strong>archived for 5 years</strong>, searchable by address &mdash; longer than the 4 years TREC requires brokers to keep transaction records (22 TAC &sect;535.2). '
+            f'The archive holds the drafts created in TxtAnOffer, so keep your executed copies too.</p></div>')
+
+
+def _upsell_html() -> str:
+    return (f'<div style="margin-top:16px;background:{_GREEN_DARK};border-radius:10px;padding:18px 20px;">'
+            f'<p style="margin:0 0 6px;font-size:15px;font-weight:700;color:#ffffff;font-family:{_FONT};">Every file, every agent, checked automatically</p>'
+            f'<p style="margin:0 0 14px;font-size:13px;line-height:1.55;color:#c9dcd8;font-family:{_FONT};">The Brokerage plan checks every offer your agents send before it goes out &mdash; $349/mo for your whole roster. Start with a free audit of your last 20 closed files.</p>'
+            f'<a href="{_UPSELL_URL}" style="display:inline-block;font-size:13px;font-weight:700;color:#0f1f2f;background:{_YELLOW};padding:10px 18px;border-radius:999px;text-decoration:none;font-family:{_FONT};">Get a free 20-file audit &rarr;</a></div>')
+
+
+def _footer_html(check_count: int = 0) -> str:
+    streak = _streak_note(check_count)
+    streak_html = f"{escape(streak)}<br>" if streak else ""
+    return (f'<p style="margin:24px 0 0;padding-top:16px;border-top:1px solid #eef0f2;font-size:12px;line-height:1.6;color:#8a9aa9;font-family:{_FONT};">'
+            f'{streak_html}Check another file: <a href="mailto:tc@check.txtanoffer.com" style="color:{_GREEN};">tc@check.txtanoffer.com</a> or '
+            f'<a href="https://txtanoffer.com/tc-check" style="color:{_GREEN};">txtanoffer.com/tc-check</a><br>'
+            f'<span style="font-size:11px;">{escape(_DISCLAIMER)}</span></p>')
 
 
 def format_reply_html(result: dict, check_count: int = 0) -> str:
@@ -377,22 +483,34 @@ def format_reply_html(result: dict, check_count: int = 0) -> str:
             f"(not scanned or flattened files). If you forwarded a scan, try re-sending "
             f"the original fillable PDF instead.</p>"
         )
-        return _email_shell("We couldn't read that file", "It didn't match a TREC 20-19 we recognize", body)
+        return _email_shell("We couldn&rsquo;t read that file", "It didn&rsquo;t match a TREC 20-19 we recognize", body)
 
-    issues = result.get("issues") or []
+    issues = _display_issues(result.get("issues") or [])
     blockers = [i for i in issues if i.get("severity") == "blocker"]
     warnings = [i for i in issues if i.get("severity") == "warning"]
+    prop = result.get("property") or {}
 
-    body = _status_banner_html(result)
-    if not issues:
-        body += f'<p style="{_P_STYLE}color:#15803d;">Nothing to fix &mdash; this one\'s ready.</p>'
+    if prop.get("address"):
+        heading = escape(prop["address"])
+        sub_bits = [escape(x) for x in (prop.get("city", ""), f"{prop['county']} County" if prop.get("county") else "") if x]
     else:
-        body += _issue_group_html(blockers, "Critical deal blockers")
-        body += _issue_group_html(warnings, "Also worth fixing")
-        body += _SHARE_WITH_AGENT_HTML
-        body += _UPSELL_HTML
-    body += _share_footer_html(check_count)
-    return _email_shell("TC File Check results", "On the file you forwarded", body)
+        heading = '<span style="color:#b91c1c;">Property address not filled in</span>'
+        sub_bits = ["Section 2A is blank"]
+    sub_bits.append(f"Checked {_checked_date()}")
+    sub_bits.append(escape(_files_line(result)))
+    subheading = " &middot; ".join(sub_bits)
+
+    body = _status_card_html(result)
+    if not issues:
+        body += f'<p style="{_P_STYLE}margin-top:18px;color:#15803d;">Nothing to fix on the fields TC Check verifies &mdash; this one&rsquo;s ready.</p>'
+    else:
+        body += _issue_group_html(blockers, "Fix before this goes to title")
+        body += _issue_group_html(warnings, "Worth fixing")
+        body += _next_steps_html()
+    body += _archive_html()
+    body += _upsell_html()
+    body += _footer_html(check_count)
+    return _email_shell(heading, subheading, body, kicker="TC File Check report")
 
 
 def format_no_pdf_html() -> str:
@@ -400,9 +518,9 @@ def format_no_pdf_html() -> str:
         f'<p style="{_P_STYLE}">Forward the TREC 20-19 as a PDF attachment (not a scanned '
         f"image or a link) and we'll reply with an itemized check of what's missing.</p>"
     )
-    return _email_shell("No PDF found", "We didn't find a PDF attached to that email", body)
+    return _email_shell("No PDF found", "We didn&rsquo;t find a PDF attached to that email", body)
 
 
 def format_unreadable_html() -> str:
     body = f'<p style="{_P_STYLE}">Make sure it\'s not corrupted or password-protected, and try forwarding again.</p>'
-    return _email_shell("Couldn't read that file", "It didn't open as a valid PDF", body)
+    return _email_shell("Couldn&rsquo;t read that file", "It didn&rsquo;t open as a valid PDF", body)

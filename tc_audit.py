@@ -384,6 +384,13 @@ def check_tc_file(pdf_paths) -> dict:
         "has_addendum": has_addendum,
         "has_amendment": has_amendment,
         "severity": _severity_summary(issues),
+        # As written on the form (Section 2A), for the report header and
+        # email subject. Blank strings when the form left them blank.
+        "property": {
+            "address": values.get(FIELD_MAP["address"], "").strip(),
+            "city": values.get(FIELD_MAP["city"], "").strip(),
+            "county": values.get(FIELD_MAP["county"], "").strip(),
+        },
     }
 
 
