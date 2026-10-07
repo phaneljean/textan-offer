@@ -436,6 +436,53 @@ def get_daily_funnel(days: int = 14) -> list:
     return result
 
 
+def get_recent_visitors(hours: int = 48, limit: int = 150) -> list:
+    """One row per visitor (ta_vid) seen in the last `hours`, newest first:
+    pages loaded, referrer, ?src=, device, user agent (logged from
+    2026-10-07), and which engagement beacons fired. Added 2026-10-07 so
+    "who were today's visitors?" can be answered row by row instead of
+    guessed from daily totals. Bots and link scanners don't keep cookies,
+    so each of their hits shows up as a separate one-page visitor with no
+    "real browser" -- that pattern is the tell."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cutoff = (datetime.utcnow() - timedelta(hours=hours)).isoformat()
+    cursor.execute("""
+        SELECT event_type, metadata, created_at FROM events
+        WHERE created_at > ? AND event_type IN ('page_view', 'page_engagement')
+        ORDER BY created_at
+    """, (cutoff,))
+    rows = cursor.fetchall()
+    conn.close()
+
+    import json
+    internal = _internal_visitor_ids()
+    visitors = {}
+    for event_type, metadata_json, created_at in rows:
+        metadata = json.loads(metadata_json) if metadata_json else {}
+        vid = metadata.get("visitor") or ""
+        if not vid or vid in internal:
+            continue
+        v = visitors.setdefault(vid, {"visitor": vid, "first": created_at, "last": created_at, "pages": {},
+                                      "referrers": set(), "sources": set(), "devices": set(), "ua": "", "events": set()})
+        v["last"] = created_at
+        if event_type == "page_view":
+            page = metadata.get("page") or "?"
+            v["pages"][page] = v["pages"].get(page, 0) + 1
+            v["referrers"].add(metadata.get("referrer") or "(none)")
+            v["sources"].add(metadata.get("source") or "direct")
+            v["devices"].add(metadata.get("device") or "?")
+            if metadata.get("ua") and not v["ua"]:
+                v["ua"] = metadata["ua"]
+        else:
+            v["events"].add(metadata.get("type") or "")
+    result = sorted(visitors.values(), key=lambda v: v["first"], reverse=True)[:limit]
+    for v in result:
+        for key in ("referrers", "sources", "devices", "events"):
+            v[key] = sorted(v[key])
+    return result
+
+
 def get_top_referrers(days: int = 30, limit: int = 15) -> list:
     """Referring site for 'page_view' events, by host ("" -> "(none)": typed
     URL, bookmark, or an app that strips the Referer such as LinkedIn's

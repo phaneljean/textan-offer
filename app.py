@@ -32,7 +32,7 @@ from pdf_validator import validate_offer_pdf
 from amendment import fill_amendment_pdf
 from agent_profiles import get_agent_profile, save_agent_profile, find_by_email, get_emails_for_phones
 from subscriptions import can_generate_offer, increment_offer_count, activate_subscription, deactivate_subscription, get_user, create_user, FREE_OFFER_LIMIT, is_admin_phone, has_professional_access
-from analytics import track_event, get_conversion_metrics, get_revenue_metrics, get_recent_sms, get_recent_sms_failures, get_last_blocked_state, get_waitlist_signups, get_signups_by_source, get_signup_details, get_landing_visits_by_source, get_tc_check_summary, get_recent_tc_check_email_senders, get_tc_check_count_for_sender, get_tc_check_repeat_senders, get_tc_check_bulk_summary, get_tc_check_attempts_by_source, get_tc_check_attempts_by_page, get_brokerage_alert_delivery, get_daily_funnel, get_top_referrers, set_internal_visitor, get_visitor_roles, get_engagement_by_device
+from analytics import track_event, get_conversion_metrics, get_revenue_metrics, get_recent_sms, get_recent_sms_failures, get_last_blocked_state, get_waitlist_signups, get_signups_by_source, get_signup_details, get_landing_visits_by_source, get_tc_check_summary, get_recent_tc_check_email_senders, get_tc_check_count_for_sender, get_tc_check_repeat_senders, get_tc_check_bulk_summary, get_tc_check_attempts_by_source, get_tc_check_attempts_by_page, get_brokerage_alert_delivery, get_daily_funnel, get_top_referrers, set_internal_visitor, get_visitor_roles, get_engagement_by_device, get_recent_visitors
 from integrations import send_offer_email, fire_webhook, save_webhook, get_webhook, delete_webhook, send_to_docusign, send_plain_email, send_html_email
 from offers_db import record_offer, get_offers_for_phone, get_offer_by_filename, record_amendment, get_amendments_for_phone, record_thread_response, record_email_sent, record_docusign_sent
 from brokerages import extract_brokerage_prefix, link_user_to_brokerage, get_brokerage, get_brokerage_by_code, create_brokerage, list_brokerages, list_brokerage_agents, list_brokerage_records
@@ -264,6 +264,9 @@ def track_page_view(resp, page: str):
         "referrer": referrer,
         "source": src or request.cookies.get("ta_src") or "direct",
         "device": "mobile" if _is_mobile_request() else "desktop",
+        # Raw User-Agent (truncated), so /analytics' Recent Visitors table can
+        # tell a link scanner posing as Chrome from a person. Added 2026-10-07.
+        "ua": ua[:160],
     })
 
 
@@ -5595,6 +5598,7 @@ def analytics_dashboard():
     daily_funnel = get_daily_funnel(days=14)
     visitor_roles = get_visitor_roles()
     engagement_by_device = get_engagement_by_device(days=7)
+    recent_visitors = get_recent_visitors(hours=48)
     top_referrers = get_top_referrers(days=30)
     tc_check_attempts_by_source = get_tc_check_attempts_by_source(days=30)
     tc_check_attempts_by_page = get_tc_check_attempts_by_page(days=30)
@@ -5695,6 +5699,36 @@ def analytics_dashboard():
         )
     else:
         role_summary = "Card hasn't been shown to anyone yet."
+    def _central(ts):
+        try:
+            from zoneinfo import ZoneInfo
+            from datetime import datetime as _utc_dt
+            return _utc_dt.fromisoformat(ts).replace(tzinfo=ZoneInfo("UTC")).astimezone(ZoneInfo("America/Chicago")).strftime("%m-%d %I:%M %p")
+        except Exception:
+            return ts[5:16]
+
+    def _visitor_row(v):
+        real = "js_ok" in v["events"]
+        engaged = [label for key, label in (("stay_10s", "10s+"), ("stay_60s", "60s+"), ("dropzone_seen", "saw drop box"),
+                                            ("hero_cta", "clicked check"), ("hero_sample", "sample"))
+                   if key in v["events"]]
+        engaged += [e.replace("_", " ") for e in v["events"] if e.endswith("_cta") and e != "hero_cta"]
+        engaged += [e[5:] for e in v["events"] if e.startswith("role_") and e not in ("role_shown", "role_dismissed")]
+        pages = ", ".join(f"{p}&times;{n}" if n > 1 else p for p, n in v["pages"].items()) or "(beacon only)"
+        style = "" if real else "color:#999;"
+        return (f"<tr style='{style}'><td style='padding:6px;white-space:nowrap;'>{_central(v['first'])}</td>"
+                f"<td style='padding:6px;'>{escape(pages)}</td>"
+                f"<td style='padding:6px;'>{escape(', '.join(v['referrers']))}</td>"
+                f"<td style='padding:6px;'>{escape(', '.join(v['sources']))}</td>"
+                f"<td style='padding:6px;'>{escape(', '.join(v['devices']))}</td>"
+                f"<td style='padding:6px;'>{'&#10003;' if real else '&mdash;'}</td>"
+                f"<td style='padding:6px;'>{escape(', '.join(engaged))}</td>"
+                f"<td style='padding:6px;font-size:11px;max-width:260px;word-break:break-all;'>{escape(v['ua'] or '(not logged)')}</td></tr>")
+
+    recent_visitor_rows = "".join(_visitor_row(v) for v in recent_visitors) or \
+        "<tr><td colspan='8' style='padding:6px;color:#666;'>No visitors in the last 48 hours.</td></tr>"
+    recent_real = sum(1 for v in recent_visitors if "js_ok" in v["events"])
+
     device_rows = "".join(
         f"<tr><td>{d['device']}</td><td>{d['visitors']}</td><td>{d['js_ok']}</td><td>{d['stay_10s']}</td>"
         f"<td>{d['dropzone_seen']}</td><td>{d['hero_cta']}</td></tr>"
@@ -5769,6 +5803,14 @@ body{{font-family:system-ui;max-width:800px;margin:40px auto;padding:20px;}}
   <p style="color:#666;font-size:13px;">{role_summary}</p>
   <table><tr><th>Role</th><th>Visitors</th><th>% of answers</th><th>Saw drop box</th><th>Tried sample</th><th>Uploaded</th><th>Recognized 20-19</th><th>Repeat (2+)</th></tr>{role_rows}</table>
   <p class="label" style="margin-top:8px;">One row per browser (ta_vid cookie), counted from the first time the card was shown. &ldquo;No answer&rdquo; = real browsers that never answered (left before 4s, closed it, or ignored it). Repeat = 2+ recognized uploads from the same browser.</p>
+</div>
+<div class="metric">
+  <h3>Recent Visitors (48 hours, Central time)</h3>
+  <p style="color:#666;font-size:13px;">{len(recent_visitors)} visitors &middot; {recent_real} ran the page in a real browser. Grey rows never ran the page's JavaScript &mdash; almost always link scanners or preview bots.</p>
+  <div style="overflow-x:auto;">
+  <table><tr><th>First seen</th><th>Pages</th><th>Referrer</th><th>Source</th><th>Device</th><th>Real browser</th><th>Did</th><th>Browser (user agent)</th></tr>{recent_visitor_rows}</table>
+  </div>
+  <p class="label" style="margin-top:8px;">One row per browser cookie. Bots don't keep cookies, so each bot hit shows up as its own one-page row. Your own visits are excluded once you've opened /internal-mode on that device. User agent is logged from 2026-10-07; older rows say "(not logged)".</p>
 </div>
 <div class="metric">
   <h3>Tracking Check: Phone vs Desktop (7 days)</h3>
