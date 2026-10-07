@@ -35,7 +35,7 @@ from subscriptions import can_generate_offer, increment_offer_count, activate_su
 from analytics import track_event, get_conversion_metrics, get_revenue_metrics, get_recent_sms, get_recent_sms_failures, get_last_blocked_state, get_waitlist_signups, get_signups_by_source, get_signup_details, get_landing_visits_by_source, get_tc_check_summary, get_recent_tc_check_email_senders, get_tc_check_count_for_sender, get_tc_check_repeat_senders, get_tc_check_bulk_summary, get_tc_check_attempts_by_source, get_tc_check_attempts_by_page, get_brokerage_alert_delivery, get_daily_funnel, get_top_referrers, set_internal_visitor, get_visitor_roles, get_engagement_by_device
 from integrations import send_offer_email, fire_webhook, save_webhook, get_webhook, delete_webhook, send_to_docusign, send_plain_email, send_html_email
 from offers_db import record_offer, get_offers_for_phone, get_offer_by_filename, record_amendment, get_amendments_for_phone, record_thread_response, record_email_sent, record_docusign_sent
-from brokerages import extract_brokerage_prefix, link_user_to_brokerage, get_brokerage, get_brokerage_by_code, create_brokerage, list_brokerages, list_brokerage_agents
+from brokerages import extract_brokerage_prefix, link_user_to_brokerage, get_brokerage, get_brokerage_by_code, create_brokerage, list_brokerages, list_brokerage_agents, list_brokerage_records
 from sponsors import create_sponsor, list_sponsors, set_sponsor_active
 from sms_utils import parse_incoming_sms
 from cleanup import run_cleanup_if_due
@@ -986,6 +986,7 @@ def index():
     </a>
     <div class="nav-links" id="navLinks">
       <a href="#how">How it works</a>
+      <a href="/brokers">For Brokers</a>
       <a href="#workflow">Workflow</a>
       <a href="/pricing">Pricing</a>
       <a href="/faq">FAQ</a>
@@ -1011,7 +1012,7 @@ def index():
 
   <section class="sl-hero">
     <div class="sl-hero-panel">
-      <h1>Closing is complicated.<br>Your file doesn&rsquo;t have to be.</h1>
+      <h1>Catch what title kicks back &mdash; before you send the file.</h1>
       <p>Drop a filled TREC 20-19 and see exactly what title would kick back &mdash; blank dates, missing initials, mismatched checkboxes &mdash; in seconds.</p>
       <div class="sl-hero-actions">
         <a class="sl-cta" href="#check" data-evt="hero_cta">Check a file free</a>
@@ -1025,7 +1026,7 @@ def index():
 
   <div class="main">
   <section class="hero section" id="check">
-    <h2 class="check-title">Catch what title kicks back &mdash; before you send the file.</h2>
+    <h2 class="check-title">Drop a TREC 20-19. See exactly what&rsquo;s missing.</h2>
     <p style="font-size:0.85rem;color:var(--accent-dark);font-weight:600;margin-top:0.6rem;">Built to help TCs catch what's missing &mdash; not to replace what you do.</p>
 
     <div class="input-card">
@@ -1084,25 +1085,8 @@ def index():
     <div class="secondary-cta" style="margin:1.75rem auto 0;padding-top:1.75rem;max-width:560px;text-align:center;">
       <div class="secondary-cta-label">Running a brokerage or TC team? Get a text the moment any agent's file has a real blocker &mdash; not just an email you have to open.</div>
       <a href="/pricing#brokerage" class="input-btn" style="display:inline-block;text-decoration:none;">See Brokerage pricing &rarr;</a>
-      <div style="margin-top:0.85rem;"><a href="/tc-check/bulk" style="font-size:0.85rem;color:var(--text-muted);text-decoration:underline;text-underline-offset:2px;">Or try a free 20-file bulk sample right now &rarr;</a></div>
+      <div style="margin-top:0.85rem;"><a href="/brokers" style="font-size:0.85rem;color:var(--text-muted);text-decoration:underline;text-underline-offset:2px;">Managing broker? Audit your last 20 closed files free &rarr;</a></div>
     </div>
-  </section>
-
-  <section class="steps" id="title" style="border-top:none;padding-top:1rem;padding-bottom:2.5rem;">
-    <div class="sl-row reverse">
-      <div class="sl-media"><img src="/static/home-house.jpg" alt="A home at dusk with the porch lights on" loading="lazy"></div>
-      <div class="sl-copy">
-        <div class="steps-kicker">For title companies</div>
-        <h2>Clean files reach escrow. Closings stay on schedule.</h2>
-        <p>Every broken TREC 20-19 that lands on an escrow officer's desk can mean an hour or more of curative emails back to the agent &mdash; before the file can even close. We'll audit your last 20 kicked-back files free, no obligation.</p>
-        <a class="sl-outline" href="mailto:support@txtanoffer.com?subject=Title%20company%20pilot">Talk to us</a>
-      </div>
-    </div>
-    <ul class="tc-checklist">
-      <li><span class="tc-check">&check;</span><span><strong>Missing signatures &amp; initials</strong> &mdash; a routine reason a file bounces back to the agent.</span></li>
-      <li><span class="tc-check">&check;</span><span><strong>Blank required fields</strong> &mdash; Effective Date, earnest money, escrow agent, and more.</span></li>
-      <li><span class="tc-check">&check;</span><span><strong>Addendum mismatches</strong> &mdash; loan amount or financing terms disagreeing with the contract.</span></li>
-    </ul>
   </section>
 
   <section class="steps" id="workflow" style="border-top:none;padding-top:1rem;padding-bottom:2.5rem;">
@@ -1115,7 +1099,7 @@ def index():
       <div class="step-card">
         <div class="step-num">1</div>
         <h3>Offer</h3>
-        <p>Text the terms in, get back a structured offer in seconds &mdash; the starting point everything else builds on. Text <a href="sms:+18338970333" style="color:var(--accent-dark);font-weight:600;text-decoration:underline;">(833) 897-0333</a>, or <a href="/playground" style="color:var(--accent-dark);font-weight:600;text-decoration:underline;">try a sample text first &rarr;</a></p>
+        <p>Your agents text the terms in and get back a structured offer in seconds &mdash; the starting point everything else builds on, and the first record in your brokerage's archive.</p>
       </div>
       <div class="step-card">
         <div class="step-num">2</div>
@@ -5166,6 +5150,7 @@ def pricing():
       <li><span class="check">&#10003;</span> Add a phone number and get a text the moment a real blocker shows up &mdash; missing county, title company, earnest money &mdash; before it ever costs a deal</li>
       <li><span class="check">&#10003;</span> Your TC can also forward any outside file to tc@check.txtanoffer.com for an instant check &mdash; free, no dashboard login needed</li>
       <li><span class="check">&#10003;</span> Bulk-check your whole closed-file backlog &mdash; up to 200 files per batch with your join code (the free tool caps at 20)</li>
+      <li><span class="check">&#10003;</span> 5-year records archive: every offer and amendment your agents draft here, searchable by address and exportable anytime &mdash; helps with TREC's 4-year record-keeping rule</li>
       <li><span class="check">&#10003;</span> Brokerage roster &amp; compliance dashboard</li>
       <li><span class="check">&#10003;</span> Agents join with one text &mdash; no per-agent setup</li>
     </ul>
@@ -6209,6 +6194,29 @@ def broker_dashboard(join_code):
         for i in tc_summary["issue_frequency"][:8]
     ) or "<tr><td colspan='3' style='padding:8px;color:#666;'>No data yet.</td></tr>"
 
+    archive_q = (request.args.get("q") or "").strip()[:100]
+    records = list_brokerage_records(brokerage["id"], archive_q)
+
+    def _record_row(r):
+        on_disk = os.path.isfile(os.path.join(OUTPUT_DIR, r["filename"]))
+        if on_disk:
+            expires, sig = sign_pdf_view_params(r["filename"])
+            link = f"<a href='/offers/{escape(r['filename'])}?expires={expires}&sig={sig}' target='_blank' rel='noopener'>PDF</a>"
+        else:
+            link = "<span style='color:#8a9aa9;'>expired</span>"
+        kind = "Offer (20-19)" if r["kind"] == "offer" else "Amendment (39-11)"
+        return (f"<tr><td style='padding:8px;'>{(r['created_at'] or '')[:10]}</td>"
+                f"<td style='padding:8px;'>{escape(r['address'] or '')}</td>"
+                f"<td style='padding:8px;'>{kind}</td>"
+                f"<td style='padding:8px;'>{escape(r['phone'] or '')}</td>"
+                f"<td style='padding:8px;'>{link}</td></tr>")
+
+    record_rows = "".join(_record_row(r) for r in records) or (
+        f"<tr><td colspan='5' style='padding:8px;color:#666;'>No records match &ldquo;{escape(archive_q)}&rdquo;.</td></tr>"
+        if archive_q else
+        "<tr><td colspan='5' style='padding:8px;color:#666;'>No offers drafted by your roster yet.</td></tr>"
+    )
+
     return f"""<!DOCTYPE html>
 <html><head><title>{brokerage['name']} — TxtAnOffer</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -6258,7 +6266,55 @@ def broker_dashboard(join_code):
   </table>
 </div>
 
+<div class="card" id="archive">
+  <h2>Records archive</h2>
+  <p style="color:#5a6b7a;font-size:0.85rem;margin-top:-6px;margin-bottom:14px;">
+    Every offer and amendment your agents draft in TxtAnOffer is kept for 5 years while they're on your roster &mdash;
+    to help with TREC's 4-year record-keeping rule (22 TAC &sect;535.2). These are the drafts generated here,
+    not the final executed contracts, so keep your own copy of what was signed.
+  </p>
+  <form method="get" action="#archive" style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+    <input type="text" name="q" value="{escape(archive_q)}" placeholder="Search by address, e.g. 123 Main St" style="flex:1;min-width:200px;padding:9px 12px;border:1px solid #ddd;border-radius:9px;font:inherit;">
+    <button type="submit" style="padding:9px 16px;border:0;border-radius:9px;background:#0b5d52;color:#fff;font:inherit;font-weight:600;cursor:pointer;">Search</button>
+    <a href="/broker/dashboard/{brokerage['join_code']}/archive.zip" style="padding:9px 16px;border:1.5px solid #0b5d52;border-radius:9px;color:#0b5d52;font-weight:600;text-decoration:none;">Download all (ZIP)</a>
+  </form>
+  <div style="overflow-x:auto;">
+  <table>
+    <tr><th>Date</th><th>Address</th><th>Document</th><th>Agent</th><th>File</th></tr>
+    {record_rows}
+  </table>
+  </div>
+</div>
+
 </body></html>"""
+
+
+@app.route("/broker/dashboard/<join_code>/archive.zip")
+def broker_archive_zip(join_code):
+    """Export of the brokerage's whole records archive -- the "cancel
+    anytime, take your records with you" promise. Same join_code-as-secret
+    access as the dashboard itself."""
+    import io
+    import zipfile
+    brokerage = get_brokerage_by_code(join_code)
+    if not brokerage:
+        abort(404)
+    records = list_brokerage_records(brokerage["id"], limit=100000)
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        seen = set()
+        for r in records:
+            name = r["filename"]
+            path = os.path.join(OUTPUT_DIR, name)
+            if name in seen or "/" in name or ".." in name or not os.path.isfile(path):
+                continue
+            seen.add(name)
+            zf.write(path, arcname=f"{(r['created_at'] or '')[:10]}_{name}")
+    buf.seek(0)
+    track_event("brokerage_archive_export", None, {"brokerage_id": brokerage["id"], "files": len(seen)})
+    safe_name = re.sub(r"[^A-Za-z0-9]+", "-", brokerage["name"]).strip("-") or "brokerage"
+    return Response(buf.getvalue(), mimetype="application/zip",
+                    headers={"Content-Disposition": f'attachment; filename="{safe_name}-records.zip"'})
 
 
 @app.route("/signup", methods=["GET", "POST"])
@@ -6763,7 +6819,7 @@ def terms():
     </ul>
     <p>We use this data solely to operate and improve the Service. We do not sell your personal information to third parties.</p>
     <p><strong>Third-party services:</strong> The Service uses Twilio (SMS delivery), Stripe (payment processing), and Railway on Google Cloud Platform (infrastructure). These services have their own privacy policies and may process your data in accordance with their terms.</p>
-    <p><strong>Data retention:</strong> Generated PDFs are stored temporarily and may be deleted after a reasonable period (currently 30 days). We retain account and billing records as required by law. <strong>This is shorter than the 4-year offer/contract/addenda retention period brokers are independently required to maintain under TREC Rule &sect;535.2.</strong> Our retention does not satisfy that obligation &mdash; you are responsible for downloading and separately retaining your own copy of every offer and amendment.</p>
+    <p><strong>Data retention:</strong> Generated PDFs are stored temporarily and may be deleted after a reasonable period (currently 30 days). On the Brokerage plan, offers and amendments drafted by an agent linked to the brokerage are kept for 5 years from creation while that agent stays linked, and can be exported at any time from the brokerage dashboard. These are the drafts generated by the Service, not the executed contracts. We retain account and billing records as required by law. <strong>Outside the Brokerage plan, this is shorter than the 4-year offer/contract/addenda retention period brokers are independently required to maintain under TREC Rule &sect;535.2.</strong> Our retention does not satisfy that obligation &mdash; you are responsible for downloading and separately retaining your own copy of every offer and amendment.</p>
     <p><strong>Security:</strong> We implement reasonable technical and organizational measures to protect your data. However, no system is perfectly secure, and we cannot guarantee absolute security of your information.</p>
 
     <h2><span class="section-num">10.</span> Acceptable Use</h2>
@@ -6987,11 +7043,12 @@ def privacy():
     <h2>5. Data Retention</h2>
     <ul>
       <li>Generated PDFs: stored temporarily for download, deleted after 30 days</li>
+      <li>Brokerage plan: offers and amendments drafted by an agent linked to a brokerage are kept for 5 years from creation while the agent stays linked, viewable and exportable by that brokerage</li>
       <li>Account data: retained while your account is active and for 90 days after cancellation</li>
       <li>Billing records: retained as required by applicable tax and accounting laws</li>
       <li>SMS logs: retained for 90 days for support and debugging purposes</li>
     </ul>
-    <p><strong>Note for licensees:</strong> TREC Rule &sect;535.2 requires brokers to independently retain offers, contracts, and related addenda for at least 4 years from closing or termination. Our 30-day PDF retention does not satisfy that requirement &mdash; you are responsible for downloading and separately retaining your own copy of every offer and amendment.</p>
+    <p><strong>Note for licensees:</strong> TREC Rule &sect;535.2 requires brokers to independently retain offers, contracts, and related addenda for at least 4 years from closing or termination. Our 30-day PDF retention does not satisfy that requirement. The Brokerage plan's 5-year archive holds the drafts generated here, not the executed contracts, so it helps with but does not by itself satisfy that requirement &mdash; you remain responsible for retaining your own copy of every executed offer and amendment.</p>
 
     <h2>6. Data Security</h2>
     <p>We implement reasonable technical and organizational measures to protect your data:</p>
@@ -7168,8 +7225,8 @@ def faq():
 
   <div class="faq-item">
     <h2>Do you store my texts or offers?</h2>
-    <p>Generated PDFs are stored temporarily for download and deleted after 30 days. SMS logs are retained for 90 days for support and debugging. We do not sell or share your data. See our <a href="/privacy" style="color:var(--accent-dark);">Privacy Policy</a> for the full breakdown.</p>
-    <p><strong>Important:</strong> TREC Rule &sect;535.2 requires brokers to independently retain records of offers, contracts, and related addenda for at least 4 years from closing or termination of the transaction. Our 30-day retention does not satisfy that requirement &mdash; download and save your own copy of every offer and amendment PDF.</p>
+    <p>Generated PDFs are stored temporarily for download and deleted after 30 days &mdash; except on the Brokerage plan, where every offer and amendment your agents draft here is kept for 5 years in a searchable archive the broker can export. SMS logs are retained for 90 days for support and debugging. We do not sell or share your data. See our <a href="/privacy" style="color:var(--accent-dark);">Privacy Policy</a> for the full breakdown.</p>
+    <p><strong>Important:</strong> TREC Rule &sect;535.2 requires brokers to independently retain records of offers, contracts, and related addenda for at least 4 years from closing or termination of the transaction. Our 30-day retention does not satisfy that requirement. The Brokerage archive helps, but it holds the drafts generated here, not the signed contracts &mdash; keep your own copy of every executed offer and amendment.</p>
   </div>
 
   <div class="faq-item">
@@ -8151,6 +8208,7 @@ def brokers():
       <li>Every agent's offer checked before it's sent</li>
       <li>Your TC can forward any outside file to tc@check.txtanoffer.com for an instant check</li>
       <li>Bulk-check up to 200 files per batch with your join code</li>
+      <li>5-year records archive of every offer and amendment drafted here, searchable by address, export anytime</li>
       <li>Roster &amp; compliance dashboard, Transaction Workspace and Closing Checklist</li>
       <li>Agents join with one text &mdash; no per-agent setup</li>
     </ul>

@@ -1,6 +1,11 @@
 """
 cleanup.py -- Enforces the retention policy stated in the Privacy Policy:
 generated PDFs deleted after 30 days, SMS/event logs deleted after 90 days.
+Exception: offers/amendments drafted by an agent linked to a brokerage are
+kept BROKERAGE_RETENTION_DAYS (5 years), the Brokerage plan's records
+archive. TREC 22 TAC 535.2(h) asks brokers to keep transaction records 4
+years from closing or termination; we only know the draft date, so 5 years
+from creation covers a normal contract-to-close window.
 Nothing else in the codebase was doing this until now -- files and event
 rows just accumulated indefinitely.
 """
@@ -13,6 +18,7 @@ from datetime import datetime, timedelta
 DB_PATH = os.environ.get("DATABASE_PATH", "subscriptions.db")
 PDF_RETENTION_DAYS = int(os.environ.get("PDF_RETENTION_DAYS", 30))
 SMS_LOG_RETENTION_DAYS = int(os.environ.get("SMS_LOG_RETENTION_DAYS", 90))
+BROKERAGE_RETENTION_DAYS = int(os.environ.get("BROKERAGE_RETENTION_DAYS", 5 * 365))
 
 _STATE_FILE = os.environ.get("CLEANUP_STATE_FILE", ".last_cleanup")
 _CHECK_INTERVAL_SECONDS = 6 * 3600  # actually run cleanup at most this often
@@ -35,8 +41,10 @@ def _mark_cleanup_ran():
         pass
 
 
-def cleanup_old_pdfs(output_dir: str, max_age_days: int = PDF_RETENTION_DAYS) -> int:
+def cleanup_old_pdfs(output_dir: str, max_age_days: int = PDF_RETENTION_DAYS,
+                     retained: set = None, retained_max_age_days: int = BROKERAGE_RETENTION_DAYS) -> int:
     """Delete generated PDFs older than max_age_days. Returns count deleted.
+    Filenames in `retained` (brokerage archive) use retained_max_age_days.
 
     Only touches *.pdf files -- output_dir may be shared with non-PDF files
     (e.g. subscriptions.db, if DATABASE_PATH points into the same volume),
@@ -45,13 +53,16 @@ def cleanup_old_pdfs(output_dir: str, max_age_days: int = PDF_RETENTION_DAYS) ->
     if not os.path.isdir(output_dir):
         return 0
     cutoff = time.time() - max_age_days * 86400
+    retained_cutoff = time.time() - retained_max_age_days * 86400
+    retained = retained or set()
     deleted = 0
     for name in os.listdir(output_dir):
         if not name.lower().endswith(".pdf"):
             continue
         path = os.path.join(output_dir, name)
         try:
-            if os.path.isfile(path) and os.path.getmtime(path) < cutoff:
+            limit = retained_cutoff if name in retained else cutoff
+            if os.path.isfile(path) and os.path.getmtime(path) < limit:
                 os.remove(path)
                 deleted += 1
         except OSError:
@@ -80,7 +91,10 @@ def run_cleanup_if_due(output_dir: str):
 
     def _do():
         try:
-            pdfs_deleted = cleanup_old_pdfs(output_dir)
+            from brokerages import get_retained_brokerage_filenames
+            # If this lookup fails, skip the PDF sweep entirely rather than
+            # fall back to 30 days and wipe a broker's archive.
+            pdfs_deleted = cleanup_old_pdfs(output_dir, retained=get_retained_brokerage_filenames())
             logs_deleted = cleanup_old_sms_logs()
             if pdfs_deleted or logs_deleted:
                 print(f"[cleanup] Deleted {pdfs_deleted} old PDF(s), {logs_deleted} old SMS/event log row(s)")

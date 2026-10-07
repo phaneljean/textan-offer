@@ -183,4 +183,54 @@ def list_brokerage_agents(brokerage_id: int) -> list:
     return [dict(r) for r in rows]
 
 
+def list_brokerage_records(brokerage_id: int, query: str = "", limit: int = 500) -> list:
+    """The brokerage's records archive: every offer and 39-11 amendment an
+    agent on the roster drafted, newest first, optionally filtered by
+    address. These are the PDFs cleanup.py keeps for BROKERAGE_RETENTION_DAYS
+    instead of the default 30 -- see get_retained_brokerage_filenames.
+    Amendments carry their parent offer's address, since that's what a
+    broker will search by."""
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    like = f"%{query.strip()}%"
+    rows = cursor.execute("""
+        SELECT * FROM (
+            SELECT 'offer' AS kind, o.created_at, o.address, o.phone, o.filename
+            FROM offers o JOIN users u ON u.phone = o.phone
+            WHERE u.brokerage_id = ? AND o.filename IS NOT NULL AND o.filename != ''
+            UNION ALL
+            SELECT 'amendment' AS kind, a.created_at, o.address, a.phone, a.filename
+            FROM amendments a
+            JOIN users u ON u.phone = a.phone
+            LEFT JOIN offers o ON o.id = a.offer_id
+            WHERE u.brokerage_id = ? AND a.filename IS NOT NULL AND a.filename != ''
+        )
+        WHERE address LIKE ? OR ? = ''
+        ORDER BY created_at DESC
+        LIMIT ?
+    """, (brokerage_id, brokerage_id, like, query.strip(), limit)).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def get_retained_brokerage_filenames() -> set:
+    """Filenames of every offer/amendment PDF drafted by an agent currently
+    linked to any brokerage. cleanup.py exempts these from the 30-day PDF
+    sweep so the broker's archive survives. Deliberately lets DB errors
+    raise: an empty set here would mean "no exemptions" and the sweep
+    would delete the archive."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    rows = cursor.execute("""
+        SELECT o.filename FROM offers o JOIN users u ON u.phone = o.phone
+        WHERE u.brokerage_id IS NOT NULL AND o.filename IS NOT NULL AND o.filename != ''
+        UNION
+        SELECT a.filename FROM amendments a JOIN users u ON u.phone = a.phone
+        WHERE u.brokerage_id IS NOT NULL AND a.filename IS NOT NULL AND a.filename != ''
+    """).fetchall()
+    conn.close()
+    return {r[0] for r in rows}
+
+
 init_brokerages_table()
