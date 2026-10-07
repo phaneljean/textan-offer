@@ -76,9 +76,23 @@ def send_offer_email(to_email: str, pdf_path: str, parsed: dict, thread_url: str
             return {"success": True}
     except urllib.error.HTTPError as e:
         body = e.read().decode("utf-8") if e.fp else ""
-        return {"success": False, "error": f"SendGrid error {e.code}: {body[:200]}"}
+        result = {"success": False, "error": f"SendGrid error {e.code}: {body[:200]}"}
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        result = {"success": False, "error": str(e)}
+    _record_send_failure(to_email, subject, result["error"])
+    return result
+
+
+def _record_send_failure(to_email: str, subject: str, error: str):
+    """Most callers ignore _send_email's return value, so a revoked key or a
+    suspended SendGrid account used to fail silently (found 2026-10-07:
+    TC Check email replies stopped arriving with no trace). Logged as an
+    event so /analytics can show the actual SendGrid error."""
+    try:
+        from analytics import track_event
+        track_event("email_send_failed", None, {"to": to_email, "subject": subject[:120], "error": error[:300]})
+    except Exception:
+        pass
 
 
 def send_plain_email(to_email: str, subject: str, text_body: str) -> dict:
@@ -130,9 +144,23 @@ def _send_email(to_email: str, subject: str, content: list) -> dict:
             return {"success": True}
     except urllib.error.HTTPError as e:
         body = e.read().decode("utf-8") if e.fp else ""
-        return {"success": False, "error": f"SendGrid error {e.code}: {body[:200]}"}
+        result = {"success": False, "error": f"SendGrid error {e.code}: {body[:200]}"}
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        result = {"success": False, "error": str(e)}
+    _record_send_failure(to_email, subject, result["error"])
+    return result
+
+
+def _record_send_failure(to_email: str, subject: str, error: str):
+    """Most callers ignore _send_email's return value, so a revoked key or a
+    suspended SendGrid account used to fail silently (found 2026-10-07:
+    TC Check email replies stopped arriving with no trace). Logged as an
+    event so /analytics can show the actual SendGrid error."""
+    try:
+        from analytics import track_event
+        track_event("email_send_failed", None, {"to": to_email, "subject": subject[:120], "error": error[:300]})
+    except Exception:
+        pass
 
 
 # --- Webhook / Zapier ------------------------------------------------------

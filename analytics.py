@@ -1022,3 +1022,19 @@ def get_engagement_by_device(days: int = 7) -> list:
         elif m.get("type") in keys:
             d[m["type"]].add(v)
     return [{k: (len(x) if isinstance(x, set) else x) for k, x in row.items()} for row in out.values()]
+
+
+def get_recent_email_send_failures(limit: int = 10) -> list:
+    """Outbound emails SendGrid refused (see integrations._record_send_failure)."""
+    import json
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        rows = conn.execute("""SELECT metadata, created_at FROM events WHERE event_type = 'email_send_failed'
+                               ORDER BY created_at DESC LIMIT ?""", (limit,)).fetchall()
+    finally:
+        conn.close()
+    out = []
+    for metadata_json, created_at in rows:
+        m = json.loads(metadata_json) if metadata_json else {}
+        out.append({"time": created_at, "to": m.get("to", ""), "subject": m.get("subject", ""), "error": m.get("error", "")})
+    return out
