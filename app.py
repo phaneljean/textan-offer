@@ -159,7 +159,7 @@ _BOT_UA_RE = re.compile(
 
 _MOBILE_UA_RE = re.compile(r"Mobi|Android|iPhone|iPad|iPod", re.I)
 _ENGAGEMENT_TYPES = ("js_ok", "hero_cta", "hero_sample", "dropzone_seen", "stay_10s", "stay_60s",
-                     "role_shown", "role_dismissed", "brokers_audit_cta", "brokers_email_cta", "brokers_plan_cta") + tuple("role_" + r for r in _VISITOR_ROLES)
+                     "role_shown", "role_dismissed", "brokers_audit_cta", "brokers_email_cta", "brokers_plan_cta", "records_brokers_cta") + tuple("role_" + r for r in _VISITOR_ROLES)
 
 # Tiny, cookie-less-of-its-own beacon script appended to every page that
 # track_page_view() logs. Elements opt in with data-evt="<type>" for clicks;
@@ -854,6 +854,7 @@ def index():
     .steps-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; }
     @media (min-width: 961px) {
       #how .steps-grid { grid-template-columns: repeat(4, 1fr); }
+      #records .steps-grid { grid-template-columns: repeat(2, 1fr); max-width: 760px; margin: 0 auto; }
     }
     .step-card {
       background: #fff;
@@ -1087,6 +1088,38 @@ def index():
       <a href="/pricing#brokerage" class="input-btn" style="display:inline-block;text-decoration:none;">See Brokerage pricing &rarr;</a>
       <div style="margin-top:0.85rem;"><a href="/brokers" style="font-size:0.85rem;color:var(--text-muted);text-decoration:underline;text-underline-offset:2px;">Managing broker? Audit your last 20 closed files free &rarr;</a></div>
     </div>
+  </section>
+
+  <section class="steps" id="records" style="border-top:none;padding-top:1rem;padding-bottom:2.5rem;">
+    <div class="steps-header" style="margin-bottom:1.75rem;">
+      <div class="steps-kicker">For managing brokers &mdash; Brokerage plan</div>
+      <h2>Every offer your agents text in, archived for 5 years.</h2>
+      <p>TREC asks you to keep transaction records for 4 years from closing (22 TAC &sect;535.2). Here's how files land in your archive &mdash; your agents don't do anything extra.</p>
+    </div>
+    <div class="steps-grid">
+      <div class="step-card">
+        <div class="step-num">1</div>
+        <h3>Agents join your roster</h3>
+        <p>Each agent texts your brokerage's join code before their first offer, or enters it at signup. One time, no per-agent setup.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-num">2</div>
+        <h3>They text the offer</h3>
+        <p>The TREC 20-19 comes back in seconds, gets checked for blanks and mismatches, and a copy goes to your TC by email.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-num">3</div>
+        <h3>Changes are filed with it</h3>
+        <p>When an agent texts a price or closing-date change (<code>AMEND 123 Main St price 730k</code>), it becomes a 39-11 amendment, archived under the same address.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-num">4</div>
+        <h3>Find it in seconds</h3>
+        <p>Search by address from your dashboard, open any PDF, or download the whole archive as a ZIP &mdash; anytime, even if you cancel.</p>
+      </div>
+    </div>
+    <p style="text-align:center;font-size:0.8rem;color:var(--text-dim);max-width:620px;margin:1.5rem auto 0;">The archive holds the drafts generated in TxtAnOffer, not the final signed contracts &mdash; it helps with the 4-year rule but doesn't replace your own copy of what was executed. Files stay archived while the agent is on your roster.</p>
+    <div style="text-align:center;margin-top:1.25rem;"><a class="sl-outline" href="/brokers" data-evt="records_brokers_cta">See it for your brokerage &rarr;</a></div>
   </section>
 
   <section class="steps" id="workflow" style="border-top:none;padding-top:1rem;padding-bottom:2.5rem;">
