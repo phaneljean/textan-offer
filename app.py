@@ -165,7 +165,7 @@ _BOT_UA_RE = re.compile(
 
 _MOBILE_UA_RE = re.compile(r"Mobi|Android|iPhone|iPad|iPod", re.I)
 _ENGAGEMENT_TYPES = ("js_ok", "hero_cta", "hero_sample", "dropzone_seen", "stay_10s", "stay_60s",
-                     "role_shown", "role_dismissed", "brokers_audit_cta", "brokers_email_cta", "brokers_plan_cta", "records_brokers_cta", "guide_check_cta", "guide_brokers_cta", "path_self_cta", "path_walkthrough_cta", "path_brokerage_cta", "guide_card_cta", "support_email_cta") + tuple("role_" + r for r in _VISITOR_ROLES)
+                     "role_shown", "role_dismissed", "brokers_audit_cta", "brokers_email_cta", "brokers_plan_cta", "records_brokers_cta", "guide_check_cta", "guide_brokers_cta", "path_self_cta", "path_walkthrough_cta", "path_brokerage_cta", "guide_card_cta", "support_email_cta", "pricing_audit_cta") + tuple("role_" + r for r in _VISITOR_ROLES)
 
 # Tiny, cookie-less-of-its-own beacon script appended to every page that
 # track_page_view() logs. Elements opt in with data-evt="<type>" for clicks;
@@ -5062,14 +5062,14 @@ def pricing():
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pricing — TxtAnOffer</title>
-<meta name="description" content="TC File Check is free for Texas transaction coordinators and agents -- drop a TREC 20-19 and get back what's missing. Professional adds DocuSign e-signature and a full offer-to-closing Transaction Workspace for $79/month. Brokerages get all of that for their whole roster at $349/month.">
-<meta property="og:title" content="TxtAnOffer Pricing — Free to Check, Paid to Run the File">
-<meta property="og:description" content="TC File Check is free, always. Professional and Brokerage add e-signature and a full offer-to-closing workspace.">
+<meta name="description" content="TC File Check is free for Texas TCs and agents: drop a TREC 20-19 and see what title would kick back. Agent plan $40/mo for unlimited offers by text. Brokerage $349/mo covers your whole roster.">
+<meta property="og:title" content="TxtAnOffer Pricing — Free to Check, Simple to Scale">
+<meta property="og:description" content="TC File Check is free. Agent plan $40/mo, Brokerage $349/mo for your whole roster.">
 <meta property="og:url" content="https://txtanoffer.com/pricing">
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="TxtAnOffer Pricing — Free to Check, Paid to Run the File">
-<meta name="twitter:description" content="TC File Check is free, always. Professional and Brokerage add e-signature and a full offer-to-closing workspace.">
+<meta name="twitter:title" content="TxtAnOffer Pricing — Free to Check, Simple to Scale">
+<meta name="twitter:description" content="TC File Check is free. Agent plan $40/mo, Brokerage $349/mo for your whole roster.">
 <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -5197,6 +5197,8 @@ def pricing():
   .footer-note a {color:var(--accent-dark);}
   .footer-note a:hover {text-decoration:underline;}
 
+  .nav-cta {white-space:nowrap;}
+  @media(max-width:480px) { .nav-cta {display:none;} }
   @media(max-width:600px) {
     .page-header h1 {font-size:2rem;}
     .pricing-grid {padding:0 1rem 2rem;}
@@ -5242,42 +5244,38 @@ def pricing():
 </script>
 
 <div class="page-header">
-  <h1>Free to check.<br><span class="gradient">Paid to run the whole file.</span></h1>
-  <p>TC File Check catches what's missing in a TREC 20-19 before title does &mdash; upload a file, get a report, no signup, always free. Professional adds e-signature and a full offer-to-closing workspace for your own deals. Brokerage gives your whole roster the same thing, plus every agent's offer auto-checked before it's sent.</p>
+  <h1>Free to check.<br><span class="gradient">Simple to scale.</span></h1>
+  <p>Check any TREC 20-19 free. Pay only to draft offers by text, or to cover your whole brokerage.</p>
 </div>
 
-<div class="pricing-grid">
+<div class="pricing-grid" style="max-width:1000px;">
 
-  <div class="pricing-card featured">
-    <span class="featured-badge">Start Here</span>
+  <div class="pricing-card" id="tc-check">
     <h2 class="plan-name">TC File Check</h2>
-    <p class="plan-desc">Upload any TREC 20-19 (plus its 40-11 addendum or 39-11 amendment) and get back exactly what's missing.</p>
+    <p class="plan-desc">See what title would kick back on any TREC 20-19.</p>
     <div class="price-row">
       <span class="price-current">Free</span>
     </div>
     <ul class="features">
-      <li><span class="check">&#10003;</span> Itemized report: blanks, missing initials, mismatches</li>
-      <li><span class="check">&#10003;</span> Compare two contract versions &mdash; see exactly what changed</li>
-      <li><span class="check">&#10003;</span> Bulk-check up to 20 files at once</li>
-      <li><span class="check">&#10003;</span> Results in under a minute</li>
-      <li><span class="check">&#10003;</span> First 3 full reports: no signup, no email, no card</li>
-      <li><span class="check">&#10003;</span> After that, still free &mdash; just add your email</li>
+      <li><span class="check">&#10003;</span> Blanks, missing initials and mismatches, itemized</li>
+      <li><span class="check">&#10003;</span> Results in seconds</li>
+      <li><span class="check">&#10003;</span> 3 full reports with no signup, then just your email</li>
+      <li><span class="check">&#10003;</span> Your file isn&rsquo;t kept</li>
     </ul>
-    <a href="/tc-check" class="cta-btn">Try TC Check Free</a>
-    <p style="text-align:center;font-size:0.75rem;color:var(--text-dim);margin-top:0.75rem;">Free, no card, no trial to expire.</p>
+    <a href="/tc-check" class="cta-btn">Check a file free</a>
   </div>
 
   <div class="pricing-card" id="individual">
-    <h2 class="plan-name">Individual</h2>
-    <p class="plan-desc">Draft TREC 20-19 offers by text message, unlimited &mdash; past your first 3 free.</p>
+    <h2 class="plan-name">Agent</h2>
+    <p class="plan-desc">Draft TREC 20-19 offers by text message.</p>
     <div class="price-row">
       <span class="price-current">$40</span>
       <span class="price-period">/month</span>
     </div>
     <ul class="features">
-      <li><span class="check">&#10003;</span> Unlimited SMS-drafted offers (3 free to start)</li>
-      <li><span class="check">&#10003;</span> Property address, sales price &amp; closing date auto-fill</li>
-      <li><span class="check">&#10003;</span> Finished PDF texted back in seconds</li>
+      <li><span class="check">&#10003;</span> First 3 offers free</li>
+      <li><span class="check">&#10003;</span> Then unlimited offers</li>
+      <li><span class="check">&#10003;</span> Address, price and closing date filled in for you</li>
       <li><span class="check">&#10003;</span> Cancel anytime</li>
     </ul>
     <form action="/create-checkout-session" method="POST">
@@ -5286,122 +5284,51 @@ def pricing():
     </form>
   </div>
 
-  <div class="pricing-card" id="professional">
-    <h2 class="plan-name">Professional</h2>
-    <p class="plan-desc">For an individual agent or TC who wants the deal managed end to end, not just drafted.</p>
-    <div class="price-row">
-      <span class="price-current">$79</span>
-      <span class="price-period">/month</span>
-    </div>
-    <ul class="features">
-      <li><span class="check">&#10003;</span> Everything in Individual</li>
-      <li><span class="check">&#10003;</span> Send for e-signature via DocuSign, validation-gated so an incomplete contract can't go out</li>
-      <li><span class="check">&#10003;</span> Transaction Workspace on every accepted offer &mdash; stage timeline + task checklist (option period, earnest money, title, financing, inspections, amendments, walkthrough)</li>
-      <li><span class="check">&#10003;</span> Closing Checklist, auto-surfaced within 5 days of closing: documents complete, signature status, open tasks, every key date</li>
-      <li><span class="check">&#10003;</span> Webhook / Zapier automation</li>
-    </ul>
-    <form action="/create-checkout-session" method="POST">
-      <input type="hidden" name="plan" value="professional">
-      <button type="submit" class="cta-btn">Subscribe &mdash; $79/mo</button>
-    </form>
-  </div>
-
   <div class="pricing-card featured" id="brokerage">
-    <span class="featured-badge">For Managing Brokers</span>
+    <span class="featured-badge">For managing brokers</span>
     <h2 class="plan-name">Brokerage</h2>
-    <p class="plan-desc">Everything in Professional, for your whole roster &mdash; the compliance and transaction dashboard built for managing brokers and TC teams.</p>
+    <p class="plan-desc">Every agent on your roster, covered.</p>
     <div class="price-row">
       <span class="price-current">$349</span>
       <span class="price-period">/month</span>
     </div>
     <ul class="features">
-      <li><span class="check">&#10003;</span> Free SMS drafting for your whole roster (unlimited agents)</li>
-      <li><span class="check">&#10003;</span> Every agent's offer auto-checked before it's even sent</li>
-      <li><span class="check">&#10003;</span> DocuSign e-signature + Transaction Workspace + Closing Checklist, for every agent's accepted offers</li>
-      <li><span class="check">&#10003;</span> Finished PDFs auto-emailed to your TC, no login needed</li>
-      <li><span class="check">&#10003;</span> Add a phone number and get a text the moment a real blocker shows up &mdash; missing county, title company, earnest money &mdash; before it ever costs a deal</li>
-      <li><span class="check">&#10003;</span> Bulk-check your whole closed-file backlog &mdash; up to 200 files per batch with your join code (the free tool caps at 20)</li>
-      <li><span class="check">&#10003;</span> 5-year records archive: every offer and amendment your agents draft here, searchable by address and exportable anytime &mdash; helps with TREC's 4-year record-keeping rule</li>
-      <li><span class="check">&#10003;</span> Brokerage roster &amp; compliance dashboard</li>
-      <li><span class="check">&#10003;</span> Agents join with one text &mdash; no per-agent setup</li>
+      <li><span class="check">&#10003;</span> Every agent&rsquo;s offer checked before it&rsquo;s sent</li>
+      <li><span class="check">&#10003;</span> Unlimited offers for all your agents</li>
+      <li><span class="check">&#10003;</span> 5-year records archive, searchable by address</li>
+      <li><span class="check">&#10003;</span> DocuSign, Transaction Workspace and roster dashboard</li>
     </ul>
-    <form action="/create-checkout-session" method="POST">
+    <a href="/brokers" class="cta-btn" data-evt="pricing_audit_cta">Start with a free 20-file audit</a>
+    <form action="/create-checkout-session" method="POST" style="margin-top:0.75rem;text-align:center;">
       <input type="hidden" name="plan" value="brokerage">
-      <button type="submit" class="cta-btn">Set Up Your Brokerage</button>
+      <button type="submit" style="background:none;border:none;padding:0;font:inherit;font-size:0.85rem;color:var(--text-muted);text-decoration:underline;cursor:pointer;">Ready now? Subscribe &mdash; $349/mo</button>
     </form>
-    <p style="text-align:center;font-size:0.82rem;margin-top:0.75rem;"><a href="/brokers" style="text-decoration:underline;">Not sure yet? Audit your last 20 closed files free &rarr;</a></p>
-    <p style="text-align:center;font-size:0.75rem;color:var(--text-dim);margin-top:0.75rem;">Your join code and dashboard link arrive by email right after checkout.</p>
-  </div>
-
-  <div class="pricing-card" id="enterprise">
-    <h2 class="plan-name">Enterprise</h2>
-    <p class="plan-desc">For large franchises and multi-office brokerages needing custom terms.</p>
-    <div class="price-row">
-      <span class="price-current">Custom</span>
-    </div>
-    <ul class="features">
-      <li><span class="check">&#10003;</span> Everything in Brokerage</li>
-      <li><span class="check">&#10003;</span> Multi-office rollout &amp; onboarding</li>
-      <li><span class="check">&#10003;</span> SLA &amp; dedicated support</li>
-    </ul>
-    <a href="mailto:support@txtanoffer.com?subject=Enterprise%20Plan" class="cta-btn outline">Contact Us</a>
   </div>
 
 </div>
 
-<div class="value-section">
-  <div class="value-grid">
-    <div class="value-card">
-      <div class="value-title">Catch It Before Title Does</div>
-      <div class="value-text">Missing a signature, an initial, or the Effective Date is what gets a file kicked back. TC File Check flags it before you send it.</div>
-    </div>
-    <div class="value-card">
-      <div class="value-title">Actually Free</div>
-      <div class="value-text">Not a trial. Not a lead-gen gate on the important part. Upload a file, get the report, every time.</div>
-    </div>
-    <div class="value-card">
-      <div class="value-title">One Roster, One View</div>
-      <div class="value-text">Brokerage plan checks every agent's offer automatically and drops the finished PDF in your TC's inbox &mdash; no one has to remember to check anything.</div>
-    </div>
-  </div>
-</div>
-
-<div style="max-width:640px;margin:0 auto;padding:2rem;text-align:center;">
-  <div style="background:var(--accent-tint);border:1px solid rgba(11,93,82,0.2);border-radius:1rem;padding:2rem 1.75rem;">
-    <div style="font-size:1.5rem;margin-bottom:0.5rem;">&#128737;</div>
-    <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:0.5rem;">No Risk on Any Plan</h3>
-    <p style="color:var(--text-muted);font-size:0.9rem;line-height:1.7;margin:0;">
-      TC File Check is <strong style="color:var(--text);">free, no card required, no trial to expire</strong>.
-      Every paid plan is a real subscription — cancel anytime from your dashboard, no contracts, no fees, no questions asked.
-      Cancellation takes effect at the end of your billing cycle so you keep access through the period you paid for.
-    </p>
-  </div>
-</div>
+<p style="text-align:center;font-size:0.9rem;color:var(--text-muted);padding:0 1rem 2.5rem;">Multi-office brokerage or franchise? <a href="mailto:support@txtanoffer.com?subject=Multi-office%20pricing" style="color:var(--accent-dark);font-weight:600;">Contact us</a> for custom terms.</p>
 
 <div class="value-section" style="border-top:1px solid var(--border);">
   <h2 style="text-align:center;font-size:1.4rem;font-weight:800;margin-bottom:1.5rem;color:var(--text);">Questions</h2>
   <div class="value-grid">
     <div class="value-card">
       <div class="value-title">Is TC File Check really free?</div>
-      <div class="value-text">Yes. Your first 3 full reports need nothing at all &mdash; no signup, no email, no card. After that, add your email to keep getting full reports, still free. No trial, no expiration date.</div>
+      <div class="value-text">Yes. Your first 3 full reports need nothing at all. After that, add your email to keep getting full reports, still free. No card, no trial.</div>
     </div>
     <div class="value-card">
-      <div class="value-title">Do you store my client's file?</div>
-      <div class="value-text">No. A file you upload to TC Check is parsed to generate your report, then deleted right after. The one exception is on purpose: on the Brokerage plan, offers your agents text in are archived for your brokerage&rsquo;s records.</div>
+      <div class="value-title">Do you keep my client&rsquo;s file?</div>
+      <div class="value-text">No. A file you check is deleted right after your report. The one exception is on purpose: on the Brokerage plan, offers your agents text in are archived for your records.</div>
     </div>
     <div class="value-card">
-      <div class="value-title">What about SMS offer drafting?</div>
-      <div class="value-text">Free for your first 3 offers, then $40/mo unlimited on Individual &mdash; or free unlimited if your brokerage is on the Brokerage plan, no separate subscription needed.</div>
-    </div>
-    <div class="value-card">
-      <div class="value-title">What's the difference between Professional and Brokerage?</div>
-      <div class="value-text">Same feature set &mdash; DocuSign, Transaction Workspace, Closing Checklist. Professional is one agent's own deals. Brokerage extends all of it to your whole roster, plus auto-checks every agent's offer and gives your TC one dashboard.</div>
+      <div class="value-title">Can I cancel?</div>
+      <div class="value-text">Anytime, from your dashboard. No contracts. You keep access through the period you paid for.</div>
     </div>
   </div>
 </div>
 
 <div class="footer-note">
-  Brokerage cancels anytime. No contracts. By subscribing you agree to our <a href="/terms">Terms of Service</a>.
+  By subscribing you agree to our <a href="/terms">Terms of Service</a>.
   <br><br>
   <a href="/tc-check">&larr; Try TC File Check</a> &middot; <a href="/">Home</a>
 </div>
@@ -9978,9 +9905,9 @@ display:flex;align-items:center;justify-content:center;text-align:center;padding
 display:flex;align-items:center;justify-content:center;text-align:center;padding:2rem;}}
 .box{{max-width:440px;}}h2{{margin-bottom:0.75rem;}}p{{color:#5a6b7a;font-size:0.9rem;line-height:1.6;margin-bottom:1.25rem;}}
 a.btn{{display:inline-block;background:#0b5d52;color:#fff;padding:0.75rem 1.5rem;border-radius:999px;font-size:0.9rem;font-weight:600;text-decoration:none;}}</style>
-</head><body><div class="box"><h2>Transaction Workspace is a Professional-plan feature</h2>
-<p>This offer was accepted &mdash; the stage timeline, task checklist, and Closing Checklist for {address} are ready as soon as you're on Professional or Brokerage.</p>
-<a href="/pricing#professional" class="btn">See plans &rarr;</a></div></body></html>"""
+</head><body><div class="box"><h2>Transaction Workspace is part of the Brokerage plan</h2>
+<p>This offer was accepted &mdash; the stage timeline, task checklist, and Closing Checklist for {address} are ready once your brokerage is on the Brokerage plan. Individual agent? Email support@txtanoffer.com and we&rsquo;ll set it up for you.</p>
+<a href="/pricing#brokerage" class="btn">See the Brokerage plan &rarr;</a></div></body></html>"""
 
     try:
         effective_date = datetime.fromisoformat(offer.get("thread_responded_at") or "").date()
