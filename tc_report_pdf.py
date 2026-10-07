@@ -45,7 +45,7 @@ BOTTOM_LIMIT = 0.9 * inch  # leave room for the footer on every page
 # something to fix, same as the email.
 _SHARE_LINE = "Share this with your agent: just forward this report."
 _UPSELL_HEADING = "Tired of catching these by hand?"
-_UPSELL_LINE_1 = "Free: tell your agents to CC tc@check.txtanoffer.com on their next offer — it gets checked automatically as it's sent, no forwarding needed."
+_UPSELL_LINE_1 = "Free: check your next file at txtanoffer.com/tc-check before it goes to title."
 _UPSELL_LINE_2 = "Every file, every agent, zero effort: the TxtAnOffer Brokerage Dashboard — $349/mo for your whole roster."
 _UPSELL_CTA = "See how it works →"
 UPSELL_BG = HexColor("#171717")

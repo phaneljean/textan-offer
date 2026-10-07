@@ -1079,7 +1079,6 @@ def index():
         <button type="button" class="sl-cta-secondary" id="heroSampleBtn" data-evt="hero_sample">See a sample report &rarr;</button>
       </div>
       <div class="sl-hero-note">No signup &middot; Files you check are never stored</div>
-      <div class="sl-hero-phone">On your phone? Forward the contract email to <a href="mailto:tc@check.txtanoffer.com">tc@check.txtanoffer.com</a> &mdash; the report comes back by email.</div>
     </div>
     <div class="sl-hero-photo" role="img" aria-label="A father and daughter painting a room in their new home"></div>
   </section>
@@ -1112,8 +1111,6 @@ def index():
         <input type="email" id="homeEmailOptinInput" class="email-optin-input" placeholder="you@example.com" autocomplete="email">
         <div class="email-optin-confirm" id="homeEmailOptinConfirm"></div>
       </div>
-      <div class="or-divider">or</div>
-      <div class="email-forward-note"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 6 10-6"/></svg>Already have it in your inbox? Forward it to <a href="mailto:tc@check.txtanoffer.com">tc@check.txtanoffer.com</a></div>
       <div class="privacy-note">&#9203;&nbsp; Takes a minute now &mdash; saves you a callback from title tonight.</div>
     </div>
 
@@ -1261,10 +1258,10 @@ def index():
 
   <section class="steps" id="how">
     <div class="steps-header">
-      <h2 style="max-width:620px;margin:0 auto;">Forward it, or drop it here. Get back exactly what's missing.</h2>
+      <h2 style="max-width:620px;margin:0 auto;">Drop it here. Get back exactly what's missing.</h2>
     </div>
     <ul class="tc-checklist" style="max-width:560px;margin:1.5rem auto 0;">
-      <li><span class="tc-check">&check;</span><span>Forward the TREC 20-19 to <strong>tc@check.txtanoffer.com</strong>, or upload it above &mdash; add the 40-11 addendum or 39-11 amendment if you've got them.</span></li>
+      <li><span class="tc-check">&check;</span><span>Upload the TREC 20-19 above &mdash; add the 40-11 addendum or 39-11 amendment if you've got them.</span></li>
       <li><span class="tc-check">&check;</span><span>We re-read the actual filled-in PDF against TREC's current form &mdash; not a guess based on file size or page count.</span></li>
       <li><span class="tc-check">&check;</span><span>Get an itemized report back in under a minute: what's blank, what's missing an initial, what disagrees with the addendum.</span></li>
     </ul>
@@ -1322,7 +1319,7 @@ def index():
       <div class="step-card">
         <div class="step-num">&check;</div>
         <h3>Files you check aren&rsquo;t kept</h3>
-        <p>A contract you upload or forward to TC Check is processed for the report, then discarded. The one exception is on purpose: on the Brokerage plan, offers your agents text in are archived for your brokerage&rsquo;s records &mdash; <a href="#records" style="color:var(--accent-dark);text-decoration:underline;">see how that works</a>.</p>
+        <p>A contract you upload to TC Check is processed for the report, then discarded. The one exception is on purpose: on the Brokerage plan, offers your agents text in are archived for your brokerage&rsquo;s records &mdash; <a href="#records" style="color:var(--accent-dark);text-decoration:underline;">see how that works</a>.</p>
       </div>
     </div>
   </section>
@@ -1344,9 +1341,9 @@ def index():
         <a href="mailto:support@txtanoffer.com" data-evt="support_email_cta">support@txtanoffer.com</a>
       </div>
       <div>
-        <h3>Forward a file</h3>
-        <p>Send a TREC 20-19 from your inbox and get the report back by email.</p>
-        <a href="mailto:tc@check.txtanoffer.com">tc@check.txtanoffer.com</a>
+        <h3>Check a file</h3>
+        <p>Drop a filled TREC 20-19 and see what&rsquo;s missing in seconds.</p>
+        <a href="/tc-check">Open TC Check &rarr;</a>
       </div>
     </div>
   </section>
@@ -3781,8 +3778,6 @@ border-radius:var(--radius-sm);font-family:inherit;font-size:0.85rem;font-weight
 <input type="email" id="emailOptinInput" class="email-optin-input" placeholder="you@example.com" autocomplete="email">
 <div class="email-optin-confirm" id="emailOptinConfirm"></div>
 </div>
-<div class="or-divider">or</div>
-<div class="email-forward-note"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 6 10-6"/></svg>Already have it in your inbox? Forward it to <a href="mailto:tc@check.txtanoffer.com">tc@check.txtanoffer.com</a></div>
 <div class="privacy-note"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Processed instantly and never stored &mdash; your file is discarded the moment your results are ready.</div>
 <div class="status" id="status"></div>
 <div class="result" id="result"></div>
@@ -4036,7 +4031,7 @@ function buildUpsellCta(issues) {
 // is the one sales ask after a report.
 function buildNextStepCta() {
   return '<div class="next-step-cta">' +
-    '<p class="next-step-lead">Want to test another file? <a href="#" onclick="resetForm();return false;">Check another one &rarr;</a><br>Or forward your next deal straight to us: <a href="mailto:tc@check.txtanoffer.com">tc@check.txtanoffer.com</a></p>' +
+    '<p class="next-step-lead">Want to test another file? <a href="#" onclick="resetForm();return false;">Check another one &rarr;</a></p>' +
   '</div>';
 }
 
@@ -5067,7 +5062,7 @@ def pricing():
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pricing — TxtAnOffer</title>
-<meta name="description" content="TC File Check is free for Texas transaction coordinators and agents -- forward a TREC 20-19 and get back what's missing. Professional adds DocuSign e-signature and a full offer-to-closing Transaction Workspace for $79/month. Brokerages get all of that for their whole roster at $349/month.">
+<meta name="description" content="TC File Check is free for Texas transaction coordinators and agents -- drop a TREC 20-19 and get back what's missing. Professional adds DocuSign e-signature and a full offer-to-closing Transaction Workspace for $79/month. Brokerages get all of that for their whole roster at $349/month.">
 <meta property="og:title" content="TxtAnOffer Pricing — Free to Check, Paid to Run the File">
 <meta property="og:description" content="TC File Check is free, always. Professional and Brokerage add e-signature and a full offer-to-closing workspace.">
 <meta property="og:url" content="https://txtanoffer.com/pricing">
@@ -5248,7 +5243,7 @@ def pricing():
 
 <div class="page-header">
   <h1>Free to check.<br><span class="gradient">Paid to run the whole file.</span></h1>
-  <p>TC File Check catches what's missing in a TREC 20-19 before title does &mdash; forward a file, get a report, no signup, always free. Professional adds e-signature and a full offer-to-closing workspace for your own deals. Brokerage gives your whole roster the same thing, plus every agent's offer auto-checked before it's sent.</p>
+  <p>TC File Check catches what's missing in a TREC 20-19 before title does &mdash; upload a file, get a report, no signup, always free. Professional adds e-signature and a full offer-to-closing workspace for your own deals. Brokerage gives your whole roster the same thing, plus every agent's offer auto-checked before it's sent.</p>
 </div>
 
 <div class="pricing-grid">
@@ -5256,12 +5251,11 @@ def pricing():
   <div class="pricing-card featured">
     <span class="featured-badge">Start Here</span>
     <h2 class="plan-name">TC File Check</h2>
-    <p class="plan-desc">Forward any TREC 20-19 (plus its 40-11 addendum or 39-11 amendment) and get back exactly what's missing.</p>
+    <p class="plan-desc">Upload any TREC 20-19 (plus its 40-11 addendum or 39-11 amendment) and get back exactly what's missing.</p>
     <div class="price-row">
       <span class="price-current">Free</span>
     </div>
     <ul class="features">
-      <li><span class="check">&#10003;</span> Forward to tc@check.txtanoffer.com, or upload on the web</li>
       <li><span class="check">&#10003;</span> Itemized report: blanks, missing initials, mismatches</li>
       <li><span class="check">&#10003;</span> Compare two contract versions &mdash; see exactly what changed</li>
       <li><span class="check">&#10003;</span> Bulk-check up to 20 files at once</li>
@@ -5326,7 +5320,6 @@ def pricing():
       <li><span class="check">&#10003;</span> DocuSign e-signature + Transaction Workspace + Closing Checklist, for every agent's accepted offers</li>
       <li><span class="check">&#10003;</span> Finished PDFs auto-emailed to your TC, no login needed</li>
       <li><span class="check">&#10003;</span> Add a phone number and get a text the moment a real blocker shows up &mdash; missing county, title company, earnest money &mdash; before it ever costs a deal</li>
-      <li><span class="check">&#10003;</span> Your TC can also forward any outside file to tc@check.txtanoffer.com for an instant check &mdash; free, no dashboard login needed</li>
       <li><span class="check">&#10003;</span> Bulk-check your whole closed-file backlog &mdash; up to 200 files per batch with your join code (the free tool caps at 20)</li>
       <li><span class="check">&#10003;</span> 5-year records archive: every offer and amendment your agents draft here, searchable by address and exportable anytime &mdash; helps with TREC's 4-year record-keeping rule</li>
       <li><span class="check">&#10003;</span> Brokerage roster &amp; compliance dashboard</li>
@@ -5364,11 +5357,11 @@ def pricing():
     </div>
     <div class="value-card">
       <div class="value-title">Actually Free</div>
-      <div class="value-text">Not a trial. Not a lead-gen gate on the important part. Forward a file, get the report, every time.</div>
+      <div class="value-text">Not a trial. Not a lead-gen gate on the important part. Upload a file, get the report, every time.</div>
     </div>
     <div class="value-card">
       <div class="value-title">One Roster, One View</div>
-      <div class="value-text">Brokerage plan checks every agent's offer automatically and drops the finished PDF in your TC's inbox &mdash; no one has to remember to forward anything.</div>
+      <div class="value-text">Brokerage plan checks every agent's offer automatically and drops the finished PDF in your TC's inbox &mdash; no one has to remember to check anything.</div>
     </div>
   </div>
 </div>
@@ -5390,11 +5383,11 @@ def pricing():
   <div class="value-grid">
     <div class="value-card">
       <div class="value-title">Is TC File Check really free?</div>
-      <div class="value-text">Yes. Your first 3 full reports need nothing at all &mdash; no signup, no email, no card. After that, add your email to keep getting full reports, still free. No trial, no expiration date, and you can also forward files to tc@check.txtanoffer.com anytime.</div>
+      <div class="value-text">Yes. Your first 3 full reports need nothing at all &mdash; no signup, no email, no card. After that, add your email to keep getting full reports, still free. No trial, no expiration date.</div>
     </div>
     <div class="value-card">
       <div class="value-title">Do you store my client's file?</div>
-      <div class="value-text">No. A file you upload or forward to TC Check is parsed to generate your report, then deleted right after. The one exception is on purpose: on the Brokerage plan, offers your agents text in are archived for your brokerage&rsquo;s records.</div>
+      <div class="value-text">No. A file you upload to TC Check is parsed to generate your report, then deleted right after. The one exception is on purpose: on the Brokerage plan, offers your agents text in are archived for your brokerage&rsquo;s records.</div>
     </div>
     <div class="value-card">
       <div class="value-title">What about SMS offer drafting?</div>
@@ -6413,12 +6406,11 @@ def broker_dashboard(join_code):
 
     total_offers = sum(a["offer_count"] for a in agents)
     tc_scope_note = (
-        "Scoped to files forwarded to tc@check.txtanoffer.com by an agent on your roster."
+        "Scoped to files checked by agents on your roster."
         if roster_scoped else
         "Not yet scoped to your roster specifically &mdash; no agent on your roster has an "
         "email on file yet, so this is every file checked on TxtAnOffer, shown as context "
-        "for what the tool catches. Have an agent save their email in their profile, then "
-        "forward a file to <a href=\"/tc-check\">the free checker</a> for a roster-specific read."
+        "for what the tool catches."
     )
     issue_rows = "".join(
         f"<tr><td style='padding:8px;'>{i['label']}</td><td style='padding:8px;'>{i['count']}</td>"
@@ -8227,7 +8219,7 @@ def about():
 
     <p><strong>That solved the first 45 minutes. It didn't solve what happens next.</strong> The more I dug into how Texas files actually close, the clearer it got: the real risk in a Texas contract isn't how fast it gets written &mdash; it's what's still blank or mismatched by the time it reaches title. A missing initial. An Effective Date nobody filled in. A 40-11 that disagrees with the contract it's attached to. That's not a speed problem, it's a review problem, and it can happen on any file &mdash; not just the ones typed from a phone.</p>
 
-    <p>So TxtAnOffer became two things. <strong>Create</strong> an offer by text in seconds &mdash; still here, free to start. And <strong>Check</strong> any TREC 20-19 for exactly what's missing before title finds it &mdash; free, no login, forward a file or drop it on the site. Brokerages and TC teams that want every file checked automatically, across their whole roster, get the Brokerage Dashboard.</p>
+    <p>So TxtAnOffer became two things. <strong>Create</strong> an offer by text in seconds &mdash; still here, free to start. And <strong>Check</strong> any TREC 20-19 for exactly what's missing before title finds it &mdash; free, no login, just drop it on the site. Brokerages and TC teams that want every file checked automatically, across their whole roster, get the Brokerage Dashboard.</p>
 
     <h2>Why It's Built This Way</h2>
     <p>Every feature is built around a specific way a Texas file goes wrong &mdash; not because a spec sheet said a contract tool should have it:</p>
@@ -8837,7 +8829,6 @@ def brokers():
     <div class="price">$349<span>/month for your whole roster</span></div>
     <ul>
       <li>Every agent's offer checked before it's sent</li>
-      <li>Your TC can forward any outside file to tc@check.txtanoffer.com for an instant check</li>
       <li>Bulk-check up to 200 files per batch with your join code</li>
       <li>5-year records archive of every offer and amendment drafted here, searchable by address, export anytime</li>
       <li>Roster &amp; compliance dashboard, Transaction Workspace and Closing Checklist</li>
