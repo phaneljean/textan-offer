@@ -468,7 +468,7 @@ def index():
       background: linear-gradient(135deg, rgba(15,31,47,0.10), rgba(15,31,47,0.05));
       border-radius: 50%;
       filter: blur(80px);
-      top: -120px; right: -80px;
+      top: -120px; right: 0;
       pointer-events: none; z-index: 0;
     }
     a { color: inherit; text-decoration: none; }
@@ -762,6 +762,18 @@ def index():
       max-width: 100%;
     }
     .stat-num { font-size: 1.4rem; font-weight: 800; color: var(--text); line-height: 1; }
+    @media (min-width: 601px) {
+      .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.5rem; width: 100%; max-width: 540px; box-sizing: border-box; }
+    }
+    /* Center the upload column so it lines up with the centered sections below it. */
+    #check { max-width: 620px; margin-left: auto; margin-right: auto; }
+    /* No one-word last lines on headings. */
+    h1, h2, h3 { text-wrap: balance; }
+    /* 7 workflow cards: center the last row instead of stranding card 7 on the left. */
+    @media (min-width: 701px) {
+      #workflow .steps-grid { display: flex; flex-wrap: wrap; justify-content: center; }
+      #workflow .step-card { flex: 0 1 calc((100% - 2.5rem) / 3); }
+    }
     .stat-label { font-size: 0.72rem; color: var(--text-dim); margin-top: 0.25rem; font-weight: 500; }
 
     /* Dark card wrap (dashboard/results preview) -- layered ambient shadow */
@@ -849,11 +861,13 @@ def index():
     .steps-header { text-align: center; margin-bottom: 3rem; }
     .steps-kicker { font-size: 0.7rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase;
       letter-spacing: 0.07em; margin-bottom: 0.6rem; }
-    .steps-header h2 { font-size: 2rem; font-weight: 800; margin: 0 0 0.5rem; letter-spacing: -0.02em; }
+    .steps-header h2 { font-size: 2rem; font-weight: 800; margin: 0 0 0.5rem; letter-spacing: -0.02em; line-height: 1.15; }
     .steps-header p { color: var(--text-dim); font-size: 1rem; }
     .steps-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; }
     @media (min-width: 961px) {
       #how .steps-grid { grid-template-columns: repeat(4, 1fr); }
+    }
+    @media (min-width: 701px) {
       #records .steps-grid { grid-template-columns: repeat(2, 1fr); max-width: 760px; margin: 0 auto; }
     }
     .step-card {
@@ -955,7 +969,7 @@ def index():
           radial-gradient(ellipse 90% 260px at 50% -60px, rgba(15,31,47,0.05) 0%, transparent 55%),
           var(--bg);
       }
-      body::before { width: 200px; height: 200px; top: -60px; right: -50px; filter: blur(50px); }
+      body::before { width: 200px; height: 200px; top: -60px; right: 0; filter: blur(50px); }
       .main { padding: 0 1.25rem; }
       .hero h1 { font-size: 2.25rem; }
       .steps-grid { grid-template-columns: 1fr; }
@@ -971,7 +985,23 @@ def index():
       .nav-links a:last-child { border-bottom: none; }
       .stats { gap: 1.5rem; }
     }
+    .nav-cta { white-space: nowrap; }
+    @media (min-width: 701px) and (max-width: 960px) {
+      .nav-toggle { display: flex; }
+      .nav-links {
+        display: none; position: absolute; top: 100%; left: 0; right: 0;
+        flex-direction: column; gap: 0; padding: 0.5rem 2rem 1.25rem;
+        background: #fff; border-bottom: 1px solid rgba(15,31,47,0.08);
+      }
+      .nav-links.open { display: flex; }
+      .nav-links a { padding: 0.75rem 0; border-bottom: 1px solid rgba(15,31,47,0.08); }
+      .nav-links a:last-child { border-bottom: none; }
+    }
+    @media (max-width: 960px) {
+      .nav-cta { margin-left: auto; margin-right: 0.75rem; }
+    }
     @media (max-width: 480px) {
+      .nav-cta { display: none; }
       .hero h1 { font-size: 1.9rem; }
       .input-row { flex-direction: column; }
       .input-btn { width: 100%; }
@@ -1058,7 +1088,7 @@ def index():
       <div class="privacy-note">&#9203;&nbsp; Takes a minute now &mdash; saves you a callback from title tonight.</div>
     </div>
 
-    <div class="stats" style="max-width:640px;margin:2.25rem 0 0;">
+    <div class="stats" style="margin:2.25rem 0 0;">
       <div><div class="stat-num">__TC_STAT1_NUM__</div><div class="stat-label">__TC_STAT1_LABEL__</div></div>
       <div><div class="stat-num">__TC_STAT2_NUM__</div><div class="stat-label">__TC_STAT2_LABEL__</div></div>
       <div><div class="stat-num">__TC_STAT3_NUM__</div><div class="stat-label">__TC_STAT3_LABEL__</div></div>
