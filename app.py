@@ -1079,6 +1079,7 @@ def index():
         <button type="button" class="sl-cta-secondary" id="heroSampleBtn" data-evt="hero_sample">See a sample report &rarr;</button>
       </div>
       <div class="sl-hero-note">No signup &middot; Files you check are never stored</div>
+      <div class="sl-hero-phone">On your phone? Forward the contract email to <a href="mailto:tc@check.txtanoffer.com">tc@check.txtanoffer.com</a> &mdash; the report comes back by email.</div>
     </div>
     <div class="sl-hero-photo" role="img" aria-label="A father and daughter painting a room in their new home"></div>
   </section>
@@ -1111,6 +1112,8 @@ def index():
         <input type="email" id="homeEmailOptinInput" class="email-optin-input" placeholder="you@example.com" autocomplete="email">
         <div class="email-optin-confirm" id="homeEmailOptinConfirm"></div>
       </div>
+      <div class="or-divider">or</div>
+      <div class="email-forward-note"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 6 10-6"/></svg>Already have it in your inbox? Forward it to <a href="mailto:tc@check.txtanoffer.com">tc@check.txtanoffer.com</a></div>
       <div class="privacy-note">&#9203;&nbsp; Takes a minute now &mdash; saves you a callback from title tonight.</div>
     </div>
 
@@ -1258,10 +1261,10 @@ def index():
 
   <section class="steps" id="how">
     <div class="steps-header">
-      <h2 style="max-width:620px;margin:0 auto;">Drop it here. Get back exactly what's missing.</h2>
+      <h2 style="max-width:620px;margin:0 auto;">Forward it, or drop it here. Get back exactly what's missing.</h2>
     </div>
     <ul class="tc-checklist" style="max-width:560px;margin:1.5rem auto 0;">
-      <li><span class="tc-check">&check;</span><span>Upload the TREC 20-19 above &mdash; add the 40-11 addendum or 39-11 amendment if you've got them.</span></li>
+      <li><span class="tc-check">&check;</span><span>Forward the TREC 20-19 to <strong>tc@check.txtanoffer.com</strong>, or upload it above &mdash; add the 40-11 addendum or 39-11 amendment if you've got them.</span></li>
       <li><span class="tc-check">&check;</span><span>We re-read the actual filled-in PDF against TREC's current form &mdash; not a guess based on file size or page count.</span></li>
       <li><span class="tc-check">&check;</span><span>Get an itemized report back in under a minute: what's blank, what's missing an initial, what disagrees with the addendum.</span></li>
     </ul>
@@ -1319,7 +1322,7 @@ def index():
       <div class="step-card">
         <div class="step-num">&check;</div>
         <h3>Files you check aren&rsquo;t kept</h3>
-        <p>A contract you upload to TC Check is processed for the report, then discarded. The one exception is on purpose: on the Brokerage plan, offers your agents text in are archived for your brokerage&rsquo;s records &mdash; <a href="#records" style="color:var(--accent-dark);text-decoration:underline;">see how that works</a>.</p>
+        <p>A contract you upload or forward to TC Check is processed for the report, then discarded. The one exception is on purpose: on the Brokerage plan, offers your agents text in are archived for your brokerage&rsquo;s records &mdash; <a href="#records" style="color:var(--accent-dark);text-decoration:underline;">see how that works</a>.</p>
       </div>
     </div>
   </section>
@@ -1341,9 +1344,9 @@ def index():
         <a href="mailto:support@txtanoffer.com" data-evt="support_email_cta">support@txtanoffer.com</a>
       </div>
       <div>
-        <h3>Check a file</h3>
-        <p>Drop a filled TREC 20-19 and see what&rsquo;s missing in seconds.</p>
-        <a href="/tc-check">Open TC Check &rarr;</a>
+        <h3>Forward a file</h3>
+        <p>Send a TREC 20-19 from your inbox and get the report back by email.</p>
+        <a href="mailto:tc@check.txtanoffer.com">tc@check.txtanoffer.com</a>
       </div>
     </div>
   </section>
