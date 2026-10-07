@@ -900,16 +900,18 @@ def index():
     }
     .step-card h3 { font-size: 1.05rem; font-weight: 700; margin: 0 0 0.5rem; letter-spacing: -0.01em; }
     /* "3 ways to get started" + guide cards + support block (2026-10-07) */
-    .path-card { display: flex; flex-direction: column; }
-    .path-card .path-kicker { font-size: 0.7rem; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 0.5rem; }
+    .path-card { display: flex; flex-direction: column; background: #f5c242; border-color: #e6b230; }
+    .path-card:hover { border-color: #d9a520; }
+    .step-card.path-card p, .step-card.path-card li { color: #2b2615; }
+    .path-card .path-kicker { font-size: 0.7rem; font-weight: 700; color: #0a3f3a; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 0.5rem; }
     .path-card ul { list-style: none; margin: 0.9rem 0 1.25rem; padding: 0; }
     .path-card li { font-size: 0.85rem; color: var(--text-muted); padding: 0.3rem 0 0.3rem 1.3rem; position: relative; }
-    .path-card li::before { content: "\\2713"; position: absolute; left: 0; color: var(--accent); font-weight: 700; }
+    .path-card li::before { content: "\\2713"; position: absolute; left: 0; color: #0a3f3a; font-weight: 700; }
     .path-btn { margin-top: auto; display: block; text-align: center; padding: 0.7rem 1rem; border-radius: 9999px; font-weight: 600; font-size: 0.9rem; text-decoration: none; transition: var(--transition); }
     .path-btn.solid { background: var(--accent); color: #fff; }
     .path-btn.solid:hover { background: var(--accent-light); }
-    .path-btn.outline { border: 1.5px solid var(--accent); color: var(--accent); }
-    .path-btn.outline:hover { background: var(--accent-tint); }
+    .path-btn.outline { border: 1.5px solid #0a3f3a; color: #0a3f3a; background: rgba(255,255,255,0.35); }
+    .path-btn.outline:hover { background: rgba(255,255,255,0.7); }
     a.guide-card { display: flex; flex-direction: column; text-decoration: none; color: inherit; }
     a.guide-card .guide-tag { font-size: 0.7rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 0.6rem; }
     a.guide-card .guide-more { margin-top: auto; padding-top: 1rem; font-size: 0.85rem; font-weight: 600; color: var(--accent); }
@@ -1134,11 +1136,11 @@ def index():
         <a class="path-btn solid" href="/tc-check" data-evt="path_self_cta">Check a file free</a>
       </div>
       <div class="step-card path-card">
-        <div class="path-kicker">Get a walkthrough</div>
-        <h3>Talk it through with Phanel</h3>
-        <p>A short walkthrough of what TC Check catches, using your own files or the sample.</p>
-        <ul><li>15 minutes, by phone or video</li><li>Questions answered by the person who built it</li><li>No sales pitch</li></ul>
-        <a class="path-btn outline" href="mailto:support@txtanoffer.com?subject=TC%20Check%20walkthrough" data-evt="path_walkthrough_cta">Get a walkthrough</a>
+        <div class="path-kicker">Talk to us</div>
+        <h3>Schedule a walkthrough call</h3>
+        <p>A short call to walk through what TC Check catches, using your own files or the sample.</p>
+        <ul><li>15 minutes, by phone or video</li><li>Direct answers, no call center</li><li>No sales pitch</li></ul>
+        <a class="path-btn outline" href="mailto:support@txtanoffer.com?subject=Schedule%20a%20walkthrough%20call" data-evt="path_walkthrough_cta">Schedule a call</a>
       </div>
       <div class="step-card path-card">
         <div class="path-kicker">For your whole brokerage</div>
