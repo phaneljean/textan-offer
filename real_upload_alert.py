@@ -16,8 +16,10 @@ What does NOT alert (all of it noise for that purpose):
   (looks_like_blank_draft, or the Section 2A address left empty) -- a blank
   template someone downloaded to poke at the tool is not a closed file
 
-The alert carries only metadata (source, recognized, issue count, sender,
-property line). The file itself is never attached or stored here.
+The alert carries only metadata (source, src tag, recognized, issue count,
+sender) -- no property address or other contract contents, so Phanel's
+inbox never holds a copy of what the site says is discarded. The file
+itself is never attached or stored here.
 """
 import hashlib
 import threading
@@ -54,7 +56,6 @@ def should_alert(result: dict, sender: str = "", is_demo: bool = False, internal
 
 def format_alert(result: dict, source: str, src_tag: str = "", sender: str = "") -> tuple:
     prop = result.get("property") or {}
-    place = ", ".join(p for p in (prop.get("address"), prop.get("city")) if p)
     issues = result.get("issues") or []
     blockers = sum(1 for i in issues if i.get("severity") == "blocker")
     subject = f"Real TC Check upload ({source}): {sender or 'unknown sender'}"
@@ -66,7 +67,6 @@ def format_alert(result: dict, source: str, src_tag: str = "", sender: str = "")
         f"Sender: {sender or 'unknown (no email given)'}",
         f"Recognized: {'yes' if result.get('recognized') else 'no'}",
         f"Issues: {len(issues)} ({blockers} must-fix)",
-        f"Property: {place or '(blank)'}",
     ]
     # 123 Main St is the sample/demo address on every TxtAnOffer asset, so
     # this is most likely one of our own files run without the demo flag.
