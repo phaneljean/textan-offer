@@ -206,8 +206,10 @@ def _check_initials_pair(page_label: str, buyer_boxes: list, seller_boxes: list,
         for ini in filled:
             verdicts = [_initials_match(ini, n) for n in names]
             if verdicts and None not in verdicts and not any(verdicts):
+                # Blocker, not warning: wrong-person initials pass a quick
+                # visual check, so they're worse than a visibly blank box.
                 issues.append({
-                    "severity": "warning",
+                    "severity": "blocker",
                     "message": f'{page_label}: {role} initials "{ini}" don\'t match the {role.lower()} named in Paragraph 1 ({" and ".join(names)})',
                     "key": "initials_mismatch",
                 })
@@ -329,6 +331,11 @@ NOTICE_EMAILS = [("Buyer's notice email (Paragraph 21)", "undefined_2013"),
                  ("Seller's notice email (Paragraph 21)", "undefined numb 2214"),
                  ("Buyer's agent email (Paragraph 21 copy)", "undefined_20"),
                  ("Listing agent email (Paragraph 21 copy)", "undefined numb 22")]
+SPECIAL_PROVISIONS = ["Text3", "Text3 2", "Text3 3"]   # Paragraph 11 lines, page 6 (rect-verified 2026-10-09)
+# Paragraph 11 allows only informational items; money, credits, repairs and
+# conditions are business terms a licensee may not draft there.
+_BUSINESS_TERM_RE = re.compile(r"\$\s*\d|\d\s*%|\b(credit|pay|pays|paid|repair|repairs|replace|concession|contingen\w*|"
+                               r"if buyer|if seller|seller (shall|will|to)|buyer (shall|will|to)|refund|deduct|escrow)\b", re.I)
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[A-Za-z]{2,}$")
 MONTHS = {m: i for i, m in enumerate(["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"], 1)}
 _STREET_ABBR = {"STREET": "ST", "AVENUE": "AVE", "DRIVE": "DR", "ROAD": "RD", "LANE": "LN", "BOULEVARD": "BLVD",
@@ -367,20 +374,40 @@ def _slot(values: dict, pages: dict, key: str) -> str:
     return _text_in_rect(pages[page_no], rect)
 
 
+def _parse_month_day(text: str):
+    """'November 31' / 'Nov. 31st' / '11/31' -> (11, 31); None if unreadable."""
+    t = (text or "").strip().lower().replace(",", " ")
+    m = re.match(r"([a-z]+)\.?\s+(\d{1,2})(?:st|nd|rd|th)?\b", t)
+    if m and m.group(1)[:3] in MONTHS:
+        return MONTHS[m.group(1)[:3]], int(m.group(2))
+    m = re.match(r"(\d{1,2})\s*/\s*(\d{1,2})\b", t)
+    return (int(m.group(1)), int(m.group(2))) if m else None
+
+
+def _year(year_suffix: str):
+    ys = re.sub(r"\D", "", year_suffix or "")
+    return 2000 + int(ys[-2:]) if ys else None
+
+
+def _effective_date(values: dict):
+    """Page 10 'EXECUTED the 8th day of October, 20 26' -> date, else None."""
+    day = re.sub(r"\D", "", values.get(EFFECTIVE_DATE_FIELDS["day"], ""))
+    md = _parse_month_day(f'{values.get(EFFECTIVE_DATE_FIELDS["month"], "")} {day}')
+    year = _year(values.get(EFFECTIVE_DATE_FIELDS["year"], ""))
+    try:
+        return date(year, *md) if md and year else None
+    except ValueError:
+        return None
+
+
 def _closing_date_problem(text: str, year_suffix: str):
     """Message if the 9A date can't exist (e.g. 'November 31'); None if
     fine or unparseable (an unreadable date is not proof of an error)."""
-    t = text.strip().lower().replace(",", " ")
-    m = re.match(r"([a-z]+)\.?\s+(\d{1,2})(?:st|nd|rd|th)?\b", t)
-    if m and m.group(1)[:3] in MONTHS:
-        month, day = MONTHS[m.group(1)[:3]], int(m.group(2))
-    else:
-        m = re.match(r"(\d{1,2})\s*/\s*(\d{1,2})\b", t)
-        if not m:
-            return None
-        month, day = int(m.group(1)), int(m.group(2))
-    ys = re.sub(r"\D", "", year_suffix or "")
-    year = 2000 + int(ys[-2:]) if ys else 2028   # unknown year: use a leap year so Feb 29 isn't flagged
+    md = _parse_month_day(text)
+    if not md:
+        return None
+    month, day = md
+    year = _year(year_suffix) or 2028   # unknown year: use a leap year so Feb 29 isn't flagged
     try:
         date(year, month, day)
         return None
@@ -409,6 +436,23 @@ def _consistency_issues(values: dict, pages: dict) -> list:
         if problem:
             add("blocker", problem, "closing_date_invalid")
 
+    # 9A closing date before the Effective Date
+    md, year = _parse_month_day(closing), _year(_slot(values, pages, "closing_year"))
+    eff = _effective_date(values)
+    if closing and md and year and eff:
+        try:
+            close_on = date(year, *md)
+        except ValueError:
+            close_on = None
+        if close_on and close_on < eff:
+            add("blocker", f"Paragraph 9A: Closing date ({close_on:%B %-d, %Y}) is before the Effective Date "
+                           f"({eff:%B %-d, %Y})", "closing_before_effective")
+
+    # 3B financing entered but 3A cash portion blank
+    if loan and cash is None:
+        add("warning", "Paragraph 3A: Cash portion is blank while 3B financing is filled in -- enter the cash "
+                       "amount (or 0 for 100% financing)", "cash_portion_blank")
+
     # 5B option period days when an option fee is entered
     if values.get(FIELD_MAP["option_fee_amount"], "").strip() and not _slot(values, pages, "option_days"):
         add("blocker", "Paragraph 5B: Option fee is entered but the option period (number of days) is blank", "option_days_blank")
@@ -420,6 +464,12 @@ def _consistency_issues(values: dict, pages: dict) -> list:
         checked = _checked_labels(values, boxes)
         if len(checked) > 1:
             add("blocker", f"{label}: {' and '.join(checked)} are both checked -- only one box is allowed", "check_one_conflict")
+
+    # 7B requires exactly one box; none checked leaves the Seller's
+    # Disclosure terms undefined
+    if not _checked_labels(values, DISCLOSURE_BOXES):
+        add("blocker", "Paragraph 7B (Seller's Disclosure Notice): no box is checked -- one of 7B(1), 7B(2) or 7B(3) is required",
+            "disclosure_box_missing")
 
     # 7B(2) needs its delivery days
     if _is_checked(values, DISCLOSURE_BOXES[1][1]) and not _slot(values, pages, "disclosure_days"):
@@ -458,10 +508,19 @@ def _consistency_issues(values: dict, pages: dict) -> list:
                 continue
             header = values.get(name, "").strip() or _text_in_rect(pages[page_no], HEADER_RECT)
             if not header:
-                add("warning", f"Page {page_no} of 12: \"Address of Property\" header is blank", "header_address")
+                add("warning", f"Page {page_no} of 12: \"Address of Property\" header is blank", "header_address_blank")
             elif _street(header) != street:
                 add("blocker", f'Page {page_no} of 12: header address reads "{header}" but Paragraph 2A says '
                                f'"{values.get(FIELD_MAP["address"], "").strip()}"', "header_address")
+
+    # Paragraph 11 holding business terms (review, not a hard error)
+    provisions = " ".join(values.get(n, "").strip() for n in SPECIAL_PROVISIONS).strip()
+    hit = _BUSINESS_TERM_RE.search(provisions)
+    if hit:
+        snippet = provisions if len(provisions) <= 90 else provisions[:87] + "..."
+        add("warning", f'Paragraph 11 (Special Provisions) reads like a business term ("{snippet}"). Paragraph 11 is for '
+                       f"informational items only; licensees can't draft business terms there -- use a TREC addendum or "
+                       f"have a party or attorney draft it", "special_provisions_business_term")
 
     # Notice emails
     for label, name in NOTICE_EMAILS:
@@ -639,10 +698,20 @@ def check_tc_file(pdf_paths) -> dict:
         if not checked_22:
             issues.append({"severity": "blocker", "message": "Section 22: Third Party Financing Addendum checkbox not checked, but a 40-11 addendum is attached", "key": "addendum_checkbox_mismatch"})
     else:
-        if checked_3b:
-            issues.append({"severity": "blocker", "message": "Section 3B: Third Party Financing Addendum checkbox is checked, but no 40-11 addendum is attached", "key": "addendum_checkbox_mismatch"})
-        if checked_22:
-            issues.append({"severity": "blocker", "message": "Section 22: Third Party Financing Addendum checkbox is checked, but no 40-11 addendum is attached", "key": "addendum_checkbox_mismatch"})
+        # One finding naming every gap, so the agent knows exactly what to fix.
+        if checked_3b and checked_22:
+            msg = ("Third Party Financing is checked in Paragraph 3B and listed in Paragraph 22, "
+                   "but the 40-11 addendum isn't attached")
+        elif checked_3b:
+            msg = ("Third Party Financing is checked in Paragraph 3B, but the 40-11 addendum is neither "
+                   "listed in Paragraph 22 nor attached")
+        elif checked_22:
+            msg = ("Paragraph 22 lists the Third Party Financing Addendum, but it isn't attached and "
+                   "Paragraph 3B financing isn't checked")
+        else:
+            msg = None
+        if msg:
+            issues.append({"severity": "blocker", "message": msg, "key": "financing_addendum_missing"})
 
     # 3. Contract vs. Amendment: price. Only compared when the amendment's
     # OWN price-change section is actually in use (its checkbox checked

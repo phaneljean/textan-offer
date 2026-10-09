@@ -556,6 +556,12 @@ TC_ISSUE_LABELS = {
     "receipt_mismatch": "Page 12 receipt disagrees with 5A",
     "header_address": "Page header address blank or wrong",
     "email_invalid": "Malformed notice email",
+    "header_address_blank": "Page header address blank",
+    "financing_addendum_missing": "Financing checked, 40-11 not attached",
+    "closing_before_effective": "Closing date before Effective Date",
+    "cash_portion_blank": "3A cash portion blank with financing",
+    "disclosure_box_missing": "No 7B Seller's Disclosure box checked",
+    "special_provisions_business_term": "Business term in Paragraph 11",
 }
 
 def get_tc_check_summary(days: int = 30, sender_emails: set = None) -> dict:

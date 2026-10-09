@@ -2118,6 +2118,11 @@ _SMS_SHORT_FIELD_LABELS = {
     "broker_contribution_incomplete": "Broker Contribution",
     "receipt_mismatch": "Receipt Amount",
     "header_address": "Page Header",
+    "header_address_blank": "Page Header",
+    "financing_addendum_missing": "Financing Addendum",
+    "closing_before_effective": "Closing Date",
+    "disclosure_box_missing": "Seller's Disclosure",
+    "initials_mismatch": "Wrong Initials",
 }
 
 
@@ -3246,6 +3251,11 @@ TC_GATE_CATEGORY_LABELS = {
     "broker_contribution_incomplete": "Broker Contribution",
     "receipt_mismatch": "Receipt Amount",
     "header_address": "Page Header Address",
+    "header_address_blank": "Page Header Address",
+    "financing_addendum_missing": "Financing Addendum",
+    "closing_before_effective": "Closing Date",
+    "disclosure_box_missing": "Seller's Disclosure",
+    "initials_mismatch": "Wrong Initials",
 }
 
 

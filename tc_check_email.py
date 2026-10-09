@@ -76,6 +76,12 @@ _CONSEQUENCE_TAGS = {
     "receipt_mismatch": "RECEIPT DISAGREES",
     "header_address": "WRONG ADDRESS ON PAGE",
     "email_invalid": "NOTICES WILL BOUNCE",
+    "header_address_blank": "ADDRESS MISSING ON PAGE",
+    "financing_addendum_missing": "FINANCING ADDENDUM MISSING",
+    "closing_before_effective": "IMPOSSIBLE CLOSING DATE",
+    "cash_portion_blank": "DEAL TERMS INCOMPLETE",
+    "disclosure_box_missing": "DISCLOSURE TERMS UNDEFINED",
+    "special_provisions_business_term": "REVIEW: BUSINESS TERM IN PARA 11",
 }
 
 _UPSELL_URL = "https://txtanoffer.com/brokers?src=report_email"
