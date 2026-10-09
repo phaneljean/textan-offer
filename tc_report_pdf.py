@@ -7,8 +7,11 @@ the property address from Section 2A as the headline, every finding listed
 with its consequence tag (per-page initials already folded into one line by
 the /v1/tc/check response), next steps, the Brokerage archive card, and the
 Brokerage audit card. Takes only the already-computed results the browser
-has -- never re-reads the original TREC file, so this stays consistent with
-"your file is never stored".
+has -- never re-reads the original TREC file. The uploaded PDF only lives
+in a temp file for the seconds the check takes (deleted in app.py's finally
+block), so it isn't available here anyway. Don't describe that as "never
+stored": a temp copy does exist briefly, and the site copy says "checked,
+then deleted -- no copy kept".
 """
 import io
 import os

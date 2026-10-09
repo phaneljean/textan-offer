@@ -1052,7 +1052,7 @@ def index():
         <a class="sl-cta" href="#check" data-evt="hero_cta">Check a file free</a>
         <button type="button" class="sl-cta-secondary" id="heroSampleBtn" data-evt="hero_sample">See a sample report &rarr;</button>
       </div>
-      <div class="sl-hero-note">No signup &middot; Files you check are never stored</div>
+      <div class="sl-hero-note">No signup &middot; Checked, then deleted &mdash; no copy kept</div>
       <div class="sl-hero-phone">On your phone? Forward the contract email to <a href="mailto:tc@check.txtanoffer.com">tc@check.txtanoffer.com</a> &mdash; the report comes back by email.</div>
     </div>
     <div class="sl-hero-photo" role="img" aria-label="A father and daughter painting a room in their new home"></div>
@@ -1073,7 +1073,7 @@ def index():
       </div>
       <input type="file" id="homeFileInput" accept="application/pdf">
       <div class="dz-trust">
-        <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>Not kept unless you archive it</span>
+        <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>Not kept unless your brokerage archives it</span>
         <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Free, no signup</span>
         <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>Results in seconds</span>
       </div>
@@ -1243,7 +1243,7 @@ def index():
       <li><span class="tc-check">&check;</span><span>Get an itemized report back in under a minute: what's blank, what's missing an initial, what disagrees with the addendum.</span></li>
     </ul>
     <div class="secondary-cta" style="margin:1.75rem auto 0;padding-top:1.75rem;max-width:540px;text-align:center;">
-      <div class="secondary-cta-label">Free. No login. Checked files are never stored.</div>
+      <div class="secondary-cta-label">Free. No login. Checked, then deleted &mdash; no copy kept.</div>
       <a href="/tc-check" class="input-btn" style="display:inline-block;text-decoration:none;">Try TC File Check &rarr;</a>
     </div>
   </section>
@@ -1296,7 +1296,7 @@ def index():
       <div class="step-card">
         <div class="step-num">&check;</div>
         <h3>Files you check aren&rsquo;t kept</h3>
-        <p>A contract you upload or forward to TC Check is processed for the report, then discarded. The one exception is on purpose: on the Brokerage plan, contracts your brokerage forwards or uploads to its archive, and offers your agents text in, are kept for your records &mdash; <a href="#records" style="color:var(--accent-dark);text-decoration:underline;">see how that works</a>.</p>
+        <p>A contract you upload or forward to TC Check is processed for the report, then discarded. If you get the report by email, its subject line includes the property address, and for bulk checks we keep each file&rsquo;s name and issue count, viewable at your batch link. The one exception is on purpose: on the Brokerage plan, contracts your brokerage forwards or uploads to its archive, and offers your agents text in, are kept for your records &mdash; <a href="#records" style="color:var(--accent-dark);text-decoration:underline;">see how that works</a>.</p>
       </div>
     </div>
   </section>
@@ -1327,8 +1327,8 @@ def index():
 
   <footer class="footer">
     <div class="trust-badges">
-      <span class="trust-badge">Checked files never stored</span>
-      <span class="trust-badge">Built &amp; run in Texas</span>
+      <span class="trust-badge">Checked, then deleted</span>
+      <span class="trust-badge">Made for Texas TREC forms</span>
       <span class="trust-badge">Billing by Stripe</span>
     </div>
     <div class="footer-links">
@@ -2529,7 +2529,7 @@ DEMO_FORM = """
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Demo — TxtAnOffer</title>
-<meta name="description" content="Generate TREC purchase offers in 10 seconds via text or web. Texas real estate agents save 45 minutes per offer.">
+<meta name="description" content="Generate TREC purchase offers in 10 seconds via text or web. A filled TREC 20-19 from a text message.">
 <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -2817,7 +2817,7 @@ DEMO_FORM = """
   <div class="page">
     <div class="page-badge">Live Demo</div>
     <h1>Get a purchase offer<br><span class="gradient">in 10 seconds.</span></h1>
-    <p class="page-sub">Agents spend up to 45 minutes preparing purchase offers. TxtAnOffer reduces that to under 10 seconds.</p>
+    <p class="page-sub">Preparing a purchase offer by hand takes time. TxtAnOffer drafts one in under 10 seconds.</p>
 
     <div class="workflow">
       <div class="wf-step"><div class="wf-icon">&#9993;</div><div class="wf-title">You type</div><div class="wf-desc">725k 3% 21day<br>1234 Main St</div></div>
@@ -2855,9 +2855,8 @@ DEMO_FORM = """
 
     <div class="trust">
       <div class="trust-item"><div class="trust-val">&lt;10s</div><div class="trust-label">Generation</div></div>
-      <div class="trust-item"><div class="trust-val">45 min</div><div class="trust-label">Saved per offer</div></div>
-      <div class="trust-item"><div class="trust-val">TREC</div><div class="trust-label">20-19 Compliant</div></div>
-      <div class="trust-item"><div class="trust-val">AES-256</div><div class="trust-label">Encrypted at rest</div></div>
+      <div class="trust-item"><div class="trust-val">TREC</div><div class="trust-label">Official 20-19 form</div></div>
+      <div class="trust-item"><div class="trust-val">HTTPS</div><div class="trust-label">Encrypted in transit</div></div>
     </div>
 
     <div class="foot">
@@ -3112,7 +3111,7 @@ def demo():
               <div class="disclaimer">Draft only -- agent must review before signing. TREC NO. 20-19 (mandatory as of {TREC_FORM_CURRENT_AS_OF}).</div>
 
               <div class="share-section">
-                <span class="share-label">Save 45 minutes per offer</span>
+                <span class="share-label">Draft an offer by text</span>
                 <div class="share-buttons">
                   <a href="{twitter_share}" target="_blank" class="share-btn share-twitter">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
@@ -3815,7 +3814,7 @@ border-radius:var(--radius-sm);font-family:inherit;font-size:0.85rem;font-weight
 </div>
 <input type="file" id="fileInput" accept="application/pdf">
 <div class="dz-trust">
-<span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>Not kept unless you archive it</span>
+<span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>Not kept unless your brokerage archives it</span>
 <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Free, no signup</span>
 <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>Results in seconds</span>
 </div>
@@ -3831,7 +3830,7 @@ border-radius:var(--radius-sm);font-family:inherit;font-size:0.85rem;font-weight
 <input type="email" id="emailOptinInput" class="email-optin-input" placeholder="you@example.com" autocomplete="email">
 <div class="email-optin-confirm" id="emailOptinConfirm"></div>
 </div>
-<div class="privacy-note"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Processed instantly and discarded the moment your results are ready &mdash; unless you save it to your brokerage archive.</div>
+<div class="privacy-note"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Your PDF is written to a temporary file, checked, then deleted &mdash; normally within seconds (bulk uploads: when the batch finishes). On the Brokerage plan, contracts forwarded from your brokerage&rsquo;s emails go to its archive (on by default; the brokerage can turn it off).</div>
 <div class="status" id="status"></div>
 <div class="result" id="result"></div>
 </div>
@@ -4104,7 +4103,7 @@ function buildEmailReportAsk(left) {
     '<p class="gate-headline">Want this report in your inbox?</p>' +
     '<div class="gate-form"><input type="email" id="gateEmailInput" placeholder="work email" autocomplete="email" onkeydown="if(event.key===\\'Enter\\')unlockGate()"><button type="button" onclick="unlockGate()">Email me this report</button></div>' +
     '<div class="gate-error" id="gateError"></div>' +
-    '<div class="gate-note">' + leftText + ' Your file is never stored.</div>' +
+    '<div class="gate-note">' + leftText + ' Your file is deleted after the check.</div>' +
   '</div>';
 }
 
@@ -4192,7 +4191,7 @@ function renderResult(data, file, isDemo) {
     html += '<div class="gate-box">';
     html += '<div class="gate-shield">&#128737; Secure Audit Report</div>';
     html += '<p class="gate-headline">' + gateHeadline + '</p>';
-    html += '<p class="gate-sub">You&rsquo;ve used your free full reports on this browser. Enter your email to see the exact pages and lines &mdash; your file is never stored.</p>';
+    html += '<p class="gate-sub">You&rsquo;ve used your free full reports on this browser. Enter your email to see the exact pages and lines &mdash; your file is deleted after the check.</p>';
     html += '<div class="gate-form"><input type="email" id="gateEmailInput" placeholder="work email" autocomplete="email" onkeydown="if(event.key===\\'Enter\\')unlockGate()"><button type="button" onclick="unlockGate()">See my bounce report</button></div>';
     html += '<div class="gate-error" id="gateError"></div>';
     if (data.social_proof) {
@@ -5405,7 +5404,7 @@ def pricing():
     </div>
     <div class="value-card">
       <div class="value-title">Do you keep my client&rsquo;s file?</div>
-      <div class="value-text">No. A file you check is deleted right after your report. The one exception is on purpose: on the Brokerage plan, contracts you forward or upload to your archive, and offers your agents text in, are kept 5 years for your records.</div>
+      <div class="value-text">No. A file you check is deleted right after your report. If you get the report by email, its subject line includes the property address, and for bulk checks we keep each file&rsquo;s name and issue count, viewable at your batch link. The one exception is on purpose: on the Brokerage plan, contracts you forward or upload to your archive, and offers your agents text in, are kept 5 years for your records.</div>
     </div>
     <div class="value-card">
       <div class="value-title">Can I cancel?</div>
@@ -7290,7 +7289,11 @@ def privacy():
     <ul>
       <li><strong>Twilio</strong> — SMS delivery (phone number, message content)</li>
       <li><strong>Stripe</strong> — Payment processing (billing details)</li>
-      <li><strong>Railway (hosted on Google Cloud Platform)</strong> — Infrastructure provider, SOC 2 Type II certified. All data encrypted in transit (TLS 1.3) and at rest (AES-256). US region only.</li>
+      <li><strong>Railway</strong> — Hosting provider; our app server and database run there</li>
+      <li><strong>SendGrid</strong> — Inbound email: receives emails (and attached contracts) forwarded to tc@check.txtanoffer.com; also our backup outbound email provider</li>
+      <li><strong>DocuSign</strong> — E-signature: when you send an offer for signature, the PDF and the signers&rsquo; names and emails</li>
+      <li><strong>Your webhook</strong> — If you set up a webhook (e.g. Zapier), offer data is sent to the URL you choose</li>
+      <li><strong>Resend</strong> — Outbound email: sends TC Check report emails (your email address, the property address and the findings), offer emails with the generated PDF, and account notifications</li>
     </ul>
     <p>We may disclose information if required by law, legal process, or to protect the rights and safety of our users or the public.</p>
 
@@ -7298,7 +7301,9 @@ def privacy():
     <ul>
       <li>Generated PDFs: on the free trial, stored for download and deleted after 30 days; on a paid plan, kept 5 years in your dashboard</li>
       <li>Brokerage plan: offers and amendments drafted by an agent linked to a brokerage are kept for 5 years from creation while the agent stays linked, viewable and exportable by that brokerage</li>
-      <li>Brokerage contract archive: executed contracts a brokerage forwards from a linked email or uploads while signed in are stored for 5 years from when they are added (or until the brokerage deletes them), visible only to that brokerage's signed-in users, and exportable anytime. Files checked outside the archive are still deleted right after the report.</li>
+      <li>Brokerage contract archive: executed contracts a brokerage forwards from a linked email or uploads while signed in are stored for 5 years from when they are added (or until the brokerage deletes them), visible only to that brokerage's signed-in users, and exportable anytime. Files checked outside the archive are still deleted after the check (bulk uploads: when the batch finishes).</li>
+      <li>TC Check records: for each check we keep a record (your email if you gave one, and short issue codes &mdash; not the file, the property address or the form contents). Records older than 90 days are removed by an automatic cleanup that doesn&rsquo;t run on a fixed schedule, so some may last longer than 90 days. We also keep a per-browser count of free checks (a random browser ID and your email if you gave one) with no set expiry.</li>
+      <li>TC Check bulk uploads: we keep your email, the number of files, and each file&rsquo;s original filename, whether it was recognized, its issue count and up to 10 issue messages, with no set expiry. Anyone with the batch results link can view them.</li>
       <li>Account data: retained while your account is active and for 90 days after cancellation</li>
       <li>Billing records: retained as required by applicable tax and accounting laws</li>
       <li>SMS logs: retained for 90 days for support and debugging purposes</li>
@@ -7308,10 +7313,9 @@ def privacy():
     <h2>6. Data Security</h2>
     <p>We implement reasonable technical and organizational measures to protect your data:</p>
     <ul>
-      <li><strong>Encryption in transit:</strong> TLS 1.3 on all connections</li>
-      <li><strong>Encryption at rest:</strong> AES-256 via Google Cloud Platform infrastructure</li>
-      <li><strong>Infrastructure:</strong> Railway (SOC 2 Type II certified), running on GCP (SOC 2, ISO 27001)</li>
-      <li><strong>Access controls:</strong> No human access to offer content — all processing is automated</li>
+      <li><strong>Encryption in transit:</strong> the site is served over HTTPS</li>
+      <li><strong>Infrastructure:</strong> hosted on Railway</li>
+      <li><strong>Access:</strong> processing is automated; TxtAnOffer&rsquo;s founder can access stored data for support and debugging</li>
       <li><strong>Payment data:</strong> Handled exclusively by Stripe (PCI DSS Level 1); card numbers never touch our servers</li>
     </ul>
     <p>No method of transmission over the internet is 100% secure, and we cannot guarantee absolute security.</p>
@@ -8246,9 +8250,9 @@ def about():
 
     <p>I'm not a real estate agent &mdash; I'm a software builder with a passion for solving real problems with simple tools. TxtAnOffer started after a conversation with a Texas REALTOR who walked me through what a bad day actually looks like: standing in a driveway or sitting in a parking lot, laptop open, manually filling 40+ fields on a TREC 20-19 while a buyer waits, because in Texas real estate the agent who gets their offer in first often gets the house.</p>
 
-    <p>That 45 minutes costs deals. So I built a way to skip it. TxtAnOffer turns what used to take a laptop and 45 minutes into a text message and 10 seconds.</p>
+    <p>That time costs deals. So I built a way to skip it. TxtAnOffer turns what used to take a laptop into a text message and about 10 seconds.</p>
 
-    <p><strong>That solved the first 45 minutes. It didn't solve what happens next.</strong> The more I dug into how Texas files actually close, the clearer it got: the real risk in a Texas contract isn't how fast it gets written &mdash; it's what's still blank or mismatched by the time it reaches title. A missing initial. An Effective Date nobody filled in. A 40-11 that disagrees with the contract it's attached to. That's not a speed problem, it's a review problem, and it can happen on any file &mdash; not just the ones typed from a phone.</p>
+    <p><strong>That solved the drafting. It didn't solve what happens next.</strong> The more I dug into how Texas files actually close, the clearer it got: the real risk in a Texas contract isn't how fast it gets written &mdash; it's what's still blank or mismatched by the time it reaches title. A missing initial. An Effective Date nobody filled in. A 40-11 that disagrees with the contract it's attached to. That's not a speed problem, it's a review problem, and it can happen on any file &mdash; not just the ones typed from a phone.</p>
 
     <p>So TxtAnOffer became two things. <strong>Create</strong> an offer by text in seconds &mdash; still here, free to start. And <strong>Check</strong> any TREC 20-19 for exactly what's missing before title finds it &mdash; free, no login, just drop it on the site. Brokerages and TC teams that want every file checked automatically, across their whole roster, get the Brokerage Dashboard.</p>
 
@@ -9245,7 +9249,7 @@ _ARCHIVE_EA_PAGE = """<!DOCTYPE html>
     <li>Private to your brokerage, export everything anytime</li>
   </ul>
   __FORM__
-  <p class="note">Included in the Brokerage plan. Files checked outside your archive are still deleted right after the report. TxtAnOffer is not affiliated with TREC. <a href="/" style="color:var(--green);">txtanoffer.com</a></p>
+  <p class="note">Included in the Brokerage plan. Files checked outside your archive are still deleted after the check (bulk uploads: when the batch finishes). TxtAnOffer is not affiliated with TREC. <a href="/" style="color:var(--green);">txtanoffer.com</a></p>
 </main>
 </body>
 </html>"""
