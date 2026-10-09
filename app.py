@@ -3868,17 +3868,22 @@ border-radius:var(--radius-sm);font-family:inherit;font-size:0.85rem;font-weight
 <h3>What this checks</h3>
 <div class="scope-grid">
 <ul>
-<li>Property address, county</li>
+<li>Property address, county &mdash; and the address header on every page</li>
 <li>Buyer &amp; Seller legal name</li>
-<li>Earnest money, option fee</li>
+<li>Earnest money, option fee, option period days</li>
 <li>Escrow agent, title company</li>
-<li>Effective Date</li>
-<li>Buyer/Seller initials on every page that requires them</li>
-<li>40-11 addendum loan amount matches the contract</li>
-<li>Third Party Financing checkboxes agree with whether an addendum is attached</li>
+<li>Effective Date, and a closing date that's real and after it</li>
+<li>Initials on pages 1&ndash;9: one per buyer and seller, from the right person</li>
+<li>Sales price math: 3A + 3B = 3C</li>
+<li>&ldquo;Check one box only&rdquo; conflicts (survey, Seller&rsquo;s Disclosure, As Is, possession, owners association)</li>
+<li>Seller&rsquo;s Disclosure delivery days and 12B broker contributions filled in</li>
+<li>Page 12 receipts match the option fee and earnest money</li>
+<li>40-11 addendum loan amount, and Third Party Financing listed and attached</li>
+<li>Business terms written into Special Provisions (Paragraph 11)</li>
+<li>Notice email addresses that would bounce</li>
 </ul>
 <ul class="not-checked">
-<li>Earnest-money receipts</li>
+<li>Signatures on pages 10&ndash;11</li>
 <li>Scanned or flattened PDFs</li>
 </ul>
 </div>
