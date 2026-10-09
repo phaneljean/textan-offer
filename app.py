@@ -148,9 +148,9 @@ def require_api_auth():
 
 
 import re
-# "What brings you here?" self-ID card (added 2026-10-06). An audience
-# test, not a feature: is the traffic actually TCs/brokers, or agents,
-# investors and lookers? Order here is the order shown on the card.
+# "What brings you here?" self-ID card (added 2026-10-06, removed
+# 2026-10-09: shown to 14 real browsers, 0 answered). The card is gone;
+# these keys stay so the /analytics panel keeps showing its results.
 _VISITOR_ROLES = ("tc", "agent", "broker", "investor", "browsing")
 
 _BOT_UA_RE = re.compile(
@@ -203,37 +203,8 @@ _ENGAGEMENT_JS = """<script>
     if(!document.hidden) visibleMs += now - last;
     last = now;
     if(visibleMs >= 10000) evt('stay_10s');
-    if(visibleMs >= 4000) askRole();
     if(visibleMs >= 60000){ evt('stay_60s'); clearInterval(tick); }
   }, 1000);
-  // Optional one-tap "What brings you here?" card. Once answered or
-  // closed it never comes back in this browser.
-  var asked = false;
-  function seen(){ try{ return localStorage.getItem('ta_role'); }catch(e){ return null; } }
-  function remember(v){ try{ localStorage.setItem('ta_role', v); }catch(e){} }
-  function askRole(){
-    if(asked) return; asked = true;
-    if(seen()) return;
-    var roles = [['tc','Transaction Coordinator'],['agent','Real Estate Agent'],['broker','Broker'],['investor','Investor'],['browsing','Just checking it out']];
-    var box = document.createElement('div');
-    box.setAttribute('role', 'dialog'); box.setAttribute('aria-label', 'What brings you here?');
-    box.style.cssText = 'position:fixed;right:16px;bottom:16px;left:auto;z-index:9999;width:320px;max-width:calc(100vw - 32px);background:#fff;color:#0f1f2f;border:1px solid rgba(15,31,47,0.12);border-radius:14px;box-shadow:0 10px 30px rgba(15,31,47,0.18);padding:14px 14px 10px;font:14px/1.4 Inter,-apple-system,sans-serif;';
-    var html = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><strong style="font-size:15px;">What brings you here?</strong>'
-      + '<button type="button" data-x="1" aria-label="Close" style="border:0;background:none;font-size:20px;line-height:1;color:#8a9aa9;cursor:pointer;padding:2px 6px;">&times;</button></div>'
-      + '<div style="color:#5a6b7a;font-size:12px;margin-bottom:8px;">Optional, one tap. I&rsquo;m a&hellip;</div>';
-    for(var i=0;i<roles.length;i++){
-      html += '<button type="button" data-r="' + roles[i][0] + '" style="display:inline-block;margin:0 6px 6px 0;padding:7px 11px;border:1px solid rgba(15,31,47,0.12);border-radius:999px;background:#F5F5F7;color:#0f1f2f;font:inherit;cursor:pointer;">' + roles[i][1] + '</button>';
-    }
-    box.innerHTML = html;
-    box.addEventListener('click', function(e){
-      var b = e.target.closest && e.target.closest('button'); if(!b) return;
-      var r = b.getAttribute('data-r');
-      if(r){ evt('role_' + r); remember(r); box.innerHTML = '<div style="padding:4px 2px;">Thanks!</div>'; setTimeout(function(){ box.remove(); }, 1200); }
-      else if(b.getAttribute('data-x')){ evt('role_dismissed'); remember('dismissed'); box.remove(); }
-    });
-    document.body.appendChild(box);
-    evt('role_shown');
-  }
 })();
 </script>"""
 
