@@ -1328,7 +1328,7 @@ def index():
   <footer class="footer">
     <div class="trust-badges">
       <span class="trust-badge">Checked, then deleted</span>
-      <span class="trust-badge">Built &amp; run in Texas</span>
+      <span class="trust-badge">Made for Texas TREC forms</span>
       <span class="trust-badge">Billing by Stripe</span>
     </div>
     <div class="footer-links">
@@ -2529,7 +2529,7 @@ DEMO_FORM = """
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Demo — TxtAnOffer</title>
-<meta name="description" content="Generate TREC purchase offers in 10 seconds via text or web. Texas real estate agents save 45 minutes per offer.">
+<meta name="description" content="Generate TREC purchase offers in 10 seconds via text or web. A filled TREC 20-19 from a text message.">
 <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -2817,7 +2817,7 @@ DEMO_FORM = """
   <div class="page">
     <div class="page-badge">Live Demo</div>
     <h1>Get a purchase offer<br><span class="gradient">in 10 seconds.</span></h1>
-    <p class="page-sub">Agents spend up to 45 minutes preparing purchase offers. TxtAnOffer reduces that to under 10 seconds.</p>
+    <p class="page-sub">Preparing a purchase offer by hand takes time. TxtAnOffer drafts one in under 10 seconds.</p>
 
     <div class="workflow">
       <div class="wf-step"><div class="wf-icon">&#9993;</div><div class="wf-title">You type</div><div class="wf-desc">725k 3% 21day<br>1234 Main St</div></div>
@@ -2855,9 +2855,8 @@ DEMO_FORM = """
 
     <div class="trust">
       <div class="trust-item"><div class="trust-val">&lt;10s</div><div class="trust-label">Generation</div></div>
-      <div class="trust-item"><div class="trust-val">45 min</div><div class="trust-label">Saved per offer</div></div>
-      <div class="trust-item"><div class="trust-val">TREC</div><div class="trust-label">20-19 Compliant</div></div>
-      <div class="trust-item"><div class="trust-val">AES-256</div><div class="trust-label">Encrypted at rest</div></div>
+      <div class="trust-item"><div class="trust-val">TREC</div><div class="trust-label">Official 20-19 form</div></div>
+      <div class="trust-item"><div class="trust-val">HTTPS</div><div class="trust-label">Encrypted in transit</div></div>
     </div>
 
     <div class="foot">
@@ -3112,7 +3111,7 @@ def demo():
               <div class="disclaimer">Draft only -- agent must review before signing. TREC NO. 20-19 (mandatory as of {TREC_FORM_CURRENT_AS_OF}).</div>
 
               <div class="share-section">
-                <span class="share-label">Save 45 minutes per offer</span>
+                <span class="share-label">Draft an offer by text</span>
                 <div class="share-buttons">
                   <a href="{twitter_share}" target="_blank" class="share-btn share-twitter">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
@@ -7292,6 +7291,8 @@ def privacy():
       <li><strong>Stripe</strong> — Payment processing (billing details)</li>
       <li><strong>Railway</strong> — Hosting provider; our app server and database run there</li>
       <li><strong>SendGrid</strong> — Inbound email: receives emails (and attached contracts) forwarded to tc@check.txtanoffer.com; also our backup outbound email provider</li>
+      <li><strong>DocuSign</strong> — E-signature: when you send an offer for signature, the PDF and the signers&rsquo; names and emails</li>
+      <li><strong>Your webhook</strong> — If you set up a webhook (e.g. Zapier), offer data is sent to the URL you choose</li>
       <li><strong>Resend</strong> — Outbound email: sends TC Check report emails (your email address, the property address and the findings), offer emails with the generated PDF, and account notifications</li>
     </ul>
     <p>We may disclose information if required by law, legal process, or to protect the rights and safety of our users or the public.</p>
@@ -7314,7 +7315,7 @@ def privacy():
     <ul>
       <li><strong>Encryption in transit:</strong> the site is served over HTTPS</li>
       <li><strong>Infrastructure:</strong> hosted on Railway</li>
-      <li><strong>Access controls:</strong> No human access to offer content — all processing is automated</li>
+      <li><strong>Access:</strong> processing is automated; TxtAnOffer&rsquo;s founder can access stored data for support and debugging</li>
       <li><strong>Payment data:</strong> Handled exclusively by Stripe (PCI DSS Level 1); card numbers never touch our servers</li>
     </ul>
     <p>No method of transmission over the internet is 100% secure, and we cannot guarantee absolute security.</p>
@@ -8249,9 +8250,9 @@ def about():
 
     <p>I'm not a real estate agent &mdash; I'm a software builder with a passion for solving real problems with simple tools. TxtAnOffer started after a conversation with a Texas REALTOR who walked me through what a bad day actually looks like: standing in a driveway or sitting in a parking lot, laptop open, manually filling 40+ fields on a TREC 20-19 while a buyer waits, because in Texas real estate the agent who gets their offer in first often gets the house.</p>
 
-    <p>That 45 minutes costs deals. So I built a way to skip it. TxtAnOffer turns what used to take a laptop and 45 minutes into a text message and 10 seconds.</p>
+    <p>That time costs deals. So I built a way to skip it. TxtAnOffer turns what used to take a laptop into a text message and about 10 seconds.</p>
 
-    <p><strong>That solved the first 45 minutes. It didn't solve what happens next.</strong> The more I dug into how Texas files actually close, the clearer it got: the real risk in a Texas contract isn't how fast it gets written &mdash; it's what's still blank or mismatched by the time it reaches title. A missing initial. An Effective Date nobody filled in. A 40-11 that disagrees with the contract it's attached to. That's not a speed problem, it's a review problem, and it can happen on any file &mdash; not just the ones typed from a phone.</p>
+    <p><strong>That solved the drafting. It didn't solve what happens next.</strong> The more I dug into how Texas files actually close, the clearer it got: the real risk in a Texas contract isn't how fast it gets written &mdash; it's what's still blank or mismatched by the time it reaches title. A missing initial. An Effective Date nobody filled in. A 40-11 that disagrees with the contract it's attached to. That's not a speed problem, it's a review problem, and it can happen on any file &mdash; not just the ones typed from a phone.</p>
 
     <p>So TxtAnOffer became two things. <strong>Create</strong> an offer by text in seconds &mdash; still here, free to start. And <strong>Check</strong> any TREC 20-19 for exactly what's missing before title finds it &mdash; free, no login, just drop it on the site. Brokerages and TC teams that want every file checked automatically, across their whole roster, get the Brokerage Dashboard.</p>
 
@@ -9248,7 +9249,7 @@ _ARCHIVE_EA_PAGE = """<!DOCTYPE html>
     <li>Private to your brokerage, export everything anytime</li>
   </ul>
   __FORM__
-  <p class="note">Included in the Brokerage plan. Files checked outside your archive are still deleted right after the report. TxtAnOffer is not affiliated with TREC. <a href="/" style="color:var(--green);">txtanoffer.com</a></p>
+  <p class="note">Included in the Brokerage plan. Files checked outside your archive are still deleted after the check (bulk uploads: when the batch finishes). TxtAnOffer is not affiliated with TREC. <a href="/" style="color:var(--green);">txtanoffer.com</a></p>
 </main>
 </body>
 </html>"""
