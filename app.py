@@ -32,6 +32,7 @@ from pdf_validator import validate_offer_pdf
 from amendment import fill_amendment_pdf
 from agent_profiles import get_agent_profile, save_agent_profile, find_by_email, get_emails_for_phones
 from subscriptions import can_generate_offer, increment_offer_count, activate_subscription, deactivate_subscription, get_user, create_user, FREE_OFFER_LIMIT, is_admin_phone, has_professional_access
+from analytics import _is_internal_traffic
 from analytics import track_event, get_conversion_metrics, get_revenue_metrics, get_recent_sms, get_recent_sms_failures, get_last_blocked_state, get_waitlist_signups, get_signups_by_source, get_signup_details, get_landing_visits_by_source, get_tc_check_summary, get_recent_tc_check_email_senders, get_tc_check_count_for_sender, get_tc_check_repeat_senders, get_tc_check_bulk_summary, get_tc_check_attempts_by_source, get_tc_check_attempts_by_page, get_brokerage_alert_delivery, get_daily_funnel, get_top_referrers, set_internal_visitor, get_visitor_roles, get_engagement_by_device, get_recent_email_send_failures, get_recent_visitors, get_archive_early_access
 from integrations import send_offer_email, fire_webhook, save_webhook, get_webhook, delete_webhook, send_to_docusign, send_plain_email, send_html_email
 from offers_db import record_offer, get_offers_for_phone, get_offer_by_filename, record_amendment, get_amendments_for_phone, record_thread_response, record_email_sent, record_docusign_sent
@@ -49,6 +50,7 @@ from drafts import save_draft, get_draft, clear_draft
 from tc_audit import check_tc_file, compare_contracts
 from tc_report_pdf import generate_tc_report_pdf
 from rate_limit import check_and_increment
+from real_upload_alert import maybe_send_alert as maybe_send_real_upload_alert
 from tc_gate import get_client as get_tc_client, record_use as record_tc_use, save_email as save_tc_email
 from tc_nudge import run_followup_if_due as run_tc_followup_if_due
 from tc_check_email import (
@@ -3371,6 +3373,12 @@ def tc_check():
             "visitor": request.cookies.get("ta_vid", ""),
         })
 
+    # Email Phanel when this is a real outside filled 20-19 (see
+    # real_upload_alert.py for exactly what's excluded). Metadata only.
+    maybe_send_real_upload_alert(
+        result, f"web upload ({source_page})", src_tag=request.cookies.get("ta_src") or "direct",
+        sender=client["email"] or submitted_email, is_demo=is_demo, internal=_is_internal_traffic())
+
     payload = dict(result)
     full_issues = payload.get("issues") or []
     payload["issue_count"] = len(full_issues)
@@ -3569,6 +3577,7 @@ def tc_check_email_inbound(token):
         "known_sender": known_agent is not None,
         "sender": sender,
     })
+    maybe_send_real_upload_alert(result, "email forward", src_tag="email", sender=sender)
 
     # Brokerage archive (2026-10-07): a forward from a brokerage's own TC/
     # login email or a roster agent is kept, not just checked -- unless the
