@@ -90,6 +90,14 @@ class PlantedErrors(unittest.TestCase):
         self.has("special_provisions_business_term", "$5,000")
 
 
+class DemoSample(unittest.TestCase):
+    def test_demo_sample_shows_the_range(self):
+        # static/sample_trec_20-19.pdf is the "Run a sample check" file on the
+        # homepage and /tc-check: the planted-errors contract at 123 Main St.
+        r = check_tc_file([os.path.join(HERE, "..", "static", "sample_trec_20-19.pdf")])
+        self.assertGreaterEqual(len(set(keys(r))), 14)
+
+
 class CleanControl(unittest.TestCase):
     def test_clean_file_has_no_issues(self):
         r = check_tc_file([CLEAN, CLEAN_FA])

@@ -1416,7 +1416,7 @@ def index():
     demoBtn.addEventListener('click', function(){
       demoBtn.disabled = true;
       demoBtn.textContent = 'Checking the sample\u2026';
-      fetch('/static/sample_trec_20-19.pdf')
+      fetch('/static/sample_trec_20-19.pdf?v=2026-10-09')
         .then(function(r){ return r.blob(); })
         .then(function(blob){
           uploadFile(new File([blob], 'sample_trec_20-19.pdf', {type:'application/pdf'}), true);
@@ -1537,7 +1537,7 @@ def index():
     var totalIssues = typeof data.issue_count === 'number' ? data.issue_count : issues.length;
     var html = '';
     if(isDemo){
-      html += '<div class="demo-banner">Demo result &mdash; sample contract, not your file.</div>';
+      html += '<div class="demo-banner">Demo result &mdash; a sample contract with planted mistakes, not your file.</div>';
     }
     if(data.complete){
       html += '<div class="result-banner complete">All checked fields are filled in.</div>';
@@ -3929,7 +3929,7 @@ if (demoBtn) {
   demoBtn.addEventListener('click', () => {
     demoBtn.disabled = true;
     demoBtn.textContent = 'Checking the sample\u2026';
-    fetch('/static/sample_trec_20-19.pdf')
+    fetch('/static/sample_trec_20-19.pdf?v=2026-10-09')
       .then(r => r.blob())
       .then(blob => {
         uploadFile(new File([blob], 'sample_trec_20-19.pdf', {type: 'application/pdf'}), '', true);
@@ -4160,7 +4160,7 @@ function buildReportHead(data) {
 function renderResult(data, file, isDemo) {
   const issues = (data.display_issues && data.display_issues.length) ? data.display_issues : (data.issues || []);
   const totalIssues = typeof data.issue_count === 'number' ? data.issue_count : issues.length;
-  let html = isDemo ? '<div class="demo-banner">Demo result &mdash; sample contract, not your file.</div>' : '';
+  let html = isDemo ? '<div class="demo-banner">Demo result &mdash; a sample contract with planted mistakes, not your file.</div>' : '';
   html += buildReportHead(data);
   html += buildMetaBar(data, file);
 
