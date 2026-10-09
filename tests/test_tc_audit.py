@@ -114,6 +114,40 @@ class CleanControl(unittest.TestCase):
         r = variant(initials={6: ["JD", "MD", "JS", "KL"]})
         self.assertEqual(keys(r), ["initials_mismatch"])
 
+    # Paragraph 1 wording Texas files really use. Each one used to raise
+    # 10-20 false "initials_mismatch" blockers on a correct file.
+    BUYER = "Seller and"
+    SELLER = "1 PARTIES The parties to this contract are"
+
+    def test_and_wife_wording_is_clean(self):
+        self.assertEqual(keys(variant(text={self.BUYER: "John Doe and wife, Mary Doe"})), [])
+
+    def test_married_couple_wording_is_clean(self):
+        self.assertEqual(keys(variant(text={self.BUYER: "John Doe and Mary Doe, a married couple"})), [])
+
+    def test_single_woman_wording_is_clean(self):
+        # One seller, so seller2 boxes are blank on the contract. The 40-11
+        # fixture still carries seller2 "MS", which is a real mismatch
+        # against a lone "Jane Smith" -- so only the contract's own pages
+        # are asserted here.
+        r = variant(text={self.SELLER: "Jane Smith, a single woman"},
+                    initials={i: ["JD", "MD", "JS", ""] for i in range(9)})
+        contract = [i["key"] for i in r["issues"] if not i["message"].startswith("40-11 addendum")]
+        self.assertEqual(contract, [])
+
+    def test_hyphenated_surname_is_clean(self):
+        r = variant(text={self.BUYER: "John Doe and Mary Smith-Doe"},
+                    initials={0: ["JD", "MSD", "JS", "MS"]})
+        self.assertEqual(keys(r), [])
+
+    def test_last_first_order_is_clean(self):
+        self.assertEqual(keys(variant(text={self.SELLER: "Smith, Jane and Smith, Mark"})), [])
+
+    def test_wrong_initials_still_fire_with_and_wife(self):
+        r = variant(text={self.BUYER: "John Doe and wife, Mary Doe"},
+                    initials={6: ["JD", "KL", "JS", "MS"]})
+        self.assertEqual(keys(r), ["initials_mismatch"])
+
     def test_closing_before_effective(self):
         self.assertEqual(keys(variant(text={"A The closing of the sale will be on or before": "October 1"})),
                          ["closing_before_effective"])

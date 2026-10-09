@@ -172,22 +172,65 @@ _ENTITY_WORDS = re.compile(r"\b(LLC|L\.L\.C|INC|CORP|CORPORATION|COMPANY|CO|LP|L
 _NAME_SUFFIXES = {"JR", "SR", "II", "III", "IV"}
 
 
+# Texas Paragraph 1 names routinely carry marital/capacity wording ("John
+# Doe and wife, Mary Doe", "Jane Smith, a single woman"). Left in, that
+# wording becomes the "first"/"last" name and correct initials get flagged
+# as a must-fix (live 2026-10-09 to 10-13). Stripped from the whole string
+# before splitting on " and " ("husband and wife" contains one) and again
+# from each part, so "Jane Smith, a single woman and John Doe, a single
+# man" also cleans up.
+_TRAILING_DESCRIPTOR = re.compile(
+    r",?\s*\b(husband and wife|wife and husband|a married couple|married couple|spouses"
+    r"|a married (man|woman|person)|an? (single|unmarried) (man|woman|person)|individually)\b\.?\s*$",
+    re.I)
+_LEADING_SPOUSE = re.compile(r"^(wife|husband|spouse)\s*,?\s+", re.I)
+# Lowercase words that are part of a real surname ("Mary de la Cruz").
+# Any other lowercase word means leftover wording we don't understand.
+_SURNAME_PARTICLES = {"de", "del", "la", "van", "von", "da", "di", "du", "le", "st"}
+
+
+def _strip_descriptor(text: str) -> str:
+    return _TRAILING_DESCRIPTOR.sub("", text).strip(" ,")
+
+
 def _party_names(raw: str) -> list:
-    """'John Doe and Mary Doe' -> ['John Doe', 'Mary Doe']. Blank -> []."""
-    parts = re.split(r"\s+and\s+|\s*&\s*|\s*;\s*|\s*/\s*", (raw or "").strip(), flags=re.I)
-    return [p.strip(" ,") for p in parts if p.strip(" ,")]
+    """'John Doe and Mary Doe' -> ['John Doe', 'Mary Doe']. Blank -> [].
+    Marital/capacity wording is dropped: 'John Doe and wife, Mary Doe' ->
+    ['John Doe', 'Mary Doe']."""
+    cleaned = _strip_descriptor((raw or "").strip())
+    parts = re.split(r"\s+and\s+|\s*&\s*|\s*;\s*|\s*/\s*", cleaned, flags=re.I)
+    names = []
+    for p in parts:
+        p = _strip_descriptor(_LEADING_SPOUSE.sub("", p.strip(" ,")))
+        if p:
+            names.append(p)
+    return names
 
 
 def _initials_match(initials: str, name: str):
     """True/False for a person's name; None when it can't be judged (an
-    entity like 'ABC Homes LLC' is initialed by whoever signs for it)."""
+    entity like 'ABC Homes LLC' is initialed by whoever signs for it).
+    A missed mismatch beats a false must-fix, so anything unusual --
+    'Smith, Jane' order, 'et ux', stray lowercase wording -- is None."""
     if _ENTITY_WORDS.search(name):
         return None
+    # ", Jr." is the one comma that's still a plain First Last name.
+    name = re.sub(r",\s*(jr|sr|ii|iii|iv)\b\.?", "", name, flags=re.I)
+    if "," in name or re.search(r"\bet\.?\s+(ux|al|vir)\b", name, re.I):
+        return None
     words = [w for w in re.findall(r"[A-Za-z][A-Za-z'.-]*", name) if w.upper().strip(".") not in _NAME_SUFFIXES]
+    if any(w[0].islower() and w.lower().strip(".") not in _SURNAME_PARTICLES for w in words):
+        return None
     letters = re.sub(r"[^A-Za-z]", "", initials).upper()
     if len(words) < 2 or len(letters) < 2:
         return None
-    return letters[0] == words[0][0].upper() and letters[-1] == words[-1][0].upper()
+    # The surname may be compound ("de la Cruz", "Smith-Doe"): the last
+    # initial may be the first letter of any particle or hyphen part.
+    i = len(words) - 1
+    while i > 1 and words[i - 1].lower().strip(".") in _SURNAME_PARTICLES:
+        i -= 1
+    surname_starts = {part[0].upper() for w in words[i:] for part in w.split("-") if part}
+    return letters[0] == words[0][0].upper() and letters[-1] in surname_starts
 
 
 def _check_initials_pair(page_label: str, buyer_boxes: list, seller_boxes: list,
