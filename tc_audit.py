@@ -11,12 +11,16 @@ truth to check it against here. v1 is therefore internal-consistency-only:
 did the fields this app has already rect-verified (see pdf_filler.py's
 FIELD_MAP comments) actually get filled in.
 
-Only fields with a confirmed on-page position are checked. Effective Date,
-per-page initials, cross-document (addendum) checks, and earnest-money
-receipts are all explicitly OUT of scope for v1 -- their field mapping has
-never been rect-verified, and a wrong "complete" signal on an unverified
-field is worse than no signal at all (see CLAUDE.md / QA_SPEC.md: TREC's
-auto-generated field /T names routinely lie about their on-page position).
+Only fields with a confirmed on-page position are checked. Since 2026-10-09
+that includes per-page initials (found by position, one per party),
+Paragraph 3 price math, the 9A closing date, option-period days,
+"check one box only" conflicts, 12B broker contributions, page-12
+receipts, page header addresses and Paragraph 21 notice emails -- all
+rect-verified by rendering a filled test file (see _consistency_issues).
+Earlier comments in this file saying closing date and option period have
+NO AcroForm field were wrong: both fields exist. This app's own generator
+leaves them empty and draws the value as an overlay, so those checks read
+"field value, else text drawn inside the field's box".
 
 v1 also assumes the uploaded PDF is AcroForm-fillable (not a flattened scan)
 and was filled using field names matching this app's own 20-19_2.pdf
@@ -26,6 +30,7 @@ present in the uploaded file, this reports the file as unrecognized rather
 than claiming everything on it is "missing".
 """
 import re
+from datetime import date
 from pypdf import PdfReader
 from pdf_validator import _read_values, _is_checked, _money_to_int
 from pdf_filler import FIELD_MAP
@@ -94,24 +99,17 @@ EFFECTIVE_DATE_FIELDS = {
     "year": "20_2",
 }
 
-# Initials-for-identification quads -- 4 raw fields per page (Buyer1, Buyer2,
-# Seller1, Seller2), rect-verified 2026-08-30 by rendering distinct COL1-4
-# markers into each candidate field and visually confirming against the
-# printed "Initialed for identification by Buyer ___ ___ and Seller ___ ___"
-# line. IMPORTANT: field names do NOT reliably match role -- on pages 8 and 9
-# (indices 7, 8) the field literally named "and Seller_*" renders in the
-# BUYER2 position, not Seller1 (confirmed by render, not by name). Trust this
-# table's column position, never the field name text, same rule as
-# everywhere else in this codebase's FIELD_MAP.
-# Printed page numbers confirmed via each page's own footer text.
-INITIALS_PAGES = [
-    ("Page 1 of 12", "Initialed for identification by Buyer", "undefined_8", "and Seller", "undefined_9"),
-    ("Page 4 of 12", "Initialed for identification by Buyer_2", "undefined_14", "and Seller_4", "undefined_15"),
-    ("Page 5 of 12", "Initialed for identification by Buyer_3", "Buyers Expenses as allowed by the lender", "and Seller_5", "undefined_16"),
-    ("Page 6 of 12", "Initialed for identification by Buyer_4", "undefined_17", "and Seller_6", "undefined_18"),
-    ("Page 8 of 12", "Initialed for identification by Buyer_521", "and Seller_18", "undefined_2219", "undefined_2322"),
-    ("Page 9 of 12", "Initialed for identification by Buyer_5", "and Seller_7", "undefined_22", "undefined_23"),
-]
+# Initials for identification -- found by POSITION, not field name
+# (2026-10-09). Every 20-19 page 1-9 has four boxes on the footer line
+# "Initialed for identification by Buyer ___ ___ and Seller ___ ___",
+# rect-verified on all nine pages by rendering: x0 = 211/252/347/396,
+# bottom ~20-21pt. Ordered left to right they are Buyer1, Buyer2, Seller1,
+# Seller2. Their /T names are unusable (pages 2, 3 and 7 are named
+# "2 MEMBERSHIP IN PROPERTY...", "Property Code requires...", "AC numb 1-4";
+# on page 8 "and Seller_18" is the BUYER2 box), which is why an earlier
+# name-based table silently skipped pages 2, 3 and 7.
+INITIALS_X_RANGE = (200, 440)
+INITIALS_MAX_BOTTOM = 40
 
 # Same quad on the 40-11 Third Party Financing Addendum's own page 1 of 2 --
 # rect-verified 2026-08-30 the same way. Only checked when the addendum is
@@ -141,12 +139,10 @@ FA_INITIALS_PAGE = ("40-11 addendum", "Initialed for identification by Buyer", "
 # compared the same way the 40-11 loan-amount check above compares two
 # separate dicts. Scope is deliberately narrow: amendment.py's FIELD_MAP
 # only has rect-verified fields for price and address. A closing-date
-# cross-check is NOT included -- confirmed by rendering (2026-09-04) that
-# the TREC 20-19 template has NO AcroForm field at all backing Paragraph
-# 9A's "on or before ___, 20__" blank (this app fills it via a reportlab
-# overlay for exactly this reason -- see feedback memory on closing-date
-# handling). With no field to read, there is nothing to cross-check against
-# an arbitrary uploaded contract, regardless of what filled the amendment.
+# cross-check is NOT included yet. (Correction 2026-10-09: the 20-19 DOES
+# have a 9A field, "A The closing of the sale will be on or before"; this
+# app's own generator overlays the date instead of filling it. See
+# SLOTS["closing_date"] for how the single-file check reads both.)
 # Buyer/seller names, financing type, earnest money, option fee, and the
 # amendment's free-text "other modifications" paragraph are out of scope
 # for the same reason CHECKED_FIELDS' docstring gives for v1 in general:
@@ -172,12 +168,307 @@ def _normalized_address(raw: str) -> str:
     return " ".join(cleaned.upper().split())
 
 
-def _check_initials_quad(values: dict, page_label: str, b1: str, b2: str, s1: str, s2: str) -> list:
+_ENTITY_WORDS = re.compile(r"\b(LLC|L\.L\.C|INC|CORP|CORPORATION|COMPANY|CO|LP|LLP|LTD|TRUST|TRUSTEE|ESTATE|BANK|PARTNERS|HOLDINGS|PROPERTIES|HOMES|GROUP)\b", re.I)
+_NAME_SUFFIXES = {"JR", "SR", "II", "III", "IV"}
+
+
+def _party_names(raw: str) -> list:
+    """'John Doe and Mary Doe' -> ['John Doe', 'Mary Doe']. Blank -> []."""
+    parts = re.split(r"\s+and\s+|\s*&\s*|\s*;\s*|\s*/\s*", (raw or "").strip(), flags=re.I)
+    return [p.strip(" ,") for p in parts if p.strip(" ,")]
+
+
+def _initials_match(initials: str, name: str):
+    """True/False for a person's name; None when it can't be judged (an
+    entity like 'ABC Homes LLC' is initialed by whoever signs for it)."""
+    if _ENTITY_WORDS.search(name):
+        return None
+    words = [w for w in re.findall(r"[A-Za-z][A-Za-z'.-]*", name) if w.upper().strip(".") not in _NAME_SUFFIXES]
+    letters = re.sub(r"[^A-Za-z]", "", initials).upper()
+    if len(words) < 2 or len(letters) < 2:
+        return None
+    return letters[0] == words[0][0].upper() and letters[-1] == words[-1][0].upper()
+
+
+def _check_initials_pair(page_label: str, buyer_boxes: list, seller_boxes: list,
+                         buyers: list, sellers: list) -> list:
+    """One initial per party per page. The party count comes from the
+    Paragraph 1 names (one buyer named = only the first buyer box is
+    required; a blank second box is correct, not missing)."""
     issues = []
-    if not values.get(b1, "").strip() or not values.get(b2, "").strip():
-        issues.append({"severity": "blocker", "message": f"{page_label}: Buyer initials missing", "key": "initials_buyer"})
-    if not values.get(s1, "").strip() or not values.get(s2, "").strip():
-        issues.append({"severity": "blocker", "message": f"{page_label}: Seller initials missing", "key": "initials_seller"})
+    for role, boxes, names, key in (("Buyer", buyer_boxes, buyers, "initials_buyer"),
+                                    ("Seller", seller_boxes, sellers, "initials_seller")):
+        filled = [b.strip() for b in boxes if b and b.strip()]
+        needed = min(max(len(names), 1), len(boxes))
+        if len(filled) < needed:
+            who = f"{role.lower()} initials missing" if needed == 1 else f"{role.lower()} initials missing ({len(filled)} of {needed})"
+            issues.append({"severity": "blocker", "message": f"{page_label}: {who[0].upper() + who[1:]}", "key": key})
+        for ini in filled:
+            verdicts = [_initials_match(ini, n) for n in names]
+            if verdicts and None not in verdicts and not any(verdicts):
+                issues.append({
+                    "severity": "warning",
+                    "message": f'{page_label}: {role} initials "{ini}" don\'t match the {role.lower()} named in Paragraph 1 ({" and ".join(names)})',
+                    "key": "initials_mismatch",
+                })
+    return issues
+
+
+def _widget_rows(page) -> list:
+    """(name, value, field_type, rect) for every form widget on a page."""
+    rows = []
+    for a in page.get("/Annots") or []:
+        a = a.get_object()
+        if a.get("/Subtype") != "/Widget":
+            continue
+        parent = a.get("/Parent")
+        parent = parent.get_object() if parent is not None else None
+        name = a.get("/T") if a.get("/T") is not None else (parent.get("/T") if parent is not None else None)
+        value = a.get("/V") if a.get("/V") is not None else (parent.get("/V") if parent is not None else None)
+        ft = a.get("/FT") or (parent.get("/FT") if parent is not None else None)
+        rows.append((str(name or ""), "" if value is None else str(value), str(ft or ""), [float(x) for x in a["/Rect"]]))
+    return rows
+
+
+def _contract_pages(reader) -> dict:
+    """{printed page number: page} for the TREC 20-19 pages in a file,
+    using each page's own printed footer/header text, so a cover page or a
+    merged addendum never shifts the numbering."""
+    out = {}
+    for page in reader.pages:
+        text = page.extract_text() or ""
+        if not re.search(r"TREC NO\.?\s*20-\d+", text):
+            continue
+        m = re.search(r"Page\s*(\d+)\s*of\s*12", text)
+        n = int(m.group(1)) if m else (1 if not out else None)
+        if n is not None and n not in out:
+            out[n] = page
+    return out
+
+
+def _initials_by_position(pages: dict) -> list:
+    """[(page label, [buyer1, buyer2], [seller1, seller2])] for each 20-19
+    page whose footer has exactly the four initials boxes."""
+    found = []
+    for n in sorted(pages):
+        boxes = []
+        for name, value, ft, (x0, y0, x1, y1) in _widget_rows(pages[n]):
+            if (ft == "/Tx" and not name.startswith(FA_PREFIX)
+                    and INITIALS_X_RANGE[0] <= x0 <= INITIALS_X_RANGE[1] and min(y0, y1) < INITIALS_MAX_BOTTOM):
+                boxes.append((x0, value))
+        if len(boxes) == 4:
+            boxes.sort()
+            found.append((f"Page {n} of 12", [boxes[0][1], boxes[1][1]], [boxes[2][1], boxes[3][1]]))
+    return found
+
+
+def _text_in_rect(page, rect) -> str:
+    """Text DRAWN on the page inside a box (not a form-field value). This
+    app's own generator writes closing date, option period and the page-11
+    header as reportlab overlays on top of an empty field, so a check must
+    read 'field value, else overlay text in the same box'."""
+    x0, y0, x1, y1 = rect
+    max_chars = max(4, int((x1 - x0) / 3.5))   # what can physically fit in the box
+    parts = []
+
+    def visit(text, cm, tm, font_dict, font_size):
+        # The form's own printed line ("_____ days after the Effective
+        # Date...") can start inside the same box; it's far longer than the
+        # box, so length separates it from a value drawn into the blank.
+        text = text.replace("_", " ").strip()
+        if not text or len(text) > max_chars:
+            return
+        x = tm[4] * cm[0] + tm[5] * cm[2] + cm[4]
+        y = tm[4] * cm[1] + tm[5] * cm[3] + cm[5]
+        if x0 - 8 <= x <= x1 and y0 - 2 <= y <= y1:
+            parts.append(text)
+    page.extract_text(visitor_text=visit)
+    return " ".join("".join(parts).split())
+
+
+# --- Internal-consistency rules (2026-10-09) --------------------------------
+# Every field below was rect-verified 2026-10-09 by rendering a filled test
+# 20-19 with each widget's box and index drawn on the page. Several /T names
+# describe a DIFFERENT blank (e.g. the 5B option-period days box is named
+# "the Title Company and Buyers lenders Check one box only"); trust the
+# comment, not the name.
+SURVEY_BOXES = [("6C(1)", "Buyer"), ("6C(2)", "Within three"), ("6C(3)", "Within four")]
+DISCLOSURE_BOXES = [("7B(1)", "1 Buyer accepts the Property As Is"),
+                    ("7B(2)", "2 Buyer accepts the Property As Is provided Seller at Sellers expense shall complete the"),
+                    ("7B(3)", "upon")]
+AS_IS_BOXES = [("7D(1)", "As Is"), ("7D(2)", "As Is except")]
+POA_BOXES = [("is", "1Within"), ("is not", "2 Within")]   # 6E(2) "The Property [ ] is [ ] is not subject to..."
+POSSESSION_BOXES = [("upon closing and funding", "will"),
+                    ("temporary residential lease", "will not be credited to the Sales Price at closing Time is of the")]
+# 12B: (label, row checkbox, $ checkbox, $ amount, % checkbox, % amount)
+BROKER_CONTRIB = [
+    ("12B(1) (Seller pays toward Buyer's broker)", "Seller as List Brok Sub agent", "Seller as List Brok Sub agent27",
+     "acknowledged by Seller and Buyers agreement to pay Seller 130", "Seller only as Sellers agent",
+     "acknowledged by Seller and Buyers agreement to pay Seller 31"),
+    ("12B(2) (Buyer pays toward Seller's broker)", "Dollar Amt4", "Dollar Amt5",
+     "acknowledged by Seller and Buyers agreement to pay Seller 32", "Percentage",
+     "acknowledged by Seller and Buyers agreement to pay Seller 40"),
+]
+# Value slots: (printed page, field name, rect in PDF points). Read as the
+# field's value, else overlay text drawn inside the rect (this app's own
+# generator overlays closing date, option days and the page-11 header).
+SLOTS = {
+    "option_days": (2, "the Title Company and Buyers lenders Check one box only", (76, 496, 109, 505)),
+    "disclosure_days": (4, "Within", (424, 203, 478, 213)),
+    "closing_date": (6, "A The closing of the sale will be on or before", (291, 668, 422, 678)),
+    "closing_year": (6, "20", (442, 668, 469, 678)),
+}
+HEADER_FIELDS = [(2, "Page 2 of 10"), (3, "Page 3 of 10"), (4, "Contract Concerning"), (5, "Contract Concerning_2"),
+                 (6, "Contract Concerning_3"), (7, "Page 7 of 10"), (8, "Contract Concerning_4"),
+                 (9, "Address of Property"), (10, "Addr of Prop"), (11, "Address of Property_2"),
+                 (12, "Address of Property_26")]
+HEADER_RECT = (120, 745, 440, 766)   # stops before the printed "Page N of 12"
+RECEIPTS = [("Option Fee receipt (page 12)", "is acknowledged", "option_fee_amount", "option fee in Paragraph 5A"),
+            ("Earnest Money receipt (page 12)", "is acknowledged_2", "earnest_money_amount", "earnest money in Paragraph 5A")]
+NOTICE_EMAILS = [("Buyer's notice email (Paragraph 21)", "undefined_2013"),
+                 ("Seller's notice email (Paragraph 21)", "undefined numb 2214"),
+                 ("Buyer's agent email (Paragraph 21 copy)", "undefined_20"),
+                 ("Listing agent email (Paragraph 21 copy)", "undefined numb 22")]
+EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[A-Za-z]{2,}$")
+MONTHS = {m: i for i, m in enumerate(["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"], 1)}
+_STREET_ABBR = {"STREET": "ST", "AVENUE": "AVE", "DRIVE": "DR", "ROAD": "RD", "LANE": "LN", "BOULEVARD": "BLVD",
+                "COURT": "CT", "CIRCLE": "CIR", "PLACE": "PL", "PARKWAY": "PKWY", "TRAIL": "TRL", "HIGHWAY": "HWY"}
+
+
+def _money(text: str):
+    """'$425,000.00' -> 425000.0; blank/unreadable -> None. (Unlike
+    _money_to_int, '425000' and '425,000.00' compare equal.)"""
+    cleaned = re.sub(r"[^\d.]", "", text or "")
+    try:
+        return float(cleaned) if cleaned.strip(".") else None
+    except ValueError:
+        return None
+
+
+def _fmt_money(x: float) -> str:
+    return f"${x:,.0f}" if x == int(x) else f"${x:,.2f}"
+
+
+def _street(addr: str) -> str:
+    first = (addr or "").split(",")[0].upper()
+    words = re.sub(r"[^A-Z0-9 ]", " ", first).split()
+    return " ".join(_STREET_ABBR.get(w, w) for w in words)
+
+
+def _checked_labels(values: dict, boxes: list) -> list:
+    return [label for label, name in boxes if _is_checked(values, name)]
+
+
+def _slot(values: dict, pages: dict, key: str) -> str:
+    page_no, name, rect = SLOTS[key]
+    v = values.get(name, "").strip()
+    if v or page_no not in pages:
+        return v
+    return _text_in_rect(pages[page_no], rect)
+
+
+def _closing_date_problem(text: str, year_suffix: str):
+    """Message if the 9A date can't exist (e.g. 'November 31'); None if
+    fine or unparseable (an unreadable date is not proof of an error)."""
+    t = text.strip().lower().replace(",", " ")
+    m = re.match(r"([a-z]+)\.?\s+(\d{1,2})(?:st|nd|rd|th)?\b", t)
+    if m and m.group(1)[:3] in MONTHS:
+        month, day = MONTHS[m.group(1)[:3]], int(m.group(2))
+    else:
+        m = re.match(r"(\d{1,2})\s*/\s*(\d{1,2})\b", t)
+        if not m:
+            return None
+        month, day = int(m.group(1)), int(m.group(2))
+    ys = re.sub(r"\D", "", year_suffix or "")
+    year = 2000 + int(ys[-2:]) if ys else 2028   # unknown year: use a leap year so Feb 29 isn't flagged
+    try:
+        date(year, month, day)
+        return None
+    except ValueError:
+        return f'Paragraph 9A: Closing date "{text.strip()}" is not a real date'
+
+
+def _consistency_issues(values: dict, pages: dict) -> list:
+    issues = []
+
+    def add(sev, msg, key):
+        issues.append({"severity": sev, "message": msg, "key": key})
+
+    # 3A + 3B = 3C
+    cash, loan, price = (_money(values.get(FIELD_MAP[k], "")) for k in ("down_payment", "loan_amount", "sales_price"))
+    if price is not None and cash is not None:
+        total = cash + (loan or 0)
+        if abs(total - price) > 0.5:
+            add("blocker", f"Paragraph 3: Cash portion (3A) {_fmt_money(cash)} + financing (3B) {_fmt_money(loan or 0)} = "
+                           f"{_fmt_money(total)}, but the Sales Price (3C) says {_fmt_money(price)}", "sales_price_math")
+
+    # 9A closing date is a real date
+    closing = _slot(values, pages, "closing_date")
+    if closing:
+        problem = _closing_date_problem(closing, _slot(values, pages, "closing_year"))
+        if problem:
+            add("blocker", problem, "closing_date_invalid")
+
+    # 5B option period days when an option fee is entered
+    if values.get(FIELD_MAP["option_fee_amount"], "").strip() and not _slot(values, pages, "option_days"):
+        add("blocker", "Paragraph 5B: Option fee is entered but the option period (number of days) is blank", "option_days_blank")
+
+    # "Check one box only" groups
+    for label, boxes in (("Paragraph 6C (Survey)", SURVEY_BOXES), ("Paragraph 7B (Seller's Disclosure)", DISCLOSURE_BOXES),
+                         ("Paragraph 7D (Acceptance of condition)", AS_IS_BOXES), ("Paragraph 6E(2) (Owners association)", POA_BOXES),
+                         ("Paragraph 10A (Possession)", POSSESSION_BOXES)):
+        checked = _checked_labels(values, boxes)
+        if len(checked) > 1:
+            add("blocker", f"{label}: {' and '.join(checked)} are both checked -- only one box is allowed", "check_one_conflict")
+
+    # 7B(2) needs its delivery days
+    if _is_checked(values, DISCLOSURE_BOXES[1][1]) and not _slot(values, pages, "disclosure_days"):
+        add("blocker", "Paragraph 7B(2): Seller's Disclosure delivery days are blank", "disclosure_days_blank")
+
+    # 12B broker contributions
+    for label, row, d_box, d_amt, p_box, p_amt in BROKER_CONTRIB:
+        if not _is_checked(values, row):
+            continue
+        d_on, p_on = _is_checked(values, d_box), _is_checked(values, p_box)
+        if not d_on and not p_on:
+            add("blocker", f"Paragraph {label}: checked, but neither the $ box nor the % box is", "broker_contribution_incomplete")
+        elif d_on and p_on:
+            add("blocker", f"Paragraph {label}: both the $ box and the % box are checked -- only one is allowed", "broker_contribution_incomplete")
+        elif d_on and not values.get(d_amt, "").strip():
+            add("blocker", f"Paragraph {label}: $ box checked but the amount is blank", "broker_contribution_incomplete")
+        elif p_on and not values.get(p_amt, "").strip():
+            add("blocker", f"Paragraph {label}: % box checked but the percentage is blank", "broker_contribution_incomplete")
+
+    # Owners association disclosed but its addendum not listed in Paragraph 22
+    if _is_checked(values, POA_BOXES[0][1]) and not _is_checked(values, FIELD_MAP["hoa_addendum"]):
+        add("warning", "Paragraph 6E(2) says the property IS subject to an owners association, but the Owners Association "
+                       "Addendum isn't checked in Paragraph 22 -- attach it or correct 6E(2)", "poa_addendum_missing")
+
+    # Receipts on page 12 vs. Paragraph 5A
+    for label, receipt_field, key, what in RECEIPTS:
+        got, want = _money(values.get(receipt_field, "")), _money(values.get(FIELD_MAP[key], ""))
+        if got is not None and want is not None and abs(got - want) > 0.005:
+            add("blocker", f"{label} says {_fmt_money(got)}, but the {what} is {_fmt_money(want)}", "receipt_mismatch")
+
+    # Address header on every page vs. Paragraph 2A
+    street = _street(values.get(FIELD_MAP["address"], ""))
+    if street:
+        for page_no, name in HEADER_FIELDS:
+            if page_no not in pages:
+                continue
+            header = values.get(name, "").strip() or _text_in_rect(pages[page_no], HEADER_RECT)
+            if not header:
+                add("warning", f"Page {page_no} of 12: \"Address of Property\" header is blank", "header_address")
+            elif _street(header) != street:
+                add("blocker", f'Page {page_no} of 12: header address reads "{header}" but Paragraph 2A says '
+                               f'"{values.get(FIELD_MAP["address"], "").strip()}"', "header_address")
+
+    # Notice emails
+    for label, name in NOTICE_EMAILS:
+        v = values.get(name, "").strip()
+        if v and not EMAIL_RE.match(v):
+            add("warning", f'{label} "{v}" is not a valid email address -- notices sent there will bounce', "email_invalid")
+
     return issues
 
 
@@ -235,20 +526,23 @@ def check_tc_file(pdf_paths) -> dict:
     all_values = [_read_values(p) for p in pdf_paths]
 
     main_values = None
+    main_path = None
     fa_values = None  # always raw (un-prefixed) FA_FIELDS keys, whichever source it came from
     amend_values = None
     if len(all_values) == 1:
         values = all_values[0]
         if _matched_main(values) >= MIN_MATCHED_FIELDS:
             main_values = values
+            main_path = pdf_paths[0]
             # Addendum already merged into this same PDF via pdf_filler.py's FA_ prefix.
             if any(k.startswith(FA_PREFIX) for k in values):
                 fa_values = {k[len(FA_PREFIX):]: v for k, v in values.items() if k.startswith(FA_PREFIX)}
     else:
-        for values in all_values:
+        for path, values in zip(pdf_paths, all_values):
             m, f, am = _matched_main(values), _matched_fa(values), _matched_amend(values)
             if m >= MIN_MATCHED_FIELDS and m >= f and m >= am:
                 main_values = values
+                main_path = path
             elif f >= MIN_MATCHED_FIELDS_FA and f >= am:
                 fa_values = values
             elif am >= MIN_MATCHED_AMEND:
@@ -290,9 +584,15 @@ def check_tc_file(pdf_paths) -> dict:
     if missing_parts:
         issues.append({"severity": "blocker", "message": "Page 10 of 12: Effective Date is blank", "key": "effective_date"})
 
-    # Initials for identification, main contract
-    for page_label, b1, b2, s1, s2 in INITIALS_PAGES:
-        issues.extend(_check_initials_quad(values, page_label, b1, b2, s1, s2))
+    # Initials for identification, main contract -- one per party, boxes
+    # found by position on each printed page.
+    pages = _contract_pages(PdfReader(main_path))
+    buyers = _party_names(values.get(FIELD_MAP["buyer_name"], ""))
+    sellers = _party_names(values.get(FIELD_MAP["seller_name"], ""))
+    for page_label, buyer_boxes, seller_boxes in _initials_by_position(pages):
+        issues.extend(_check_initials_pair(page_label, buyer_boxes, seller_boxes, buyers, sellers))
+
+    issues.extend(_consistency_issues(values, pages))
 
     has_addendum = fa_values is not None
     has_amendment = amend_values is not None
@@ -314,8 +614,8 @@ def check_tc_file(pdf_paths) -> dict:
     # Initials on the 40-11 addendum -- only if actually attached.
     if has_addendum:
         label, b1, b2, s1, s2 = FA_INITIALS_PAGE
-        addendum_initials = {k: fa_values.get(k, "") for k in (b1, b2, s1, s2)}
-        issues.extend(_check_initials_quad(addendum_initials, label, b1, b2, s1, s2))
+        issues.extend(_check_initials_pair(label, [fa_values.get(b1, ""), fa_values.get(b2, "")],
+                                           [fa_values.get(s1, ""), fa_values.get(s2, "")], buyers, sellers))
 
     # 1. Loan amount: main contract Section 3B vs. 40-11 principal amount.
     if has_addendum:

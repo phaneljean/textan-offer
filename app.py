@@ -2110,6 +2110,14 @@ _SMS_SHORT_FIELD_LABELS = {
     "effective_date": "Effective Date",
     "initials_buyer": "Buyer Initials",
     "initials_seller": "Seller Initials",
+    "sales_price_math": "Price Math",
+    "closing_date_invalid": "Closing Date",
+    "option_days_blank": "Option Days",
+    "check_one_conflict": "Checkbox Conflict",
+    "disclosure_days_blank": "Disclosure Days",
+    "broker_contribution_incomplete": "Broker Contribution",
+    "receipt_mismatch": "Receipt Amount",
+    "header_address": "Page Header",
 }
 
 
@@ -3230,6 +3238,14 @@ TC_GATE_CATEGORY_LABELS = {
     "initials_seller": "Seller Initials",
     "loan_amount_mismatch": "Loan Amount Mismatch",
     "addendum_checkbox_mismatch": "Financing Checkbox",
+    "sales_price_math": "Sales Price Math",
+    "closing_date_invalid": "Closing Date",
+    "option_days_blank": "Option Period",
+    "check_one_conflict": "Checkbox Conflict",
+    "disclosure_days_blank": "Seller's Disclosure",
+    "broker_contribution_incomplete": "Broker Contribution",
+    "receipt_mismatch": "Receipt Amount",
+    "header_address": "Page Header Address",
 }
 
 

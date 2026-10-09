@@ -65,6 +65,17 @@ _CONSEQUENCE_TAGS = {
     "amendment_price_mismatch": "PRICE TERMS DISAGREE",
     "amendment_address_mismatch": "WRONG FILE ATTACHED",
     "extra_file_unrecognized": "ATTACHMENT NOT VERIFIED",
+    "initials_mismatch": "WRONG PARTY INITIALED",
+    "sales_price_math": "PRICE DOESN'T ADD UP",
+    "closing_date_invalid": "IMPOSSIBLE CLOSING DATE",
+    "option_days_blank": "OPTION PERIOD UNDEFINED",
+    "check_one_conflict": "CONFLICTING CHECKBOXES",
+    "disclosure_days_blank": "DEADLINE UNDEFINED",
+    "broker_contribution_incomplete": "COMPENSATION UNCLEAR",
+    "poa_addendum_missing": "ADDENDUM MAY BE MISSING",
+    "receipt_mismatch": "RECEIPT DISAGREES",
+    "header_address": "WRONG ADDRESS ON PAGE",
+    "email_invalid": "NOTICES WILL BOUNCE",
 }
 
 _UPSELL_URL = "https://txtanoffer.com/brokers?src=report_email"

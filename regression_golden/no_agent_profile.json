@@ -1,11 +1,11 @@
 {
   "field_values": {
-    "1 Buyer accepts the Property As Is": "/On",
     "Addendum for Reservation of Oil Gas": "/On",
     "Addition City of": "San Antonio",
     "Addr of Prop": "500 Ocean Blvd, San Antonio, TX",
     "Address of Property": "500 Ocean Blvd, San Antonio, TX",
     "Address of Property_26": "500 Ocean Blvd, San Antonio, TX",
+    "As Is": "/On",
     "B Sum of all financing described in the attached": "/On",
     "Contract Concerning": "500 Ocean Blvd, San Antonio, TX",
     "Contract Concerning_2": "500 Ocean Blvd, San Antonio, TX",
@@ -25,7 +25,7 @@
     "undefined_3": "120,000",
     "undefined_4": "1,080,000",
     "undefined_5": "1,200,000",
-    "upon": "/On"
+    "will": "/On"
   },
   "overlay_present": {
     "closing_date": true

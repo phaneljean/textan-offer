@@ -1,10 +1,10 @@
 {
   "field_values": {
-    "1 Buyer accepts the Property As Is": "/On",
     "Addition City of": "Dallas",
     "Addr of Prop": "900 Cash Buyer Ln, Dallas, TX",
     "Address of Property": "900 Cash Buyer Ln, Dallas, TX",
     "Address of Property_26": "900 Cash Buyer Ln, Dallas, TX",
+    "As Is": "/On",
     "Associates Email Address": "Keller Williams",
     "Contract Concerning": "900 Cash Buyer Ln, Dallas, TX",
     "Contract Concerning_2": "900 Cash Buyer Ln, Dallas, TX",
@@ -29,8 +29,8 @@
     "undefined_3": "450,000",
     "undefined_5": "450,000",
     "undefined_6": "Independence Title",
-    "upon": "/On",
-    "when mailed to handdelivered at or transmitted by fax or electronic transmission as follows": "100 Congress Ave"
+    "when mailed to handdelivered at or transmitted by fax or electronic transmission as follows": "100 Congress Ave",
+    "will": "/On"
   },
   "overlay_present": {
     "closing_date": true

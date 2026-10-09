@@ -545,6 +545,17 @@ TC_ISSUE_LABELS = {
     "initials_seller": "Seller initials missing (some page)",
     "loan_amount_mismatch": "40-11 loan amount doesn't match contract",
     "addendum_checkbox_mismatch": "Third Party Financing checkbox disagrees with addendum",
+    "initials_mismatch": "Initials don't match the named party",
+    "sales_price_math": "3A + 3B doesn't equal Sales Price",
+    "closing_date_invalid": "Closing date is not a real date",
+    "option_days_blank": "Option fee set but option days blank",
+    "check_one_conflict": "Two boxes checked in a check-one section",
+    "disclosure_days_blank": "7B(2) disclosure days blank",
+    "broker_contribution_incomplete": "12B broker contribution incomplete",
+    "poa_addendum_missing": "POA disclosed, addendum not checked",
+    "receipt_mismatch": "Page 12 receipt disagrees with 5A",
+    "header_address": "Page header address blank or wrong",
+    "email_invalid": "Malformed notice email",
 }
 
 def get_tc_check_summary(days: int = 30, sender_emails: set = None) -> dict:

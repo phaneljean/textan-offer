@@ -1,11 +1,11 @@
 {
   "field_values": {
-    "1 Buyer accepts the Property As Is": "/On",
     "Addendum for Reservation of Oil Gas": "/On",
     "Addition City of": "Austin",
     "Addr of Prop": "123 Main St, Austin, TX",
     "Address of Property": "123 Main St, Austin, TX",
     "Address of Property_26": "123 Main St, Austin, TX",
+    "As Is": "/On",
     "Associates Email Address": "Keller Williams",
     "B Sum of all financing described in the attached": "/On",
     "Contract Concerning": "123 Main St, Austin, TX",
@@ -38,8 +38,8 @@
     "undefined_4": "703,250",
     "undefined_5": "725,000",
     "undefined_6": "Independence Title",
-    "upon": "/On",
-    "when mailed to handdelivered at or transmitted by fax or electronic transmission as follows": "100 Congress Ave"
+    "when mailed to handdelivered at or transmitted by fax or electronic transmission as follows": "100 Congress Ave",
+    "will": "/On"
   },
   "overlay_present": {
     "closing_date": true,

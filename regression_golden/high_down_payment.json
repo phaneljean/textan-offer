@@ -1,11 +1,11 @@
 {
   "field_values": {
-    "1 Buyer accepts the Property As Is": "/On",
     "Addendum for Reservation of Oil Gas": "/On",
     "Addition City of": "Houston",
     "Addr of Prop": "123 Main St, Houston, TX",
     "Address of Property": "123 Main St, Houston, TX",
     "Address of Property_26": "123 Main St, Houston, TX",
+    "As Is": "/On",
     "Associates Email Address": "Remax",
     "B Sum of all financing described in the attached": "/On",
     "Contract Concerning": "123 Main St, Houston, TX",
@@ -38,8 +38,8 @@
     "undefined_4": "325,000",
     "undefined_5": "650,000",
     "undefined_6": "Texas Title Co",
-    "upon": "/On",
-    "when mailed to handdelivered at or transmitted by fax or electronic transmission as follows": "456 Business Blvd"
+    "when mailed to handdelivered at or transmitted by fax or electronic transmission as follows": "456 Business Blvd",
+    "will": "/On"
   },
   "overlay_present": {
     "closing_date": true
