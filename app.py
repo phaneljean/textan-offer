@@ -8325,7 +8325,7 @@ _GUIDES = {
 </ul>
 
 <h2>4. Initials on every page</h2>
-<p>The 20-19 has an "Initialed for identification by Buyer ___ and Seller ___" line at the bottom of pages 1, 4, 5, 6, 8 and 9 of 12, and the 40-11 has one on its first page. Check all four slots on each page (two buyers, two sellers). A single missing initial is easy to miss scrolling through, and it's a routine reason a file bounces back.</p>
+<p>The 20-19 has an "Initialed for identification by Buyer ___ and Seller ___" line at the bottom of every page from 1 to 9 of 12, and the 40-11 has one on its first page. Each party initials once per page: one buyer means one buyer slot filled, and the second buyer slot correctly stays blank. A single missing initial is easy to miss scrolling through, and it's a routine reason a file bounces back.</p>
 
 <h2>5. The Effective Date (page 10 of 12)</h2>
 <p>The line reads "EXECUTED the ___ day of ___, 20__ (Effective Date)," with the instruction "BROKER: FILL IN THE DATE OF FINAL ACCEPTANCE." Deadlines in the contract count from it, so a blank here creates confusion about every date that follows. <a href="/guides/trec-20-19-effective-date">More on why the Effective Date matters &rarr;</a></p>
@@ -8439,7 +8439,7 @@ _GUIDES = {
     },
     "trec-20-19-initials": {
         "title": "TREC 20-19 Initials: Which Pages Need Buyer and Seller Initials",
-        "description": "The TREC 20-19 has an initials line on pages 1, 4, 5, 6, 8 and 9 of 12, plus one on the 40-11 addendum. Here's where they are and how to check them fast.",
+        "description": "The TREC 20-19 has an initials line on every page from 1 to 9 of 12, plus one on the 40-11 addendum. Here's where they are and how to check them fast.",
         "kicker": "For transaction coordinators",
         "h1": "TREC 20-19 initials: which pages need them, and how to check fast",
         "lede": "A missing initial is one of the most routine reasons a Texas file bounces back. It's not hard to fix. It's just easy to miss when you're scrolling 12 pages.",
@@ -8447,14 +8447,10 @@ _GUIDES = {
 <h2>Where the initials lines are</h2>
 <p>At the bottom of these pages of the TREC 20-19 (the page numbers are printed in each page's footer as "Page X of 12"):</p>
 <ul>
-  <li>Page 1 of 12</li>
-  <li>Page 4 of 12</li>
-  <li>Page 5 of 12</li>
-  <li>Page 6 of 12</li>
-  <li>Page 8 of 12</li>
-  <li>Page 9 of 12</li>
+  <li>Pages 1 through 9 of 12, every one of them</li>
+  <li>Not pages 10&ndash;12: those carry the signatures, broker information and receipts instead</li>
 </ul>
-<p>Each line reads "Initialed for identification by Buyer ___ ___ and Seller ___ ___", which gives <strong>four slots per page</strong>: two for buyers and two for sellers. If a TREC 40-11 Third Party Financing Addendum is attached, it has the same line on its first page.</p>
+<p>Each line reads "Initialed for identification by Buyer ___ ___ and Seller ___ ___", which gives <strong>four slots per page</strong>: two for buyers and two for sellers. Only the slots for parties actually named in Paragraph 1 need initials, so with one buyer and one seller, two slots stay blank, and that's correct. If a TREC 40-11 Third Party Financing Addendum is attached, it has the same line on its first page.</p>
 
 <h2>Why they get missed</h2>
 <ul>
@@ -8465,7 +8461,7 @@ _GUIDES = {
 
 <h2>How to check fast</h2>
 <ol>
-  <li>Jump straight to the six page numbers above instead of reading page by page.</li>
+  <li>Go to the footer of pages 1 through 9. Pages 2, 3 and 7 are the ones people skip most, so check those first.</li>
   <li>Count the slots on each one: one per buyer and one per seller who's party to the contract.</li>
   <li>Then check the 40-11's first page if it's attached.</li>
   <li>If your e-sign template is older than the current form (mandatory since July 1, 2026), rebuild it so the initials fields land on the right pages.</li>
