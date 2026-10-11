@@ -179,6 +179,8 @@ LA_FIELDS = {
     "rate_cap1": "2 an increase in the interest rate to more than",   # D(2) for C(1)
     "rate_cap2": "in C1 or_2",                                        # D(2) for C(2)
 }
+FA_SECOND_LOAN_BOX = "b A second mortgage loan in the principal amount of"   # 40-11 1A(2)
+FA_SECOND_LOAN_AMOUNT = "excluding"                                        # its $ blank (rect-verified 2026-10-11)
 LA_INITIALS_PAGE = ("41-3 addendum", "Initialed for identification by Buyer", "Text2", "and Seller", "Text3")
 # Names only the 41-3 uses -- the generic ones ("within", "undefined_2")
 # also exist on the 40-11, so they can't tell the two apart.
@@ -206,6 +208,12 @@ def _matched_la(values: dict) -> int:
     return sum(1 for name in LA_FINGERPRINT if name in values)
 
 
+def _la_notes(la: dict) -> list:
+    """C rows in use: box checked, or payee/balance filled in."""
+    return [n for n in (1, 2) if _is_checked(la, LA_FIELDS[f"note{n}"]) or any(
+        la.get(LA_FIELDS[f"note{n}_{k}"], "").strip() for k in ("payee", "payee_2", "balance"))]
+
+
 def _loan_assumption_issues(la: dict, values: dict) -> list:
     """Internal checks on an attached 41-3. Only notes whose C(1)/C(2) box is
     checked are held to their D(1)/D(2) caps -- a blank second-lien row on a
@@ -220,12 +228,15 @@ def _loan_assumption_issues(la: dict, values: dict) -> list:
 
     if not val("credit_days"):
         add("blocker", "41-3 Paragraph A: the number of days for Buyer to deliver credit documentation is blank -- "
-                       "Seller's right to terminate (and keep the earnest money) runs off that deadline", "la_credit_days_blank")
+                       "Seller's right to terminate with the earnest money paid to Seller (41-3 Paragraph B) runs off that deadline", "la_credit_days_blank")
 
-    notes = [n for n in (1, 2) if _is_checked(la, LA_FIELDS[f"note{n}"])]
+    notes = _la_notes(la)
+    for n in notes:
+        if not _is_checked(la, LA_FIELDS[f"note{n}"]):
+            add("warning", f"41-3 Paragraph C({n}): the loan terms are filled in but its box isn't checked", "la_note_unchecked")
     if not notes:
-        add("blocker", "41-3 Paragraph C: neither C(1) nor C(2) is checked -- the addendum doesn't say which loan "
-                       "Buyer is assuming", "la_no_note")
+        add("blocker", "41-3 Paragraph C: neither C(1) nor C(2) is checked or filled in -- the addendum doesn't say "
+                       "which loan Buyer is assuming", "la_no_note")
     for n in notes:
         label = f"C({n})"
         if not (val(f"note{n}_payee") or val(f"note{n}_payee_2")):
@@ -254,24 +265,43 @@ def _loan_assumption_issues(la: dict, values: dict) -> list:
                        "larger-than-expected variance has no threshold", "la_variance_cap_blank")
 
     la_addr, main_addr = val("address"), values.get(FIELD_MAP["address"], "").strip()
-    if la_addr and main_addr and _normalized_address(la_addr) != _normalized_address(main_addr):
+    # House numbers only -- city/zip/abbreviation/comma differences between
+    # a one-line 41-3 header and 20-19 Paragraph 2A are routine, not a mismatch.
+    la_no, main_no = (re.match(r"\s*(\d+)", a) for a in (la_addr, main_addr))
+    if la_no and main_no and la_no.group(1) != main_no.group(1):
         add("warning", f"41-3 addendum's property address ({la_addr}) doesn't match the contract's ({main_addr}) -- "
                        f"confirm this addendum belongs to this file", "la_address_mismatch")
 
     # Not an error -- the 41-3's own NOTICE TO SELLER says this.
     if not _is_checked(values, RELEASE_22_BOX):
-        add("warning", "Paragraph 22: the Addendum for Release of Liability on Assumed Loan and/or Restoration of "
-                       "Seller's VA Entitlement isn't listed. Without it Seller stays liable on the assumed loan (and a "
-                       "VA seller's entitlement stays tied to it) -- confirm Seller knows", "la_release_not_listed")
+        add("warning", "Paragraph 22 doesn't list the Release of Liability addendum. The 41-3's NOTICE TO SELLER says "
+                       "Seller's liability on the assumed note continues unless the noteholder releases Seller, and points "
+                       "to TREC's Release of Liability Addendum -- review", "la_release_not_listed")
     return issues
 
 
-def _contains_41_3(path: str) -> bool:
-    """True if a 41-3 is merged (flattened or with different field names)
-    into the same PDF as the contract -- then "not attached" would be false."""
-    reader = PdfReader(path)
-    return any("41-3" in (p.extract_text() or "") and "LOAN ASSUMPTION ADDENDUM" in (p.extract_text() or "").upper()
-               for p in reader.pages[12:])
+def _contains_41_3(paths) -> bool:
+    """True if any page of any uploaded file is a 41-3 -- merged into the
+    contract packet (before or after it), or flattened so its fields can't
+    be read. Then "not attached" would be false."""
+    for path in paths:
+        for p in PdfReader(path).pages:
+            text = (p.extract_text() or "").upper()
+            if "LOAN ASSUMPTION ADDENDUM" in text and re.search(r"TREC\s*NO\.?\s*41-", text):
+                return True
+    return False
+
+
+def _fa_total(fa: dict):
+    """40-11 1A(1) + 1A(2) when checked; None when a checked amount is
+    unreadable (or the loan isn't conventional, so 1A(1) is blank)."""
+    first = _money(fa.get(FA_FIELDS["first_loan_amount"], ""))
+    if first is None:
+        return None
+    if _is_checked(fa, FA_SECOND_LOAN_BOX):
+        second = _money(fa.get(FA_SECOND_LOAN_AMOUNT, ""))
+        return None if second is None else first + second
+    return first
 
 
 def _normalized_address(raw: str) -> str:
@@ -506,11 +536,8 @@ _STREET_ABBR = {"STREET": "ST", "AVENUE": "AVE", "DRIVE": "DR", "ROAD": "RD", "L
 def _money(text: str):
     """'$425,000.00' -> 425000.0; blank/unreadable -> None. (Unlike
     _money_to_int, '425000' and '425,000.00' compare equal.)"""
-    cleaned = re.sub(r"[^\d.]", "", text or "")
-    try:
-        return float(cleaned) if cleaned.strip(".") else None
-    except ValueError:
-        return None
+    m = re.search(r"\d[\d,]*(?:\.\d+)?", text or "")
+    return float(m.group().replace(",", "")) if m else None
 
 
 def _fmt_money(x: float) -> str:
@@ -846,7 +873,17 @@ def check_tc_file(pdf_paths) -> dict:
     # 1. Loan amount: main contract Section 3B vs. 40-11 principal amount.
     # 3B is the sum of ALL attached financing, so with a 41-3 attached the
     # assumed balances are added in (check 1b below) instead.
-    if has_addendum and not has_loan_assumption:
+    # A checked 1A(2) second loan is part of that sum too.
+    if has_addendum and not has_loan_assumption and _is_checked(fa_values, FA_SECOND_LOAN_BOX):
+        main_loan, fa_loan = _money(values.get(FIELD_MAP["loan_amount"], "")), _fa_total(fa_values)
+        if main_loan is not None and fa_loan is not None and abs(main_loan - fa_loan) > 0.5:
+            issues.append({
+                "severity": "blocker",
+                "message": f"Section 3B financing amount ({_fmt_money(main_loan)}) doesn't match the 40-11 addendum's "
+                           f"first + second loan amounts ({_fmt_money(fa_loan)})",
+                "key": "loan_amount_mismatch",
+            })
+    elif has_addendum and not has_loan_assumption:
         main_loan = values.get(FIELD_MAP["loan_amount"], "").strip()
         fa_loan = fa_values.get(FA_FIELDS["first_loan_amount"], "").strip()
         if main_loan and fa_loan and _money_to_int(main_loan) != _money_to_int(fa_loan):
@@ -898,16 +935,21 @@ def check_tc_file(pdf_paths) -> dict:
         issues.extend(_loan_assumption_issues(la_values, values))
 
         main_loan = _money(values.get(FIELD_MAP["loan_amount"], ""))
-        assumed = [_money(la_values.get(LA_FIELDS[f"note{n}_balance"], "")) for n in (1, 2)
-                   if _is_checked(la_values, LA_FIELDS[f"note{n}"])]
-        fa_loan = _money(fa_values.get(FA_FIELDS["first_loan_amount"], "")) if has_addendum else 0
+        assumed = [_money(la_values.get(LA_FIELDS[f"note{n}_balance"], "")) for n in _la_notes(la_values)]
+        fa_loan = _fa_total(fa_values) if has_addendum else 0
+        # 3B Third Party Financing checked with no 40-11 uploaded: its share
+        # of 3B is unknown (financing_addendum_missing already says so).
+        tpf_unknown = not has_addendum and _is_checked(values, FIELD_MAP["third_party_financing_3b"])
         if (main_loan is not None and assumed and None not in assumed and fa_loan is not None
-                and not _is_checked(values, SELLER_FINANCING_3B_BOX)):
+                and not tpf_unknown and not _is_checked(values, SELLER_FINANCING_3B_BOX)):
             total = sum(assumed) + fa_loan
             if abs(total - main_loan) > 0.5:
                 parts = " + ".join([f"40-11 loan {_fmt_money(fa_loan)}"] * has_addendum + [f"assumed {_fmt_money(a)}" for a in assumed])
                 issues.append({"severity": "blocker", "message": f"Section 3B financing ({_fmt_money(main_loan)}) doesn't match the attached financing: {parts} = {_fmt_money(total)}", "key": "loan_amount_mismatch"})
-    elif (la_3b or la_22) and not _contains_41_3(main_path):
+    elif (la_3b or la_22) and _contains_41_3(pdf_paths):
+        issues.append({"severity": "warning", "message": "A 41-3 Loan Assumption Addendum was found, but it isn't a "
+                       "fillable PDF we can read -- its checks were skipped", "key": "la_unreadable"})
+    elif la_3b or la_22:
         where = " and ".join(p for p, on in (("checked in Paragraph 3B", la_3b), ("listed in Paragraph 22", la_22)) if on)
         issues.append({"severity": "blocker", "message": f"Loan Assumption Addendum is {where}, but the 41-3 addendum isn't attached", "key": "loan_assumption_addendum_missing"})
 

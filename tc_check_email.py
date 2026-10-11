@@ -87,13 +87,15 @@ _CONSEQUENCE_TAGS = {
     "la_credit_days_blank": "DEADLINE UNDEFINED",
     "la_no_note": "ASSUMED LOAN NOT IDENTIFIED",
     "la_note_incomplete": "ASSUMED LOAN TERMS INCOMPLETE",
-    "la_fee_cap_blank": "BUYER PROTECTION UNDEFINED",
-    "la_rate_cap_blank": "BUYER PROTECTION UNDEFINED",
+    "la_fee_cap_blank": "REVIEW: BUYER PROTECTION UNDEFINED",
+    "la_rate_cap_blank": "REVIEW: BUYER PROTECTION UNDEFINED",
     "la_adjust_conflict": "CONFLICTING CHECKBOXES",
     "la_adjust_blank": "REVIEW: VARIANCE ADJUSTMENT",
     "la_variance_cap_blank": "REVIEW: VARIANCE LIMIT",
-    "la_address_mismatch": "WRONG FILE ATTACHED",
-    "la_release_not_listed": "REVIEW: SELLER STAYS LIABLE",
+    "la_address_mismatch": "REVIEW: ADDRESS DIFFERS",
+    "la_release_not_listed": "REVIEW: SELLER RELEASE OF LIABILITY",
+    "la_note_unchecked": "REVIEW: LOAN BOX UNCHECKED",
+    "la_unreadable": "ATTACHMENT NOT VERIFIED",
 }
 
 _UPSELL_URL = "https://txtanoffer.com/brokers?src=report_email"

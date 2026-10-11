@@ -1241,7 +1241,7 @@ def index():
       <h2 style="max-width:620px;margin:0 auto;">Forward it, or drop it here. Get back exactly what's missing.</h2>
     </div>
     <ul class="tc-checklist" style="max-width:560px;margin:1.5rem auto 0;">
-      <li><span class="tc-check">&check;</span><span>Forward the TREC 20-19 to <strong>tc@check.txtanoffer.com</strong>, or upload it above &mdash; add the 40-11 or 41-3 addendum or 39-11 amendment if you've got them.</span></li>
+      <li><span class="tc-check">&check;</span><span>Forward the TREC 20-19 to <strong>tc@check.txtanoffer.com</strong>, or upload it above &mdash; attach the 40-11, 41-3 or 39-11 to the same email, or add them on the <a href="/tc-check">full check page</a>.</span></li>
       <li><span class="tc-check">&check;</span><span>We re-read the actual filled-in PDF against TREC's current form &mdash; not a guess based on file size or page count.</span></li>
       <li><span class="tc-check">&check;</span><span>Get an itemized report back in under a minute: what's blank, what's missing an initial, what disagrees with the addendum.</span></li>
     </ul>
@@ -3829,9 +3829,9 @@ border-radius:var(--radius-sm);font-family:inherit;font-size:0.85rem;font-weight
 <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Free, no signup</span>
 <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>Results in seconds</span>
 </div>
-<div class="addendum-toggle" id="addendumToggle">+ Also have the 40-11 Financing Addendum? Add it to check the loan amount &amp; checkboxes match, too.</div>
+<div class="addendum-toggle" id="addendumToggle">+ Also have the 40-11, 41-3 or 39-11? Add up to 3 to cross-check them against the contract, too.</div>
 <div class="addendum-row" id="addendumRow" hidden>
-<input type="file" id="addendumInput" accept="application/pdf">
+<input type="file" id="addendumInput" accept="application/pdf" multiple>
 <span class="addendum-filename" id="addendumFileName"></span>
 <button type="button" class="addendum-clear" id="addendumClear" title="Remove">&times;</button>
 </div>
@@ -3960,12 +3960,12 @@ addendumToggle.addEventListener('click', () => {
 });
 addendumInput.addEventListener('change', () => {
   if (addendumInput.files.length) {
-    pendingAddendumFile = addendumInput.files[0];
-    addendumFileName.textContent = pendingAddendumFile.name;
+    pendingAddendumFiles = Array.from(addendumInput.files).slice(0, 3);
+    addendumFileName.textContent = pendingAddendumFiles.map(f => f.name).join(', ');
   }
 });
 addendumClear.addEventListener('click', () => {
-  pendingAddendumFile = null;
+  pendingAddendumFiles = [];
   addendumInput.value = '';
   addendumFileName.textContent = '';
   addendumRow.hidden = true;
@@ -3992,7 +3992,7 @@ function revealResult() {
   const r = resultEl.getBoundingClientRect();
   if (r.top < 20 || r.top > window.innerHeight * 0.6) resultEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
-let pendingAddendumFile = null;
+let pendingAddendumFiles = [];
 
 function uploadFile(file, email, isDemo) {
   pendingFile = file;
@@ -4010,7 +4010,7 @@ function uploadFile(file, email, isDemo) {
   formData.append('source_page', 'tc_check_page');
   // A real addendum picked for a prior real upload should never ride along
   // on a demo run -- the sample file is the whole check, on its own.
-  if (pendingAddendumFile && !isDemo) formData.append('file', pendingAddendumFile);
+  if (!isDemo) pendingAddendumFiles.forEach(f => formData.append('file', f));
   if (email) formData.append('email', email);
   if (isDemo) formData.append('is_demo', '1');
 
@@ -4048,7 +4048,9 @@ function buildMetaBar(data, file) {
   html += '<span>' + formatBytes(file.size) + '</span>';
   if (typeof data.page_count === 'number') html += '<span>' + data.page_count + ' page' + (data.page_count === 1 ? '' : 's') + '</span>';
   html += '<span>' + (data.recognized ? 'TREC 20-19 AcroForm detected' : 'Not recognized as a TREC 20-19') + '</span>';
-  if (data.has_addendum) html += '<span>40-11 addendum attached' + (pendingAddendumFile ? ' (' + escapeHtml(pendingAddendumFile.name) + ')' : '') + '</span>';
+  if (data.has_addendum) html += '<span>40-11 addendum attached</span>';
+  if (data.has_loan_assumption) html += '<span>41-3 addendum attached</span>';
+  if (data.has_amendment) html += '<span>39-11 amendment attached</span>';
   html += '</div>';
   return html;
 }
@@ -4122,7 +4124,7 @@ function resetForm() {
   resultEl.classList.remove('show');
   resultEl.innerHTML = '';
   pendingFile = null;
-  pendingAddendumFile = null;
+  pendingAddendumFiles = [];
   fileInput.value = '';
   if (addendumInput) addendumInput.value = '';
   dropZone.scrollIntoView({ behavior: 'smooth', block: 'center' });

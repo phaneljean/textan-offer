@@ -231,8 +231,42 @@ class LoanAssumption(unittest.TestCase):
                 self.assertEqual(keys(assumption(la={"text": {field: ""}})), [key])
 
     def test_no_note_checked(self):
-        r = assumption(la={"checks": {"1 The unpaid principal balance of a first lien promissory note payable to": False}})
+        box = "1 The unpaid principal balance of a first lien promissory note payable to"
+        r = assumption(la={"checks": {box: False}})
+        self.assertEqual(keys(r), ["la_note_unchecked"])   # terms filled: intended, just unchecked
+        r = assumption(la={"checks": {box: False}, "text": {"undefined_2": "", "which unpaid balance at closing will be": "",
+                                                           "undefined_3": "", "1 payment of an assumption fee in excess of": "",
+                                                           "2 an increase in the interest rate to more than": ""}})
         self.assertEqual(keys(r), ["la_no_note"])
+
+    # Must-not-fire cases from the 2026-10-11 txo-trec-qa review.
+    def test_40_11_second_loan_is_summed(self):
+        c = _edit(CLEAN, text={"undefined_3": "5,000.00", "undefined_4": "670,000.00", "undefined_5": "675,000.00"},
+                  checks={"Check Box2": True, "Environmental Assessment Threatened or": True, "Third Party Financing Addendum": True})
+        fa = _edit(CLEAN_FA, text={"excluding": "50,000.00"}, checks={"b A second mortgage loan in the principal amount of": True})
+        self.assertEqual(keys(check_tc_file([c, fa, _edit(CLEAN_LA)])), [])
+        plain = _edit(CLEAN, text={"undefined_3": "35,000.00", "undefined_4": "390,000.00"})
+        self.assertEqual(keys(check_tc_file([plain, fa])), [])
+
+    def test_no_sum_when_40_11_missing(self):
+        r = assumption(contract={"checks": {**ASSUME_ONLY["checks"], "B Sum of all financing described in the attached": True}})
+        self.assertNotIn("loan_amount_mismatch", keys(r))
+
+    def test_estimate_wording_in_balance(self):
+        r = assumption(la={"text": {"which unpaid balance at closing will be": "approx. 280,000"}})
+        self.assertEqual(keys(r), [])
+
+    def test_address_formatting_is_not_a_mismatch(self):
+        for addr in ("1234 Elm St, Austin, TX 78704", "1234 Elm Street", "1234 ELM STREET AUSTIN TX 78704"):
+            with self.subTest(addr=addr):
+                self.assertEqual(keys(assumption(la={"text": {"Address of Property": addr}})), [])
+
+    def test_41_3_merged_before_contract(self):
+        d = fitz.open(_edit(CLEAN_LA))
+        d.insert_pdf(fitz.open(_edit(CLEAN, **ASSUME_ONLY)))
+        p = os.path.join(tempfile.mkdtemp(), "packet.pdf")
+        d.save(p)
+        self.assertNotIn("loan_assumption_addendum_missing", keys(check_tc_file([p])))
 
     def test_adjustment_boxes(self):
         both = assumption(la={"checks": {"Sales Price will be adjusted by the amount": True}})
@@ -247,6 +281,7 @@ class LoanAssumption(unittest.TestCase):
 
     def test_address_and_initials(self):
         r = assumption(la={"text": {"Address of Property": "99 Oak Ave, Austin, TX", "and Seller": "", "Text3": ""}})
+        self.assertEqual({i["severity"] for i in r["issues"] if i["key"] == "la_address_mismatch"}, {"warning"})
         self.assertEqual(sorted(keys(r)), ["initials_seller", "la_address_mismatch"])
 
     def test_40_11_is_not_mistaken_for_41_3(self):
