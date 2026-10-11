@@ -164,5 +164,96 @@ class CleanControl(unittest.TestCase):
         self.assertEqual(keys(variant()), [])
 
 
+CLEAN_LA = os.path.join(FIX, "trec_41-3_clean.pdf")
+
+
+def _edit(src, text=None, checks=None):
+    d = fitz.open(src)
+    for page in d:
+        for w in page.widgets():
+            if text and w.field_name in text:
+                w.field_value = text[w.field_name] or " "
+                w.update()
+            elif checks and w.field_name in checks:
+                w.field_value = w.on_state() if checks[w.field_name] else "Off"
+                w.update()
+    path = os.path.join(tempfile.mkdtemp(), os.path.basename(src))
+    d.save(path)
+    return path
+
+
+# The clean deal, switched to an assumption: 3B/22 Third Party Financing off,
+# Loan Assumption + Release of Liability on, 3B = the assumed balance.
+ASSUME_ONLY = dict(
+    text={"undefined_3": "145,000.00", "undefined_4": "280,000.00"},
+    checks={"B Sum of all financing described in the attached": False, "Addendum for Reservation of Oil Gas": False,
+            "Check Box2": True, "Environmental Assessment Threatened or": True, "Third Party Financing Addendum": True})
+
+
+def assumption(contract=None, la=None, with_contract=True):
+    c = _edit(CLEAN, **{**ASSUME_ONLY, **(contract or {})}) if with_contract else None
+    paths = [p for p in (c, _edit(CLEAN_LA, **(la or {}))) if p]
+    return check_tc_file(paths)
+
+
+class LoanAssumption(unittest.TestCase):
+    def test_clean_assumption_is_clean(self):
+        r = assumption()
+        self.assertTrue(r["has_loan_assumption"])
+        self.assertEqual(keys(r), [])
+
+    def test_with_40_11_sums_both_into_3b(self):
+        c = _edit(CLEAN, text={"undefined_3": "5,000.00", "undefined_4": "620,000.00", "undefined_5": "625,000.00"},
+                  checks={"Check Box2": True, "Environmental Assessment Threatened or": True, "Third Party Financing Addendum": True})
+        r = check_tc_file([c, CLEAN_FA, _edit(CLEAN_LA)])
+        self.assertEqual(keys(r), [])
+        c = _edit(CLEAN, checks={"Check Box2": True, "Environmental Assessment Threatened or": True, "Third Party Financing Addendum": True})
+        r = check_tc_file([c, CLEAN_FA, _edit(CLEAN_LA)])
+        self.assertEqual(keys(r), ["loan_amount_mismatch"])
+
+    def test_listed_but_not_attached(self):
+        c = _edit(CLEAN, **ASSUME_ONLY)
+        r = check_tc_file([c])
+        self.assertEqual(keys(r), ["loan_assumption_addendum_missing"])
+
+    def test_attached_but_not_listed(self):
+        r = assumption(contract={"checks": {**ASSUME_ONLY["checks"], "Check Box2": False}})
+        self.assertEqual(keys(r), ["la_checkbox_mismatch"])
+
+    def test_each_blank_fires_alone(self):
+        cases = {"within": "la_credit_days_blank", "undefined_2": "la_note_incomplete",
+                 "which unpaid balance at closing will be": "la_note_incomplete",
+                 "2 an increase in the interest rate to more than": "la_rate_cap_blank",
+                 "1 payment of an assumption fee in excess of": "la_fee_cap_blank",
+                 "undefinedNo 5": "la_variance_cap_blank"}
+        for field, key in cases.items():
+            with self.subTest(field=field):
+                self.assertEqual(keys(assumption(la={"text": {field: ""}})), [key])
+
+    def test_no_note_checked(self):
+        r = assumption(la={"checks": {"1 The unpaid principal balance of a first lien promissory note payable to": False}})
+        self.assertEqual(keys(r), ["la_no_note"])
+
+    def test_adjustment_boxes(self):
+        both = assumption(la={"checks": {"Sales Price will be adjusted by the amount": True}})
+        self.assertEqual(keys(both), ["la_adjust_conflict"])
+        none = assumption(la={"checks": {"cash payable at closing": False}})
+        self.assertEqual(keys(none), ["la_adjust_blank"])
+
+    def test_release_not_listed_is_warning_only(self):
+        r = assumption(contract={"checks": {**ASSUME_ONLY["checks"], "Third Party Financing Addendum": False}})
+        self.assertEqual(keys(r), ["la_release_not_listed"])
+        self.assertTrue(r["complete"])
+
+    def test_address_and_initials(self):
+        r = assumption(la={"text": {"Address of Property": "99 Oak Ave, Austin, TX", "and Seller": "", "Text3": ""}})
+        self.assertEqual(sorted(keys(r)), ["initials_seller", "la_address_mismatch"])
+
+    def test_40_11_is_not_mistaken_for_41_3(self):
+        r = check_tc_file([CLEAN, CLEAN_FA])
+        self.assertFalse(r["has_loan_assumption"])
+        self.assertTrue(r["has_addendum"])
+
+
 if __name__ == "__main__":
     unittest.main()

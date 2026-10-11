@@ -3,7 +3,7 @@ tc_check_email.py -- Email-forward intake for TC File Check (see tc_audit.py).
 
 Phase 1 of the "document-driven" TC Check pitch: instead of an agent/TC
 uploading a PDF to txtanoffer.com, they forward the TREC 20-19 (and,
-optionally, its 40-11 addendum and/or 39-11 amendment) to a dedicated inbox
+optionally, its 40-11 / 41-3 addenda and/or 39-11 amendment) to a dedicated inbox
 and get the same itemized report back by reply. This module only handles
 the SendGrid Inbound Parse payload -> PDF attachments -> reply-text
 plumbing; the actual audit logic is unchanged and lives entirely in
@@ -22,7 +22,7 @@ Docs: https://www.twilio.com/docs/sendgrid/for-developers/parsing-email/setting-
 import re
 from html import escape
 
-MAX_ATTACHMENTS = 3  # contract + optional 40-11 addendum + optional 39-11 amendment, same cap check_tc_file() expects
+MAX_ATTACHMENTS = 4  # contract + optional 40-11 addendum + optional 41-3 addendum + optional 39-11 amendment, same cap check_tc_file() expects
 
 # Same brand colors as the web TC Check page's .issue-tag.blocker/.warning
 # (see app.py) -- kept in sync by eye, not shared code, since one lives in
@@ -82,6 +82,18 @@ _CONSEQUENCE_TAGS = {
     "cash_portion_blank": "DEAL TERMS INCOMPLETE",
     "disclosure_box_missing": "DISCLOSURE TERMS UNDEFINED",
     "special_provisions_business_term": "REVIEW: BUSINESS TERM IN PARA 11",
+    "loan_assumption_addendum_missing": "ASSUMPTION ADDENDUM MISSING",
+    "la_checkbox_mismatch": "ADDENDUM CHECKBOX WRONG",
+    "la_credit_days_blank": "DEADLINE UNDEFINED",
+    "la_no_note": "ASSUMED LOAN NOT IDENTIFIED",
+    "la_note_incomplete": "ASSUMED LOAN TERMS INCOMPLETE",
+    "la_fee_cap_blank": "BUYER PROTECTION UNDEFINED",
+    "la_rate_cap_blank": "BUYER PROTECTION UNDEFINED",
+    "la_adjust_conflict": "CONFLICTING CHECKBOXES",
+    "la_adjust_blank": "REVIEW: VARIANCE ADJUSTMENT",
+    "la_variance_cap_blank": "REVIEW: VARIANCE LIMIT",
+    "la_address_mismatch": "WRONG FILE ATTACHED",
+    "la_release_not_listed": "REVIEW: SELLER STAYS LIABLE",
 }
 
 _UPSELL_URL = "https://txtanoffer.com/brokers?src=report_email"
@@ -268,6 +280,8 @@ def _files_line(result: dict) -> str:
     parts = ["TREC 20-19"]
     if result.get("has_addendum"):
         parts.append("40-11 addendum")
+    if result.get("has_loan_assumption"):
+        parts.append("41-3 addendum")
     if result.get("has_amendment"):
         parts.append("39-11 amendment")
     return " + ".join(parts)

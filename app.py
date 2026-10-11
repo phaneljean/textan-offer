@@ -1145,6 +1145,7 @@ def index():
       <li><span class="tc-check">&check;</span><span><strong>Effective Date left blank</strong> &mdash; the date every other deadline counts from.</span></li>
       <li><span class="tc-check">&check;</span><span><strong>Missing buyer or seller initials</strong> &mdash; easy to miss page-by-page, hard to fix once closed.</span></li>
       <li><span class="tc-check">&check;</span><span><strong>40-11 addendum mismatches</strong> &mdash; loan amount or financing checkbox disagreeing with the contract.</span></li>
+      <li><span class="tc-check">&check;</span><span><strong>41-3 loan assumption gaps</strong> &mdash; addendum listed but not attached, blank rate or fee caps, assumed balance not matching 3B.</span></li>
       <li><span class="tc-check">&check;</span><span><strong>39-11 amendment mismatches</strong> &mdash; sales price or property address disagreeing with the original contract.</span></li>
       <li><span class="tc-check">&check;</span><span><strong>Your whole closed-file backlog</strong> &mdash; free sample checks up to 20 files at once; a Brokerage join code raises that to 200, no extra charge.</span></li>
       <li><span class="tc-check">&check;</span><span><strong>A text the moment it happens</strong> &mdash; on the Brokerage plan, a real blocker on any agent's file texts you directly, before it ever reaches title.</span></li>
@@ -1240,7 +1241,7 @@ def index():
       <h2 style="max-width:620px;margin:0 auto;">Forward it, or drop it here. Get back exactly what's missing.</h2>
     </div>
     <ul class="tc-checklist" style="max-width:560px;margin:1.5rem auto 0;">
-      <li><span class="tc-check">&check;</span><span>Forward the TREC 20-19 to <strong>tc@check.txtanoffer.com</strong>, or upload it above &mdash; add the 40-11 addendum or 39-11 amendment if you've got them.</span></li>
+      <li><span class="tc-check">&check;</span><span>Forward the TREC 20-19 to <strong>tc@check.txtanoffer.com</strong>, or upload it above &mdash; add the 40-11 or 41-3 addendum or 39-11 amendment if you've got them.</span></li>
       <li><span class="tc-check">&check;</span><span>We re-read the actual filled-in PDF against TREC's current form &mdash; not a guess based on file size or page count.</span></li>
       <li><span class="tc-check">&check;</span><span>Get an itemized report back in under a minute: what's blank, what's missing an initial, what disagrees with the addendum.</span></li>
     </ul>
@@ -3298,16 +3299,17 @@ def tc_check():
     client = get_tc_client(cid)
     submitted_email = (request.form.get("email") or "").strip()
 
-    # Up to 3 files under the same 'file' field: the contract, and
-    # optionally its 40-11 Third Party Financing Addendum and/or its 39-11
+    # Up to 4 files under the same 'file' field: the contract, and
+    # optionally its 40-11 Third Party Financing Addendum, 41-3 Loan
+    # Assumption Addendum and/or its 39-11
     # Amendment to Contract, each as a separate PDF (the realistic case --
     # see tc_audit.check_tc_file's docstring for why that's not the same as
     # the FA_-prefix merged-file case).
     uploads = request.files.getlist("file")
     if not uploads or not uploads[0].filename:
         return jsonify({"error": "No file uploaded. Attach a PDF as 'file'."}), 400
-    if len(uploads) > 3:
-        return jsonify({"error": "Upload at most 3 files: the contract and, if you have them, the 40-11 addendum and/or 39-11 amendment."}), 400
+    if len(uploads) > 4:
+        return jsonify({"error": "Upload at most 4 files: the contract and, if you have them, the 40-11 and 41-3 addenda and/or 39-11 amendment."}), 400
     if any(not f.filename.lower().endswith(".pdf") for f in uploads):
         return jsonify({"error": "Only PDF files are supported."}), 400
 

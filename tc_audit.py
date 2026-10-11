@@ -152,8 +152,126 @@ AMEND_PRICE_MISMATCH_KEY = "amendment_price_mismatch"
 AMEND_ADDRESS_MISMATCH_KEY = "amendment_address_mismatch"
 
 
+# TREC 41-3 Loan Assumption Addendum (11-07-2022), uploaded as its own
+# PDF. Every name below was rect-verified 2026-10-11 by rendering a
+# numbered marker into each field of TREC's published 41-3_0.pdf -- and
+# as usual the /T names lie: "The total current monthly payment..." is
+# really the second line of the C(1) payee name, and "in C1 or" is the
+# C(2) assumption-fee cap.
+LA_FIELDS = {
+    "address": "Address of Property",
+    "credit_days": "within",                                          # A: credit documentation due within __ days
+    "note1": "1 The unpaid principal balance of a first lien promissory note payable to",  # C(1) checkbox
+    "note1_payee": "undefined_2",
+    "note1_payee_2": "The total current monthly payment including principal interest and any reserve deposits is",
+    "note1_balance": "which unpaid balance at closing will be",
+    "note1_payment": "undefined_3",
+    "note2": "2 The unpaid principal balance of a  second  lien  promissory  note  payable  to",  # C(2) checkbox
+    "note2_payee": "undefined_4",
+    "note2_payee_2": "The total current monthly payment including principal interest and any reserve deposits is_2",
+    "note2_balance": "which unpaid balance at closing will be_2",
+    "note2_payment": "undefined_5",
+    "adjust_cash": "cash payable at closing",                         # C: variance adjusts [ ] cash payable
+    "adjust_price": "Sales Price will be adjusted by the amount",     #    [ ] Sales Price
+    "variance_cap": "undefinedNo 5",                                  # C: terminate if variance exceeds $__
+    "fee_cap1": "1 payment of an assumption fee in excess of",        # D(1) for C(1)
+    "fee_cap2": "in C1 or",                                           # D(1) for C(2)
+    "rate_cap1": "2 an increase in the interest rate to more than",   # D(2) for C(1)
+    "rate_cap2": "in C1 or_2",                                        # D(2) for C(2)
+}
+LA_INITIALS_PAGE = ("41-3 addendum", "Initialed for identification by Buyer", "Text2", "and Seller", "Text3")
+# Names only the 41-3 uses -- the generic ones ("within", "undefined_2")
+# also exist on the 40-11, so they can't tell the two apart.
+LA_FINGERPRINT = [LA_FIELDS[k] for k in ("note1", "note1_balance", "note2_balance", "variance_cap",
+                                          "fee_cap1", "rate_cap1", "adjust_cash")]
+MIN_MATCHED_LA = 3
+
+# 20-19 boxes for the 41-3, rect-verified the same day by rendering:
+# page 1 Paragraph 3B "[ ] Loan Assumption Addendum" is "Check Box2" (the
+# field NAMED "Loan Assumption Addendum" is really 3B's Seller Financing
+# box), and in the Paragraph 22 list "Environmental Assessment Threatened
+# or" is the Loan Assumption Addendum and "Third Party Financing Addendum"
+# is the Release of Liability / VA Entitlement addendum.
+LA_3B_BOX = "Check Box2"
+SELLER_FINANCING_3B_BOX = "Loan Assumption Addendum"
+LA_22_BOX = "Environmental Assessment Threatened or"
+RELEASE_22_BOX = "Third Party Financing Addendum"
+
+
 def _matched_amend(values: dict) -> int:
     return sum(1 for name in AMEND_FIELDS.values() if name in values)
+
+
+def _matched_la(values: dict) -> int:
+    return sum(1 for name in LA_FINGERPRINT if name in values)
+
+
+def _loan_assumption_issues(la: dict, values: dict) -> list:
+    """Internal checks on an attached 41-3. Only notes whose C(1)/C(2) box is
+    checked are held to their D(1)/D(2) caps -- a blank second-lien row on a
+    one-note assumption is correct, not missing."""
+    issues = []
+
+    def add(sev, msg, key):
+        issues.append({"severity": sev, "message": msg, "key": key})
+
+    def val(k):
+        return la.get(LA_FIELDS[k], "").strip()
+
+    if not val("credit_days"):
+        add("blocker", "41-3 Paragraph A: the number of days for Buyer to deliver credit documentation is blank -- "
+                       "Seller's right to terminate (and keep the earnest money) runs off that deadline", "la_credit_days_blank")
+
+    notes = [n for n in (1, 2) if _is_checked(la, LA_FIELDS[f"note{n}"])]
+    if not notes:
+        add("blocker", "41-3 Paragraph C: neither C(1) nor C(2) is checked -- the addendum doesn't say which loan "
+                       "Buyer is assuming", "la_no_note")
+    for n in notes:
+        label = f"C({n})"
+        if not (val(f"note{n}_payee") or val(f"note{n}_payee_2")):
+            add("blocker", f"41-3 Paragraph {label}: the noteholder (who the note is payable to) is blank", "la_note_incomplete")
+        if not val(f"note{n}_balance"):
+            add("blocker", f"41-3 Paragraph {label}: the unpaid balance at closing is blank", "la_note_incomplete")
+        if not val(f"note{n}_payment"):
+            add("warning", f"41-3 Paragraph {label}: the current monthly payment is blank", "la_note_incomplete")
+        if not val(f"fee_cap{n}"):
+            add("warning", f"41-3 Paragraph D(1): the assumption-fee cap for {label} is blank -- Buyer's right to walk "
+                           f"away if the lender charges a bigger fee has no limit written in", "la_fee_cap_blank")
+        if not val(f"rate_cap{n}"):
+            add("warning", f"41-3 Paragraph D(2): the interest-rate cap for {label} is blank -- Buyer's right to walk "
+                           f"away if the lender raises the rate has no limit written in", "la_rate_cap_blank")
+
+    adjust = [label for label, k in (("cash payable at closing", "adjust_cash"), ("Sales Price", "adjust_price"))
+              if _is_checked(la, LA_FIELDS[k])]
+    if len(adjust) > 1:
+        add("blocker", "41-3 Paragraph C: both \"cash payable at closing\" and \"Sales Price\" are checked for the "
+                       "balance-variance adjustment -- only one is allowed", "la_adjust_conflict")
+    elif not adjust:
+        add("warning", "41-3 Paragraph C: neither \"cash payable at closing\" nor \"Sales Price\" is checked -- if the "
+                       "assumed balance differs at closing, the contract doesn't say which one adjusts", "la_adjust_blank")
+    if not val("variance_cap"):
+        add("warning", "41-3 Paragraph C: the balance-variance limit ($) is blank -- the termination right for a "
+                       "larger-than-expected variance has no threshold", "la_variance_cap_blank")
+
+    la_addr, main_addr = val("address"), values.get(FIELD_MAP["address"], "").strip()
+    if la_addr and main_addr and _normalized_address(la_addr) != _normalized_address(main_addr):
+        add("warning", f"41-3 addendum's property address ({la_addr}) doesn't match the contract's ({main_addr}) -- "
+                       f"confirm this addendum belongs to this file", "la_address_mismatch")
+
+    # Not an error -- the 41-3's own NOTICE TO SELLER says this.
+    if not _is_checked(values, RELEASE_22_BOX):
+        add("warning", "Paragraph 22: the Addendum for Release of Liability on Assumed Loan and/or Restoration of "
+                       "Seller's VA Entitlement isn't listed. Without it Seller stays liable on the assumed loan (and a "
+                       "VA seller's entitlement stays tied to it) -- confirm Seller knows", "la_release_not_listed")
+    return issues
+
+
+def _contains_41_3(path: str) -> bool:
+    """True if a 41-3 is merged (flattened or with different field names)
+    into the same PDF as the contract -- then "not attached" would be false."""
+    reader = PdfReader(path)
+    return any("41-3" in (p.extract_text() or "") and "LOAN ASSUMPTION ADDENDUM" in (p.extract_text() or "").upper()
+               for p in reader.pages[12:])
 
 
 def _normalized_address(raw: str) -> str:
@@ -605,7 +723,8 @@ def check_tc_file(pdf_paths) -> dict:
     Financing Addendum and/or its 39-11 Amendment to Contract, each
     uploaded as its own SEPARATE PDF.
 
-    pdf_paths is a list of 1-3 file paths, in any order -- each is read
+    pdf_paths is a list of 1-4 file paths (a 41-3 Loan Assumption Addendum,
+    matched by LA_FINGERPRINT, can be the fourth), in any order -- each is read
     independently and classified by field-name fingerprint (whichever
     matches CHECKED_FIELDS's template is the contract; whichever matches
     FA_FIELDS's own raw names is the addendum; whichever matches
@@ -631,6 +750,7 @@ def check_tc_file(pdf_paths) -> dict:
     main_path = None
     fa_values = None  # always raw (un-prefixed) FA_FIELDS keys, whichever source it came from
     amend_values = None
+    la_values = None
     if len(all_values) == 1:
         values = all_values[0]
         if _matched_main(values) >= MIN_MATCHED_FIELDS:
@@ -645,6 +765,8 @@ def check_tc_file(pdf_paths) -> dict:
             if m >= MIN_MATCHED_FIELDS and m >= f and m >= am:
                 main_values = values
                 main_path = path
+            elif _matched_la(values) >= MIN_MATCHED_LA:
+                la_values = values
             elif f >= MIN_MATCHED_FIELDS_FA and f >= am:
                 fa_values = values
             elif am >= MIN_MATCHED_AMEND:
@@ -668,6 +790,7 @@ def check_tc_file(pdf_paths) -> dict:
             "page_count": page_count,
             "has_addendum": False,
             "has_amendment": False,
+            "has_loan_assumption": False,
             "severity": _severity_summary(unrecognized_issues),
         }
 
@@ -705,11 +828,12 @@ def check_tc_file(pdf_paths) -> dict:
     # exactly one of pdf_paths, so any gap between "files supplied" and
     # "files classified" means something didn't match.)
     extra_files = len(pdf_paths) - 1
-    matched_extra = (1 if has_addendum else 0) + (1 if has_amendment else 0)
+    has_loan_assumption = la_values is not None
+    matched_extra = (1 if has_addendum else 0) + (1 if has_amendment else 0) + (1 if has_loan_assumption else 0)
     if extra_files > matched_extra:
         issues.append({
             "severity": "warning",
-            "message": "One of the uploaded files wasn't recognized as a TREC 40-11 Third Party Financing Addendum or 39-11 Amendment to Contract -- its consistency checks were skipped.",
+            "message": "One of the uploaded files wasn't recognized as a TREC 40-11 Third Party Financing Addendum, 41-3 Loan Assumption Addendum or 39-11 Amendment to Contract -- its consistency checks were skipped.",
             "key": "extra_file_unrecognized",
         })
 
@@ -720,7 +844,9 @@ def check_tc_file(pdf_paths) -> dict:
                                            [fa_values.get(s1, ""), fa_values.get(s2, "")], buyers, sellers))
 
     # 1. Loan amount: main contract Section 3B vs. 40-11 principal amount.
-    if has_addendum:
+    # 3B is the sum of ALL attached financing, so with a 41-3 attached the
+    # assumed balances are added in (check 1b below) instead.
+    if has_addendum and not has_loan_assumption:
         main_loan = values.get(FIELD_MAP["loan_amount"], "").strip()
         fa_loan = fa_values.get(FA_FIELDS["first_loan_amount"], "").strip()
         if main_loan and fa_loan and _money_to_int(main_loan) != _money_to_int(fa_loan):
@@ -755,6 +881,35 @@ def check_tc_file(pdf_paths) -> dict:
             msg = None
         if msg:
             issues.append({"severity": "blocker", "message": msg, "key": "financing_addendum_missing"})
+
+    # 1b. 41-3 Loan Assumption Addendum: attached <-> listed in 3B and 22,
+    # its own blanks, and 3B = 40-11 principal + assumed balances. The sum
+    # is skipped when 3B's Seller Financing box is checked -- that addendum
+    # isn't read, so its share of 3B is unknown.
+    la_3b, la_22 = _is_checked(values, LA_3B_BOX), _is_checked(values, LA_22_BOX)
+    if has_loan_assumption:
+        label, b1, b2, s1, s2 = LA_INITIALS_PAGE
+        issues.extend(_check_initials_pair(label, [la_values.get(b1, ""), la_values.get(b2, "")],
+                                           [la_values.get(s1, ""), la_values.get(s2, "")], buyers, sellers))
+        if not la_3b:
+            issues.append({"severity": "blocker", "message": "Section 3B: Loan Assumption Addendum checkbox not checked, but a 41-3 addendum is attached", "key": "la_checkbox_mismatch"})
+        if not la_22:
+            issues.append({"severity": "blocker", "message": "Section 22: Loan Assumption Addendum checkbox not checked, but a 41-3 addendum is attached", "key": "la_checkbox_mismatch"})
+        issues.extend(_loan_assumption_issues(la_values, values))
+
+        main_loan = _money(values.get(FIELD_MAP["loan_amount"], ""))
+        assumed = [_money(la_values.get(LA_FIELDS[f"note{n}_balance"], "")) for n in (1, 2)
+                   if _is_checked(la_values, LA_FIELDS[f"note{n}"])]
+        fa_loan = _money(fa_values.get(FA_FIELDS["first_loan_amount"], "")) if has_addendum else 0
+        if (main_loan is not None and assumed and None not in assumed and fa_loan is not None
+                and not _is_checked(values, SELLER_FINANCING_3B_BOX)):
+            total = sum(assumed) + fa_loan
+            if abs(total - main_loan) > 0.5:
+                parts = " + ".join([f"40-11 loan {_fmt_money(fa_loan)}"] * has_addendum + [f"assumed {_fmt_money(a)}" for a in assumed])
+                issues.append({"severity": "blocker", "message": f"Section 3B financing ({_fmt_money(main_loan)}) doesn't match the attached financing: {parts} = {_fmt_money(total)}", "key": "loan_amount_mismatch"})
+    elif (la_3b or la_22) and not _contains_41_3(main_path):
+        where = " and ".join(p for p, on in (("checked in Paragraph 3B", la_3b), ("listed in Paragraph 22", la_22)) if on)
+        issues.append({"severity": "blocker", "message": f"Loan Assumption Addendum is {where}, but the 41-3 addendum isn't attached", "key": "loan_assumption_addendum_missing"})
 
     # 3. Contract vs. Amendment: price. Only compared when the amendment's
     # OWN price-change section is actually in use (its checkbox checked
@@ -795,6 +950,7 @@ def check_tc_file(pdf_paths) -> dict:
         "page_count": page_count,
         "has_addendum": has_addendum,
         "has_amendment": has_amendment,
+        "has_loan_assumption": has_loan_assumption,
         "severity": _severity_summary(issues),
         # As written on the form (Section 2A), for the report header and
         # email subject. Blank strings when the form left them blank.
