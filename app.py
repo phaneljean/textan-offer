@@ -447,10 +447,10 @@ def index():
       --border-hover: rgba(11,93,82,0.35);
       --text: #0f1f2f;
       --text-muted: #5a6b7a;
-      --text-dim: #8a9aa9;
+      --text-dim: #5f707f; /* was #8a9aa9 (2.9:1 on white, failed WCAG AA) */
       --accent: #0b5d52;
       --accent-light: #16806e;
-      --accent-tint: #E7F3F1;
+      --accent-tint: #eef5f3;
       --accent-glow: rgba(11,93,82,0.18);
       --radius: 1.25rem;
       --radius-sm: 0.85rem;
@@ -530,19 +530,19 @@ def index():
     .nav-links a { transition: var(--transition); }
     .nav-links a:hover { color: var(--text); }
     .nav-cta {
-      background: var(--accent);
+      background: #0a3f3a;
       color: #fff;
       padding: 0.55rem 1.35rem;
       border-radius: 9999px;
       font-size: 0.875rem;
       font-weight: 600;
-      border: 1px solid var(--accent);
+      border: 1px solid #0a3f3a;
       cursor: pointer;
       transition: var(--transition);
       display: inline-block;
       text-decoration: none;
     }
-    .nav-cta:hover { background: var(--accent-light); border-color: var(--accent-light); }
+    .nav-cta:hover { background: var(--accent); border-color: var(--accent); }
     .nav-toggle { display: none; flex-direction: column; justify-content: center; gap: 5px; width: 34px; height: 34px; background: none; border: none; cursor: pointer; padding: 0; }
     .nav-toggle span { display: block; width: 100%; height: 2px; background: var(--text); border-radius: 2px; }
 
@@ -583,6 +583,8 @@ def index():
       .sl-row { grid-template-columns: 1fr; gap: 1.25rem; }
       .sl-row.reverse .sl-media { order: 0; }
     }
+
+    .nw { white-space: nowrap; }
 
     /* Main column */
     .main { max-width: 840px; margin: 0 auto; padding: 0 2rem; position: relative; z-index: 1; }
@@ -723,12 +725,13 @@ def index():
     .privacy-note svg { flex-shrink: 0; }
     .or-divider { display: flex; align-items: center; gap: 0.75rem; margin: 0.15rem 0; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-dim); }
     .or-divider::before, .or-divider::after { content: ""; flex: 1; height: 1px; background: var(--border); }
-    .email-forward-note { display: flex; align-items: center; gap: 0.6rem; font-size: 0.82rem; color: var(--text-muted); background: var(--accent-tint); border-radius: var(--radius-sm); padding: 0.8rem 1rem; }
-    .email-forward-note svg { flex-shrink: 0; color: var(--text-dim); }
+    .email-forward-note { display: block; line-height: 1.6; font-size: 0.82rem; color: var(--text-muted); background: var(--accent-tint); border-radius: var(--radius-sm); padding: 0.8rem 1rem; }
+    .email-forward-note svg { vertical-align: -3px; margin-right: 0.5rem; color: var(--accent); }
+    .email-forward-note a { white-space: nowrap; }
     .email-forward-note a { color: var(--accent); font-weight: 700; text-decoration: underline; text-underline-offset: 2px; }
     .email-optin { margin-top: 0.85rem; display: flex; flex-direction: column; gap: 0.5rem; }
     .email-optin-check { display: flex; align-items: center; gap: 0.5rem; font-size: 0.82rem; color: var(--text-muted); cursor: pointer; }
-    .email-optin-check input { width: auto; }
+    .email-optin-check input { width: auto; accent-color: var(--accent); }
     .email-optin-input { padding: 0.6rem 0.85rem; border: 1px solid rgba(15,31,47,0.16); border-radius: var(--radius-sm); font-family: inherit; font-size: 0.85rem; background: #fff; color: var(--text); }
     .email-optin-input:focus { outline: none; border-color: var(--accent); }
     .email-optin-confirm { font-size: 0.78rem; color: #047857; display: none; }
@@ -875,7 +878,7 @@ def index():
     .steps-kicker { font-size: 0.7rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase;
       letter-spacing: 0.07em; margin-bottom: 0.6rem; }
     .steps-header h2 { font-size: 2rem; font-weight: 800; margin: 0 0 0.5rem; letter-spacing: -0.02em; line-height: 1.15; }
-    .steps-header p { color: var(--text-dim); font-size: 1rem; }
+    .steps-header p { color: var(--text-muted); font-size: 1rem; }
     .steps-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; }
     @media (min-width: 961px) {
       #how .steps-grid { grid-template-columns: repeat(4, 1fr); }
@@ -1010,6 +1013,14 @@ def index():
       }
       body::before { width: 200px; height: 200px; top: -60px; right: 0; filter: blur(50px); }
       .main { padding: 0 1.25rem; }
+      /* One 20px gutter at phone width. .steps kept its 32px desktop gutter, and
+         inside .main that stacked on .main's own padding (~52px per side), so
+         section cards were far narrower than the upload card above them. */
+      .steps { padding: 3.5rem 1.25rem; }
+      .main .steps { padding-left: 0; padding-right: 0; }
+      .steps-header { margin-bottom: 2rem; }
+      .steps-header h2 { font-size: 1.65rem; }
+      .hero .check-title { font-size: 1.85rem; }
       .hero h1 { font-size: 2.25rem; }
       .steps-grid { grid-template-columns: 1fr; }
       .nav-toggle { display: flex; }
@@ -1096,7 +1107,7 @@ def index():
 
   <div class="main">
   <section class="hero section" id="check">
-    <h2 class="check-title">Drop a TREC 20-19. See exactly what&rsquo;s missing.</h2>
+    <h2 class="check-title">Drop a TREC <span class="nw">20-19.</span> See exactly what&rsquo;s missing.</h2>
     <p style="font-size:0.85rem;color:var(--accent-dark);font-weight:600;margin-top:0.6rem;">Built to help TCs catch what's missing &mdash; not to replace what you do.</p>
 
     <div class="input-card">
@@ -1124,7 +1135,7 @@ def index():
       </div>
       <div class="or-divider">or</div>
       <div class="email-forward-note"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 6 10-6"/></svg>Already have it in your inbox? Forward it to <a href="mailto:tc@check.txtanoffer.com">tc@check.txtanoffer.com</a></div>
-      <div class="privacy-note">&#9203;&nbsp; Takes a minute now &mdash; saves you a callback from title tonight.</div>
+      <div class="privacy-note"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Takes a minute now &mdash; saves you a callback from title tonight.</div>
     </div>
 
     <div class="stats" style="margin:2.25rem 0 0;">
@@ -6551,7 +6562,7 @@ def broker_dashboard(join_code):
     agent_rows = "".join(
         f"<tr><td style='padding:8px;'>{a['phone']}</td>"
         f"<td style='padding:8px;'>{a['offer_count']}</td>"
-        f"<td style='padding:8px;color:#666;'>{(a['last_offer_at'] or 'never')[:10] if a['last_offer_at'] else 'never'}</td></tr>"
+        f"<td class='nw' style='padding:8px;color:#5a6b7a;'>{(a['last_offer_at'] or 'never')[:10] if a['last_offer_at'] else 'never'}</td></tr>"
         for a in agents
     ) or "<tr><td colspan='3' style='padding:8px;color:#666;'>No agents linked yet. Agents join by texting "
     if not agents:
@@ -6582,10 +6593,10 @@ def broker_dashboard(join_code):
         else:
             link = "<span style='color:#8a9aa9;'>expired</span>"
         kind = "Offer (20-19)" if r["kind"] == "offer" else "Amendment (39-11)"
-        return (f"<tr><td style='padding:8px;'>{(r['created_at'] or '')[:10]}</td>"
+        return (f"<tr><td class='nw' style='padding:8px;'>{(r['created_at'] or '')[:10]}</td>"
                 f"<td style='padding:8px;'>{escape(r['address'] or '')}</td>"
                 f"<td style='padding:8px;'>{kind}</td>"
-                f"<td style='padding:8px;'>{escape(r['phone'] or '')}</td>"
+                f"<td class='nw' style='padding:8px;'>{escape(r['phone'] or '')}</td>"
                 f"<td style='padding:8px;'>{link}</td></tr>")
 
     record_rows = "".join(_record_row(r) for r in records) or (
@@ -6595,26 +6606,52 @@ def broker_dashboard(join_code):
     )
 
     return f"""<!DOCTYPE html>
-<html><head><title>{brokerage['name']} — TxtAnOffer</title>
+<html lang="en"><head><meta charset="UTF-8"><title>{brokerage['name']} — TxtAnOffer</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="/static/favicon.ico?v=2" type="image/x-icon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
   * {{ box-sizing: border-box; }}
-  body{{font-family:'Inter',-apple-system,sans-serif;max-width:900px;margin:40px auto;padding:0 20px;color:#0b5d52;background:#F5F5F7;}}
-  h1{{font-size:1.6rem;margin-bottom:4px;}}
+  body{{font-family:'Inter',-apple-system,sans-serif;margin:0;color:#0f1f2f;background:#F5F5F7;-webkit-font-smoothing:antialiased;}}
+  .topbar{{background:#0a3f3a;border-bottom:3px solid #f5c242;padding:14px 20px;}}
+  .topbar-in{{max-width:900px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px;}}
+  .topbar img{{height:24px;width:auto;display:block;}}
+  .topbar-tag{{font-size:0.72rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#0f1f2f;background:#f5c242;border-radius:999px;padding:4px 10px;white-space:nowrap;}}
+  .wrap{{max-width:900px;margin:0 auto;padding:32px 20px 48px;}}
+  h1{{font-size:1.6rem;margin:0 0 4px;letter-spacing:-0.02em;}}
+  .card h2{{color:#0a3f3a;}}
+  a{{color:#0b5d52;font-weight:600;}}
+  code{{background:#eef5f3;color:#0a3f3a;padding:1px 6px;border-radius:5px;font-size:0.85em;}}
+  td.nw{{white-space:nowrap;}}
   .sub{{color:#5a6b7a;margin-bottom:28px;}}
   .card{{background:#fff;border:1px solid rgba(15,31,47,0.08);border-radius:14px;padding:22px;margin-bottom:24px;}}
   .card h2{{font-size:1.05rem;margin:0 0 14px;}}
   table{{width:100%;border-collapse:collapse;}}
-  th{{text-align:left;padding:8px;border-bottom:2px solid #eee;font-size:0.8rem;color:#8a9aa9;text-transform:uppercase;}}
+  th{{text-align:left;padding:8px;border-bottom:2px solid #eee;font-size:0.75rem;color:#5f707f;text-transform:uppercase;letter-spacing:0.04em;}}
   td{{border-bottom:1px solid #eee;font-size:0.9rem;}}
   .stat-row{{display:flex;gap:24px;margin-bottom:24px;}}
-  .stat{{background:#fff;border:1px solid rgba(15,31,47,0.08);border-radius:14px;padding:18px 22px;flex:1;}}
-  .stat-num{{font-size:1.7rem;font-weight:800;}}
-  .stat-label{{font-size:0.8rem;color:#8a9aa9;margin-top:2px;}}
+  .stat{{background:#fff;border:1px solid rgba(15,31,47,0.08);border-top:4px solid #f5c242;border-radius:14px;padding:18px 22px;flex:1;min-width:0;}}
+  .stat-num{{font-size:1.7rem;font-weight:800;color:#0b5d52;}}
+  .stat-label{{font-size:0.8rem;color:#5f707f;margin-top:2px;}}
+  @media(max-width:600px){{
+    .wrap{{padding:24px 16px 40px;}}
+    .stat-row{{gap:10px;}}
+    .stat{{padding:14px 12px;}}
+    .stat-num{{font-size:1.35rem;}}
+    .stat-label{{font-size:0.72rem;}}
+    td{{font-size:0.78rem;}}
+    th{{font-size:0.64rem;letter-spacing:0.02em;}}
+    th,td{{padding:6px 4px !important;}}
+    .card{{padding:18px 12px;}}
+  }}
 </style>
 </head><body>
+<header class="topbar"><div class="topbar-in">
+  <a href="/"><img src="/static/logo-wordmark-white.png?v=1" alt="TxtAnOffer"></a>
+  <span class="topbar-tag">Broker</span>
+</div></header>
+<div class="wrap">
 <h1>{brokerage['name']}</h1>
 <p class="sub">Roster &amp; compliance dashboard &middot; join code <code>{brokerage['join_code']}</code></p>
 
@@ -6669,6 +6706,7 @@ def broker_dashboard(join_code):
   </div>
 </div>
 
+</div>
 </body></html>"""
 
 
@@ -11093,7 +11131,7 @@ align-items:center;justify-content:center;min-height:100vh;margin:0;padding:20px
 border:1px solid rgba(15,31,47,0.08);box-shadow:0 1px 2px rgba(15,31,47,0.04);}
 h2{margin:0 0 0.75rem;font-size:1.35rem;font-weight:700;}
 p{color:#5a6b7a;font-size:0.9rem;line-height:1.6;}
-a{color:#000000;text-decoration:none;}
+a{color:#0b5d52;font-weight:600;text-decoration:none;}
 a:hover{text-decoration:underline;}
 </style></head><body><div class="box">
 <h2>Access Expired</h2>
@@ -11215,11 +11253,11 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
     elif user["is_subscribed"]:
         sub_status = "Active"
         sub_badge_color = "var(--accent-tint)"
-        sub_badge_text = "#000000"
+        sub_badge_text = "#0a3f3a"
     else:
         sub_status = f"Free ({user['offer_count']}/{FREE_OFFER_LIMIT} used)"
-        sub_badge_color = "rgba(245,158,11,0.12)"
-        sub_badge_text = "#b45309"
+        sub_badge_color = "#FFF6DA"
+        sub_badge_text = "#8a5a00"
 
     profile_url = f"/profile?phone={_urlquote(phone, safe='')}&expires={expires}&sig={sig}"
     archive_sub = ("Every offer you text in is kept 5 years &mdash; open any PDF here anytime." if archived_plan else
@@ -11272,11 +11310,11 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
     --border-hover: rgba(11,93,82,0.35);
     --text: #0f1f2f;
     --text-muted: #5a6b7a;
-    --text-dim: #8a9aa9;
+    --text-dim: #5f707f; /* was #8a9aa9, under WCAG AA on white */
     --accent: #0b5d52;
     --accent-light: #16806e;
     --accent-dark: #0a3a33;
-    --accent-tint: #E7F3F1;
+    --accent-tint: #eef5f3;
     --radius: 1.25rem;
     --radius-sm: 0.85rem;
     --transition: all 0.2s ease;
@@ -11337,14 +11375,14 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
     box-shadow:0 1px 3px rgba(15,31,47,0.05);
   }}
   .stat:hover {{border-color:var(--border-hover);transform:translateY(-1px);}}
-  .stat-val {{font-size:1.75rem;font-weight:800;color:var(--accent);}}
+  .stat-val {{font-size:1.75rem;font-weight:800;color:var(--accent);white-space:nowrap;line-height:1.15;}}
   .stat-label {{font-size:0.7rem;font-weight:600;color:var(--text-dim);margin-top:0.25rem;
     text-transform:uppercase;letter-spacing:0.06em;}}
 
   .profile-card {{
     background:var(--bg-card);
     border:1px solid var(--border);border-radius:var(--radius);
-    padding:1.5rem 1.75rem;margin-top:0.5rem;
+    padding:1.5rem 1.75rem;margin-top:1rem;
     box-shadow:0 1px 3px rgba(15,31,47,0.05);
   }}
   .profile-card-head {{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;}}
@@ -11388,10 +11426,10 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
   .offer-card:hover {{border-color:var(--border-hover);box-shadow:0 4px 16px rgba(15,31,47,0.08);}}
   .offer-card:active {{transform:scale(0.99);}}
   .offer-card-bar {{width:4px;flex-shrink:0;background:linear-gradient(180deg, var(--accent), var(--accent-light));}}
-  .offer-card-bar.status-draft {{background:linear-gradient(180deg, #0b5d52, #16806e);}}
-  .offer-card-bar.status-sent {{background:linear-gradient(180deg, #f59e0b, #fbbf24);}}
+  .offer-card-bar.status-draft {{background:#f5c242;}}
+  .offer-card-bar.status-sent {{background:linear-gradient(180deg, #0b5d52, #16806e);}}
   .offer-card-bar.status-expired {{background:linear-gradient(180deg, #9ca3af, #cbd5e1);}}
-  .offer-card-bar.status-accepted {{background:linear-gradient(180deg, #3b82f6, #60a5fa);}}
+  .offer-card-bar.status-accepted {{background:#0a3f3a;}}
   .offer-card-bar.status-declined {{background:linear-gradient(180deg, #f43f5e, #fb7185);}}
   .offer-card-body {{padding:1.25rem 1.5rem;flex:1;min-width:0;}}
   .offer-top {{display:flex;align-items:baseline;justify-content:space-between;gap:0.75rem;margin-bottom:0.9rem;}}
@@ -11402,11 +11440,11 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
     font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;
     padding:0.2rem 0.55rem;border-radius:9999px;flex-shrink:0;
   }}
-  .status-badge.status-draft {{background:rgba(11,93,82,0.12);color:#0a3f3a;}}
-  .status-badge.status-sent {{background:rgba(245,158,11,0.14);color:#b45309;}}
-  .status-badge.status-expired {{background:rgba(148,163,184,0.18);color:#64748b;}}
-  .status-badge.status-accepted {{background:rgba(59,130,246,0.12);color:#2563eb;}}
-  .status-badge.status-declined {{background:rgba(244,63,94,0.12);color:#e11d48;}}
+  .status-badge.status-draft {{background:#f5c242;color:#0f1f2f;}}
+  .status-badge.status-sent {{background:var(--accent-tint);color:#0a3f3a;}}
+  .status-badge.status-expired {{background:rgba(148,163,184,0.18);color:#4b5563;}}
+  .status-badge.status-accepted {{background:#0a3f3a;color:#fff;}}
+  .status-badge.status-declined {{background:rgba(244,63,94,0.12);color:#be123c;}}
 
   .pills {{display:flex;gap:0.6rem;margin-bottom:1rem;flex-wrap:wrap;}}
   .pill {{
@@ -11454,7 +11492,7 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
     display:flex;flex-direction:column;align-items:center;gap:0.2rem;
     font-size:0.65rem;font-weight:600;color:var(--text-dim);transition:var(--transition);
   }}
-  .nav-item span.icon {{font-size:1.2rem;}}
+  .nav-item svg {{width:20px;height:20px;display:block;}}
   .nav-item:hover, .nav-item.active {{color:var(--accent);}}
   .nav-item.active {{position:relative;}}
   .nav-item.active::before {{content:"";position:absolute;top:-0.7rem;left:20%;right:20%;height:3px;border-radius:2px;background:#f5c242;}}
@@ -11473,6 +11511,11 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
     .nav-links a {{ padding: 0.75rem 0; border-bottom: 1px solid rgba(255,255,255,0.12); }}
     .nav-links a:last-child {{ border-bottom: none; }}
     .offer-top {{flex-direction:column;align-items:flex-start;gap:0.15rem;}}
+    .stats {{gap:0.6rem;}}
+    .stat {{padding:1rem 0.85rem;}}
+    .stat-val {{font-size:1.3rem;}}
+    .stat-label {{font-size:0.62rem;letter-spacing:0.04em;}}
+    .nav {{padding:1rem 1.25rem;}}
   }}
 </style>
 </head>
@@ -11531,9 +11574,9 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
 </div>
 
 <nav class="bottom-nav">
-  <a href="/dashboard?phone={_urlquote(phone, safe='')}&expires={expires}&sig={sig}" class="nav-item active"><span class="icon">&#8962;</span>Dashboard</a>
-  <a href="{profile_url}" class="nav-item"><span class="icon">&#128100;</span>Profile</a>
-  <a href="/pricing" class="nav-item"><span class="icon">&#128179;</span>{'Billing' if user['is_subscribed'] else 'Upgrade'}</a>
+  <a href="/dashboard?phone={_urlquote(phone, safe='')}&expires={expires}&sig={sig}" class="nav-item active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>Dashboard</a>
+  <a href="{profile_url}" class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg>Profile</a>
+  <a href="/pricing" class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>{'Billing' if user['is_subscribed'] else 'Upgrade'}</a>
 </nav>
 </body>
 </html>"""
