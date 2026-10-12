@@ -1,6 +1,6 @@
 """
 cover_page.py - Generate dark or light/print cover page for TREC contracts
-Matches the site's design system: black/charcoal accents, glass-morphism cards.
+Matches txtanoffer.com: dark-green brand band, gold accent, green key values.
 """
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
@@ -19,28 +19,9 @@ import re
 _STATIC = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
 _WORDMARK = {"light": os.path.join(_STATIC, "logo-wordmark.png"),
              "dark": os.path.join(_STATIC, "logo-wordmark-white.png")}
-_WORDMARK_H = 13  # pt; the 18pt TREC badge on the right is centered on the same line
-_WORDMARK_W = _WORDMARK_H * 708 / 120
-
-
-def _draw_brand(c, x, y, mode="light", text_color=None):
-    """Draws the wordmark left-aligned at x, vertically centered on y-3 (the
-    TREC badge's center line). A broken or missing asset must never block
-    real offer generation, so any failure falls back to the name as text."""
-    bottom = y - 3 - _WORDMARK_H / 2
-    try:
-        c.drawImage(_WORDMARK.get(mode, _WORDMARK["light"]), x, bottom,
-                    _WORDMARK_W, _WORDMARK_H, mask="auto")
-    except Exception:
-        if text_color is not None:
-            c.setFillColor(text_color)
-        c.setFont("Helvetica-Bold", 12)
-        c.drawString(x, bottom + 2, "txtanoffer")
-
 
 # Fixed accent used in both modes (readable on white and on navy alike).
 ACCENT_RGB = (0.09, 0.09, 0.09)  # ~#171717, matches the site's black/charcoal accent
-ON_ACCENT = HexColor("#ffffff")  # text drawn on top of solid accent/avatar shapes
 
 PALETTES = {
     "dark": {
@@ -130,307 +111,308 @@ def _draw_bg(c, width, height, pal, mode):
     c.restoreState()
 
 
+# Site brand colors (txtanoffer.com hero/nav/CTAs) -- the cover and the
+# certification page share these so the packet reads as one product with the
+# website: dark-green band + white wordmark, gold accent, green key values.
+BRAND = {
+    "green": HexColor("#0a3f3a"),
+    "green_mid": HexColor("#0b5d52"),
+    "green_tint": HexColor("#eef5f3"),
+    "gold": HexColor("#f5c242"),
+    "gold_tint": HexColor("#fdf6e3"),
+    "gold_border": HexColor("#f1d48a"),
+    "ink": HexColor("#0f1f2f"),
+    "muted": HexColor("#5a6b7a"),
+    "dim": HexColor("#8a9aa9"),
+    "line": HexColor("#e3e8ec"),
+    "white": HexColor("#ffffff"),
+}
+
+_FINANCING_LABELS = {
+    "conventional": "Conventional", "fha": "FHA", "va": "VA", "usda": "USDA",
+    "texas_veterans": "Texas Veterans", "reverse_mortgage": "Reverse Mortgage",
+    "cash": "Cash",
+}
+
+
+def _fmt_long_date(d) -> str:
+    """'November 2, 2026' -- no zero-padded day, matching how a person writes it."""
+    return f"{d:%B} {d.day}, {d.year}"
+
+
+def packet_forms(parsed: dict) -> list:
+    """The forms actually attached to this offer's PDF, in packet order.
+    Must stay in sync with generate_offer_pdf() in pdf_filler.py: the 40-11
+    only rides along when there's a loan, the 36-10 only when the text said
+    HOA. The cover and certification pages both list exactly these, so a cash
+    offer never claims a financing addendum that isn't there."""
+    forms = [("TREC 20-19", "One to Four Family Residential Contract (Resale)")]
+    if (parsed.get("loan_amount") or 0) > 0:
+        forms.append(("TREC 40-11", "Third Party Financing Addendum"))
+    if parsed.get("has_hoa"):
+        forms.append(("TREC 36-10", "Addendum for Mandatory Owners' Association Membership"))
+    forms.append(("TREC 61-0", "Seller's Disclosure re: Groundwater/Surface Water"))
+    forms.append(("IABS 1-2", "Information About Brokerage Services"))
+    return forms
+
+
+def _draw_brand_band(c, width, height, right_label=None):
+    """Full-width dark-green header band with the white wordmark, a gold
+    accent rule underneath, and an optional gold pill on the right."""
+    band_h = 64
+    c.setFillColor(BRAND["green"])
+    c.rect(0, height - band_h, width, band_h, fill=1, stroke=0)
+    c.setFillColor(BRAND["gold"])
+    c.rect(0, height - band_h - 3, width, 3, fill=1, stroke=0)
+
+    margin = 0.65 * inch
+    mid = height - band_h / 2
+    logo_h = 15
+    logo_w = logo_h * 708 / 120
+    try:
+        c.drawImage(_WORDMARK["dark"], margin, mid - logo_h / 2, logo_w, logo_h, mask="auto")
+    except Exception:
+        c.setFillColor(BRAND["white"])
+        c.setFont("Helvetica-Bold", 14)
+        c.drawString(margin, mid - 5, "txtanoffer")
+
+    if right_label:
+        c.setFont("Helvetica-Bold", 7)
+        tw = c.stringWidth(right_label, "Helvetica-Bold", 7)
+        pw, ph = tw + 20, 18
+        px = width - margin - pw
+        _draw_rounded_rect(c, px, mid - ph / 2, pw, ph, r=9, fill_color=BRAND["gold"])
+        c.setFillColor(BRAND["green"])
+        c.drawString(px + 10, mid - 2.5, right_label)
+    return height - band_h - 3
+
+
+def _draw_kicker(c, x, y, text, color=None):
+    c.setFillColor(color or BRAND["green_mid"])
+    c.setFont("Helvetica-Bold", 7)
+    c.drawString(x, y, text.upper())
+
+
+def _draw_page_footer(c, width, left, right):
+    margin = 0.65 * inch
+    fy = 0.5 * inch
+    c.setStrokeColor(BRAND["line"])
+    c.setLineWidth(0.5)
+    c.line(margin, fy + 12, width - margin, fy + 12)
+    c.setFillColor(BRAND["dim"])
+    c.setFont("Helvetica", 7)
+    c.drawString(margin, fy, left)
+    c.drawRightString(width - margin, fy, right)
+
+
 def generate_cover_page(parsed: dict, agent: dict, mode: str = "light") -> bytes:
-    """mode: 'light' (print-friendly, default -- sits next to white TREC forms)
-    or 'dark' (digital/dashboard preview)."""
-    pal = PALETTES.get(mode, PALETTES["light"])
-
-    def surface(alpha):
-        """Semi-transparent card surface: white-tint on dark bg, gray-tint on light bg."""
-        r, g, b = pal["surface_tint"]
-        return Color(r, g, b, alpha=alpha * pal["surface_scale"])
-
-    BG_ELEVATED = pal["elevated_bg"]
-    ACCENT = pal["accent"]
-    ACCENT_LIGHT = pal["accent_light"]
-    TEXT_PRIMARY = pal["text_primary"]
-    TEXT_MUTED = pal["text_muted"]
-    TEXT_DIM = pal["text_dim"]
-    TEXT_ROW_VALUE = pal["text_row_value"]
-    AMBER = pal["amber"]
-    AMBER_BG = pal["amber_bg"]
-    AMBER_BORDER = pal["amber_border"]
-    DIVIDER = pal["divider"]
-
+    """Page 1 of every offer PDF, and the preview image on the /review page
+    the SMS reply links to. Print-first (it sits in front of white TREC
+    forms), styled to match txtanoffer.com. `mode` is kept for callers;
+    only the light/print layout exists."""
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=letter)
     width, height = letter
-
-    _draw_bg(c, width, height, pal, mode)
-
     margin = 0.65 * inch
     content_w = width - 2 * margin
-    cx = width / 2
+    now = datetime.now()
 
-    # === HEADER ===
-    y = height - 0.6 * inch
-    # Brand
-    _draw_brand(c, margin, y, mode, TEXT_PRIMARY)
+    c.setFillColor(BRAND["white"])
+    c.rect(0, 0, width, height, fill=1, stroke=0)
+    y = _draw_brand_band(c, width, height, "DRAFT — REVIEW BEFORE SIGNING")
 
-    # TREC badge (right side)
-    badge_text = "TREC 20-19 + 40-11"
-    c.setFont("Helvetica-Bold", 6.5)
-    tw = c.stringWidth(badge_text, "Helvetica-Bold", 6.5)
-    badge_x = width - margin - tw - 16
-    _draw_rounded_rect(c, badge_x - 4, y - 12, tw + 22, 18, r=9,
-                       fill_color=Color(*ACCENT_RGB, alpha=0.1),
-                       stroke_color=Color(*ACCENT_RGB, alpha=0.2))
-    c.setFillColor(ACCENT_LIGHT if mode == "dark" else HexColor("#000000"))
-    c.drawString(badge_x + 7, y - 7, badge_text)
-
-    # === TITLE BLOCK ===
-    y -= 0.7 * inch
-    c.setFillColor(TEXT_PRIMARY)
-    c.setFont("Helvetica-Bold", 17)
-    c.drawCentredString(cx, y, "Residential Purchase Offer")
-    y -= 0.28 * inch
-    c.setFillColor(TEXT_MUTED)
+    # === TITLE ===
+    y -= 0.5 * inch
+    _draw_kicker(c, margin, y, "Generated contract summary")
+    y -= 0.34 * inch
+    c.setFillColor(BRAND["ink"])
+    c.setFont("Helvetica-Bold", 22)
+    c.drawString(margin, y, "Residential Purchase Offer")
+    y -= 0.24 * inch
+    c.setFillColor(BRAND["muted"])
     c.setFont("Helvetica", 9)
-    c.drawCentredString(cx, y, "Generated Contract Summary — Review Before Signing")
+    c.drawString(margin, y, f"Prepared {_fmt_long_date(now)}  ·  Review every page before signing or presenting")
 
-    # === PROPERTY ADDRESS CARD ===
-    y -= 0.55 * inch
-    card_h = 0.85 * inch
-    _draw_rounded_rect(c, margin, y - card_h + 0.15*inch, content_w, card_h, r=8,
-                       fill_color=surface(0.035),
-                       stroke_color=surface(0.07))
-
-    address = parsed.get('address', '')
-    city = parsed.get('city', '')
-    county = parsed.get('county', '')
-    zip_code = parsed.get('zip', '')
+    # === PROPERTY ===
+    address = parsed.get('address', '') or ''
     location_parts = []
-    if city:
-        location_parts.append(city)
-    if county:
-        location_parts.append(f"{county} County")
-    location_parts.append(f"TX {zip_code}" if zip_code else "TX")
-    city_state = ", ".join(location_parts)
+    if parsed.get('city'):
+        location_parts.append(parsed['city'])
+    if parsed.get('county'):
+        location_parts.append(f"{parsed['county']} County")
+    location_parts.append(f"TX {parsed['zip']}" if parsed.get('zip') else "TX")
+    location = ", ".join(location_parts)
 
-    c.setFillColor(TEXT_PRIMARY)
-    c.setFont("Helvetica-Bold", 13)
-    c.drawCentredString(cx, y - 0.28*inch, address)
-    c.setFillColor(TEXT_MUTED)
-    c.setFont("Helvetica", 9)
-    c.drawCentredString(cx, y - 0.52*inch, city_state)
+    y -= 0.32 * inch
+    card_h = 0.95 * inch
+    _draw_rounded_rect(c, margin, y - card_h, content_w, card_h, r=8, fill_color=BRAND["green_tint"])
+    c.setFillColor(BRAND["green"])
+    c.rect(margin, y - card_h + 8, 3, card_h - 16, fill=1, stroke=0)
+    _draw_kicker(c, margin + 0.25 * inch, y - 0.26 * inch, "Property")
+    c.setFillColor(BRAND["ink"])
+    font_size = 16
+    while font_size > 11 and c.stringWidth(address, "Helvetica-Bold", font_size) > content_w - 0.5 * inch:
+        font_size -= 0.5
+    c.setFont("Helvetica-Bold", font_size)
+    c.drawString(margin + 0.25 * inch, y - 0.52 * inch, address)
+    c.setFillColor(BRAND["muted"])
+    c.setFont("Helvetica", 9.5)
+    c.drawString(margin + 0.25 * inch, y - 0.72 * inch, location)
 
-    y -= card_h + 0.2 * inch
-
-    # === STATS GRID (3 boxes) ===
-    price = parsed.get('price', 0)
-    down_pct = parsed.get('down_payment_pct', 0)
-    down_amt = parsed.get('down_payment_amount', 0)
-    loan_amt = parsed.get('loan_amount', 0)
-
-    box_w = (content_w - 0.2*inch) / 3
-    box_h = 0.7 * inch
-    stats = [
-        ("SALES PRICE", f"${price:,}"),
-        ("DOWN PAYMENT", f"{_fmt_pct(down_pct)} (${down_amt:,})"),
-        ("LOAN AMOUNT", f"${loan_amt:,}"),
-    ]
-
-    for i, (label, value) in enumerate(stats):
-        bx = margin + i * (box_w + 0.1*inch)
-        _draw_rounded_rect(c, bx, y - box_h, box_w, box_h, r=6,
-                           fill_color=surface(0.025),
-                           stroke_color=surface(0.05))
-        c.setFillColor(TEXT_DIM)
-        c.setFont("Helvetica-Bold", 6)
-        c.drawCentredString(bx + box_w/2, y - 0.22*inch, label)
-        c.setFillColor(ACCENT_LIGHT if i == 0 else TEXT_PRIMARY)
-        font_size = 10 if len(value) < 12 else 8.5
-        c.setFont("Helvetica-Bold", font_size)
-        c.drawCentredString(bx + box_w/2, y - 0.46*inch, value)
-
-    y -= box_h + 0.2 * inch
-
-    # === PROPERTY DETAILS ROW (if MLS data available) ===
-    bed = parsed.get('bed', 0)
-    bath = parsed.get('bath', 0)
-    sqft = parsed.get('sqft', 0)
-    year_built = parsed.get('year_built', 0)
-    if bed or bath or sqft:
-        detail_parts = []
-        if bed:
-            detail_parts.append(f"{bed} Bed")
-        if bath:
-            detail_parts.append(f"{bath} Bath")
-        if sqft:
-            detail_parts.append(f"{sqft:,} Sqft")
-        if year_built:
-            detail_parts.append(f"Built {year_built}")
-        detail_text = "  ·  ".join(detail_parts)
-
-        detail_h = 0.35 * inch
-        _draw_rounded_rect(c, margin, y - detail_h, content_w, detail_h, r=6,
-                           fill_color=surface(0.02),
-                           stroke_color=surface(0.04))
-        c.setFillColor(TEXT_MUTED)
+    # Property details from the listing lookup, when there are any
+    details = []
+    if parsed.get('bed'):
+        details.append(f"{parsed['bed']} Bed")
+    if parsed.get('bath'):
+        details.append(f"{parsed['bath']} Bath")
+    if parsed.get('sqft'):
+        details.append(f"{parsed['sqft']:,} Sqft")
+    if parsed.get('year_built'):
+        details.append(f"Built {parsed['year_built']}")
+    if details and (parsed.get('bed') or parsed.get('bath') or parsed.get('sqft')):
         c.setFont("Helvetica", 8.5)
-        c.drawCentredString(cx, y - 0.22*inch, detail_text)
-        y -= detail_h + 0.15 * inch
+        c.drawRightString(width - margin - 0.25 * inch, y - 0.72 * inch, "  ·  ".join(details))
+    y -= card_h + 0.22 * inch
 
-    # === FINANCIAL BREAKDOWN TABLE ===
-    close_days = parsed.get('close_days', 0)
-    close_date = (datetime.now() + timedelta(days=close_days)).strftime("%B %d, %Y")
-    earnest = parsed.get('earnest_money', 0)
-    option = parsed.get('option_fee', 0)
+    # === KEY TERMS (3 tiles) ===
+    price = parsed.get('price', 0) or 0
+    down_pct = parsed.get('down_payment_pct', 0) or 0
+    down_amt = parsed.get('down_payment_amount', 0) or 0
+    loan_amt = parsed.get('loan_amount', 0) or 0
+    close_days = parsed.get('close_days', 0) or 0
+    close_date = _fmt_long_date(now + timedelta(days=close_days)) if close_days else "—"
 
-    rows = [
-        ("Sales Price", f"${price:,}"),
-        (f"Down Payment ({_fmt_pct(down_pct)})", f"${down_amt:,}"),
-        ("Loan Amount", f"${loan_amt:,}"),
-        ("Earnest Money", f"${earnest:,}"),
-        ("Option Fee", f"${option:,}"),
-        ("Closing Date", close_date),
+    tiles = [
+        ("Sales price", f"${price:,}", BRAND["green"]),
+        ("Down payment", f"${down_amt:,}  ({_fmt_pct(down_pct)})", BRAND["ink"]) if loan_amt > 0
+        else ("Payment", "All cash", BRAND["ink"]),
+        ("Closing on or before", close_date, BRAND["ink"]),
     ]
+    gap = 0.12 * inch
+    tile_w = (content_w - 2 * gap) / 3
+    tile_h = 0.78 * inch
+    for i, (label, value, color) in enumerate(tiles):
+        tx = margin + i * (tile_w + gap)
+        _draw_rounded_rect(c, tx, y - tile_h, tile_w, tile_h, r=7,
+                           fill_color=BRAND["white"], stroke_color=BRAND["line"])
+        c.setFillColor(BRAND["dim"])
+        c.setFont("Helvetica-Bold", 6.5)
+        c.drawString(tx + 0.17 * inch, y - 0.25 * inch, label.upper())
+        size = 15
+        while size > 9 and c.stringWidth(value, "Helvetica-Bold", size) > tile_w - 0.34 * inch:
+            size -= 0.5
+        c.setFillColor(color)
+        c.setFont("Helvetica-Bold", size)
+        c.drawString(tx + 0.17 * inch, y - 0.55 * inch, value)
+    y -= tile_h + 0.28 * inch
 
-    table_h = len(rows) * 0.3 * inch + 0.2 * inch
-    _draw_rounded_rect(c, margin, y - table_h, content_w, table_h, r=6,
-                       fill_color=surface(0.025),
-                       stroke_color=surface(0.05))
+    # === OFFER TERMS ===
+    ftype = parsed.get('financing_type')
+    if loan_amt > 0:
+        financing = _FINANCING_LABELS.get(ftype or "conventional", (ftype or "").title())
+        if not ftype:
+            financing += " (default — confirm)"
+    else:
+        financing = "Cash"
+    rows = [("Financing", financing)]
+    if loan_amt > 0:
+        rows.append(("Loan amount", f"${loan_amt:,}"))
+    rows.append(("Earnest money", f"${parsed.get('earnest_money', 0) or 0:,}"))
+    rows.append(("Option fee", f"${parsed.get('option_fee', 0) or 0:,}"))
+    if parsed.get('inspection_days') is not None:
+        rows.append(("Option period", f"{parsed['inspection_days']} days"))
+    if close_days:
+        rows.append(("Days to close", f"{close_days} days from today"))
 
-    row_y = y - 0.28 * inch
-    for i, (label, value) in enumerate(rows):
-        is_last = (i == len(rows) - 1)
-        c.setFillColor(TEXT_PRIMARY if is_last else TEXT_MUTED)
-        c.setFont("Helvetica-Bold" if is_last else "Helvetica", 9)
-        c.drawString(margin + 0.2*inch, row_y, label)
-        c.setFillColor(ACCENT_LIGHT if is_last else TEXT_ROW_VALUE)
-        c.setFont("Helvetica-Bold", 10 if is_last else 9)
-        c.drawRightString(width - margin - 0.2*inch, row_y, value)
-
-        if not is_last:
-            row_y -= 0.05 * inch
-            c.setStrokeColor(DIVIDER)
-            c.setLineWidth(0.3)
-            c.line(margin + 0.15*inch, row_y, width - margin - 0.15*inch, row_y)
-            row_y -= 0.25 * inch
-        else:
-            row_y -= 0.3 * inch
-
-    y -= table_h + 0.2 * inch
-
-    # === AGENT CARD ===
-    agent_name = agent.get('name', '')
-    license_num = agent.get('license', '')
-    brokerage = agent.get('brokerage', '')
-    agent_phone = agent.get('phone', '')
-
-    if agent_name:
-        agent_card_h = 0.6 * inch
-        _draw_rounded_rect(c, margin, y - agent_card_h, content_w, agent_card_h, r=6,
-                           fill_color=surface(0.025),
-                           stroke_color=surface(0.05))
-
-        # Avatar circle
-        initials = "".join(w[0].upper() for w in agent_name.split()[:2]) if agent_name else "AG"
-        av_x = margin + 0.35 * inch
-        av_y = y - agent_card_h/2
-        c.setFillColor(HexColor("#3b82f6"))
-        c.circle(av_x, av_y, 14, fill=1, stroke=0)
-        c.setFillColor(ON_ACCENT)
-        c.setFont("Helvetica-Bold", 8)
-        c.drawCentredString(av_x, av_y - 3, initials)
-
-        # Agent info
-        info_x = margin + 0.75 * inch
-        c.setFillColor(TEXT_PRIMARY)
-        c.setFont("Helvetica-Bold", 9.5)
-        c.drawString(info_x, y - 0.24*inch, agent_name)
-        meta_parts = []
-        if license_num:
-            meta_parts.append(f"License #{license_num}")
-        if brokerage:
-            meta_parts.append(brokerage)
-        if agent_phone:
-            meta_parts.append(_fmt_phone(agent_phone))
-        c.setFillColor(TEXT_DIM)
-        c.setFont("Helvetica", 7.5)
-        c.drawString(info_x, y - 0.42*inch, " · ".join(meta_parts))
-
-        y -= agent_card_h + 0.2 * inch
-
-    # === DISCLAIMER ===
-    disc_h = 0.7 * inch
-    _draw_rounded_rect(c, margin, y - disc_h, content_w, disc_h, r=6,
-                       fill_color=AMBER_BG, stroke_color=AMBER_BORDER)
-
-    c.setFillColor(AMBER)
-    c.setFont("Helvetica-Bold", 7)
-    c.drawString(margin + 0.2*inch, y - 0.2*inch, "IMPORTANT NOTICE")
-    c.setFillColor(TEXT_MUTED)
-    c.setFont("Helvetica", 7.5)
-    disc_text = (
-        "This is a summary only. The attached TREC 20-19 and 40-11 are the official "
-        "promulgated forms required by the Texas Real Estate Commission. This summary "
-        "does not modify or replace any provision of the TREC contract. Agent must "
-        "review all pages before signing."
-    )
-    text_obj = c.beginText(margin + 0.2*inch, y - 0.38*inch)
-    text_obj.setFont("Helvetica", 7.5)
-    text_obj.setFillColor(TEXT_MUTED)
-    words = disc_text.split()
-    line = ""
-    max_line_w = content_w - 0.4*inch
-    for word in words:
-        test = line + " " + word if line else word
-        if c.stringWidth(test, "Helvetica", 7.5) < max_line_w:
-            line = test
-        else:
-            text_obj.textLine(line)
-            line = word
-    if line:
-        text_obj.textLine(line)
-    c.drawText(text_obj)
-
-    y -= disc_h + 0.2 * inch
-
-    # === FOOTER ===
-    c.setStrokeColor(DIVIDER)
-    c.setLineWidth(0.5)
+    _draw_kicker(c, margin, y, "Offer terms")
+    y -= 0.12 * inch
+    c.setStrokeColor(BRAND["ink"])
+    c.setLineWidth(0.8)
     c.line(margin, y, width - margin, y)
-    y -= 0.25 * inch
+    for label, value in rows:
+        y -= 0.24 * inch
+        c.setFillColor(BRAND["muted"])
+        c.setFont("Helvetica", 9.5)
+        c.drawString(margin, y, label)
+        c.setFillColor(BRAND["ink"])
+        c.setFont("Helvetica-Bold", 9.5)
+        c.drawRightString(width - margin, y, value)
+        y -= 0.09 * inch
+        c.setStrokeColor(BRAND["line"])
+        c.setLineWidth(0.5)
+        c.line(margin, y, width - margin, y)
+    y -= 0.32 * inch
 
-    c.setFillColor(TEXT_DIM)
-    c.setFont("Helvetica-Bold", 7)
-    c.drawString(margin, y, "TREC No. 20-19 (05-04-2026)")
-    y -= 0.16 * inch
-    c.setFont("Helvetica", 7)
-    c.drawString(margin, y, "Third Party Financing Addendum (40-11) attached")
-    y -= 0.16 * inch
-    c.drawString(margin, y, "Seller's Disclosure re: Groundwater/Surface Water (61-0) attached")
-    y -= 0.16 * inch
-    c.drawString(margin, y, "Not affiliated with TREC")
+    # === AGENT ===
+    agent_name = agent.get('name', '')
+    if agent_name:
+        meta = []
+        if agent.get('license'):
+            meta.append(f"TREC #{agent['license']}")
+        if agent.get('brokerage'):
+            meta.append(agent['brokerage'])
+        if agent.get('phone'):
+            meta.append(_fmt_phone(agent['phone']))
+        _draw_kicker(c, margin, y, "Buyer's agent")
+        y -= 0.24 * inch
+        initials = "".join(w[0].upper() for w in agent_name.split()[:2])
+        c.setFillColor(BRAND["green"])
+        c.circle(margin + 13, y - 4, 13, fill=1, stroke=0)
+        c.setFillColor(BRAND["white"])
+        c.setFont("Helvetica-Bold", 8)
+        c.drawCentredString(margin + 13, y - 7, initials)
+        c.setFillColor(BRAND["ink"])
+        c.setFont("Helvetica-Bold", 10)
+        c.drawString(margin + 36, y, agent_name)
+        c.setFillColor(BRAND["muted"])
+        c.setFont("Helvetica", 8)
+        c.drawString(margin + 36, y - 13, "  ·  ".join(meta))
+        y -= 0.44 * inch
 
-    # Draft badge (right side)
-    badge_y = y + 0.25 * inch
-    _draw_rounded_rect(c, width - margin - 1.3*inch, badge_y, 1.3*inch, 0.22*inch, r=9,
-                       fill_color=AMBER_BG,
-                       stroke_color=AMBER_BORDER)
-    c.setFillColor(AMBER)
-    c.setFont("Helvetica-Bold", 6.5)
-    c.drawCentredString(width - margin - 0.65*inch, badge_y + 0.06*inch, "DRAFT — REVIEW REQUIRED")
+    # === IN THIS PACKET ===
+    forms = packet_forms(parsed) + [("Final page", "Agent Certification & review checklist")]
+    _draw_kicker(c, margin, y, "In this packet")
+    y -= 0.08 * inch
+    for code, name in forms:
+        y -= 0.2 * inch
+        c.setStrokeColor(BRAND["green_mid"])
+        c.setLineWidth(1.3)
+        p = c.beginPath()
+        p.moveTo(margin + 1, y + 3)
+        p.lineTo(margin + 4, y)
+        p.lineTo(margin + 9, y + 6)
+        c.drawPath(p, stroke=1, fill=0)
+        c.setFillColor(BRAND["ink"])
+        c.setFont("Helvetica-Bold", 8.5)
+        c.drawString(margin + 16, y, code)
+        c.setFillColor(BRAND["muted"])
+        c.setFont("Helvetica", 8.5)
+        c.drawString(margin + 16 + 62, y, name)
+    y -= 0.26 * inch
 
-    timestamp = datetime.now().strftime("%m/%d/%Y %I:%M %p")
-    c.setFillColor(TEXT_DIM)
-    c.setFont("Helvetica", 6.5)
-    c.drawRightString(width - margin, badge_y - 0.18*inch, f"Generated {timestamp}")
+    # === NOTICE ===
+    notice = ("This page is a summary for review only. The attached TREC forms are the "
+              "contract; this summary does not modify or replace any of their terms. The "
+              "agent must review and complete every page before signing or presenting.")
+    lines = _wrap_text(c, notice, "Helvetica", 8, content_w - 0.4 * inch)
+    box_h = 0.36 * inch + len(lines) * 0.15 * inch
+    _draw_rounded_rect(c, margin, y - box_h, content_w, box_h, r=7,
+                       fill_color=BRAND["gold_tint"], stroke_color=BRAND["gold_border"])
+    _draw_kicker(c, margin + 0.2 * inch, y - 0.22 * inch, "Before you sign", BRAND["green"])
+    ty = y - 0.4 * inch
+    c.setFillColor(BRAND["ink"])
+    c.setFont("Helvetica", 8)
+    for line in lines:
+        c.drawString(margin + 0.2 * inch, ty, line)
+        ty -= 0.15 * inch
+
+    _draw_page_footer(c, width, "txtanoffer.com  ·  Not affiliated with TREC",
+                      f"TREC 20-19 (05-04-2026)  ·  Generated {now:%m/%d/%Y %I:%M %p}")
 
     c.save()
     buffer.seek(0)
     return buffer.getvalue()
 
-
-# Blue accent for the certification page only -- spec calls for a distinct
-# color from the cover page's teal so agents can tell the two apart at a
-# glance when flipping through a printed packet.
-BLUE_RGB = (0.231, 0.510, 0.965)  # #3b82f6
-CERT_BLUE = {
-    "dark": {"accent": HexColor("#3b82f6"), "accent_light": HexColor("#60a5fa")},
-    "light": {"accent": HexColor("#3b82f6"), "accent_light": HexColor("#2563eb")},
-}
 
 REVIEW_CHECKLIST = [
     ("Property Address Verified",
@@ -466,18 +448,15 @@ def _wrap_text(c, text, font, size, max_width):
 
 def generate_certification_page(parsed: dict, agent: dict, mode: str = "light") -> bytes:
     """Final-page agent certification + review checklist (spec Part 3).
-    Blue accent distinguishes it from the teal cover page. Checkboxes and the
+    Shares the cover page's brand band; its gold pill names the page. Checkboxes and the
     signature line are drawn empty -- this is a printed page the agent signs
     by hand, not something this app fills in on their behalf."""
     pal = PALETTES.get(mode, PALETTES["light"])
-    blue = CERT_BLUE.get(mode, CERT_BLUE["light"])
 
     def surface(alpha):
         r, g, b = pal["surface_tint"]
         return Color(r, g, b, alpha=alpha * pal["surface_scale"])
 
-    ACCENT = blue["accent"]
-    ACCENT_LIGHT = blue["accent_light"]
     TEXT_PRIMARY = pal["text_primary"]
     TEXT_MUTED = pal["text_muted"]
     TEXT_DIM = pal["text_dim"]
@@ -487,29 +466,18 @@ def generate_certification_page(parsed: dict, agent: dict, mode: str = "light") 
     c = canvas.Canvas(buffer, pagesize=letter)
     width, height = letter
 
-    # Background + top accent bar (blue, not the shared teal _draw_bg helper)
+    # Same brand band as the cover page; the gold pill tells the two apart
+    # when flipping through a printed packet.
     c.setFillColor(pal["page_bg"])
     c.rect(0, 0, width, height, fill=1, stroke=0)
-    if mode == "dark" and pal["elevated_bg"] is not None:
-        c.setFillColor(pal["elevated_bg"])
-        c.rect(0, 0, width, height * 0.35, fill=1, stroke=0)
-    c.setFillColor(ACCENT)
-    c.rect(0, height - 4, width, 4, fill=1, stroke=0)
-    c.saveState()
-    c.setFillColor(Color(*BLUE_RGB, alpha=pal["corner_glow_alpha"]))
-    c.circle(width - 0.5*inch, height - 0.5*inch, 2*inch, fill=1, stroke=0)
-    c.restoreState()
+    _draw_brand_band(c, width, height, "AGENT CERTIFICATION")
 
     margin = 0.65 * inch
     content_w = width - 2 * margin
     cx = width / 2
 
-    # === HEADER (brand) ===
-    y = height - 0.6 * inch
-    _draw_brand(c, margin, y, mode, TEXT_PRIMARY)
-
     # === TITLE BLOCK ===
-    y -= 0.7 * inch
+    y = height - 67 - 0.62 * inch
     c.setFillColor(TEXT_PRIMARY)
     c.setFont("Helvetica-Bold", 17)
     c.drawCentredString(cx, y, "Agent Certification")
@@ -526,9 +494,11 @@ def generate_certification_page(parsed: dict, agent: dict, mode: str = "light") 
 
     # === CERTIFICATION STATEMENT ===
     y -= 0.45 * inch
+    codes = [code for code, _ in packet_forms(parsed)]
+    form_list = ", ".join(codes[:-1]) + " and " + codes[-1]
     stmt_text = (
         "By signing below, I confirm that I have personally reviewed all fields "
-        "in the attached TREC 20-19 and 40-11 forms, and that they accurately "
+        f"in the attached {form_list} forms, and that they accurately "
         "reflect the terms of this offer as communicated by the buyer."
     )
     stmt_lines = _wrap_text(c, stmt_text, "Helvetica", 9, content_w - 0.4*inch)
@@ -545,8 +515,8 @@ def generate_certification_page(parsed: dict, agent: dict, mode: str = "light") 
     y -= stmt_h + 0.3 * inch
 
     # === REVIEW CHECKLIST ===
-    c.setFillColor(TEXT_DIM)
-    c.setFont("Helvetica-Bold", 9)
+    c.setFillColor(BRAND["green_mid"])
+    c.setFont("Helvetica-Bold", 8)
     c.drawString(margin, y, "REVIEW CHECKLIST")
     y -= 0.06 * inch
     c.setStrokeColor(DIVIDER)
@@ -583,8 +553,8 @@ def generate_certification_page(parsed: dict, agent: dict, mode: str = "light") 
     y -= 0.35 * inch
 
     # === AGENT ACKNOWLEDGMENT ===
-    c.setFillColor(TEXT_DIM)
-    c.setFont("Helvetica-Bold", 9)
+    c.setFillColor(BRAND["green_mid"])
+    c.setFont("Helvetica-Bold", 8)
     c.drawString(margin, y, "AGENT ACKNOWLEDGMENT")
     y -= 0.06 * inch
     c.setStrokeColor(DIVIDER)
@@ -636,14 +606,8 @@ def generate_certification_page(parsed: dict, agent: dict, mode: str = "light") 
         c.drawCentredString(cx, y, line)
         y -= 0.14 * inch
 
-    # === FOOTER ===
-    footer_y = 0.55 * inch
-    c.setStrokeColor(DIVIDER)
-    c.setLineWidth(0.5)
-    c.line(margin, footer_y + 0.15*inch, width - margin, footer_y + 0.15*inch)
-    c.setFillColor(TEXT_DIM)
-    c.setFont("Helvetica", 7)
-    c.drawCentredString(cx, footer_y, "Generated by TxtAnOffer · txtanoffer.com · Not affiliated with TREC")
+    _draw_page_footer(c, width, "txtanoffer.com  \u00b7  Not affiliated with TREC",
+                      "Agent Certification  \u00b7  Final page")
 
     c.save()
     buffer.seek(0)

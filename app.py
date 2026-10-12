@@ -2051,33 +2051,46 @@ def format_offer_confirmation(parsed: dict) -> str:
         addr_parts.append("TX")
     full_addr = ", ".join(addr_parts)
 
+    # Plain GSM-7 characters only (no "|", "\u00b7" or em dashes): one
+    # non-GSM character flips the whole SMS to UCS-2, which cuts each segment
+    # from 160 to 70 characters and roughly triples what every reply costs.
+    if parsed["loan_amount"] > 0:
+        money_line = (f"Price ${parsed['price']:,}, {_fmt_pct(parsed['down_payment_pct'])}% down "
+                      f"(${parsed['down_payment_amount']:,})")
+        loan_line = f"Loan ${parsed['loan_amount']:,}"
+    else:
+        money_line = f"Price ${parsed['price']:,}, all cash"
+        loan_line = None
     lines = [
-        "Got it.",
+        "TxtAnOffer: got it.",
         "",
         full_addr,
-        f"Price: ${parsed['price']:,} | Down: {_fmt_pct(parsed['down_payment_pct'])}% (${parsed['down_payment_amount']:,})",
-        f"Loan: ${parsed['loan_amount']:,} | Earnest: ${parsed['earnest_money']:,} | Option: ${parsed['option_fee']:,}",
-        f"Close: {close_dt.strftime('%b %d')} ({parsed['close_days']} days)",
+        money_line,
     ]
-    if parsed.get("financing_type"):
+    if loan_line:
+        lines.append(loan_line)
+    lines += [
+        f"Earnest ${parsed['earnest_money']:,}, option fee ${parsed['option_fee']:,}",
+        f"Closing {close_dt:%b} {close_dt.day} ({parsed['close_days']} days)",
+    ]
+    if parsed.get("financing_type") and parsed["financing_type"] != "cash":
         lines.append(f"Financing: {FINANCING_LABELS.get(parsed['financing_type'], parsed['financing_type'].title())}")
     if parsed.get("inspection_days") is not None:
-        lines.append(f"Inspection: {parsed['inspection_days']} days")
+        lines.append(f"Option period: {parsed['inspection_days']} days")
 
     lines += [
         "",
-        "Reply YES to generate TREC draft.",
-        'Reply with corrections (ex: "make it 820k").',
+        'Reply YES to create the TREC draft, or text a correction (ex: "make it 820k").',
     ]
 
     agent = parsed.get("agent") or {}
     if agent.get("name"):
         agent_line = agent["name"]
         if agent.get("license"):
-            agent_line += f" - Lic #{agent['license']}"
+            agent_line += f", TREC #{agent['license']}"
         lines += ["", agent_line]
 
-    lines.append("Msg rates may apply. Reply STOP to unsubscribe, HELP for help.")
+    lines += ["", "Msg rates may apply. Reply STOP to unsubscribe, HELP for help."]
     return "\n".join(lines)
 
 
@@ -2294,18 +2307,18 @@ def finalize_offer_sms(agent_phone: str, draft: dict):
     else:
         remaining = FREE_OFFER_LIMIT - new_count
         if remaining > 0:
-            status_line = f"\n{remaining} free offers remaining"
+            status_line = f"\n\n{remaining} free offer{'s' if remaining != 1 else ''} left."
         else:
             payment_url = request.host_url.rstrip("/") + "/pricing"
-            status_line = f"\nLast free offer! Subscribe for unlimited:\n{payment_url}"
+            status_line = f"\n\nThat was your last free offer. Unlimited offers: {payment_url}"
 
-    includes = "TREC 20-19"
+    forms = ["TREC 20-19"]
     if draft.get("loan_amount", 0) > 0:
-        includes += " + 40-11 Financing Addendum"
-    includes += " + 61-0 Water Disclosure"
+        forms.append("40-11 Financing Addendum")
     if draft.get("has_hoa"):
-        includes += " + HOA Addendum"
-    includes += " + IABS"
+        forms.append("36-10 HOA Addendum")
+    forms += ["61-0 Water Disclosure", "IABS"]
+    includes = ", ".join(forms[:-1]) + " and " + forms[-1]
 
     # One-time nudge on the very first offer only -- an agent with no saved
     # profile sees a much longer blocking-fields checklist on the review
@@ -2326,13 +2339,13 @@ def finalize_offer_sms(agent_phone: str, draft: dict):
             )
 
     reply = (
-        f"DONE. TREC draft for {draft['address']} ready:\n\n"
-        f"Review & Email: {pdf_url}\n\n"
-        f"Includes: {includes}. DRAFT - Agent must review before signing.\n\n"
-        f"Need to change price/terms? Just text new offer.\n\n"
-        f"Reply DASHBOARD for all offers. STOP to unsubscribe, HELP for help."
+        f"Your TREC draft for {draft['address']} is ready.\n\n"
+        f"Review and email it: {pdf_url}\n\n"
+        f"Includes {includes}. Draft only: review every page before signing.\n\n"
+        f"To change terms, just text the new offer. Reply DASHBOARD for all your offers."
         f"{status_line}"
-        f"{profile_nudge}"
+        f"{profile_nudge}\n\n"
+        f"Reply STOP to unsubscribe, HELP for help."
     )
     twilio_send_sms(agent_phone, reply)
 
@@ -10098,7 +10111,13 @@ def review_offer(filename):
         created_dt = datetime.fromisoformat(offer["created_at"])
     except (KeyError, TypeError, ValueError):
         created_dt = datetime.now()
-    close_date = (created_dt + timedelta(days=close_days)).strftime("%B %d, %Y") if close_days else ""
+    close_dt = created_dt + timedelta(days=close_days) if close_days else None
+    close_date = f"{close_dt:%B} {close_dt.day}, {close_dt.year}" if close_dt else ""
+
+    def _qa_item(msg):
+        # Validator messages are plain text written with ASCII "--"; escape
+        # them for HTML and give them real dashes for the page.
+        return str(escape(msg)).replace(" -- ", " &mdash; ")
 
     sent_date = ""
     if email_sent_at:
@@ -10118,12 +10137,16 @@ def review_offer(filename):
 <style>
 :root{{--bg:#F5F5F7;--bg-card:#fff;--border:rgba(15,31,47,0.08);
 --text:#0f1f2f;--text-muted:#5a6b7a;--text-dim:#8a9aa9;--accent:#0b5d52;--accent-light:#16806e;
---accent-dark:#0a3a33;--accent-tint:#E7F3F1;--radius:1.25rem;--radius-sm:0.85rem;}}
+--accent-dark:#0a3f3a;--accent-tint:#E7F3F1;--gold:#f5c242;--radius:1.25rem;--radius-sm:0.85rem;}}
 *{{margin:0;padding:0;box-sizing:border-box;}}
 body{{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;
 -webkit-font-smoothing:antialiased;}}
-.top-bar{{background:var(--accent-tint);border-bottom:1px solid rgba(11,93,82,0.2);
-padding:0.6rem 1.5rem;text-align:center;font-size:0.8rem;color:var(--accent-dark);font-weight:600;}}
+.site-header{{background:var(--accent-dark);border-bottom:3px solid var(--gold);}}
+.site-header-inner{{max-width:600px;margin:0 auto;padding:0.9rem 1rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;}}
+.site-header img{{height:22px;width:auto;display:block;}}
+.site-header .draft-pill{{background:var(--gold);color:var(--accent-dark);font-size:0.68rem;font-weight:700;
+letter-spacing:0.04em;text-transform:uppercase;padding:0.3rem 0.7rem;border-radius:999px;white-space:nowrap;}}
+.kicker{{font-size:0.68rem;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.35rem;}}
 .container{{max-width:600px;margin:0 auto;padding:1.5rem 1rem;}}
 .address-card{{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
 padding:1.5rem;text-align:center;margin-bottom:1rem;box-shadow:0 1px 3px rgba(15,31,47,0.05);}}
@@ -10146,8 +10169,6 @@ text-decoration:none;border:none;cursor:pointer;transition:all 0.2s;}}
 .btn-secondary:hover{{border-color:var(--accent);}}
 .btn-outline{{background:transparent;color:var(--text-muted);border:1px solid var(--border);}}
 .btn-outline:hover{{border-color:var(--accent);color:var(--accent-dark);}}
-.pdf-frame{{width:100%;height:70vh;border:1px solid var(--border);border-radius:var(--radius-sm);
-background:#f1f5f9;}}
 .pdf-preview-card{{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
 padding:0.75rem;margin-bottom:1rem;box-shadow:0 1px 3px rgba(15,31,47,0.05);text-align:center;}}
 .pdf-preview-card a{{display:block;}}
@@ -10179,6 +10200,7 @@ border-top:1px solid var(--border);margin-top:1rem;}}
 .qa-blocking strong, .qa-warnings strong{{display:block;margin-bottom:0.4rem;color:var(--text);}}
 .qa-blocking ul, .qa-warnings ul{{margin:0;padding-left:1.1rem;}}
 .qa-blocking li, .qa-warnings li{{margin-bottom:0.2rem;}}
+@media(max-width:480px){{.site-header .pill-long{{display:none;}}}}
 @media(max-width:400px){{
 .stats{{grid-template-columns:1fr 1fr;}}
 .stat:last-child{{grid-column:span 2;}}
@@ -10186,11 +10208,15 @@ border-top:1px solid var(--border);margin-top:1rem;}}
 </style>
 </head>
 <body>
-<div class="top-bar">TREC 20-19 (mandatory as of {TREC_FORM_CURRENT_AS_OF}) — Review before signing</div>
+<header class="site-header"><div class="site-header-inner">
+<a href="/" aria-label="TxtAnOffer home"><img src="/static/logo-wordmark-white.png?v=1" alt="TxtAnOffer"></a>
+<span class="draft-pill">Draft<span class="pill-long"> &middot; review before signing</span></span>
+</div></header>
 <div class="container">
 <div class="address-card">
+<div class="kicker">Offer review</div>
 <h1>{address_html}</h1>
-<div class="meta">TREC One to Four Family Residential Contract</div>
+<div class="meta">TREC 20-19 One to Four Family Residential Contract &middot; current form, mandatory since {TREC_FORM_CURRENT_AS_OF}</div>
 </div>
 
 <div class="stats">
@@ -10201,8 +10227,8 @@ border-top:1px solid var(--border);margin-top:1rem;}}
 
 {'<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:0.6rem;text-align:center;margin-bottom:1rem;color:var(--text-muted);font-size:0.8rem;">' + ' &middot; '.join([x for x in [f"{mls.get('bed')} Bed" if mls.get('bed') else '', f"{mls.get('bath')} Bath" if mls.get('bath') else '', f"{mls.get('sqft'):,} Sqft" if mls.get('sqft') else '', f"Built {mls.get('year_built')}" if mls.get('year_built') else ''] if x]) + '</div>' if any(mls.get(k) for k in ('bed','bath','sqft')) else ''}
 
-{'<div class="qa-blocking"><strong>Can&rsquo;t send yet &mdash; fix before emailing:</strong><ul>' + ''.join(f'<li>{b}</li>' for b in validation['blocking']) + '</ul></div>' if validation['blocking'] else ''}
-{'<div class="qa-warnings"><strong>Heads up before sending:</strong><ul>' + ''.join(f'<li>{w}</li>' for w in validation['warnings']) + '</ul></div>' if validation['warnings'] else ''}
+{'<div class="qa-blocking"><strong>Can&rsquo;t send yet &mdash; fix before emailing:</strong><ul>' + ''.join(f'<li>{_qa_item(b)}</li>' for b in validation['blocking']) + '</ul></div>' if validation['blocking'] else ''}
+{'<div class="qa-warnings"><strong>Heads up before sending:</strong><ul>' + ''.join(f'<li>{_qa_item(w)}</li>' for w in validation['warnings']) + '</ul></div>' if validation['warnings'] else ''}
 
 {'<div class="sent-banner" id="sent-banner">&#9989; Sent to <strong>' + escape(email_sent_to) + '</strong> on ' + sent_date + '</div>' if email_sent_at else ''}
 
@@ -10214,7 +10240,7 @@ border-top:1px solid var(--border);margin-top:1rem;}}
 <div class="actions">
 <button class="btn btn-primary" id="email-toggle"{' disabled' if validation['blocking'] else ''}>{'Resend to Listing Agent' if email_sent_at else 'Email to Listing Agent'}</button>
 <a href="{pdf_url}" class="btn btn-secondary" target="_blank">Open PDF</a>
-<a href="{pdf_url}" class="btn btn-outline" download="{filename}">Download PDF</a>
+<a href="{pdf_url}" class="btn btn-secondary" download="{filename}">Download PDF</a>
 </div>
 
 <div class="actions">
@@ -10245,11 +10271,9 @@ border-top:1px solid var(--border);margin-top:1rem;}}
 <div class="email-status" id="webhook-status"></div>
 </div>
 
-<iframe src="{pdf_url}" class="pdf-frame" title="Offer PDF"></iframe>
-
 <div class="disclaimer">
-This is a draft generated by TxtAnOffer. Agent must review all fields before signing or presenting.
-Not affiliated with TREC. &middot; <a href="/" style="color:var(--accent-dark);">txtanoffer.com</a>
+This is a draft generated by TxtAnOffer. The agent must review every field before signing or presenting.<br>
+<a href="/" style="color:var(--accent-dark);">txtanoffer.com</a> &middot; <a href="mailto:support@txtanoffer.com" style="color:var(--accent-dark);">support@txtanoffer.com</a> &middot; Not affiliated with TREC
 </div>
 </div>
 
@@ -10492,7 +10516,8 @@ def offer_thread(filename):
         created_dt = datetime.fromisoformat(offer["created_at"])
     except (KeyError, TypeError, ValueError):
         created_dt = datetime.now()
-    close_date = (created_dt + timedelta(days=close_days)).strftime("%B %d, %Y") if close_days else ""
+    close_dt = created_dt + timedelta(days=close_days) if close_days else None
+    close_date = f"{close_dt:%B} {close_dt.day}, {close_dt.year}" if close_dt else ""
 
     action_expires = int(time.time()) + THREAD_LINK_TTL
     accept_sig = sign_thread_action(filename, "accept", action_expires)
