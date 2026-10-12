@@ -10027,6 +10027,17 @@ def profile():
 """
 
 
+def _js_literal(value):
+    """A value as a JS literal, safe inside an inline <script>. The review
+    page used to paste the address into '...' by hand, so any address with
+    an apostrophe (123 O'Connor St) made the whole script a syntax error:
+    Email to Listing Agent, DocuSign and Webhook all silently did nothing.
+    json.dumps handles the quoting; "</" is escaped so a value can't close
+    the <script> tag early."""
+    import json as _json
+    return _json.dumps(value).replace("</", "<\\/")
+
+
 @app.route("/review/<path:filename>")
 def review_offer(filename):
     if ".." in filename or filename.startswith("/"):
@@ -10040,6 +10051,7 @@ def review_offer(filename):
     if not offer or not offer["price"]:
         return redirect(f"/offers/{filename}?expires={expires}&sig={sig}")
     address = offer["address"]
+    address_html = escape(address or "")
     price = offer["price"]
     down_pct = offer["down_pct"]
     close_days = offer["close_days"]
@@ -10088,7 +10100,7 @@ def review_offer(filename):
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Offer Review — {address}</title>
+<title>Offer Review — {address_html}</title>
 <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <style>
@@ -10165,7 +10177,7 @@ border-top:1px solid var(--border);margin-top:1rem;}}
 <div class="top-bar">TREC 20-19 (mandatory as of {TREC_FORM_CURRENT_AS_OF}) — Review before signing</div>
 <div class="container">
 <div class="address-card">
-<h1>{address}</h1>
+<h1>{address_html}</h1>
 <div class="meta">TREC One to Four Family Residential Contract</div>
 </div>
 
@@ -10180,7 +10192,7 @@ border-top:1px solid var(--border);margin-top:1rem;}}
 {'<div class="qa-blocking"><strong>Can&rsquo;t send yet &mdash; fix before emailing:</strong><ul>' + ''.join(f'<li>{b}</li>' for b in validation['blocking']) + '</ul></div>' if validation['blocking'] else ''}
 {'<div class="qa-warnings"><strong>Heads up before sending:</strong><ul>' + ''.join(f'<li>{w}</li>' for w in validation['warnings']) + '</ul></div>' if validation['warnings'] else ''}
 
-{'<div class="sent-banner" id="sent-banner">&#9989; Sent to <strong>' + email_sent_to + '</strong> on ' + sent_date + '</div>' if email_sent_at else ''}
+{'<div class="sent-banner" id="sent-banner">&#9989; Sent to <strong>' + escape(email_sent_to) + '</strong> on ' + sent_date + '</div>' if email_sent_at else ''}
 
 <div class="pdf-preview-card">
 <a href="{pdf_url}" target="_blank"><img src="/offers/{filename}/preview.png?expires={expires}&sig={sig}" alt="Offer PDF preview" class="pdf-preview-img" loading="lazy"></a>
@@ -10200,7 +10212,7 @@ border-top:1px solid var(--border);margin-top:1rem;}}
 
 <div class="email-form" id="email-form">
 <label>Listing agent's email</label>
-<input type="email" id="email-to" placeholder="agent@example.com" value="{email_sent_to}">
+<input type="email" id="email-to" placeholder="agent@example.com" value="{escape(email_sent_to)}">
 <button class="btn btn-primary" id="send-email-btn" style="width:100%;">Send Offer PDF</button>
 <div class="email-status" id="email-status"></div>
 </div>
@@ -10248,7 +10260,7 @@ sendBtn.addEventListener('click',function(){{
   statusEl.className='email-status';statusEl.style.display='none';
   sendBtn.textContent='Sending...';sendBtn.disabled=true;
   fetch('/api/send-email',{{method:'POST',headers:{{'Content-Type':'application/json'}},
-    body:JSON.stringify({{to_email:email,pdf_filename:'{filename}',parsed:{{address:'{address}',price:{price}}},expires:'{expires}',sig:'{sig}'}})
+    body:JSON.stringify({{to_email:email,pdf_filename:{_js_literal(filename)},parsed:{{address:{_js_literal(address)},price:{price}}},expires:{_js_literal(expires)},sig:{_js_literal(sig)}}})
   }}).then(function(r){{return r.json();}}).then(function(d){{
     if(d.success){{
       statusEl.textContent='Sent! The listing agent will receive the PDF.';statusEl.className='email-status success';
@@ -10294,7 +10306,7 @@ dsBtn.addEventListener('click',function(){{
   dsStatus.className='email-status';dsStatus.style.display='none';
   dsBtn.textContent='Sending...';dsBtn.disabled=true;
   fetch('/api/docusign',{{method:'POST',headers:{{'Content-Type':'application/json'}},
-    body:JSON.stringify({{pdf_filename:'{filename}',signer_email:email,signer_name:name,parsed:{{address:'{address}'}},expires:'{expires}',sig:'{sig}'}})
+    body:JSON.stringify({{pdf_filename:{_js_literal(filename)},signer_email:email,signer_name:name,parsed:{{address:{_js_literal(address)}}},expires:{_js_literal(expires)},sig:{_js_literal(sig)}}})
   }}).then(function(r){{return r.json();}}).then(function(d){{
     if(d.success){{
       dsStatus.textContent='Sent! Envelope: '+d.envelope_id;dsStatus.className='email-status success';
@@ -10326,7 +10338,7 @@ whBtn.addEventListener('click',function(){{
   whStatus.className='email-status';whStatus.style.display='none';
   whBtn.textContent='Saving...';whBtn.disabled=true;
   fetch('/api/webhook',{{method:'POST',headers:{{'Content-Type':'application/json'}},
-    body:JSON.stringify({{source_id:'{offer["phone"]}',url:url,filename:'{filename}',expires:'{expires}',sig:'{sig}'}})
+    body:JSON.stringify({{source_id:{_js_literal(offer['phone'])},url:url,filename:{_js_literal(filename)},expires:{_js_literal(expires)},sig:{_js_literal(sig)}}})
   }}).then(function(r){{return r.json();}}).then(function(d){{
     if(d.success){{
       whStatus.textContent='Webhook saved! Future offers will POST here.';whStatus.className='email-status success';
