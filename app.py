@@ -89,6 +89,34 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1, x_for=1)
 # tc_bulk_email below), so this ceiling only bounds worst-case body size.
 app.config["MAX_CONTENT_LENGTH"] = 200 * 1024 * 1024
 
+# Search Console (2026-10-11) flagged "Duplicate without user-selected
+# canonical": www.txtanoffer.com served a full copy of the site, and every
+# ?src= tracking link is its own URL to Google. Only the guide pages carried
+# a canonical tag. GET/HEAD on www get a 301 to the apex; other methods are
+# left alone so a webhook configured against www keeps working.
+CANONICAL_HOST = "txtanoffer.com"
+
+
+@app.before_request
+def _redirect_www():
+    if request.host.lower() == "www." + CANONICAL_HOST and request.method in ("GET", "HEAD"):
+        qs = request.query_string.decode("utf-8", "replace")
+        return redirect(f"https://{CANONICAL_HOST}{request.path}" + (f"?{qs}" if qs else ""), code=301)
+
+
+@app.after_request
+def _add_canonical(resp):
+    # Self-referencing canonical without the query string, so ?src=... links
+    # collapse onto the clean URL. Pages that already set one (the guides)
+    # are left untouched.
+    if (request.method == "GET" and resp.status_code == 200 and resp.mimetype == "text/html"
+            and not resp.direct_passthrough):
+        body = resp.get_data(as_text=True)
+        if "</head>" in body and 'rel="canonical"' not in body:
+            tag = f'<link rel="canonical" href="https://{CANONICAL_HOST}{request.path}">'
+            resp.set_data(body.replace("</head>", tag + "\n</head>", 1))
+    return resp
+
 # Stripe configuration
 stripe.api_key = os.environ.get("STRIPE_SECRET_KEY", "")
 # Pinned above the stripe==10.12.0 library default (2024-06-20) -- the
