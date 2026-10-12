@@ -1099,7 +1099,7 @@ def index():
         <a class="sl-cta" href="#check" data-evt="hero_cta">Check a file free</a>
         <button type="button" class="sl-cta-secondary" id="heroSampleBtn" data-evt="hero_sample">See a sample report &rarr;</button>
       </div>
-      <div class="sl-hero-note">No signup &middot; Checked, then deleted &mdash; no copy kept</div>
+      <div class="sl-hero-note">3 free reports, no signup &middot; Checked, then deleted &mdash; no copy kept</div>
       <div class="sl-hero-phone">On your phone? Forward the contract email to <a href="mailto:tc@check.txtanoffer.com">tc@check.txtanoffer.com</a> &mdash; the report comes back by email.</div>
     </div>
     <div class="sl-hero-photo" role="img" aria-label="A father and daughter painting a room in their new home"></div>
@@ -1121,7 +1121,7 @@ def index():
       <input type="file" id="homeFileInput" accept="application/pdf">
       <div class="dz-trust">
         <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>Not kept unless your brokerage archives it</span>
-        <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Free, no signup</span>
+        <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>3 free reports, no signup</span>
         <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>Results in seconds</span>
       </div>
       <div class="status" id="homeStatus"></div>
@@ -1174,7 +1174,7 @@ def index():
         <div class="path-kicker">Do it yourself</div>
         <h3>Check a file now</h3>
         <p>Drop one filled TREC 20-19 and see what title would kick back.</p>
-        <ul><li>Free, no signup</li><li>Results in seconds</li><li>The file isn&rsquo;t kept</li></ul>
+        <ul><li>3 free reports, no signup</li><li>Results in seconds</li><li>The file isn&rsquo;t kept</li></ul>
         <a class="path-btn solid" href="/tc-check" data-evt="path_self_cta">Check a file free</a>
       </div>
       <div class="step-card path-card">
@@ -3913,7 +3913,7 @@ border-radius:var(--radius-sm);font-family:inherit;font-size:0.85rem;font-weight
 <input type="file" id="fileInput" accept="application/pdf">
 <div class="dz-trust">
 <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>Not kept unless your brokerage archives it</span>
-<span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Free, no signup</span>
+<span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>3 free reports, no signup</span>
 <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>Results in seconds</span>
 </div>
 <div class="addendum-toggle" id="addendumToggle">+ Also have the 40-11, 41-3 or 39-11? Add up to 3 to cross-check them against the contract, too.</div>
@@ -4297,7 +4297,7 @@ function renderResult(data, file, isDemo) {
     if (data.social_proof) {
       html += '<div class="gate-proof">' + escapeHtml(data.social_proof) + '</div>';
     }
-    html += '<div class="gate-note">Free, no card, no signup &mdash; unsubscribe anytime.</div>';
+    html += '<div class="gate-note">Free, no card, no password &mdash; unsubscribe anytime.</div>';
     html += '</div>';
     html += '<div class="gate-bridge">Leading a team? <a href="/pricing#brokerage">See how Brokerage auto-checks every agent\\'s offer before it reaches you &rarr;</a></div>';
   } else {
@@ -7208,7 +7208,7 @@ def terms():
     <h2><span class="section-num">6.</span> Subscription, Payment, and Cancellation</h2>
     <p><strong>Pricing:</strong> Plans start at $40.00 per month, billed monthly via Stripe. See <a href="/pricing" style="color:var(--accent-light);">pricing page</a> for current tiers.</p>
     <p><strong>Billing cycle:</strong> Your subscription renews automatically on the same date each month. You will be charged at the beginning of each billing period.</p>
-    <p><strong>Cancellation:</strong> You may cancel your subscription at any time through your account settings or by contacting us. Cancellation takes effect at the end of your current billing period — you retain access until that date.</p>
+    <p><strong>Cancellation:</strong> You may cancel your subscription at any time by emailing support@txtanoffer.com. Cancellation takes effect at the end of your current billing period — you retain access until that date.</p>
     <p><strong>Refunds:</strong> Payments are non-refundable. We do not provide prorated refunds for partial months. If you cancel mid-cycle, you retain access through the remainder of the paid period but will not receive a refund for unused time.</p>
     <p><strong>Price changes:</strong> We reserve the right to modify pricing with 30 days' written notice (via email or SMS). Continued use of the Service after a price change constitutes acceptance of the new price.</p>
     <p><strong>Failed payments:</strong> If a payment fails, we may suspend access to the Service until the balance is resolved. We are not responsible for any disruption caused by payment failures.</p>
@@ -8755,7 +8755,7 @@ def _guide_page(slug, g, body_html):
         """<div class="cta"><strong>See what your agents leave blank.</strong> Run your last 20 closed TREC 20-19s through TC Check, free.
   <a class="btn" href="/brokers?src=seo_""" + slug + """" data-evt="guide_brokers_cta">Free 20-file audit &rarr;</a></div>"""
         if cta_brokers else
-        """<div class="cta"><strong>Check a file in seconds.</strong> Drop a filled TREC 20-19 and get back exactly which of these are blank or mismatched. Free, no signup, and the file isn't kept.
+        """<div class="cta"><strong>Check a file in seconds.</strong> Drop a filled TREC 20-19 and get back exactly which of these are blank or mismatched. Your first 3 reports need no signup, and the file isn't kept.
   <a class="btn" href="/tc-check?src=seo_""" + slug + """" data-evt="guide_check_cta">Check a file free &rarr;</a></div>"""
     )
     others = "".join(
@@ -9624,7 +9624,7 @@ def brokers():
 <div class="container">
   <div class="kicker">For managing brokers</div>
   <h1>Find out what your agents leave blank &mdash; before title calls you about it.</h1>
-  <p class="lede">You supervise every file, but you usually only see the broken ones when title kicks them back: <strong>a blank Effective Date, a missing initial, a 40-11 that disagrees with the contract.</strong> Run your agents' last 20 closed files through TC Check and see the pattern for yourself. Free, no signup, no sales call.</p>
+  <p class="lede">You supervise every file, but you usually only see the broken ones when title kicks them back: <strong>a blank Effective Date, a missing initial, a blank county.</strong> Run your agents' last 20 closed files through TC Check and see the pattern for yourself. Free, no signup, no sales call.</p>
 
   <div class="offer">
     <h2>Free backlog audit: your last 20 closed files</h2>
