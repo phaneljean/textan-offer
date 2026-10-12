@@ -993,6 +993,10 @@ def index():
     .trust-badges { display: flex; justify-content: center; align-items: center; gap: 1.5rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
     .trust-badge { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.76rem; font-weight: 600; color: var(--text-dim); }
     .footer-copy { color: var(--text-dim); font-size: 0.8rem; }
+    .footer-social { display: flex; justify-content: center; gap: 1rem; margin-bottom: 1rem; }
+    .footer-social a { display: inline-flex; align-items: center; gap: 0.4rem; color: var(--text-dim); font-size: 0.85rem; font-weight: 500; transition: var(--transition); }
+    .footer-social a:hover { color: var(--text); }
+    .footer-social svg { width: 18px; height: 18px; }
 
     @media (max-width: 700px) {
       /* The ambient orbs/gradient are fixed-px sized, tuned to read as a subtle
@@ -1394,6 +1398,10 @@ def index():
       <a href="/tc-check">TC File Check</a>
       <a href="/guides">Guides</a>
       <a href="mailto:support@txtanoffer.com">Support</a>
+    </div>
+    <div class="footer-social">
+      <a href="https://www.instagram.com/txtanoffer/" target="_blank" rel="noopener" aria-label="TxtAnOffer on Instagram" data-evt="footer_instagram"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="2.5" width="19" height="19" rx="5"/><circle cx="12" cy="12" r="4.2"/><circle cx="17.4" cy="6.6" r="0.6" fill="currentColor"/></svg>Instagram</a>
+      <a href="https://www.linkedin.com/company/143677963/" target="_blank" rel="noopener" aria-label="Follow TxtAnOffer on LinkedIn" data-evt="footer_linkedin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="2.5" width="19" height="19" rx="3"/><path d="M7.5 10.5v6"/><circle cx="7.5" cy="7.5" r="0.6" fill="currentColor"/><path d="M11.5 16.5v-6"/><path d="M11.5 13.2c0-1.6 1-2.7 2.5-2.7s2.5 1 2.5 2.7v3.3"/></svg>Follow on LinkedIn</a>
     </div>
     <div class="footer-copy">
       &copy; 2026 TxtAnOffer &middot; Texas, United States &middot; Not affiliated with TREC
