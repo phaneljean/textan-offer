@@ -432,7 +432,7 @@ def index():
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="TxtAnOffer — Catch What Title Kicks Back">
   <meta name="twitter:description" content="Drop a filled TREC 20-19 and see what's missing or inconsistent before title kicks it back &mdash; blank dates, missing initials, mismatched checkboxes.">
-  <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+  <link rel="icon" href="/static/favicon.ico?v=2" type="image/x-icon">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&display=swap" rel="stylesheet"></noscript>
@@ -2592,7 +2592,7 @@ DEMO_FORM = """
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Demo — TxtAnOffer</title>
 <meta name="description" content="Generate TREC purchase offers in 10 seconds via text or web. A filled TREC 20-19 from a text message.">
-<link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+<link rel="icon" href="/static/favicon.ico?v=2" type="image/x-icon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
@@ -3726,7 +3726,7 @@ def tc_check_page():
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TC File Check — TxtAnOffer</title>
 <meta name="description" content="Drop a filled TREC 20-19 PDF and see what's missing before title kicks it back.">
-<link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+<link rel="icon" href="/static/favicon.ico?v=2" type="image/x-icon">
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <style>
 :root{--bg:#F5F5F7;--bg-card:#fff;--border:rgba(15,31,47,0.08);
@@ -4449,7 +4449,7 @@ def tc_check_bulk_page():
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Bulk TC File Check — TxtAnOffer</title>
 <meta name="description" content="Upload a zip of closed TREC 20-19 files and get an aggregate report of what's missing across all of them.">
-<link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+<link rel="icon" href="/static/favicon.ico?v=2" type="image/x-icon">
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <style>{_BULK_PAGE_STYLE}</style>
 </head>
@@ -4649,7 +4649,7 @@ def tc_check_compare_page():
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Compare Contract Versions — TxtAnOffer</title>
 <meta name="description" content="Upload the original and an updated TREC 20-19 side by side and see exactly which fields changed, which stayed the same, and which are still blank in both.">
-<link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+<link rel="icon" href="/static/favicon.ico?v=2" type="image/x-icon">
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <style>{_BULK_PAGE_STYLE}
 .slot{{margin-bottom:1.25rem;}}
@@ -4781,7 +4781,7 @@ def playground():
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Parser Playground — TxtAnOffer</title>
 <meta name="description" content="Test the TxtAnOffer SMS parser. See how messy texts become structured TREC offers in real-time.">
-<link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+<link rel="icon" href="/static/favicon.ico?v=2" type="image/x-icon">
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <style>
 :root{--bg:#F5F5F7;--bg-card:#fff;--border:rgba(15,31,47,0.08);
@@ -5272,7 +5272,7 @@ def pricing():
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="TxtAnOffer Pricing — Free to Check, Simple to Scale">
 <meta name="twitter:description" content="TC File Check is free. Agent plan $40/mo, Brokerage $349/mo for your whole roster.">
-<link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+<link rel="icon" href="/static/favicon.ico?v=2" type="image/x-icon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
@@ -5628,7 +5628,7 @@ def success():
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Welcome to TxtAnOffer!</title>
-<link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+<link rel="icon" href="/static/favicon.ico?v=2" type="image/x-icon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <style>
@@ -6758,7 +6758,7 @@ def signup():
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sign Up — TxtAnOffer</title>
-<link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+<link rel="icon" href="/static/favicon.ico?v=2" type="image/x-icon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <style>
@@ -6888,7 +6888,7 @@ def login():
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Log In — TxtAnOffer</title>
-<link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+<link rel="icon" href="/static/favicon.ico?v=2" type="image/x-icon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <style>
@@ -6963,7 +6963,7 @@ def terms():
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Terms of Service — TxtAnOffer</title>
-<link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+<link rel="icon" href="/static/favicon.ico?v=2" type="image/x-icon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
@@ -7234,7 +7234,7 @@ def privacy():
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Privacy Policy — TxtAnOffer</title>
-<link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+<link rel="icon" href="/static/favicon.ico?v=2" type="image/x-icon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
@@ -7472,7 +7472,7 @@ def faq():
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FAQ — TxtAnOffer</title>
 <meta name="description" content="Answers to common questions about TxtAnOffer: TREC affiliation, parser accuracy, data retention, and what the Service does and doesn't cover.">
-<link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+<link rel="icon" href="/static/favicon.ico?v=2" type="image/x-icon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
@@ -7641,7 +7641,7 @@ def trec_changes():
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TREC Contract Changes — TxtAnOffer</title>
 <meta name="description" content="What's changed on the TREC 20-19 One to Four Family Residential Contract -- Paragraph 12B commission language, the mandatory Water Disclosure, the HOA addendum, and how TxtAnOffer keeps every generated contract current.">
-<link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+<link rel="icon" href="/static/favicon.ico?v=2" type="image/x-icon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
@@ -7901,7 +7901,7 @@ def tc_hub():
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Texas TC Hub — TxtAnOffer</title>
 <meta name="description" content="Free reference material for Texas transaction coordinators: TREC form guides, file-review checklists, and the most common mistakes found across real audited closing files.">
-<link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+<link rel="icon" href="/static/favicon.ico?v=2" type="image/x-icon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
@@ -8247,7 +8247,7 @@ def about():
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>About — TxtAnOffer</title>
 <meta name="description" content="TxtAnOffer started as a faster way to text in an offer. It became TC File Check &mdash; a free tool that catches what's missing in a TREC 20-19 before title does. Here's the story.">
-<link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+<link rel="icon" href="/static/favicon.ico?v=2" type="image/x-icon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
@@ -8358,7 +8358,7 @@ def about():
 </script>
 
 <div class="container">
-  <div class="avatar-lg"><img src="/static/logo.svg" alt="TxtAnOffer"></div>
+  <div class="avatar-lg"><img src="/static/logo.png?v=2" alt="TxtAnOffer"></div>
   <h1>Built After Listening to Texas Real Estate</h1>
   <div class="kicker">The story behind TxtAnOffer</div>
 
@@ -8707,7 +8707,7 @@ def _guide_page(slug, g, body_html):
 <meta property="og:title" content=\"""" + escape(g["title"]) + """\">
 <meta property="og:description" content=\"""" + escape(g["description"]) + """\">
 <meta property="og:type" content="article">
-<link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+<link rel="icon" href="/static/favicon.ico?v=2" type="image/x-icon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -9313,7 +9313,7 @@ _ARCHIVE_EA_PAGE = """<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Contract Archive — TxtAnOffer</title>
 <meta name="description" content="On the TxtAnOffer Brokerage plan: forward or drop executed contracts, get each one checked for what title kicks back, and keep them 5 years, searchable by address.">
-<link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+<link rel="icon" href="/static/favicon.ico?v=2" type="image/x-icon">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root{--bg:#F5F5F7;--text:#0f1f2f;--muted:#5a6b7a;--dim:#8a9aa9;--green:#0b5d52;--green-dark:#0a3f3a;--tint:#E7F3F1;--yellow:#f5c242;--border:rgba(15,31,47,0.08);}
@@ -9420,7 +9420,7 @@ def brokers():
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>For Managing Brokers — TxtAnOffer</title>
 <meta name="description" content="Run your agents' last 20 closed TREC 20-19 files through TC Check, free. See which fields they leave blank before title calls you about it.">
-<link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+<link rel="icon" href="/static/favicon.ico?v=2" type="image/x-icon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
@@ -9618,7 +9618,7 @@ def contact():
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Contact — TxtAnOffer</title>
 <meta name="description" content="Get in touch with TxtAnOffer support by email.">
-<link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+<link rel="icon" href="/static/favicon.ico?v=2" type="image/x-icon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
@@ -9826,7 +9826,7 @@ def profile():
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Agent Profile — TxtAnOffer</title>
-<link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+<link rel="icon" href="/static/favicon.ico?v=2" type="image/x-icon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
@@ -10113,7 +10113,7 @@ def review_offer(filename):
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Offer Review — {address_html}</title>
-<link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+<link rel="icon" href="/static/favicon.ico?v=2" type="image/x-icon">
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <style>
 :root{{--bg:#F5F5F7;--bg-card:#fff;--border:rgba(15,31,47,0.08);
@@ -10557,7 +10557,7 @@ function copyDayOneSummary(){{navigator.clipboard.writeText({_json.dumps(summary
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Offer Thread — {address}</title>
-<link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+<link rel="icon" href="/static/favicon.ico?v=2" type="image/x-icon">
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <style>
 :root{{--bg:#F5F5F7;--bg-card:#fff;--border:rgba(15,31,47,0.08);
@@ -10879,7 +10879,7 @@ a.btn{{display:inline-block;background:#0b5d52;color:#fff;padding:0.75rem 1.5rem
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Transaction — {address}</title>
-<link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+<link rel="icon" href="/static/favicon.ico?v=2" type="image/x-icon">
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <style>
 :root{{--bg:#F5F5F7;--bg-card:#fff;--border:rgba(15,31,47,0.08);
@@ -11235,7 +11235,7 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dashboard — TxtAnOffer</title>
-<link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+<link rel="icon" href="/static/favicon.ico?v=2" type="image/x-icon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
@@ -11583,7 +11583,7 @@ def wins_page():
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="{display_name}'s TxtAnOffer Milestone">
 <meta name="twitter:description" content="{share_text}">
-<link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+<link rel="icon" href="/static/favicon.ico?v=2" type="image/x-icon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
@@ -11653,6 +11653,14 @@ _SITEMAP_PATHS = ["/", "/tc-check", "/brokers", "/pricing", "/trec-changes", "/t
                   "/guides/broker-record-retention-texas", "/guides/40-11-loan-amount-mismatch",
                   "/guides/trec-20-19-initials", "/guides/trec-39-11-amendment-mismatch",
                   "/guides/trec-deadline-calculator", "/archive"]
+
+
+@app.route("/favicon.ico")
+def favicon():
+    # Browsers and Google's result snippets request /favicon.ico at the root
+    # regardless of the <link rel="icon">; serve the same "t" mark from static.
+    return send_from_directory(os.path.join(app.root_path, "static"), "favicon.ico",
+                               mimetype="image/x-icon", max_age=86400)
 
 
 @app.route("/robots.txt")
