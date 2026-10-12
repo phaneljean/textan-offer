@@ -1141,8 +1141,8 @@ def index():
     <div class="steps-grid">
       <div class="step-card">
         <svg class="why-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="15" cy="9" r="5"/><path d="M8 20v12h14v11"/><path d="M11 17c0-2 2-3 4-3s3 1 4 3l3 5h5"/><path d="M14 26h8"/><path d="M5 18v18h10"/><path d="M10 36v6"/><path d="M6 42h8"/><path d="M24 28h20"/><path d="M36 28v15"/><path d="M30 24h7l3-9"/><path d="M39 33h2M39 38h2"/></svg>
-        <h3>Built for Texas TREC forms, and nothing else</h3>
-        <p>We don&rsquo;t try to cover every state. Every check is mapped field-by-field to TREC&rsquo;s published 20-19, 40-11, 41-3 and 39-11 forms, and re-checked whenever TREC revises them. That&rsquo;s why it catches the blank Effective Date or missing initial that title would send back.</p>
+        <h3>Committed to getting every form right</h3>
+        <p>Every check is mapped field-by-field to TREC&rsquo;s published 20-19, 40-11, 41-3 and 39-11 forms, and re-verified each time TREC revises them. You can count on the same careful check on every file, so the blank Effective Date or missing initial gets caught before title sees it.</p>
       </div>
       <div class="step-card">
         <svg class="why-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m11 17 2 2a1 1 0 1 0 3-3"/><path d="m14 14 2.5 2.5a1 1 0 1 0 3-3l-3.88-3.88a3 3 0 0 0-4.24 0l-.88.88a1 1 0 1 1-3-3l2.81-2.81a5.79 5.79 0 0 1 7.06-.87l.47.28a2 2 0 0 0 1.42.25L21 4"/><path d="m21 3 1 11h-2"/><path d="M3 3 2 14l6.5 6.5a1 1 0 1 0 3-3"/><path d="M3 4h8"/></svg>
