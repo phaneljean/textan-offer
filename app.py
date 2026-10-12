@@ -1263,6 +1263,8 @@ def index():
         <div class="step-num">1</div>
         <h3>Offer</h3>
         <p>Your agents text the terms in and get back a structured offer in seconds &mdash; the starting point everything else builds on, and the first record in your brokerage's archive.</p>
+        <p style="margin-top:0.6rem;font-weight:600;">Text <a href="sms:+18338970333" data-evt="workflow_offer_sms" style="color:var(--accent-dark);text-decoration:underline;">(833) 897-0333</a></p>
+        <p style="font-size:0.72rem;color:var(--text-dim);margin-top:0.35rem;">By texting, you agree to receive SMS replies about your offers. Reply STOP to opt out, HELP for help. Msg &amp; data rates may apply. <a href="/privacy" style="color:inherit;text-decoration:underline;">Privacy</a> &middot; <a href="/terms" style="color:inherit;text-decoration:underline;">Terms</a></p>
       </div>
       <div class="step-card">
         <div class="step-num">2</div>
