@@ -170,7 +170,7 @@ _BOT_UA_RE = re.compile(
 
 _MOBILE_UA_RE = re.compile(r"Mobi|Android|iPhone|iPad|iPod", re.I)
 _ENGAGEMENT_TYPES = ("js_ok", "hero_cta", "hero_sample", "dropzone_seen", "stay_10s", "stay_60s",
-                     "role_shown", "role_dismissed", "brokers_audit_cta", "brokers_email_cta", "brokers_plan_cta", "records_brokers_cta", "guide_check_cta", "guide_brokers_cta", "path_self_cta", "path_walkthrough_cta", "path_brokerage_cta", "guide_card_cta", "support_email_cta", "pricing_audit_cta") + tuple("role_" + r for r in _VISITOR_ROLES)
+                     "role_shown", "role_dismissed", "brokers_audit_cta", "brokers_email_cta", "brokers_plan_cta", "records_brokers_cta", "guide_check_cta", "guide_brokers_cta", "path_self_cta", "path_walkthrough_cta", "path_brokerage_cta", "guide_card_cta", "support_email_cta", "pricing_audit_cta", "tc_copy_agent_msg") + tuple("role_" + r for r in _VISITOR_ROLES)
 
 # Tiny, cookie-less-of-its-own beacon script appended to every page that
 # track_page_view() logs. Elements opt in with data-evt="<type>" for clicks;
@@ -3772,7 +3772,7 @@ background:var(--accent-tint);border:1px solid var(--border);border-radius:var(-
 font-size:0.8rem;color:var(--text-muted);}
 .meta-bar strong{color:var(--text);font-weight:600;}
 .download-btn{background:#fff;color:var(--text);border:1px solid rgba(15,31,47,0.14);padding:0.7rem 1.5rem;
-border-radius:var(--radius-sm);font-family:inherit;font-size:0.85rem;font-weight:600;cursor:pointer;margin-left:0.6rem;}
+border-radius:var(--radius-sm);font-family:inherit;font-size:0.85rem;font-weight:600;cursor:pointer;margin-left:0.6rem;margin-top:0.6rem;}
 .download-btn:hover{border-color:var(--accent);}
 .scope-card{margin-top:2rem;background:var(--accent-tint);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem 1.75rem;}
 .scope-card h3{font-size:0.75rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-dim);margin-bottom:0.9rem;}
@@ -4216,6 +4216,9 @@ function renderResult(data, file, isDemo) {
   } else {
     if (issues.length) {
       html += '<button class="copy-btn" onclick="copyChecklist()">Copy checklist</button>';
+      // Not on an unrecognized file: its only finding is about this tool's
+      // template match, not anything the agent could fix.
+      if (data.recognized) html += '<button class="download-btn" onclick="copyAgentMessage()" data-evt="tc_copy_agent_msg">Copy as message to agent</button>';
       html += '<button class="download-btn" onclick="downloadReport(this)">Download report</button>';
       html += buildUpsellCta(issues);
     }
@@ -4251,6 +4254,39 @@ function checklistText() {
 
 function copyChecklist() {
   navigator.clipboard.writeText(checklistText());
+}
+
+// Same findings as checklistText(), worded as a note a TC can paste
+// straight into an email or text to the agent. Messages go in verbatim --
+// no page, paragraph or "title requires" wording beyond what each finding
+// already says -- and the name stays "___" because the contract never
+// tells us who the agent is. Uses the same folded list as the on-screen
+// report (per-page initials already merged by /v1/tc/check).
+function agentMessageText() {
+  const issues = JSON.parse(resultEl.dataset.issues || '[]');
+  if (!issues.length) return '';
+  const property = JSON.parse(resultEl.dataset.property || '{}');
+  const where = property.address || 'the contract';
+  const blockers = issues.filter(i => i.severity === 'blocker');
+  const warnings = issues.filter(i => i.severity !== 'blocker');
+  const lines = ['Hi ___,', ''];
+  if (blockers.length) {
+    lines.push('Before this file goes to title, these items need to be fixed on ' + where + ':');
+    blockers.forEach((i, n) => lines.push((n + 1) + '. ' + i.message));
+  }
+  if (warnings.length) {
+    // "Also" only reads right after a blocker list; a warnings-only file
+    // gets its own lead-in instead.
+    if (blockers.length) lines.push('', 'Also worth a look:');
+    else lines.push('A few items worth a look on ' + where + ' before this file goes to title:');
+    warnings.forEach(i => lines.push('- ' + i.message));
+  }
+  lines.push('', 'Thanks,');
+  return lines.join('\\n');
+}
+
+function copyAgentMessage() {
+  navigator.clipboard.writeText(agentMessageText());
 }
 
 function downloadReport(btn) {
