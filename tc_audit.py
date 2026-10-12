@@ -41,7 +41,10 @@ from amendment import FIELD_MAP as AMEND_FIELDS
 # "blocking" mirrors the same product decision pdf_validator.py already
 # made for these exact fields: buyer/seller legal names are never collected
 # by this app's own generation flow either, so their absence is a warning,
-# not a blocker, here too.
+# not a blocker, here too. A blank option fee is a warning too (2026-10-11,
+# txo-trec-qa): Paragraph 5D says "If no dollar amount is stated as the
+# option fee ... Buyer shall not have the unrestricted right to terminate",
+# so the form contemplates no fee -- it's a deal choice, not a form error.
 CHECKED_FIELDS = [
     ("address", "Section 2A: Property address is blank", True),
     ("city", "Section 2A: City is blank", True),
@@ -50,7 +53,7 @@ CHECKED_FIELDS = [
     ("seller_name", "Section 1: Seller legal name is blank", False),
     ("escrow_agent_name", "Section 5A: Escrow Agent name is blank", True),
     ("earnest_money_amount", "Section 5A: Earnest money amount is blank", True),
-    ("option_fee_amount", "Section 5A: Option fee amount is blank", True),
+    ("option_fee_amount", "Paragraph 5A: option fee is blank -- under 5D, no option fee means no termination option. Confirm that's intended.", False),
     ("title_company", "Section 6A: Title Company is blank", True),
 ]
 
@@ -78,8 +81,12 @@ MIN_MATCHED_AMEND = 2
 # missing right before closing) are blank, this isn't a file with a few
 # fixable gaps -- it's an essentially blank draft. Cheaper for the TC to
 # regenerate cleanly than to chase down that many individual corrections.
-CORE_BLOCKING_FIELDS = sum(1 for _, _, blocking in CHECKED_FIELDS if blocking)
-BLANK_DRAFT_THRESHOLD = 0.7  # fraction of CORE_BLOCKING_FIELDS missing
+# Listed explicitly rather than derived from CHECKED_FIELDS' blocking flag:
+# option fee is only a warning on its own, but a blank one is still part of
+# what makes a file look like an untouched draft.
+CORE_DRAFT_FIELDS = ["address", "city", "county", "escrow_agent_name", "earnest_money_amount",
+                     "option_fee_amount", "title_company"]
+BLANK_DRAFT_THRESHOLD = 0.7  # fraction of CORE_DRAFT_FIELDS missing
 
 # Effective Date -- TREC 20-19 page 10 of 12: "EXECUTED the ___ day of ___,
 # 20__ (Effective Date). (BROKER: FILL IN THE DATE OF FINAL ACCEPTANCE.)"
@@ -148,7 +155,7 @@ FA_INITIALS_PAGE = ("40-11 addendum", "Initialed for identification by Buyer", "
 # for the same reason CHECKED_FIELDS' docstring gives for v1 in general:
 # no rect-verified field mapping exists for them, and a wrong "match"/
 # "mismatch" signal on an unverified field is worse than no signal.
-AMEND_PRICE_MISMATCH_KEY = "amendment_price_mismatch"
+AMEND_PRICE_CHANGE_KEY = "amendment_price_change"
 AMEND_ADDRESS_MISMATCH_KEY = "amendment_address_mismatch"
 
 
@@ -828,7 +835,7 @@ def check_tc_file(pdf_paths) -> dict:
         val = values.get(FIELD_MAP[key], "").strip()
         if not val:
             issues.append({"severity": "blocker" if blocking else "warning", "message": message, "key": key})
-            if blocking:
+            if key in CORE_DRAFT_FIELDS:
                 core_missing += 1
 
     # Effective Date
@@ -957,23 +964,31 @@ def check_tc_file(pdf_paths) -> dict:
     # OWN price-change section is actually in use (its checkbox checked
     # and a total filled in) -- an amendment used solely to change the
     # closing date legitimately leaves this section blank, and a blank
-    # amendment price is not evidence of anything.
+    # amendment price is not evidence of anything. A different price is a
+    # warning, not a blocker: changing the Sales Price is what 39-11 box (1)
+    # is for, so the difference is the amendment working (until 2026-10-11
+    # every real price amendment got a false "Sales Price mismatch"
+    # blocker). What's worth a look is whether the financing moved with it.
     if has_amendment:
         amend_price_checked = _is_checked(amend_values, AMEND_FIELDS["price_checkbox"])
         amend_price = amend_values.get(AMEND_FIELDS["price_total"], "").strip()
         main_price = values.get(FIELD_MAP["sales_price"], "").strip()
-        if amend_price_checked and amend_price and main_price and _money_to_int(main_price) != _money_to_int(amend_price):
+        # Compared by _money, not _money_to_int: "425,000.00" and "$425,000"
+        # are the same price, but _money_to_int reads the cents as digits.
+        old, new = _money(main_price), _money(amend_price)
+        if amend_price_checked and old is not None and new is not None and abs(old - new) > 0.5:
             issues.append({
-                "severity": "blocker",
-                "message": f"Sales Price mismatch: contract ({main_price}) vs. amendment ({amend_price})",
-                "key": AMEND_PRICE_MISMATCH_KEY,
+                "severity": "warning",
+                "message": f"39-11 box (1) changes the Sales Price from {_fmt_money(old)} to {_fmt_money(new)} -- "
+                           f"confirm Paragraph 3B and the 40-11 loan amount reflect the new terms",
+                "key": AMEND_PRICE_CHANGE_KEY,
             })
 
         # 4. Contract vs. Amendment: property address, as a sanity check
-        # that the amendment actually belongs to this contract -- not a
-        # legal "conflict" the way a price mismatch is, so this stays a
-        # warning even though a real mismatch here is a bigger problem in
-        # practice (wrong file attached entirely).
+        # that the amendment actually belongs to this contract. A warning,
+        # even though a real mismatch here is a bigger problem in practice
+        # (wrong file attached entirely): the text-only address compare
+        # can't tell a different property from a differently written one.
         amend_addr = amend_values.get(AMEND_FIELDS["address"], "").strip()
         main_addr = values.get(FIELD_MAP["address"], "").strip()
         if amend_addr and main_addr and _normalized_address(amend_addr) != _normalized_address(main_addr):
@@ -988,7 +1003,7 @@ def check_tc_file(pdf_paths) -> dict:
         "recognized": True,
         "complete": len(blocking_issues) == 0,
         "issues": issues,
-        "looks_like_blank_draft": core_missing / CORE_BLOCKING_FIELDS >= BLANK_DRAFT_THRESHOLD,
+        "looks_like_blank_draft": core_missing / len(CORE_DRAFT_FIELDS) >= BLANK_DRAFT_THRESHOLD,
         "page_count": page_count,
         "has_addendum": has_addendum,
         "has_amendment": has_amendment,

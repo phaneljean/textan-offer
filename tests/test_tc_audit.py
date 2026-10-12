@@ -164,6 +164,55 @@ class CleanControl(unittest.TestCase):
         self.assertEqual(keys(variant()), [])
 
 
+    # Paragraph 5D allows no option fee (the buyer then has no termination
+    # option), so a blank fee is a choice to confirm, not a form error.
+    def test_blank_option_fee_is_warning(self):
+        r = variant(text={"as earnest money to 2": ""})
+        self.assertEqual(keys(r), ["option_fee_amount"])
+        self.assertEqual(r["issues"][0]["severity"], "warning")
+        self.assertIn("under 5D", r["issues"][0]["message"])
+        self.assertTrue(r["complete"])
+
+
+AMEND_TEMPLATE = os.path.join(HERE, "..", "39-11.pdf")
+AMEND_PRICE_BOX = "1 The Sales Price in Paragraph 3 of the contract is"
+
+
+def amendment(text=None, checks=None):
+    """The clean deal + 40-11 + a TREC 39-11 for the same address."""
+    a = _edit(AMEND_TEMPLATE, text={"Street Address and City": "1234 Elm Street, Austin, TX 78704", **(text or {})},
+              checks=checks)
+    return check_tc_file([CLEAN, CLEAN_FA, a])
+
+
+class Amendment(unittest.TestCase):
+    def test_price_change_is_warning_not_blocker(self):
+        # Reproduced false blocker (txo-trec-qa, 2026-10-11): box (1) taking
+        # the $425,000 contract to $410,000 is what box (1) is for.
+        r = amendment(text={"undefined_3": "410,000.00"}, checks={AMEND_PRICE_BOX: True})
+        self.assertTrue(r["has_amendment"])
+        self.assertEqual(keys(r), ["amendment_price_change"])
+        self.assertEqual(r["issues"][0]["severity"], "warning")
+        self.assertIn("from $425,000 to $410,000", r["issues"][0]["message"])
+        self.assertTrue(r["complete"])
+
+    def test_same_price_is_clean(self):
+        r = amendment(text={"undefined_3": "$425,000"}, checks={AMEND_PRICE_BOX: True})
+        self.assertTrue(r["has_amendment"])
+        self.assertEqual(keys(r), [])
+
+    def test_closing_date_only_amendment_is_clean(self):
+        r = amendment(text={"date 5": "December 15,", "20_25": "26"},
+                      checks={"3 The date in Paragraph 9 of the contract is changed to": True})
+        self.assertTrue(r["has_amendment"])
+        self.assertEqual(keys(r), [])
+
+    def test_address_mismatch_is_warning(self):
+        r = amendment(text={"Street Address and City": "99 Oak Lane, Austin, TX 78704"})
+        self.assertEqual(keys(r), ["amendment_address_mismatch"])
+        self.assertEqual(r["issues"][0]["severity"], "warning")
+
+
 CLEAN_LA = os.path.join(FIX, "trec_41-3_clean.pdf")
 
 

@@ -562,6 +562,7 @@ TC_ISSUE_LABELS = {
     "cash_portion_blank": "3A cash portion blank with financing",
     "disclosure_box_missing": "No 7B Seller's Disclosure box checked",
     "special_provisions_business_term": "Business term in Paragraph 11",
+    "amendment_price_change": "39-11 changes the Sales Price (review)",
 }
 
 def get_tc_check_summary(days: int = 30, sender_emails: set = None) -> dict:

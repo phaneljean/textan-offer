@@ -8340,32 +8340,32 @@ def about():
 _GUIDES = {
     "trec-20-19-checklist": {
         "title": "TREC 20-19 Checklist: What to Check Before Sending to Title",
-        "description": "A field-by-field checklist for the TREC 20-19 One to Four Family Residential Contract: the blanks and mismatches that most often get a Texas file kicked back by title.",
+        "description": "A field-by-field checklist for the TREC 20-19 One to Four Family Residential Contract: the blanks and mismatches to check before a Texas file goes to title.",
         "kicker": "For transaction coordinators",
         "h1": "TREC 20-19 checklist: what to check before you send the file to title",
-        "lede": "Most kickbacks from title aren't legal problems. They're blanks and mismatches that were easy to fix before the file left your desk. Here's the order to check them in.",
+        "lede": "Title problems like these usually aren't legal puzzles. They're blanks and mismatches that were easy to fix before the file left your desk. Here's the order to check them in.",
         "body": """
 <h2>1. Property and parties (Sections 1 and 2A)</h2>
 <ul>
-  <li><strong>Property address, city and county (Section 2A).</strong> County is the one most often left blank, and title needs it to open the file.</li>
+  <li><strong>Property address, city and county (Section 2A).</strong> Don't skip County; title needs it to open the file.</li>
   <li><strong>Buyer and seller legal names (Section 1).</strong> Match them to how the parties will sign at closing, not a nickname or a partial name.</li>
 </ul>
 
 <h2>2. Money and who holds it (Sections 5A and 6A)</h2>
 <ul>
   <li><strong>Escrow agent name (Section 5A).</strong> If it's blank, nobody knows where the earnest money goes.</li>
-  <li><strong>Earnest money and option fee amounts (Section 5A).</strong> Both should be filled in, even when the option fee is small.</li>
-  <li><strong>Title company (Section 6A).</strong> Should match the escrow agent in most deals. If it doesn't, confirm that's intentional.</li>
+  <li><strong>Earnest money and option fee amounts (Section 5A).</strong> Fill in both. A blank option fee means no termination option under 5D.</li>
+  <li><strong>Title company (Section 6A).</strong> If it isn't the escrow agent named in 5A, confirm that's intentional.</li>
 </ul>
 
 <h2>3. Financing: contract vs. 40-11 addendum</h2>
 <ul>
-  <li><strong>Loan amount.</strong> The third-party financing amount in Section 3B must match the principal amount on the TREC 40-11 Third Party Financing Addendum. A one-digit typo here is a common kickback.</li>
+  <li><strong>Loan amount.</strong> The third-party financing amount in Section 3B must match the principal amount on the TREC 40-11 Third Party Financing Addendum.</li>
   <li><strong>The financing checkboxes.</strong> If a 40-11 is attached, the Third Party Financing Addendum box should be checked in <em>both</em> Section 3B and the Section 22 addenda list. If it's an all-cash deal with no 40-11, neither box should be checked.</li>
 </ul>
 
 <h2>4. Initials on every page</h2>
-<p>The 20-19 has an "Initialed for identification by Buyer ___ and Seller ___" line at the bottom of every page from 1 to 9 of 12, and the 40-11 has one on its first page. Each party initials once per page: one buyer means one buyer slot filled, and the second buyer slot correctly stays blank. A single missing initial is easy to miss scrolling through, and it's a routine reason a file bounces back.</p>
+<p>The 20-19 has an "Initialed for identification by Buyer ___ and Seller ___" line at the bottom of every page from 1 to 9 of 12, and the 40-11 has one on its first page. Each party initials once per page: one buyer means one buyer slot filled, and the second buyer slot correctly stays blank. A single missing initial is easy to miss scrolling through.</p>
 
 <h2>5. The Effective Date (page 10 of 12)</h2>
 <p>The line reads "EXECUTED the ___ day of ___, 20__ (Effective Date)," with the instruction "BROKER: FILL IN THE DATE OF FINAL ACCEPTANCE." Deadlines in the contract count from it, so a blank here creates confusion about every date that follows. <a href="/guides/trec-20-19-effective-date">More on why the Effective Date matters &rarr;</a></p>
@@ -8469,7 +8469,7 @@ _GUIDES = {
 <ol>
   <li>Put Section 3B and the 40-11 principal amount side by side. Same number?</li>
   <li>Section 3B box and Section 22 box: both checked if there's a 40-11, neither if there isn't.</li>
-  <li>40-11 initials: all four slots filled.</li>
+  <li>40-11 initials: one per party on page 1 (one buyer = one buyer box).</li>
 </ol>
 <p>If the contract is already signed and the numbers disagree, fixing it usually means getting both parties to sign a correction. Catching it before it goes out is much cheaper. When the sales price changes later, remember the financing amount often needs to change with it.</p>
 
@@ -8482,7 +8482,7 @@ _GUIDES = {
         "description": "The TREC 20-19 has an initials line on every page from 1 to 9 of 12, plus one on the 40-11 addendum. Here's where they are and how to check them fast.",
         "kicker": "For transaction coordinators",
         "h1": "TREC 20-19 initials: which pages need them, and how to check fast",
-        "lede": "A missing initial is one of the most routine reasons a Texas file bounces back. It's not hard to fix. It's just easy to miss when you're scrolling 12 pages.",
+        "lede": "A missing initial is easy to miss when you're scrolling 12 pages, and it's quick to fix.",
         "body": """
 <h2>Where the initials lines are</h2>
 <p>At the bottom of these pages of the TREC 20-19 (the page numbers are printed in each page's footer as "Page X of 12"):</p>
@@ -8501,7 +8501,7 @@ _GUIDES = {
 
 <h2>How to check fast</h2>
 <ol>
-  <li>Go to the footer of pages 1 through 9. Pages 2, 3 and 7 are the ones people skip most, so check those first.</li>
+  <li>Go to the footer of pages 1 through 9. Check every page, including 2, 3 and 7.</li>
   <li>Count the slots on each one: one per buyer and one per seller who's party to the contract.</li>
   <li>Then check the 40-11's first page if it's attached.</li>
   <li>If your e-sign template is older than the current form (mandatory since July 1, 2026), rebuild it so the initials fields land on the right pages.</li>

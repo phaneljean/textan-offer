@@ -55,14 +55,14 @@ _CONSEQUENCE_TAGS = {
     "seller_name": "PARTY NOT NAMED",
     "escrow_agent_name": "NO ESCROW AGENT ON FILE",
     "earnest_money_amount": "DEAL TERMS INCOMPLETE",
-    "option_fee_amount": "DEAL TERMS INCOMPLETE",
+    "option_fee_amount": "REVIEW: NO OPTION FEE",  # warning: 5D allows no fee, but then no termination option
     "title_company": "NO TITLE COMPANY NAMED",
     "effective_date": "DEADLINES UNANCHORED",  # option/financing/closing dates all run off this one field
     "initials_buyer": "PAGES NOT INITIALED",
     "initials_seller": "PAGES NOT INITIALED",
     "loan_amount_mismatch": "FINANCING TERMS DISAGREE",
     "addendum_checkbox_mismatch": "ADDENDUM CHECKBOX WRONG",
-    "amendment_price_mismatch": "PRICE TERMS DISAGREE",
+    "amendment_price_change": "REVIEW: PRICE CHANGED",  # warning: changing the price is what 39-11 box (1) is for
     "amendment_address_mismatch": "WRONG FILE ATTACHED",
     "extra_file_unrecognized": "ATTACHMENT NOT VERIFIED",
     "initials_mismatch": "WRONG PARTY INITIALED",
