@@ -8,55 +8,35 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.colors import HexColor, Color
 from datetime import datetime, timedelta
 import io
+import os
 import re
 
-# Redrawn from static/logo.svg (viewBox 0 0 64 64) as native PDF vector
-# shapes rather than an embedded raster -- reportlab can't render SVG
-# directly and no SVG-rasterizing library is installed, so this traces
-# the same rounded-square + zigzag path at PDF scale. If the live SVG is
-# ever redesigned, update these coordinates to match.
-_LOGO_RECT = (2, 2, 60, 60, 15)  # x, y, w, h, rx in SVG units
-_LOGO_PATH_SVG_PTS = [  # SVG-space points (y grows downward), from the <path> d=
-    (18, 44), (18, 20), (38, 20), (28, 30), (46, 30), (46, 48), (28, 48), (38, 38), (18, 38),
-]
+# Current brand: the same "txtanoffer" wordmark PNG the site nav uses
+# (static/logo-wordmark.png, 708x120). Replaced the old rounded-square +
+# zigzag mark (static/logo.svg) on 2026-10-12 -- this cover is page 1 of
+# every offer PDF, and the /review page an agent opens from the SMS reply
+# shows it as its preview image, so the old mark was the first thing they saw.
+_STATIC = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
+_WORDMARK = {"light": os.path.join(_STATIC, "logo-wordmark.png"),
+             "dark": os.path.join(_STATIC, "logo-wordmark-white.png")}
+_WORDMARK_H = 13  # pt; the 18pt TREC badge on the right is centered on the same line
+_WORDMARK_W = _WORDMARK_H * 708 / 120
 
 
-def _draw_brand(c, x, y):
-    """Draws the real TxtAnOffer logo at (x, y-15)..(x+24, y+9) -- same
-    footprint as the circular badge it replaces, so header layout doesn't
-    shift. Vector-drawn (see note above), so it never depends on an image
-    file being present -- a broken asset must never block real offer
-    generation."""
-    size = 24
-    scale = size / 64
+def _draw_brand(c, x, y, mode="light", text_color=None):
+    """Draws the wordmark left-aligned at x, vertically centered on y-3 (the
+    TREC badge's center line). A broken or missing asset must never block
+    real offer generation, so any failure falls back to the name as text."""
+    bottom = y - 3 - _WORDMARK_H / 2
+    try:
+        c.drawImage(_WORDMARK.get(mode, _WORDMARK["light"]), x, bottom,
+                    _WORDMARK_W, _WORDMARK_H, mask="auto")
+    except Exception:
+        if text_color is not None:
+            c.setFillColor(text_color)
+        c.setFont("Helvetica-Bold", 12)
+        c.drawString(x, bottom + 2, "txtanoffer")
 
-    def pt(sx, sy):
-        # Flip SVG's y-down to PDF's y-up, then shift down 15pt so the mark's
-        # own footprint is (y-15)..(y+9) as documented -- without this offset
-        # the mark sits entirely above y (y..y+24) while the wordmark's
-        # baseline is drawn at y-7, leaving the two vertically misaligned:
-        # the text ends up hanging below the mark instead of centered beside it.
-        return x + sx * scale, (y - 15) + (64 - sy) * scale
-
-    c.saveState()
-    rx, ry, rw, rh, rr = _LOGO_RECT
-    px, py = pt(rx, ry + rh)  # top-left in SVG becomes bottom-left after the y-flip
-    _draw_rounded_rect(c, px, py, rw * scale, rh * scale, r=rr * scale,
-                       fill_color=HexColor("#1e293b"), stroke_color=HexColor("#334155"))
-
-    p = c.beginPath()
-    start_x, start_y = pt(*_LOGO_PATH_SVG_PTS[0])
-    p.moveTo(start_x, start_y)
-    for sx, sy in _LOGO_PATH_SVG_PTS[1:]:
-        px2, py2 = pt(sx, sy)
-        p.lineTo(px2, py2)
-    p.close()
-    c.setStrokeColor(HexColor("#ffffff"))
-    c.setLineWidth(3.4 * scale)
-    c.setLineCap(1)   # round
-    c.setLineJoin(1)  # round
-    c.drawPath(p, fill=0, stroke=1)
-    c.restoreState()
 
 # Fixed accent used in both modes (readable on white and on navy alike).
 ACCENT_RGB = (0.09, 0.09, 0.09)  # ~#171717, matches the site's black/charcoal accent
@@ -185,10 +165,7 @@ def generate_cover_page(parsed: dict, agent: dict, mode: str = "light") -> bytes
     # === HEADER ===
     y = height - 0.6 * inch
     # Brand
-    _draw_brand(c, margin, y)
-    c.setFillColor(TEXT_PRIMARY)
-    c.setFont("Helvetica-Bold", 10)
-    c.drawString(margin + 30, y - 7, "TxtAnOffer")
+    _draw_brand(c, margin, y, mode, TEXT_PRIMARY)
 
     # TREC badge (right side)
     badge_text = "TREC 20-19 + 40-11"
@@ -529,10 +506,7 @@ def generate_certification_page(parsed: dict, agent: dict, mode: str = "light") 
 
     # === HEADER (brand) ===
     y = height - 0.6 * inch
-    _draw_brand(c, margin, y)
-    c.setFillColor(TEXT_PRIMARY)
-    c.setFont("Helvetica-Bold", 10)
-    c.drawString(margin + 30, y - 7, "TxtAnOffer")
+    _draw_brand(c, margin, y, mode, TEXT_PRIMARY)
 
     # === TITLE BLOCK ===
     y -= 0.7 * inch

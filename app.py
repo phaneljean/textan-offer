@@ -11590,8 +11590,8 @@ def wins_page():
     border-radius:1.25rem; padding:2.75rem 2rem;
     box-shadow:0 1px 3px rgba(15,31,47,0.05);
   }}
-  .logo {{width:48px;height:48px;margin:0 auto 1.5rem;border-radius:22%;overflow:hidden;}}
-  .logo img {{width:100%;height:100%;object-fit:contain;}}
+  .logo {{margin:0 auto 1.5rem;display:flex;justify-content:center;}}
+  .logo img {{height:26px;width:auto;display:block;}}
   .agent-name {{font-size:0.95rem; font-weight:700; color:#0f1f2f;}}
   .agent-meta {{font-size:0.8rem; color:#8a9aa9; margin-top:0.15rem; margin-bottom:1.75rem;}}
   .headline {{font-size:2.25rem; font-weight:800; letter-spacing:-0.02em; line-height:1.1; color:#0f1f2f; word-break:break-word;}}
@@ -11616,7 +11616,7 @@ def wins_page():
 </head>
 <body>
   <div class="card">
-    <div class="logo"><img src="/static/logo.png" alt=""></div>
+    <div class="logo"><img src="/static/logo-wordmark.png?v=2" alt="TxtAnOffer"></div>
     <div class="agent-name">{display_name}</div>
     <div class="agent-meta">{meta_line}</div>
     <div class="headline">{headline}</div>
