@@ -1099,7 +1099,7 @@ def index():
         <a class="sl-cta" href="#check" data-evt="hero_cta">Check a file free</a>
         <button type="button" class="sl-cta-secondary" id="heroSampleBtn" data-evt="hero_sample">See a sample report &rarr;</button>
       </div>
-      <div class="sl-hero-note">No signup &middot; Checked, then deleted &mdash; no copy kept</div>
+      <div class="sl-hero-note">3 free reports, no signup &middot; Checked, then deleted &mdash; no copy kept</div>
       <div class="sl-hero-phone">On your phone? Forward the contract email to <a href="mailto:tc@check.txtanoffer.com">tc@check.txtanoffer.com</a> &mdash; the report comes back by email.</div>
     </div>
     <div class="sl-hero-photo" role="img" aria-label="A father and daughter painting a room in their new home"></div>
@@ -1111,7 +1111,7 @@ def index():
     <p style="font-size:0.85rem;color:var(--accent-dark);font-weight:600;margin-top:0.6rem;">Built to help TCs catch what's missing &mdash; not to replace what you do.</p>
 
     <div class="input-card">
-      <div class="input-label">Try it now &mdash; no signup required</div>
+      <div class="input-label">Try it now &mdash; first 3 reports need nothing, then just an email</div>
       <div class="drop-zone" id="homeDropZone">
         <div class="dz-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 13v8"/><path d="m8 17 4-4 4 4"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg></div>
         <div class="dz-title"><span class="dz-mouse">Drop your contract PDF here</span><span class="dz-touch">Choose your contract PDF</span></div>
@@ -1121,7 +1121,7 @@ def index():
       <input type="file" id="homeFileInput" accept="application/pdf">
       <div class="dz-trust">
         <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>Not kept unless your brokerage archives it</span>
-        <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Free, no signup</span>
+        <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>3 free reports, no signup</span>
         <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>Results in seconds</span>
       </div>
       <div class="status" id="homeStatus"></div>
@@ -1174,7 +1174,7 @@ def index():
         <div class="path-kicker">Do it yourself</div>
         <h3>Check a file now</h3>
         <p>Drop one filled TREC 20-19 and see what title would kick back.</p>
-        <ul><li>Free, no signup</li><li>Results in seconds</li><li>The file isn&rsquo;t kept</li></ul>
+        <ul><li>3 free reports, no signup</li><li>Results in seconds</li><li>The file isn&rsquo;t kept</li></ul>
         <a class="path-btn solid" href="/tc-check" data-evt="path_self_cta">Check a file free</a>
       </div>
       <div class="step-card path-card">
@@ -1278,8 +1278,8 @@ def index():
       </div>
       <div class="step-card">
         <div class="step-num">4</div>
-        <h3>Signature execution</h3>
-        <p>Connected to DocuSign for e-signature. Validation-gated &mdash; a contract that's still missing required fields won't go out.</p>
+        <h3>Review before it goes out</h3>
+        <p>Every draft opens on a review page that lists what&rsquo;s still blank. Emailing it to the listing agent stays locked until the required fields are filled.</p>
       </div>
       <div class="step-card">
         <div class="step-num">5</div>
@@ -1372,7 +1372,7 @@ def index():
   <section class="steps" id="support">
     <div class="steps-header" style="margin-bottom:1.75rem;">
       <h2>Questions? A real person answers.</h2>
-      <p>TxtAnOffer is built and run by one person in Texas. You&rsquo;ll hear back from the person who built it, not a ticket queue.</p>
+      <p>Built by Phanel Jean-Baptiste, for Texas TCs and brokers. You&rsquo;ll hear back from the person who built it, not a ticket queue.</p>
     </div>
     <div class="support-box">
       <div>
@@ -1678,7 +1678,7 @@ def index():
         else:
             stat3_num, stat3_label = f"{pct_incomplete:g}%", "had at least one issue TC File Check catches automatically"
     else:
-        stat1_num, stat1_label = "Free", "for every Texas TC &mdash; no signup required"
+        stat1_num, stat1_label = "Free", f"First {TC_FREE_FULL_REPORTS} reports need nothing, then just an email"
         stat2_num, stat2_label = "Seconds", "to scan a full TREC 20-19 + 40-11 addendum"
         stat3_num, stat3_label = "0", "checked PDFs kept after your report"
     for token, value in (
@@ -2368,7 +2368,7 @@ def finalize_offer_sms(agent_phone: str, draft: dict):
 SMS_HELP_TEXT = (
     "TxtAnOffer Commands:\n\n"
     "Text your offer terms anytime -- TxtAnOffer turns them into a "
-    "signed-ready PDF in seconds.\n\n"
+    "TREC 20-19 draft in seconds.\n\n"
     "HELP or MENU - This menu\n"
     "DASHBOARD - Your offer history\n"
     "STATUS - Plan & usage\n"
@@ -3913,7 +3913,7 @@ border-radius:var(--radius-sm);font-family:inherit;font-size:0.85rem;font-weight
 <input type="file" id="fileInput" accept="application/pdf">
 <div class="dz-trust">
 <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>Not kept unless your brokerage archives it</span>
-<span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Free, no signup</span>
+<span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>3 free reports, no signup</span>
 <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>Results in seconds</span>
 </div>
 <div class="addendum-toggle" id="addendumToggle">+ Also have the 40-11, 41-3 or 39-11? Add up to 3 to cross-check them against the contract, too.</div>
@@ -4297,7 +4297,7 @@ function renderResult(data, file, isDemo) {
     if (data.social_proof) {
       html += '<div class="gate-proof">' + escapeHtml(data.social_proof) + '</div>';
     }
-    html += '<div class="gate-note">Free, no card, no signup &mdash; unsubscribe anytime.</div>';
+    html += '<div class="gate-note">Free, no card, no password &mdash; unsubscribe anytime.</div>';
     html += '</div>';
     html += '<div class="gate-bridge">Leading a team? <a href="/pricing#brokerage">See how Brokerage auto-checks every agent\\'s offer before it reaches you &rarr;</a></div>';
   } else {
@@ -5527,7 +5527,7 @@ def pricing():
       <li><span class="check">&#10003;</span> Every agent&rsquo;s offer checked before it&rsquo;s sent</li>
       <li><span class="check">&#10003;</span> Unlimited offers for all your agents</li>
       <li><span class="check">&#10003;</span> Contract archive: forward or drop executed contracts, checked and kept 5 years</li>
-      <li><span class="check">&#10003;</span> DocuSign, Transaction Workspace and roster dashboard</li>
+      <li><span class="check">&#10003;</span> Transaction Workspace and roster dashboard</li>
     </ul>
     <a href="/brokers" class="cta-btn" data-evt="pricing_audit_cta">Start with a free 20-file audit</a>
     <form action="/create-checkout-session" method="POST" style="margin-top:0.75rem;text-align:center;">
@@ -5553,7 +5553,7 @@ def pricing():
     </div>
     <div class="value-card">
       <div class="value-title">Can I cancel?</div>
-      <div class="value-text">Anytime, from your dashboard. No contracts. You keep access through the period you paid for.</div>
+      <div class="value-text">Yes. Email support@txtanoffer.com and it&rsquo;s cancelled the same day. No contracts. You keep access through the period you paid for.</div>
     </div>
   </div>
 </div>
@@ -7011,6 +7011,8 @@ def login():
 </html>"""
 
 
+# TODO(Phanel): confirm legal entity + address. Until then the operator line
+# names the person only -- no entity type, state or address claim.
 @app.route("/terms")
 def terms():
     html = """<!DOCTYPE html>
@@ -7154,7 +7156,7 @@ def terms():
   </div>
 
   <div class="legal-card">
-    <p>These Terms of Service ("Terms") govern your use of TxtAnOffer ("Service"), operated by Phanel ("we," "us," or "our"), a sole proprietorship based in Texas. By accessing or using the Service, you agree to be bound by these Terms. If you do not agree, do not use the Service.</p>
+    <p>These Terms of Service ("Terms") govern your use of TxtAnOffer ("Service"), operated by Phanel Jean-Baptiste ("we," "us," or "our"). By accessing or using the Service, you agree to be bound by these Terms. If you do not agree, do not use the Service.</p>
 
     <h2><span class="section-num">1.</span> Service Description</h2>
     <p>TxtAnOffer is a document drafting tool that converts shorthand offer text into pre-filled TREC One to Four Family Residential Contract (Resale) forms (TREC No. 20-19). The Service accepts offer parameters via SMS or a web interface and generates a partially completed PDF contract for review by a licensed Texas real estate agent.</p>
@@ -7206,7 +7208,7 @@ def terms():
     <h2><span class="section-num">6.</span> Subscription, Payment, and Cancellation</h2>
     <p><strong>Pricing:</strong> Plans start at $40.00 per month, billed monthly via Stripe. See <a href="/pricing" style="color:var(--accent-light);">pricing page</a> for current tiers.</p>
     <p><strong>Billing cycle:</strong> Your subscription renews automatically on the same date each month. You will be charged at the beginning of each billing period.</p>
-    <p><strong>Cancellation:</strong> You may cancel your subscription at any time through your account settings or by contacting us. Cancellation takes effect at the end of your current billing period — you retain access until that date.</p>
+    <p><strong>Cancellation:</strong> You may cancel your subscription at any time by emailing support@txtanoffer.com. Cancellation takes effect at the end of your current billing period — you retain access until that date.</p>
     <p><strong>Refunds:</strong> Payments are non-refundable. We do not provide prorated refunds for partial months. If you cancel mid-cycle, you retain access through the remainder of the paid period but will not receive a refund for unused time.</p>
     <p><strong>Price changes:</strong> We reserve the right to modify pricing with 30 days' written notice (via email or SMS). Continued use of the Service after a price change constitutes acceptance of the new price.</p>
     <p><strong>Failed payments:</strong> If a payment fails, we may suspend access to the Service until the balance is resolved. We are not responsible for any disruption caused by payment failures.</p>
@@ -7282,6 +7284,8 @@ def terms():
     return html.replace("__TREC_FORM_DATE__", TREC_FORM_CURRENT_AS_OF)
 
 
+# TODO(Phanel): confirm legal entity + address. Until then the operator line
+# names the person only -- no entity type, state or address claim.
 @app.route("/privacy")
 def privacy():
     return """<!DOCTYPE html>
@@ -7419,7 +7423,7 @@ def privacy():
   </div>
 
   <div class="legal-card">
-    <p>TxtAnOffer ("Service") is operated by Phanel, a sole proprietorship based in Texas. This Privacy Policy explains how we collect, use, and protect your information.</p>
+    <p>TxtAnOffer ("Service") is operated by Phanel Jean-Baptiste. This Privacy Policy explains how we collect, use, and protect your information.</p>
 
     <h2>1. Information We Collect</h2>
     <p><strong>Information you provide:</strong></p>
@@ -7663,7 +7667,7 @@ def faq():
   <div class="faq-item">
     <h2>Do you store my texts or offers?</h2>
     <p>On the free trial, generated PDFs are stored for download and deleted after 30 days. On the Agent plan they're kept 5 years in your dashboard. On the Brokerage plan, every offer and amendment your agents draft here, plus any executed contracts your brokerage forwards or uploads, is kept for 5 years in a searchable archive the broker can export. SMS logs are retained for 90 days for support and debugging. We do not sell or share your data. See our <a href="/privacy" style="color:var(--accent-dark);">Privacy Policy</a> for the full breakdown.</p>
-    <p><strong>Important:</strong> TREC Rule &sect;535.2 requires brokers to independently retain records of offers, contracts, and related addenda for at least 4 years from closing or termination of the transaction. Our 30-day retention does not satisfy that requirement. The Brokerage archive helps, but it holds the drafts generated here, not the signed contracts &mdash; keep your own copy of every executed offer and amendment.</p>
+    <p><strong>Important:</strong> TREC Rule &sect;535.2 requires brokers to independently retain records of offers, contracts, and related addenda for at least 4 years from closing or termination of the transaction. Our 30-day free-trial retention does not satisfy that requirement. On the Brokerage plan, the <a href="/archive" style="color:var(--accent-dark);">contract archive</a> holds the executed contracts your brokerage forwards or uploads, kept 5 years, plus the drafts generated here. It helps with that rule, but it isn&rsquo;t a guarantee of compliance &mdash; you remain responsible for keeping complete transaction records.</p>
   </div>
 
   <div class="faq-item">
@@ -8751,7 +8755,7 @@ def _guide_page(slug, g, body_html):
         """<div class="cta"><strong>See what your agents leave blank.</strong> Run your last 20 closed TREC 20-19s through TC Check, free.
   <a class="btn" href="/brokers?src=seo_""" + slug + """" data-evt="guide_brokers_cta">Free 20-file audit &rarr;</a></div>"""
         if cta_brokers else
-        """<div class="cta"><strong>Check a file in seconds.</strong> Drop a filled TREC 20-19 and get back exactly which of these are blank or mismatched. Free, no signup, and the file isn't kept.
+        """<div class="cta"><strong>Check a file in seconds.</strong> Drop a filled TREC 20-19 and get back exactly which of these are blank or mismatched. Your first 3 reports need no signup, and the file isn't kept.
   <a class="btn" href="/tc-check?src=seo_""" + slug + """" data-evt="guide_check_cta">Check a file free &rarr;</a></div>"""
     )
     others = "".join(
@@ -9620,7 +9624,7 @@ def brokers():
 <div class="container">
   <div class="kicker">For managing brokers</div>
   <h1>Find out what your agents leave blank &mdash; before title calls you about it.</h1>
-  <p class="lede">You supervise every file, but you usually only see the broken ones when title kicks them back: <strong>a blank Effective Date, a missing initial, a 40-11 that disagrees with the contract.</strong> Run your agents' last 20 closed files through TC Check and see the pattern for yourself. Free, no signup, no sales call.</p>
+  <p class="lede">You supervise every file, but you usually only see the broken ones when title kicks them back: <strong>a blank Effective Date, a missing initial, a blank county.</strong> Run your agents' last 20 closed files through TC Check and see the pattern for yourself. Free, no signup, no sales call.</p>
 
   <div class="offer">
     <h2>Free backlog audit: your last 20 closed files</h2>
@@ -9639,8 +9643,7 @@ def brokers():
   <h2>What the audit looks for</h2>
   <ul class="checks">
     <li><span class="tick">&check;</span><span><strong>Blank required fields</strong> &mdash; Effective Date, earnest money, escrow agent, title fields.</span></li>
-    <li><span class="tick">&check;</span><span><strong>Missing initials</strong> &mdash; on every page, including the addendum.</span></li>
-    <li><span class="tick">&check;</span><span><strong>40-11 vs. contract mismatches</strong> &mdash; the loan amount in the Third Party Financing Addendum disagreeing with Section 3B.</span></li>
+    <li><span class="tick">&check;</span><span><strong>Missing initials</strong> &mdash; on every page of the contract.</span></li>
     <li><span class="tick">&check;</span><span><strong>Financing checkbox conflicts</strong> &mdash; Section 3B and Section 22 telling title two different stories.</span></li>
   </ul>
   <p style="margin-top:1rem;">Checks are mapped field-by-field to TREC's published 20-19. <a href="/trec-changes" style="color:var(--accent-dark);text-decoration:underline;">See what changed in the current version &rarr;</a></p>
@@ -9659,7 +9662,7 @@ def brokers():
   </div>
 
   <h2>Who's behind this</h2>
-  <p>TxtAnOffer is built and run in Texas by Phanel Jean Baptiste, a software builder, not a licensed agent. It's not affiliated with or endorsed by TREC. Questions go straight to me at <a href="mailto:support@txtanoffer.com" style="color:var(--accent-dark);text-decoration:underline;">support@txtanoffer.com</a>. <a href="/about" style="color:var(--accent-dark);text-decoration:underline;">The full story &rarr;</a></p>
+  <p>Built by Phanel Jean-Baptiste, for Texas TCs and brokers. Phanel is a software builder, not a licensed agent. TxtAnOffer is not affiliated with or endorsed by TREC. Questions go straight to me at <a href="mailto:support@txtanoffer.com" style="color:var(--accent-dark);text-decoration:underline;">support@txtanoffer.com</a>. <a href="/about" style="color:var(--accent-dark);text-decoration:underline;">The full story &rarr;</a></p>
 
   <p class="foot"><a href="/">&larr; Back to home</a> &middot; <a href="/pricing">Pricing</a> &middot; <a href="/faq">FAQ</a> &middot; <a href="/contact">Contact</a></p>
 </div>
@@ -11233,13 +11236,6 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
     if not offer_cards:
         offer_cards = '<div class="empty-state">No offers yet.<br>Text your first offer to get started.</div>'
 
-    def _fmt_time_saved(minutes: int) -> str:
-        if minutes < 60:
-            return f"{minutes}m"
-        h, m = divmod(minutes, 60)
-        return f"{h}h {m}m" if m else f"{h}h"
-
-    time_saved = _fmt_time_saved(user["offer_count"] * 45)
     avg_close = f"{round(sum(o['close_days'] for o in offers) / len(offers))}d" if offers else "—"
     wins_url = sign_wins_url(phone, request.host_url.rstrip("/"))
 
@@ -11509,7 +11505,7 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
 
   @media(max-width:600px){{
     .container {{padding:1.5rem 1rem 1rem;}}
-    .stats {{grid-template-columns:1fr 1fr 1fr;}}
+    .stats {{grid-template-columns:1fr 1fr;}}
     .greeting {{font-size:1.35rem;}}
     .nav-toggle {{ display: flex; }}
     .nav-links {{
@@ -11560,7 +11556,6 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
 
   <div class="stats">
     <div class="stat"><div class="stat-val">{user['offer_count']}</div><div class="stat-label">Total offers</div></div>
-    <div class="stat"><div class="stat-val">{time_saved}</div><div class="stat-label">Time saved</div></div>
     <div class="stat"><div class="stat-val">{avg_close}</div><div class="stat-label">Avg close</div></div>
   </div>
 
