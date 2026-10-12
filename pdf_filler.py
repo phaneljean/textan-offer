@@ -15,6 +15,7 @@ why some are verbose ("Texas known as") and some are generic
 """
 import os
 import io
+import secrets
 from datetime import datetime, timedelta
 from pypdf import PdfReader, PdfWriter
 from cover_page import generate_cover_page, generate_certification_page, generate_sponsor_page
@@ -502,13 +503,30 @@ def fill_offer_pdf(parsed: dict, agent_phone: str) -> str:
     final_writer.add_metadata({"/TxtAnOfferGeneratorVersion": GENERATOR_VERSION})
 
     safe_addr = "".join(ch for ch in (parsed.get("address") or "offer") if ch.isalnum())[:30]
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    out_path = os.path.join(OUTPUT_DIR, f"TREC20-19_{safe_addr}_{timestamp}.pdf")
-
-    with open(out_path, "wb") as f:
+    f, out_path = open_unique_output(OUTPUT_DIR, f"TREC20-19_{safe_addr}")
+    with f:
         final_writer.write(f)
 
     return out_path
+
+
+def open_unique_output(output_dir: str, stem: str):
+    """Opens a brand-new PDF file named <stem>_<timestamp>_<random>.pdf and
+    returns (file, path). The filename is the offer's identity everywhere
+    (DB row, signed /review link, archive), and it used to be just street +
+    timestamp-to-the-second: two offers for the same street in the same
+    second got one name, the second PDF overwrote the first on disk and
+    record_offer() skipped the second row, so agent A's link opened agent
+    B's contract. The random suffix makes a clash practically impossible,
+    and exclusive-create ("xb") guarantees an existing file is never
+    overwritten even if one happens."""
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    while True:
+        path = os.path.join(output_dir, f"{stem}_{timestamp}_{secrets.token_hex(3)}.pdf")
+        try:
+            return open(path, "xb"), path
+        except FileExistsError:
+            continue
 
 def inspect_fields(pdf_path: str = TEMPLATE_PATH):
     """Reproduces the field discovery used to build FIELD_MAP above."""

@@ -94,11 +94,10 @@ def fill_amendment_pdf(original_offer: dict, amendment: dict) -> str:
         acroform[NameObject("/NeedAppearances")] = BooleanObject(True)
 
     safe_addr = "".join(ch for ch in (original_offer.get("address") or "amendment") if ch.isalnum())[:30]
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"AMEND39-11_{safe_addr}_{suffix}_{timestamp}.pdf"
-    path = os.path.join(OUTPUT_DIR, filename)
-
-    with open(path, "wb") as f:
+    # Same collision fix as offers: unique, never-overwriting filename.
+    from pdf_filler import open_unique_output
+    f, path = open_unique_output(OUTPUT_DIR, f"AMEND39-11_{safe_addr}_{suffix}")
+    with f:
         writer.write(f)
 
     return path
