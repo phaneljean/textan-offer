@@ -2316,7 +2316,10 @@ def finalize_offer_sms(agent_phone: str, draft: dict):
     if new_count == 1:
         agent_profile = draft.get("agent") or {}
         if not agent_profile.get("title_company") or not agent_profile.get("business_address"):
-            profile_url = request.host_url.rstrip("/") + "/profile"
+            # Signed, same as the PROFILE keyword's link -- a bare /profile
+            # is a 403 (the page only opens behind a signed link), so this
+            # tip used to dead-end on the one step that clears the blocks.
+            profile_url = sign_dashboard_url(agent_phone, request.host_url.rstrip("/")).replace("/dashboard?", "/profile?")
             profile_nudge = (
                 f"\n\nTip: add your Title Company & Business Address once at "
                 f"{profile_url} and future offers will need far less filled in by hand."
@@ -5138,6 +5141,15 @@ def api_webhook():
         url = data.get("url", "")
         if not source_id or not url:
             return jsonify({"error": "source_id and url required"}), 400
+        # A signed link proves access to ONE offer, not to whatever source_id
+        # the body names -- without this, any valid review link (even your
+        # own free-trial one) could point another agent's webhook at your URL
+        # and receive their future offers. Bearer-token callers are trusted
+        # server-side and keep full control.
+        if require_api_auth() is not None:
+            owning_offer = get_offer_by_filename(data.get("filename", ""))
+            if not owning_offer or owning_offer.get("phone") != source_id:
+                return jsonify({"error": "This link can only set the webhook for its own offer."}), 403
         if not has_professional_access(source_id):
             return jsonify({"error": "Webhook automation is a Professional-plan feature. Upgrade at txtanoffer.com/pricing."}), 403
         if not _is_safe_webhook_url(url):
@@ -10815,7 +10827,7 @@ a.btn{{display:inline-block;background:#0b5d52;color:#fff;padding:0.75rem 1.5rem
         <div class="stage-section">
           <div class="stage-head"><span class="stage-badge stage-{stage_state[s]}">{stage_state[s]}</span><span class="stage-name">{s}</span></div>
           {rows or '<div class="stage-empty">No tasks.</div>'}
-          <form class="add-task-form" onsubmit="return addTask(event, {_json.dumps(s)})">
+          <form class="add-task-form" onsubmit="return addTask(event, {escape(_json.dumps(s))})">
             <input type="text" placeholder="Add a task..." maxlength="200" required>
             <input type="date" title="Due date (optional)">
             <button type="submit">+</button>
