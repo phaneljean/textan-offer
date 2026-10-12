@@ -1199,7 +1199,7 @@ def index():
       <li><span class="tc-check">&check;</span><span><strong>40-11 addendum mismatches</strong> &mdash; loan amount or financing checkbox disagreeing with the contract.</span></li>
       <li><span class="tc-check">&check;</span><span><strong>41-3 loan assumption gaps</strong> &mdash; addendum listed but not attached, blank rate or fee caps, assumed balance not matching 3B.</span></li>
       <li><span class="tc-check">&check;</span><span><strong>39-11 amendment mismatches</strong> &mdash; sales price or property address disagreeing with the original contract.</span></li>
-      <li><span class="tc-check">&check;</span><span><strong>Your whole closed-file backlog</strong> &mdash; free sample checks up to 20 files at once; a Brokerage join code raises that to 200, no extra charge.</span></li>
+      <li><span class="tc-check">&check;</span><span><strong>Your whole closed-file backlog</strong> &mdash; free sample checks up to 20 files at once; a Brokerage join code raises that to 200, no extra charge. <a href="/tc-check/bulk" style="color:var(--accent-dark);text-decoration:underline;">Bulk check &rarr;</a></span></li>
       <li><span class="tc-check">&check;</span><span><strong>A text the moment it happens</strong> &mdash; on the Brokerage plan, a real blocker on any agent's file texts you directly, before it ever reaches title.</span></li>
     </ul>
     <div class="secondary-cta" style="margin:1.75rem auto 0;padding-top:1.75rem;max-width:560px;text-align:center;">
@@ -1234,7 +1234,7 @@ def index():
       <div class="step-card">
         <div class="step-num">4</div>
         <h3>Find it in seconds</h3>
-        <p>Search by address from your dashboard, open any PDF, or download the whole archive as a ZIP &mdash; anytime, even if you cancel.</p>
+        <p>Search by address from your brokerage dashboard, open any PDF, or download the whole archive as a ZIP &mdash; anytime, even if you cancel. <a href="/broker/login" style="color:var(--accent-dark);text-decoration:underline;">Brokerage sign-in &rarr;</a></p>
       </div>
     </div>
     <p style="text-align:center;font-size:0.8rem;color:var(--text-dim);max-width:620px;margin:1.5rem auto 0;">Executed contracts too: forward them to tc@check.txtanoffer.com from your brokerage email, or drop them into your archive &mdash; each one is checked and kept 5 years. <a href="/archive" style="color:var(--accent-dark);text-decoration:underline;">How the contract archive works &rarr;</a></p>
@@ -1395,7 +1395,9 @@ def index():
       <a href="/privacy#sms-messaging">SMS Terms</a>
       <a href="/pricing">Pricing</a>
       <a href="/playground">Try a Sample Text</a>
+      <a href="/demo#commands">Text Commands</a>
       <a href="/tc-check">TC File Check</a>
+      <a href="/broker/login">Brokerage Sign-In</a>
       <a href="/guides">Guides</a>
       <a href="mailto:support@txtanoffer.com">Support</a>
     </div>
@@ -2914,7 +2916,7 @@ DEMO_FORM = """
       {result_html}
     </div>
 
-    <div class="cmd-menu">
+    <div class="cmd-menu" id="commands">
       <div class="cmd-menu-title">Text these to 1-833-897-0333</div>
       <div class="cmd-row"><span class="cmd-key">price down% days address</span><span class="cmd-desc">Get a confirmation to review &mdash; e.g. 725k 3% 21day 123 Main St</span></div>
       <div class="cmd-row"><span class="cmd-key">YES</span><span class="cmd-desc">Confirm the pending offer and generate the PDF</span></div>
@@ -6963,6 +6965,7 @@ def login():
     {msg_html}
   </div>
   <p class="alt">Don't have an account? <a href="/signup">Sign up</a></p>
+  <p class="alt">Managing broker? <a href="/broker/login">Sign in to your brokerage dashboard &amp; archive</a></p>
 </div>
 </body>
 </html>"""
@@ -7605,6 +7608,11 @@ def faq():
   <div class="faq-item">
     <h2>What if the parser gets a number wrong?</h2>
     <p>Every generated PDF is a draft. You must review all fields &mdash; price, dates, address, percentages &mdash; before presenting to clients. The parser handles most phrasings, but you are the final check. Fields like buyer/seller names, earnest money, and financing terms are intentionally left blank for you to complete.</p>
+  </div>
+
+  <div class="faq-item" id="commands">
+    <h2>What can I text TxtAnOffer?</h2>
+    <p>Text <strong>(833) 897-0333</strong>. Send your offer terms as <em>price down% days address</em> (e.g. <em>"725k 3% 21day 123 Main St"</em>), then reply <strong>YES</strong> to create the PDF or <strong>NO</strong> to cancel. Other commands: <strong>DASHBOARD</strong> for a link to your offer history, <strong>STATUS</strong> for your plan and usage, <strong>PROFILE</strong> to edit your agent info, <strong>AMEND</strong> to change a sent offer (below), <strong>HELP</strong> to get this menu by text, and <strong>STOP</strong> to unsubscribe. <a href="/demo#commands" style="color:var(--accent-dark);">See the full command list &rarr;</a></p>
   </div>
 
   <div class="faq-item">
@@ -9550,7 +9558,7 @@ def brokers():
     <a href="/tc-check">TC Check</a>
     <a href="/pricing">Pricing</a>
     <a href="/faq">FAQ</a>
-    <a href="/login">Log In</a>
+    <a href="/broker/login">Broker Sign-In</a>
   </div>
   <a href="/tc-check/bulk?src=brokers_page" class="nav-cta" data-evt="brokers_audit_cta">Free Backlog Audit</a>
   <button class="nav-toggle" id="navToggle" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
