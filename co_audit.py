@@ -468,3 +468,76 @@ def check_co_file(pdf_paths, page_count=None, all_values=None, summary=None) -> 
             "county": _v(values, F["county"]),
         },
     }
+
+
+# --- Contract dates for the transaction side (tasks, Day One, reminders) ---
+# Stage and plain-English action for each §3.1 row a TC works toward.
+# Rows not listed here (e.g. Third Party Right) still appear on the
+# contract; they just don't get a task.
+DEADLINE_TASKS = {
+    "record_title": ("Title", "title commitment and tax certificate due"),
+    "record_title_obj": ("Title", "last day to object to the title commitment"),
+    "off_record": ("Title", "off-record title documents due"),
+    "off_record_obj": ("Title", "last day to object to off-record matters"),
+    "title_resolution": ("Title", "title objections resolved or contract can terminate"),
+    "assoc_docs": ("Title", "association documents due"),
+    "assoc_term": ("Title", "last day to terminate over association documents"),
+    "spd": ("Disclosures", "Seller's Property Disclosure due"),
+    "loan_app": ("Financing", "buyer's loan application submitted"),
+    "loan_terms": ("Financing", "last day to terminate over loan terms"),
+    "loan_avail": ("Financing", "last day to terminate if the loan isn't available"),
+    "credit": ("Financing", "buyer's credit information due to seller"),
+    "credit_disapproval": ("Financing", "seller's last day to disapprove buyer's credit"),
+    "existing_loan": ("Financing", "existing loan documents due"),
+    "existing_loan_term": ("Financing", "last day to terminate over the existing loan"),
+    "loan_transfer": ("Financing", "loan transfer approval due"),
+    "seller_fin": ("Financing", "seller/private financing documents due"),
+    "appraisal": ("Appraisal", "appraisal due"),
+    "appraisal_obj": ("Appraisal", "last day to object to the appraisal"),
+    "appraisal_res": ("Appraisal", "appraisal objection resolved"),
+    "ilc": ("Inspections", "new ILC or survey due"),
+    "ilc_obj": ("Inspections", "last day to object to the ILC or survey"),
+    "ilc_res": ("Inspections", "ILC/survey objection resolved"),
+    "insp_obj": ("Inspections", "last day to send the inspection objection"),
+    "insp_term": ("Inspections", "last day to terminate over the inspection"),
+    "insp_res": ("Inspections", "inspection objection resolved"),
+    "insurance_term": ("Inspections", "last day to terminate over insurability"),
+    "dd_delivery": ("Inspections", "due diligence documents due"),
+    "dd_obj": ("Inspections", "last day to object to due diligence documents"),
+    "dd_res": ("Inspections", "due diligence objection resolved"),
+}
+
+# The deadlines worth a reminder text the day before: missing one of these
+# costs the buyer a right to terminate (§3.2 / §24).
+REMINDER_KEYS = ("insp_obj", "loan_avail", "appraisal_obj", "record_title_obj")
+
+
+def contract_deadlines(values: dict) -> list:
+    """[{key, item, label, raw, date, stage, action}] for every §3.1 row
+    in DEADLINE_TASKS that the contract actually fills in. "N/A"/blank rows
+    are left out (§3.2: that provision is deleted). `date` is None when the
+    entry isn't an absolute date (e.g. "MEC + 7") -- the raw text is kept so
+    nothing is guessed."""
+    out = []
+    for key, (stage, action) in DEADLINE_TASKS.items():
+        name, item, label = DEADLINES[key]
+        raw = _v(values, name)
+        if _blank_or_na(raw):
+            continue
+        out.append({"key": key, "item": item, "label": label, "raw": raw, "date": _parse_date(raw),
+                    "stage": stage, "action": action})
+    return out
+
+
+def contract_key_dates(values: dict) -> dict:
+    """Closing, acceptance and possession as written, parsed when absolute."""
+    return {k: _parse_date(_v(values, DEADLINES[k][0])) for k in ("closing", "acceptance", "possession")}
+
+
+def read_contract(pdf_path: str):
+    """Values from a generated CBS1, or None if it isn't one/unreadable."""
+    try:
+        values = _read_values(pdf_path)
+    except Exception:
+        return None
+    return values if is_cbs1(values) else None

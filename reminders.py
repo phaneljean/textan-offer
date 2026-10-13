@@ -86,7 +86,7 @@ def _due_offers():
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT id, phone, address, close_days, created_at
+        SELECT id, phone, address, close_days, created_at, filename
         FROM offers
         WHERE phone NOT LIKE '%demo%'
           AND id NOT IN (SELECT offer_id FROM reminders_sent WHERE kind = 'closing')
@@ -102,9 +102,56 @@ def _due_offers():
         except (ValueError, TypeError):
             continue
         closing_date = (created + timedelta(days=r["close_days"])).date()
+        co = _co_values(r.get("filename"))
+        if co is not None:
+            import co_audit
+            closing_date = co_audit.contract_key_dates(co)["closing"] or closing_date
         if closing_date == target_date:
             r["closing_date"] = closing_date
             due.append(r)
+    return due
+
+
+def _co_values(filename):
+    """CBS1 field values for a Colorado offer, else None (Texas offer or
+    file no longer on disk)."""
+    if not (filename or "").startswith("CBS1_"):
+        return None
+    import os
+    import co_audit
+    from pdf_filler import OUTPUT_DIR
+    return co_audit.read_contract(os.path.join(OUTPUT_DIR, filename))
+
+
+def _due_offers_co_deadlines():
+    """Accepted Colorado offers with a buyer-protection deadline from their
+    own §3.1 table (co_audit.REMINDER_KEYS) exactly CO_DEADLINE_REMINDER_DAYS_BEFORE
+    away. One reminder per offer per deadline (kind 'co_<key>')."""
+    import co_audit
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT id, phone, address, filename
+        FROM offers
+        WHERE phone NOT LIKE '%demo%'
+          AND thread_status = 'accept'
+          AND substr(COALESCE(filename, ''), 1, 5) = 'CBS1_'
+    """)
+    rows = [dict(r) for r in cursor.fetchall()]
+    sent = {(r[0], r[1]) for r in cursor.execute("SELECT offer_id, kind FROM reminders_sent WHERE kind LIKE 'co_%'")}
+    conn.close()
+
+    target_date = (datetime.utcnow() + timedelta(days=CO_DEADLINE_REMINDER_DAYS_BEFORE)).date()
+    due = []
+    for r in rows:
+        values = _co_values(r["filename"])
+        if not values:
+            continue
+        for d in co_audit.contract_deadlines(values):
+            kind = f"co_{d['key']}"
+            if d["key"] in co_audit.REMINDER_KEYS and d["date"] == target_date and (r["id"], kind) not in sent:
+                due.append({**r, "kind": kind, "label": d["label"], "date": d["date"]})
     return due
 
 
@@ -122,6 +169,7 @@ def _due_offers_option():
         WHERE phone NOT LIKE '%demo%'
           AND option_days IS NOT NULL
           AND thread_status = 'accept'
+          AND substr(COALESCE(filename, ''), 1, 5) != 'CBS1_'
           AND id NOT IN (SELECT offer_id FROM reminders_sent WHERE kind = 'option')
     """)
     rows = [dict(r) for r in cursor.fetchall()]
@@ -155,6 +203,7 @@ def _due_offers_earnest_money():
         FROM offers
         WHERE phone NOT LIKE '%demo%'
           AND thread_status = 'accept'
+          AND substr(COALESCE(filename, ''), 1, 5) != 'CBS1_'
           AND id NOT IN (SELECT offer_id FROM reminders_sent WHERE kind = 'earnest_money')
     """)
     rows = [dict(r) for r in cursor.fetchall()]
@@ -183,6 +232,9 @@ def _mark_sent(offer_id, kind="closing"):
     """, (offer_id, kind, datetime.utcnow().isoformat()))
     conn.commit()
     conn.close()
+
+
+CO_DEADLINE_REMINDER_DAYS_BEFORE = 1
 
 
 def run_reminders_if_due(send_sms_fn):
@@ -225,6 +277,15 @@ def run_reminders_if_due(send_sms_fn):
                 )
                 if send_sms_fn(offer["phone"], body):
                     _mark_sent(offer["id"], "earnest_money")
+
+            for offer in _due_offers_co_deadlines():
+                body = (
+                    f"Reminder: the {offer['label']} on {offer['address']} is "
+                    f"{offer['date'].strftime('%B %d, %Y')} (tomorrow), per section 3.1 of the contract. "
+                    f"Text DASHBOARD to review."
+                )
+                if send_sms_fn(offer["phone"], body):
+                    _mark_sent(offer["id"], offer["kind"])
         except Exception as e:
             print(f"[reminders] Error: {e}")
 

@@ -1405,19 +1405,20 @@ def index():
         <h3>Communication</h3>
         <p>SMS confirmations, email notifications, and a listing-agent accept/decline thread, built in from the first text.</p>
       </div>
-      <div class="step-card" data-state="tx">
+      <div class="step-card">
         <div class="step-num">6</div>
         <h3>Transaction workspace</h3>
-        <p>Once accepted, a stage timeline and task checklist track the deal &mdash; option period, earnest money, title, financing, inspections, amendments, final walkthrough &mdash; alongside accept/decline status and dashboard visibility.</p>
+        <p data-state="tx">Once accepted, a stage timeline and task checklist track the deal &mdash; option period, earnest money, title, financing, inspections, amendments, final walkthrough &mdash; alongside accept/decline status and dashboard visibility.</p>
+        <p data-state="co">Once accepted, a stage timeline and task checklist track the deal, with due dates taken from the contract&rsquo;s own &sect;3.1 deadlines &mdash; title, disclosures, financing, appraisal, inspections &mdash; plus a reminder text the day before the key ones.</p>
       </div>
-      <div class="step-card" data-state="tx">
+      <div class="step-card">
         <div class="step-num">7</div>
         <h3>Closing</h3>
         <p>Within 5 days of closing, a Closing Checklist pulls it together in one screen: documents complete, signature status, open tasks, and every key date.</p>
       </div>
     </div>
     <div data-state="tx" style="text-align:center;font-size:0.8rem;font-weight:600;color:var(--accent-dark);margin-top:1.75rem;">Offer &rarr; Documents &rarr; Compliance &rarr; Signatures &rarr; Communication &rarr; Transaction &rarr; Closing</div>
-    <div data-state="co" style="text-align:center;font-size:0.8rem;font-weight:600;color:var(--accent-dark);margin-top:1.75rem;">Offer &rarr; Contract &rarr; Compliance &rarr; Review &rarr; Communication</div>
+    <div data-state="co" style="text-align:center;font-size:0.8rem;font-weight:600;color:var(--accent-dark);margin-top:1.75rem;">Offer &rarr; Contract &rarr; Compliance &rarr; Review &rarr; Communication &rarr; Transaction &rarr; Closing</div>
   </section>
   </div>
 
@@ -2472,6 +2473,17 @@ def _notify_brokerage_tc(user: dict, draft: dict, pdf_path: str, pdf_url: str):
         })
     except Exception as e:
         print(f"[BROKERAGE_TC] notify failed for brokerage {brokerage_id}: {e}")
+
+
+def _day_one_lines(filename, address, effective_date, option_days, close_date):
+    """Texas Paragraph 5/option summary, or for a Colorado CBS1 the §3.1
+    dates printed on that contract (Colorado has no option period)."""
+    if transaction_tasks.is_co(filename):
+        import co_audit
+        from deadlines import build_co_day_one_summary
+        values = co_audit.read_contract(os.path.join(OUTPUT_DIR, filename)) or {}
+        return build_co_day_one_summary(address, effective_date, values)
+    return build_day_one_summary(address, effective_date, option_days, close_date)
 
 
 def finalize_offer_sms(agent_phone: str, draft: dict):
@@ -10802,12 +10814,13 @@ def offer_thread(filename):
                         close_date = (created_dt + timedelta(days=offer["close_days"])).date()
                 except (KeyError, TypeError, ValueError):
                     pass
-                summary_lines = build_day_one_summary(
-                    offer["address"], effective_date, offer.get("option_days"), close_date
+                summary_lines = _day_one_lines(
+                    filename, offer["address"], effective_date, offer.get("option_days"), close_date
                 )
                 twilio_send_sms(offer["phone"], "\n".join(summary_lines))
                 transaction_tasks.seed_default_tasks(
-                    filename, effective_date, offer.get("option_days"), close_date
+                    filename, effective_date, offer.get("option_days"), close_date,
+                    pdf_path=os.path.join(OUTPUT_DIR, filename)
                 )
         return redirect(f"/thread/{filename}?expires={expires}&sig={sig}")
 
@@ -10906,7 +10919,7 @@ def offer_thread(filename):
         except ValueError:
             effective_date = created_dt.date()
         close_date_obj = (created_dt + timedelta(days=close_days)).date() if close_days else None
-        summary_lines = build_day_one_summary(address, effective_date, offer.get("option_days"), close_date_obj)
+        summary_lines = _day_one_lines(filename, address, effective_date, offer.get("option_days"), close_date_obj)
         summary_text = "\n".join(summary_lines)
         summary_items_html = "".join(f"<li>{line}</li>" for line in summary_lines[1:-1])
         import json as _json
@@ -11081,7 +11094,7 @@ def transaction_page(filename):
             stage = (data.get("stage") or "").strip()
             label = (data.get("label") or "").strip()
             due_date = (data.get("due_date") or "").strip()
-            if not label or stage not in transaction_tasks.STAGES:
+            if not label or stage not in transaction_tasks.stages_for(filename):
                 return jsonify({"error": "Stage and label required"}), 400
             transaction_tasks.add_task(filename, stage, label, due_date)
         elif action == "delete":
@@ -11129,10 +11142,20 @@ a.btn{{display:inline-block;background:#0b5d52;color:#fff;padding:0.75rem 1.5rem
     except ValueError:
         effective_date = created_dt.date()
 
-    transaction_tasks.seed_default_tasks(filename, effective_date, offer.get("option_days"), close_date_obj)
+    stages = transaction_tasks.stages_for(filename)
+    co_values = None
+    if transaction_tasks.is_co(filename):
+        import co_audit
+        co_values = co_audit.read_contract(os.path.join(OUTPUT_DIR, filename))
+        if co_values:
+            # The CBS1 Closing Date moves off weekends/holidays (co_filler),
+            # so use the one printed on the contract.
+            close_date_obj = co_audit.contract_key_dates(co_values)["closing"] or close_date_obj
+    transaction_tasks.seed_default_tasks(filename, effective_date, offer.get("option_days"), close_date_obj,
+                                         pdf_path=os.path.join(OUTPUT_DIR, filename))
     tasks = transaction_tasks.get_tasks(filename)
 
-    tasks_by_stage = {s: [] for s in transaction_tasks.STAGES}
+    tasks_by_stage = {s: [] for s in stages}
     for t in tasks:
         tasks_by_stage.setdefault(t["stage"], []).append(t)
 
@@ -11153,7 +11176,7 @@ a.btn{{display:inline-block;background:#0b5d52;color:#fff;padding:0.75rem 1.5rem
     # STAGES order; everything after it is "upcoming".
     stage_state = {}
     seen_current = False
-    for s in transaction_tasks.STAGES:
+    for s in stages:
         stage_tasks = tasks_by_stage.get(s, [])
         is_done = all(t["done"] for t in stage_tasks) if stage_tasks else True
         if is_done:
@@ -11165,7 +11188,7 @@ a.btn{{display:inline-block;background:#0b5d52;color:#fff;padding:0.75rem 1.5rem
             stage_state[s] = "upcoming"
 
     timeline_html = ""
-    for s in transaction_tasks.STAGES:
+    for s in stages:
         st = stage_state[s]
         timeline_html += f'<div class="tl-node tl-{st}"><div class="tl-dot"></div><div class="tl-label">{s}</div></div>'
 
@@ -11175,7 +11198,7 @@ a.btn{{display:inline-block;background:#0b5d52;color:#fff;padding:0.75rem 1.5rem
     import json as _json
 
     stage_sections_html = ""
-    for s in transaction_tasks.STAGES:
+    for s in stages:
         stage_tasks = tasks_by_stage.get(s, [])
         rows = ""
         for t in stage_tasks:
@@ -11227,8 +11250,11 @@ a.btn{{display:inline-block;background:#0b5d52;color:#fff;padding:0.75rem 1.5rem
             sig_status_html = f'<span class="ok">Sent for signature {offer["docusign_sent_at"][:10]}</span>'
         else:
             sig_status_html = '<span class="warn">Not yet sent via DocuSign</span>'
-        earnest_dl = earnest_money_deadline(effective_date)
-        opt_end = option_end_date(effective_date, offer.get("option_days"))
+        if co_values is not None or transaction_tasks.is_co(filename):
+            earnest_dl, opt_end = None, None
+        else:
+            earnest_dl = earnest_money_deadline(effective_date)
+            opt_end = option_end_date(effective_date, offer.get("option_days"))
         closing_html = f"""
         <div class="closing-card">
           <div class="closing-title">Closing in {days_out} day{'s' if days_out != 1 else ''}</div>
@@ -11237,7 +11263,7 @@ a.btn{{display:inline-block;background:#0b5d52;color:#fff;padding:0.75rem 1.5rem
           <div class="closing-row"><span>Outstanding tasks</span><span class="{'warn' if open_count else 'ok'}">{open_count} open</span></div>
           <div class="closing-dates">
             <div>Effective Date: {_fmt(effective_date)}</div>
-            <div>Earnest money due: {_fmt(earnest_dl)}</div>
+            {f'<div>Earnest money due: {_fmt(earnest_dl)}</div>' if earnest_dl else ''}
             {f'<div>Option period ended: {_fmt(opt_end)}</div>' if opt_end else ''}
             <div>Closing: {_fmt(close_date_obj)}</div>
           </div>

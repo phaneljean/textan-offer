@@ -107,3 +107,22 @@ def build_day_one_summary(address: str, effective_date: date, option_days, close
         lines.append(f"Closing on or before: {close_date.strftime('%b %d, %Y')}")
     lines.append("Share these dates with the buyer, lender, and title company.")
     return lines
+
+
+def build_co_day_one_summary(address: str, effective_date: date, values: dict) -> list:
+    """Colorado version of build_day_one_summary: the key §3.1 dates as
+    written on that CBS1 (co_audit.contract_deadlines), not Texas Paragraph
+    5/option-period math -- Colorado has no option period. Same shape (first
+    line title, last line the share prompt) so callers render it the same."""
+    import co_audit
+    lines = [f"Day One summary — {address}", f"MEC (both signed): {effective_date.strftime('%b %d, %Y')}"]
+    wanted = ("insp_obj", "record_title_obj", "loan_avail", "appraisal_obj")
+    picked = [d for d in co_audit.contract_deadlines(values or {}) if d["key"] in wanted]
+    for d in sorted(picked, key=lambda d: d["date"] or date.max):
+        when = d["date"].strftime('%b %d, %Y') if d["date"] else d["raw"]
+        lines.append(f"{d['label']}: {when}")
+    closing = co_audit.contract_key_dates(values or {})["closing"]
+    if closing:
+        lines.append(f"Closing Date: {closing.strftime('%b %d, %Y')}")
+    lines.append("Share these dates with the buyer, lender, and title company.")
+    return lines

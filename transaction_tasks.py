@@ -49,6 +49,57 @@ DEFAULT_TASKS = [
 ]
 
 
+# Colorado CBS1 deals (filenames start "CBS1_", see co_filler.py). There is
+# no option period or option fee in Colorado; every dated task below comes
+# from the §3.1 deadline table printed on that contract (co_audit
+# .contract_deadlines), so the checklist can't disagree with the contract.
+CO_STAGES = [
+    "Accepted", "Earnest Money", "Title", "Disclosures", "Financing",
+    "Appraisal", "Inspections", "Amendments", "Final Walkthrough", "Closing",
+]
+CO_FIXED_TASKS = [
+    ("Accepted", "Confirm the MEC date (both parties signed) with all parties", "effective"),
+    ("Accepted", "Share the §3.1 deadlines with buyer, lender, and title company", "effective"),
+    ("Earnest Money", "Confirm earnest money delivered to the Earnest Money Holder (§4.3)", "effective"),
+    ("Amendments", "Send any Agreement to Amend/Extend for signature", None),
+    ("Final Walkthrough", "Schedule final walkthrough", "walkthrough"),
+    ("Closing", "Confirm closing documents are ready", "closing"),
+    ("Closing", "Verify all required signatures are complete", "closing"),
+    ("Closing", "Confirm closing date/time/location with the closing company", "closing"),
+]
+
+
+def is_co(filename: str) -> bool:
+    return (filename or "").startswith("CBS1_")
+
+
+def stages_for(filename: str) -> list:
+    return CO_STAGES if is_co(filename) else STAGES
+
+
+def _co_tasks(pdf_path: str, effective_date: date, close_date):
+    """(stage, label, due) rows for a Colorado deal, in CO_STAGES order."""
+    from datetime import timedelta
+    import co_audit
+    values = co_audit.read_contract(pdf_path) if pdf_path else None
+    deadlines = co_audit.contract_deadlines(values) if values else []
+    if values:
+        close_date = co_audit.contract_key_dates(values)["closing"] or close_date
+    rows = []
+    for stage, label, due_kind in CO_FIXED_TASKS:
+        due = {"effective": effective_date, "closing": close_date,
+               "walkthrough": (close_date - timedelta(days=1)) if close_date else None}.get(due_kind)
+        rows.append((stage, label, due))
+    for d in deadlines:
+        label = f"{d['label']}: {d['action']}"
+        if not d["date"]:
+            label += f" (contract says \"{d['raw']}\")"
+        rows.append((d["stage"], label, d["date"]))
+    order = {s: i for i, s in enumerate(CO_STAGES)}
+    rows.sort(key=lambda r: (order[r[0]], r[2] or date.max))
+    return rows
+
+
 def init_transaction_tasks_table():
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
@@ -88,9 +139,11 @@ def _resolve_due_date(due_kind, effective_date: date, option_days, close_date):
     return None
 
 
-def seed_default_tasks(filename: str, effective_date: date, option_days, close_date):
+def seed_default_tasks(filename: str, effective_date: date, option_days, close_date, pdf_path: str = None):
     """Idempotent -- a no-op if this offer already has tasks (e.g. a
-    duplicate accept POST, or a re-visit)."""
+    duplicate accept POST, or a re-visit). Colorado deals (is_co) are seeded
+    from their own contract's §3.1 dates via pdf_path instead of the Texas
+    DEFAULT_TASKS."""
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     existing = cursor.execute("SELECT COUNT(*) FROM transaction_tasks WHERE filename=?", (filename,)).fetchone()[0]
@@ -98,8 +151,12 @@ def seed_default_tasks(filename: str, effective_date: date, option_days, close_d
         conn.close()
         return
     now = datetime.utcnow().isoformat()
-    for i, (stage, label, due_kind) in enumerate(DEFAULT_TASKS):
-        due = _resolve_due_date(due_kind, effective_date, option_days, close_date)
+    if is_co(filename):
+        rows = _co_tasks(pdf_path, effective_date, close_date)
+    else:
+        rows = [(stage, label, _resolve_due_date(due_kind, effective_date, option_days, close_date))
+                for stage, label, due_kind in DEFAULT_TASKS]
+    for i, (stage, label, due) in enumerate(rows):
         cursor.execute("""
             INSERT INTO transaction_tasks (filename, stage, label, due_date, sort_order, created_at)
             VALUES (?, ?, ?, ?, ?, ?)
@@ -137,8 +194,8 @@ def toggle_task(filename: str, task_id: int, done: bool) -> bool:
 
 
 def add_task(filename: str, stage: str, label: str, due_date: str = "") -> int:
-    if stage not in STAGES:
-        stage = STAGES[0]
+    if stage not in stages_for(filename):
+        stage = stages_for(filename)[0]
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     now = datetime.utcnow().isoformat()
