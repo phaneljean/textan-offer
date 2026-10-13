@@ -987,7 +987,7 @@ def index():
       #workflow .steps-grid { display: flex; flex-wrap: wrap; justify-content: center; }
       #workflow .step-card { flex: 0 1 calc((100% - 2.5rem) / 3); }
     }
-    .stat-label { font-size: 0.72rem; color: var(--text-dim); margin-top: 0.25rem; font-weight: 500; }
+    .stat-label { font-size: 0.82rem; color: var(--text-dim); margin-top: 0.25rem; font-weight: 500; line-height: 1.4; }
 
     /* Dark card wrap (dashboard/results preview) -- layered ambient shadow */
     .dark-card-wrap {
@@ -1586,7 +1586,7 @@ def index():
         <p>Within 5 days of closing, a Closing Checklist pulls it together in one screen: documents complete, signature status, open tasks, and every key date.</p>
       </div>
     </div>
-    <div data-state="tx" style="text-align:center;font-size:0.8rem;font-weight:600;color:var(--accent-dark);margin-top:1.75rem;">Offer &rarr; Documents &rarr; Compliance &rarr; Signatures &rarr; Communication &rarr; Transaction &rarr; Closing</div>
+    <div data-state="tx" style="text-align:center;font-size:0.8rem;font-weight:600;color:var(--accent-dark);margin-top:1.75rem;">Offer &rarr; Documents &rarr; Compliance &rarr; Review &rarr; Communication &rarr; Transaction &rarr; Closing</div>
     <div data-state="co" style="text-align:center;font-size:0.8rem;font-weight:600;color:var(--accent-dark);margin-top:1.75rem;">Offer &rarr; Contract &rarr; Compliance &rarr; Review &rarr; Communication &rarr; Transaction &rarr; Closing</div>
   </section>
   </div>
@@ -3175,7 +3175,7 @@ DEMO_FORM = """
     --border-hover: rgba(0,0,0,0.35);
     --text: #0f1f2f;
     --text-muted: #5a6b7a;
-    --text-dim: #8a9aa9;
+    --text-dim: #5f707f;
     --accent: #0b5d52;
     --accent-light: #16806e;
     --accent-dark: #0a3a33;
@@ -3453,7 +3453,7 @@ DEMO_FORM = """
     <p class="page-sub">Preparing a purchase offer by hand takes time. TxtAnOffer drafts one in under 10 seconds.</p>
 
     <div class="workflow">
-      <div class="wf-step"><div class="wf-icon">&#9993;</div><div class="wf-title">You type</div><div class="wf-desc">725k 3% 21day<br>1234 Main St</div></div>
+      <div class="wf-step"><div class="wf-icon">&#9993;</div><div class="wf-title">You type</div><div class="wf-desc">725k 3% 21day<br>123 Main St, Austin, TX</div></div>
       <div class="wf-arrow">&rarr;</div>
       <div class="wf-step"><div class="wf-icon">&#9881;</div><div class="wf-title">We parse</div><div class="wf-desc">Price, terms &amp;<br>address extracted</div></div>
       <div class="wf-arrow">&rarr;</div>
@@ -3463,7 +3463,7 @@ DEMO_FORM = """
     <div class="card">
       <form method="POST" action="/demo">
         <label class="field-label">Offer details</label>
-        <input type="text" name="offer_text" placeholder="725k 3% 21day Harris 123 Main St" value="{prefill}">
+        <input type="text" name="offer_text" placeholder="725k 3% 21day 123 Main St, Austin, TX" value="{prefill}">
         <button type="submit">Generate My Contract</button>
         <div class="hint">price &middot; down % &middot; closing days &middot; county (optional) &middot; address &middot; financing type &amp; inspection days (optional)</div>
         <div class="hint">You'll get a confirmation to review first &mdash; reply <code>YES</code> to generate the PDF, <code>NO</code> to cancel, or send corrections.</div>
@@ -3474,7 +3474,7 @@ DEMO_FORM = """
 
     <div class="cmd-menu" id="commands">
       <div class="cmd-menu-title">Text these to 1-833-897-0333</div>
-      <div class="cmd-row"><span class="cmd-key">price down% days address</span><span class="cmd-desc">Get a confirmation to review &mdash; e.g. 725k 3% 21day 123 Main St</span></div>
+      <div class="cmd-row"><span class="cmd-key">price down% days address</span><span class="cmd-desc">Get a confirmation to review &mdash; e.g. 725k 3% 21day 123 Main St, Austin, TX</span></div>
       <div class="cmd-row"><span class="cmd-key">YES</span><span class="cmd-desc">Confirm the pending offer and generate the PDF</span></div>
       <div class="cmd-row"><span class="cmd-key">NO</span><span class="cmd-desc">Cancel the pending offer</span></div>
       <div class="cmd-row"><span class="cmd-key">AMEND &lt;address&gt; price &lt;value&gt;</span><span class="cmd-desc">Change the sales price on an offer you sent</span></div>
@@ -4318,7 +4318,7 @@ def tc_check_page():
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <style>
 :root{--bg:#F5F5F7;--bg-card:#fff;--border:rgba(15,31,47,0.08);
---text:#0f1f2f;--text-muted:#5a6b7a;--text-dim:#8a9aa9;--accent:#0b5d52;--accent-light:#16806e;
+--text:#0f1f2f;--text-muted:#5a6b7a;--text-dim:#5f707f;--accent:#0b5d52;--accent-light:#16806e;
 --accent-dark:#0a3a33;--accent-tint:#E7F3F1;--radius:1.25rem;--radius-sm:0.85rem;}
 *{margin:0;padding:0;box-sizing:border-box;}
 body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;
@@ -5103,7 +5103,7 @@ function escapeHtml(s) {
 
 _BULK_PAGE_STYLE = """
 :root{--bg:#F5F5F7;--bg-card:#fff;--border:rgba(15,31,47,0.08);
---text:#0f1f2f;--text-muted:#5a6b7a;--text-dim:#8a9aa9;--accent:#0b5d52;--accent-light:#16806e;
+--text:#0f1f2f;--text-muted:#5a6b7a;--text-dim:#5f707f;--accent:#0b5d52;--accent-light:#16806e;
 --accent-tint:#E7F3F1;--radius:1.25rem;--radius-sm:0.85rem;}
 *{margin:0;padding:0;box-sizing:border-box;}
 body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased;}
@@ -5486,7 +5486,7 @@ def playground():
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <style>
 :root{--bg:#F5F5F7;--bg-card:#fff;--border:rgba(15,31,47,0.08);
---text:#0f1f2f;--text-muted:#5a6b7a;--text-dim:#8a9aa9;--accent:#0b5d52;--accent-light:#16806e;
+--text:#0f1f2f;--text-muted:#5a6b7a;--text-dim:#5f707f;--accent:#0b5d52;--accent-light:#16806e;
 --accent-dark:#0a3a33;--accent-tint:#E7F3F1;--radius:1.25rem;--radius-sm:0.85rem;}
 *{margin:0;padding:0;box-sizing:border-box;}
 body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;
@@ -5985,7 +5985,7 @@ def pricing():
     --border-hover: rgba(11,93,82,0.35);
     --text: #0f1f2f;
     --text-muted: #5a6b7a;
-    --text-dim: #8a9aa9;
+    --text-dim: #5f707f;
     --accent: #0b5d52;
     --accent-light: #16806e;
     --accent-dark: #0a3a33;
@@ -6069,14 +6069,25 @@ def pricing():
   }
   .check {color:var(--accent-dark);font-weight:700;font-size:0.9rem;}
 
+  /* Flat buttons, one line-height for <a> and <button> so all three line
+     up (2026-10-13). Yellow = the free check, the primary action; dark
+     green = Brokerage; outline = Agent. The old gradient ran to near-black. */
   .cta-btn {
-    display:block;width:100%;padding:0.85rem;
-    background:linear-gradient(135deg,var(--accent),#0a3a33);color:#fff;
-    border:none;font-family:inherit;font-size:0.9rem;font-weight:600;
+    display:block;width:100%;padding:0.85rem;line-height:1.4;box-sizing:border-box;
+    background:var(--accent);color:#fff;
+    border:1.5px solid var(--accent);font-family:inherit;font-size:0.9rem;font-weight:600;
     border-radius:var(--radius-sm);cursor:pointer;text-align:center;
     transition:var(--transition);text-decoration:none;
   }
   .cta-btn:hover {transform:translateY(-2px);box-shadow:0 8px 24px rgba(11,93,82,0.25);}
+  .cta-btn.primary {background:#f5c242;border-color:#f5c242;color:#0f1f2f;font-weight:700;}
+  .cta-btn.primary:hover {background:#ffd25e;border-color:#ffd25e;box-shadow:0 8px 24px rgba(245,194,66,0.35);}
+  .cta-btn.dark {background:#0a3f3a;border-color:#0a3f3a;}
+  .cta-btn.ghost {background:#fff;border-color:#0a3f3a;color:#0a3f3a;}
+  .cta-btn.ghost:hover {background:#0a3f3a;color:#fff;}
+  /* Same-height slot under every button, so the Brokerage card's secondary
+     link doesn't push its main button above the other two. */
+  .plan-sub {min-height:1.4rem;margin-top:0.75rem;text-align:center;font-size:0.85rem;}
   .cta-btn.outline {
     background:transparent;border:1px solid var(--border);color:var(--text-muted);
   }
@@ -6165,7 +6176,8 @@ def pricing():
       <li><span class="check">&#10003;</span> 3 full reports with no signup, then just your email</li>
       <li><span class="check">&#10003;</span> Your file isn&rsquo;t kept</li>
     </ul>
-    <a href="/tc-check" class="cta-btn">Check a file free</a>
+    <a href="/tc-check" class="cta-btn primary">Check a file free</a>
+    <div class="plan-sub" aria-hidden="true"></div>
   </div>
 
   <div class="pricing-card" id="individual">
@@ -6184,8 +6196,9 @@ def pricing():
     </ul>
     <form action="/create-checkout-session" method="POST">
       <input type="hidden" name="plan" value="starter">
-      <button type="submit" class="cta-btn">Subscribe &mdash; $40/mo</button>
+      <button type="submit" class="cta-btn ghost">Subscribe &mdash; $40/mo</button>
     </form>
+    <div class="plan-sub" aria-hidden="true"></div>
   </div>
 
   <div class="pricing-card featured" id="brokerage">
@@ -6202,8 +6215,8 @@ def pricing():
       <li><span class="check">&#10003;</span> Contract archive: forward or drop executed contracts, checked and kept 5 years</li>
       <li><span class="check">&#10003;</span> Transaction Workspace and roster dashboard</li>
     </ul>
-    <a href="/brokers" class="cta-btn" data-evt="pricing_audit_cta">Start with a free 20-file audit</a>
-    <form action="/create-checkout-session" method="POST" style="margin-top:0.75rem;text-align:center;">
+    <a href="/brokers" class="cta-btn dark" data-evt="pricing_audit_cta">Start with a free 20-file audit</a>
+    <form action="/create-checkout-session" method="POST" class="plan-sub">
       <input type="hidden" name="plan" value="brokerage">
       <button type="submit" style="background:none;border:none;padding:0;font:inherit;font-size:0.85rem;color:var(--text-muted);text-decoration:underline;cursor:pointer;">Ready now? Subscribe &mdash; $349/mo</button>
     </form>
@@ -6334,7 +6347,7 @@ def success():
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <style>
   :root{{--bg:#F5F5F7;--bg-card:#fff;--border:rgba(15,31,47,0.08);
-    --text:#0f1f2f;--text-muted:#5a6b7a;--text-dim:#8a9aa9;
+    --text:#0f1f2f;--text-muted:#5a6b7a;--text-dim:#5f707f;
     --accent:#0b5d52;--accent-light:#16806e;--accent-dark:#0a3a33;--accent-tint:#E7F3F1;
     --radius:1.25rem;--radius-sm:0.85rem;}}
   *{{margin:0;padding:0;box-sizing:border-box;}}
@@ -7268,7 +7281,7 @@ def broker_dashboard(join_code):
             expires, sig = sign_pdf_view_params(r["filename"])
             link = f"<a href='/offers/{escape(r['filename'])}?expires={expires}&sig={sig}' target='_blank' rel='noopener'>PDF</a>"
         else:
-            link = "<span style='color:#8a9aa9;'>expired</span>"
+            link = "<span style='color:#5f707f;'>expired</span>"
         kind = "Offer (20-19)" if r["kind"] == "offer" else "Amendment (39-11)"
         return (f"<tr><td class='nw' style='padding:8px;'>{(r['created_at'] or '')[:10]}</td>"
                 f"<td style='padding:8px;'>{escape(r['address'] or '')}</td>"
@@ -7491,7 +7504,7 @@ def signup():
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <style>
   :root{{--bg:#F5F5F7;--bg-card:#fff;--border:rgba(15,31,47,0.08);
-    --text:#0f1f2f;--text-muted:#5a6b7a;--text-dim:#8a9aa9;
+    --text:#0f1f2f;--text-muted:#5a6b7a;--text-dim:#5f707f;
     --accent:#0b5d52;--accent-light:#16806e;--accent-dark:#0a3a33;--accent-tint:#E7F3F1;
     --radius:1.25rem;--radius-sm:0.85rem;--transition:all 0.2s ease;}}
   *{{margin:0;padding:0;box-sizing:border-box;}}
@@ -7621,7 +7634,7 @@ def login():
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <style>
   :root{{--bg:#F5F5F7;--bg-card:#fff;--border:rgba(15,31,47,0.08);
-    --text:#0f1f2f;--text-muted:#5a6b7a;--text-dim:#8a9aa9;
+    --text:#0f1f2f;--text-muted:#5a6b7a;--text-dim:#5f707f;
     --accent:#0b5d52;--accent-light:#16806e;--accent-dark:#0a3a33;--accent-tint:#E7F3F1;
     --radius:1.25rem;--radius-sm:0.85rem;--transition:all 0.2s ease;}}
   *{{margin:0;padding:0;box-sizing:border-box;}}
@@ -7706,7 +7719,7 @@ def terms():
     --border-hover: rgba(0,0,0,0.35);
     --text: #0f1f2f;
     --text-muted: #5a6b7a;
-    --text-dim: #8a9aa9;
+    --text-dim: #5f707f;
     --accent: #0b5d52;
     --accent-light: #16806e;
     --accent-dark: #0a3a33;
@@ -7980,7 +7993,7 @@ def privacy():
     --border-hover: rgba(0,0,0,0.35);
     --text: #0f1f2f;
     --text-muted: #5a6b7a;
-    --text-dim: #8a9aa9;
+    --text-dim: #5f707f;
     --accent: #0b5d52;
     --accent-light: #16806e;
     --accent-dark: #0a3a33;
@@ -8217,7 +8230,7 @@ def faq():
     --border: rgba(15,31,47,0.08);
     --text: #0f1f2f;
     --text-muted: #5a6b7a;
-    --text-dim: #8a9aa9;
+    --text-dim: #5f707f;
     --accent: #0b5d52;
     --accent-light: #16806e;
     --accent-dark: #0a3a33;
@@ -8330,7 +8343,7 @@ def faq():
 
   <div class="faq-item" id="commands">
     <h2>What can I text TxtAnOffer?</h2>
-    <p>Text <strong>(833) 897-0333</strong>. Send your offer terms as <em>price down% days address</em> (e.g. <em>"725k 3% 21day 123 Main St"</em>), then reply <strong>YES</strong> to create the PDF or <strong>NO</strong> to cancel. Other commands: <strong>DASHBOARD</strong> for a link to your offer history, <strong>STATUS</strong> for your plan and usage, <strong>PROFILE</strong> to edit your agent info, <strong>AMEND</strong> to change a sent offer (below), <strong>HELP</strong> to get this menu by text, and <strong>STOP</strong> to unsubscribe. <a href="/demo#commands" style="color:var(--accent-dark);">See the full command list &rarr;</a></p>
+    <p>Text <strong>(833) 897-0333</strong>. Send your offer terms as <em>price down% days address</em> (e.g. <em>"725k 3% 21day 123 Main St, Austin, TX"</em>), then reply <strong>YES</strong> to create the PDF or <strong>NO</strong> to cancel. Other commands: <strong>DASHBOARD</strong> for a link to your offer history, <strong>STATUS</strong> for your plan and usage, <strong>PROFILE</strong> to edit your agent info, <strong>AMEND</strong> to change a sent offer (below), <strong>HELP</strong> to get this menu by text, and <strong>STOP</strong> to unsubscribe. <a href="/demo#commands" style="color:var(--accent-dark);">See the full command list &rarr;</a></p>
   </div>
 
   <div class="faq-item">
@@ -8391,7 +8404,7 @@ def trec_changes():
     --border: rgba(15,31,47,0.08);
     --text: #0f1f2f;
     --text-muted: #5a6b7a;
-    --text-dim: #8a9aa9;
+    --text-dim: #5f707f;
     --accent: #0b5d52;
     --accent-light: #16806e;
     --accent-dark: #0a3a33;
@@ -8651,7 +8664,7 @@ def tc_hub():
     --border: rgba(15,31,47,0.08);
     --text: #0f1f2f;
     --text-muted: #5a6b7a;
-    --text-dim: #8a9aa9;
+    --text-dim: #5f707f;
     --accent: #0b5d52;
     --accent-light: #16806e;
     --accent-dark: #0a3a33;
@@ -9026,7 +9039,7 @@ def about():
     --border: rgba(15,31,47,0.08);
     --text: #0f1f2f;
     --text-muted: #5a6b7a;
-    --text-dim: #8a9aa9;
+    --text-dim: #5f707f;
     --accent: #0b5d52;
     --accent-light: #16806e;
     --accent-dark: #0a3a33;
@@ -9068,7 +9081,7 @@ def about():
     border:2px solid var(--border);
   }
   .avatar-lg img {width:100%;height:100%;object-fit:cover;}
-  h1 {font-size:2.1rem;font-weight:800;letter-spacing:-0.03em;margin-bottom:0.4rem;color:var(--text);}
+  h1 {font-size:2.1rem;font-weight:800;letter-spacing:-0.03em;line-height:1.12;margin-bottom:0.4rem;color:var(--text);}
   .kicker {font-size:0.9rem;color:var(--accent-dark);font-weight:600;margin-bottom:1.75rem;}
   .about-body p {font-size:0.95rem;color:var(--text-muted);margin-bottom:1.1rem;}
   .about-body strong {color:var(--text);font-weight:600;}
@@ -9480,7 +9493,7 @@ def _guide_page(slug, g, body_html):
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-  :root { --bg:#F5F5F7; --card:#fff; --border:rgba(15,31,47,0.08); --text:#0f1f2f; --muted:#5a6b7a; --dim:#8a9aa9; --accent:#0b5d52; --accent-light:#16806e; --accent-dark:#0a3a33; --tint:#E7F3F1; }
+  :root { --bg:#F5F5F7; --card:#fff; --border:rgba(15,31,47,0.08); --text:#0f1f2f; --muted:#5a6b7a; --dim:#5f707f; --accent:#0b5d52; --accent-light:#16806e; --accent-dark:#0a3a33; --tint:#E7F3F1; }
   * { margin:0; padding:0; box-sizing:border-box; }
   body { font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif; background:var(--bg); color:var(--text); line-height:1.65; -webkit-font-smoothing:antialiased; }
   a { color:var(--accent-dark); }
@@ -9574,7 +9587,7 @@ def _crm_authed():
 
 
 _CRM_CSS = """
-:root{--bg:#F5F5F7;--text:#0f1f2f;--muted:#5a6b7a;--dim:#8a9aa9;--green:#0b5d52;--gd:#0a3f3a;--tint:#E7F3F1;--y:#f5c242;--yt:#FFF6DA;--border:rgba(15,31,47,0.08);}
+:root{--bg:#F5F5F7;--text:#0f1f2f;--muted:#5a6b7a;--dim:#5f707f;--green:#0b5d52;--gd:#0a3f3a;--tint:#E7F3F1;--y:#f5c242;--yt:#FFF6DA;--border:rgba(15,31,47,0.08);}
 *{margin:0;padding:0;box-sizing:border-box;}
 body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:var(--bg);color:var(--text);line-height:1.5;font-size:14px;-webkit-font-smoothing:antialiased;}
 a{color:var(--green);}
@@ -9774,7 +9787,7 @@ def admin_crm():
 # See archive.py (storage) and broker_auth.py (sign-in links + session).
 
 _BROKER_PAGE_CSS = """
-  :root{--bg:#F5F5F7;--text:#0f1f2f;--muted:#5a6b7a;--dim:#8a9aa9;--green:#0b5d52;--green-dark:#0a3f3a;--tint:#E7F3F1;--yellow:#f5c242;--border:rgba(15,31,47,0.08);}
+  :root{--bg:#F5F5F7;--text:#0f1f2f;--muted:#5a6b7a;--dim:#5f707f;--green:#0b5d52;--green-dark:#0a3f3a;--tint:#E7F3F1;--yellow:#f5c242;--border:rgba(15,31,47,0.08);}
   *{margin:0;padding:0;box-sizing:border-box;}
   body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:var(--bg);color:var(--text);line-height:1.55;-webkit-font-smoothing:antialiased;}
   a{color:var(--green);}
@@ -10084,7 +10097,7 @@ _ARCHIVE_EA_PAGE = """<!DOCTYPE html>
 <link rel="icon" href="/static/favicon.ico?v=2" type="image/x-icon">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-  :root{--bg:#F5F5F7;--text:#0f1f2f;--muted:#5a6b7a;--dim:#8a9aa9;--green:#0b5d52;--green-dark:#0a3f3a;--tint:#E7F3F1;--yellow:#f5c242;--border:rgba(15,31,47,0.08);}
+  :root{--bg:#F5F5F7;--text:#0f1f2f;--muted:#5a6b7a;--dim:#5f707f;--green:#0b5d52;--green-dark:#0a3f3a;--tint:#E7F3F1;--yellow:#f5c242;--border:rgba(15,31,47,0.08);}
   *{margin:0;padding:0;box-sizing:border-box;}
   body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:var(--bg);color:var(--text);line-height:1.6;-webkit-font-smoothing:antialiased;}
   .head{background:var(--green-dark);padding:18px 24px;display:flex;justify-content:space-between;align-items:center;}
@@ -10199,7 +10212,7 @@ def brokers():
     --border: rgba(15,31,47,0.08);
     --text: #0f1f2f;
     --text-muted: #5a6b7a;
-    --text-dim: #8a9aa9;
+    --text-dim: #5f707f;
     --accent: #0b5d52;
     --accent-light: #16806e;
     --accent-dark: #0a3a33;
@@ -10396,7 +10409,7 @@ def contact():
     --border: rgba(15,31,47,0.08);
     --text: #0f1f2f;
     --text-muted: #5a6b7a;
-    --text-dim: #8a9aa9;
+    --text-dim: #5f707f;
     --accent: #0b5d52;
     --accent-light: #16806e;
     --accent-dark: #0a3a33;
@@ -10605,7 +10618,7 @@ def profile():
     --border-hover: rgba(11,93,82,0.35);
     --text: #0f1f2f;
     --text-muted: #5a6b7a;
-    --text-dim: #8a9aa9;
+    --text-dim: #5f707f;
     --accent: #0b5d52;
     --accent-light: #16806e;
     --accent-dark: #0a3a33;
@@ -10904,7 +10917,7 @@ def review_offer(filename):
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <style>
 :root{{--bg:#F5F5F7;--bg-card:#fff;--border:rgba(15,31,47,0.08);
---text:#0f1f2f;--text-muted:#5a6b7a;--text-dim:#8a9aa9;--accent:#0b5d52;--accent-light:#16806e;
+--text:#0f1f2f;--text-muted:#5a6b7a;--text-dim:#5f707f;--accent:#0b5d52;--accent-light:#16806e;
 --accent-dark:#0a3f3a;--accent-tint:#E7F3F1;--gold:#f5c242;--radius:1.25rem;--radius-sm:0.85rem;}}
 *{{margin:0;padding:0;box-sizing:border-box;}}
 body{{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;
@@ -11355,7 +11368,7 @@ function copyDayOneSummary(){{navigator.clipboard.writeText({_json.dumps(summary
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <style>
 :root{{--bg:#F5F5F7;--bg-card:#fff;--border:rgba(15,31,47,0.08);
---text:#0f1f2f;--text-muted:#5a6b7a;--text-dim:#8a9aa9;--accent:#0b5d52;--accent-light:#16806e;
+--text:#0f1f2f;--text-muted:#5a6b7a;--text-dim:#5f707f;--accent:#0b5d52;--accent-light:#16806e;
 --accent-dark:#0a3a33;--accent-tint:#E7F3F1;--radius:1.25rem;--radius-sm:0.85rem;}}
 *{{margin:0;padding:0;box-sizing:border-box;}}
 body{{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;
@@ -11690,7 +11703,7 @@ a.btn{{display:inline-block;background:#0b5d52;color:#fff;padding:0.75rem 1.5rem
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <style>
 :root{{--bg:#F5F5F7;--bg-card:#fff;--border:rgba(15,31,47,0.08);
---text:#0f1f2f;--text-muted:#5a6b7a;--text-dim:#8a9aa9;--accent:#0b5d52;--accent-light:#16806e;
+--text:#0f1f2f;--text-muted:#5a6b7a;--text-dim:#5f707f;--accent:#0b5d52;--accent-light:#16806e;
 --accent-dark:#0a3a33;--accent-tint:#E7F3F1;--radius:1.25rem;--radius-sm:0.85rem;}}
 *{{margin:0;padding:0;box-sizing:border-box;}}
 body{{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased;}}
@@ -12409,7 +12422,7 @@ def wins_page():
   .logo {{margin:0 auto 1.5rem;display:flex;justify-content:center;}}
   .logo img {{height:26px;width:auto;display:block;}}
   .agent-name {{font-size:0.95rem; font-weight:700; color:#0f1f2f;}}
-  .agent-meta {{font-size:0.8rem; color:#8a9aa9; margin-top:0.15rem; margin-bottom:1.75rem;}}
+  .agent-meta {{font-size:0.8rem; color:#5f707f; margin-top:0.15rem; margin-bottom:1.75rem;}}
   .headline {{font-size:2.25rem; font-weight:800; letter-spacing:-0.02em; line-height:1.1; color:#0f1f2f; word-break:break-word;}}
   .sub {{font-size:0.85rem; color:#5a6b7a; margin-top:0.5rem;}}
   .divider {{height:1px; background:rgba(15,31,47,0.08); margin:1.75rem 0 1.5rem;}}
@@ -12426,7 +12439,7 @@ def wins_page():
     transition:color 0.2s ease;
   }}
   .cta:hover {{color:#000;}}
-  .foot {{font-size:0.72rem; color:#8a9aa9; margin-top:1.5rem;}}
+  .foot {{font-size:0.72rem; color:#5f707f; margin-top:1.5rem;}}
   .foot a {{color:#5a6b7a; font-weight:600;}}
 </style>
 </head>
