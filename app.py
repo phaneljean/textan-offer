@@ -1729,7 +1729,6 @@ def index():
       <a href="/trust">Trust Center</a>
       <a href="/privacy#sms-messaging">SMS Terms</a>
       <a href="/pricing">Pricing</a>
-      <a href="/playground">Try a Sample Text</a>
       <a href="/demo#commands">Text Commands</a>
       <a href="/tc-check">TC File Check</a>
       <a href="/broker/login">Brokerage Sign-In</a>
@@ -5475,279 +5474,13 @@ compareBtn.addEventListener('click', function(){{
 
 @app.route("/playground")
 def playground():
-    return """<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Parser Playground — TxtAnOffer</title>
-<meta name="description" content="Test the TxtAnOffer SMS parser. See how messy texts become structured TREC offers in real-time.">
-<link rel="icon" href="/static/favicon.ico?v=2" type="image/x-icon">
-<link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
-<style>
-:root{--bg:#F5F5F7;--bg-card:#fff;--border:rgba(15,31,47,0.08);
---text:#0f1f2f;--text-muted:#5a6b7a;--text-dim:#5f707f;--accent:#0b5d52;--accent-light:#16806e;
---accent-dark:#0a3a33;--accent-tint:#E7F3F1;--radius:1.25rem;--radius-sm:0.85rem;}
-*{margin:0;padding:0;box-sizing:border-box;}
-body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;
--webkit-font-smoothing:antialiased;}
-a{color:inherit;text-decoration:none;}
-.nav{display:flex;align-items:center;justify-content:space-between;padding:1rem 2rem;
-background:rgba(255,255,255,0.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);
-position:sticky;top:0;z-index:100;}
-.nav-left{display:flex;align-items:center;gap:0.6rem;font-weight:700;font-size:1.1rem;color:var(--text);}
-.nav-logo{width:34px;height:34px;border-radius:22%;overflow:hidden;}
-.nav-logo img{width:100%;height:100%;object-fit:contain;}
-.nav-links{display:flex;gap:2rem;font-size:0.875rem;font-weight:500;color:var(--text-muted);}
-.nav-links a:hover{color:var(--text);}
-.nav-cta{background:var(--accent);color:#fff;padding:0.55rem 1.35rem;border-radius:9999px;
-font-size:0.875rem;font-weight:600;}
-.nav-toggle{display:none;flex-direction:column;justify-content:center;gap:5px;width:34px;height:34px;background:none;border:none;cursor:pointer;padding:0;}
-.nav-toggle span{display:block;width:100%;height:2px;background:var(--text);border-radius:2px;}
-.container{max-width:900px;margin:0 auto;padding:3rem 2rem;}
-h1{font-size:2rem;font-weight:800;letter-spacing:-0.03em;margin-bottom:0.5rem;color:var(--text);}
-.subtitle{color:var(--text-muted);font-size:1rem;margin-bottom:2rem;}
-.playground-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:2rem;box-shadow:0 1px 3px rgba(15,31,47,0.05);}
-.input-area{margin-bottom:1.5rem;}
-.input-area label{display:block;font-size:0.8rem;font-weight:600;color:var(--text-dim);
-text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.5rem;}
-.input-area textarea{width:100%;background:#fff;border:1px solid rgba(15,31,47,0.14);
-border-radius:var(--radius-sm);color:var(--text);font-family:inherit;font-size:1rem;
-padding:1rem;resize:none;outline:none;transition:border 0.2s;}
-.input-area textarea:focus{border-color:var(--accent);}
-.parse-btn{background:linear-gradient(135deg,var(--accent),#000);color:#fff;border:none;
-padding:0.85rem 2rem;border-radius:var(--radius-sm);font-family:inherit;font-size:0.9rem;
-font-weight:600;cursor:pointer;transition:all 0.2s;}
-.parse-btn:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,0.25);}
-.result{margin-top:1.5rem;display:none;}
-.result.show{display:block;}
-.result-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;}
-.result-item{background:rgba(15,31,47,0.02);border:1px solid var(--border);
-border-radius:var(--radius-sm);padding:1rem;}
-.result-label{font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;
-color:var(--text-dim);margin-bottom:0.25rem;}
-.result-value{font-size:1.1rem;font-weight:700;color:var(--text);}
-.result-value.accent{color:var(--accent-dark);}
-.error-msg{background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);
-border-radius:var(--radius-sm);padding:1rem;color:#dc2626;font-size:0.9rem;margin-top:1rem;display:none;}
-.error-msg.show{display:block;}
-.warn-msg{background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.25);
-border-radius:var(--radius-sm);padding:1rem;color:#b45309;font-size:0.9rem;margin-bottom:1rem;display:none;}
-.warn-msg.show{display:block;}
-.examples{margin-top:2rem;}
-.examples h3{font-size:0.9rem;font-weight:700;margin-bottom:1rem;color:var(--text-muted);}
-.example-chips{display:flex;flex-wrap:wrap;gap:0.5rem;}
-.chip{background:rgba(15,31,47,0.03);border:1px solid var(--border);border-radius:9999px;
-padding:0.4rem 0.85rem;font-size:0.8rem;color:var(--text-muted);cursor:pointer;transition:all 0.2s;}
-.chip:hover{border-color:var(--accent);color:var(--accent-dark);}
-.pdf-demo{margin-top:1.25rem;padding-top:1.25rem;border-top:1px solid var(--border);text-align:center;}
-.pdf-btn{background:linear-gradient(135deg,var(--accent),#0a3a33);color:#fff;border:none;
-padding:0.75rem 1.75rem;border-radius:var(--radius-sm);font-family:inherit;font-size:0.85rem;
-font-weight:600;cursor:pointer;transition:all 0.2s;}
-.pdf-btn:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(11,93,82,0.25);}
-.pdf-btn:disabled{opacity:0.6;cursor:default;transform:none;box-shadow:none;}
-.pdf-result{margin-top:1rem;display:none;}
-.pdf-result.show{display:flex;align-items:center;justify-content:center;gap:0.75rem;flex-wrap:wrap;}
-.pdf-result a{background:var(--accent-tint);color:var(--accent-dark);border:1px solid rgba(11,93,82,0.2);
-padding:0.6rem 1.1rem;border-radius:9999px;font-size:0.85rem;font-weight:600;}
-.pdf-hint{font-size:0.78rem;color:var(--text-dim);margin-top:0.6rem;}
-.formats{margin-top:2.5rem;padding-top:2rem;border-top:1px solid var(--border);}
-.formats h3{font-size:1rem;font-weight:700;margin-bottom:1rem;color:var(--text);}
-.format-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
-.format-item{font-size:0.85rem;color:var(--text-muted);line-height:1.6;}
-.format-item strong{color:var(--text);font-weight:600;}
-@media(max-width:600px){
-.result-grid{grid-template-columns:1fr;}
-.format-grid{grid-template-columns:1fr;}
-.nav-toggle{display:flex;}
-.nav-links{display:none;position:absolute;top:100%;left:0;right:0;flex-direction:column;gap:0;padding:0.5rem 1.25rem 1.25rem;background:#fff;border-bottom:1px solid rgba(15,31,47,0.08);}
-.nav-links.open{display:flex;}
-.nav-links a{padding:0.75rem 0;border-bottom:1px solid rgba(15,31,47,0.08);}
-.nav-links a:last-child{border-bottom:none;}
-}
-</style>
-</head>
-<body>
-<nav class="nav">
-<a href="/" class="nav-left">
-<img src="/static/logo-wordmark.png?v=2" alt="TxtAnOffer" style="height:26px;width:auto;display:block;">
-</a>
-<div class="nav-links" id="navLinks">
-<a href="/#how">How it works</a>
-<a href="/pricing">Pricing</a>
-<a href="/faq">FAQ</a>
-<a href="/login">Log In</a>
-</div>
-<a href="/tc-check" class="nav-cta">Check a file free</a>
-<button class="nav-toggle" id="navToggle" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
-</nav>
-<script>
-(function(){
-  var t=document.getElementById('navToggle'), l=document.getElementById('navLinks');
-  if(!t||!l) return;
-  t.addEventListener('click', function(){
-    var open = l.classList.toggle('open');
-    t.setAttribute('aria-expanded', open ? 'true' : 'false');
-  });
-  l.querySelectorAll('a').forEach(function(a){
-    a.addEventListener('click', function(){ l.classList.remove('open'); t.setAttribute('aria-expanded','false'); });
-  });
-})();
-</script>
+    # Was "Parser Playground" -- type an offer text, see it parsed, generate
+    # the PDF via /api/demo. /demo does the same job (plus amend/confirm),
+    # and in the footer as "Try a Sample Text" it read to TCs like a sample
+    # *check*. One page now; the 301 keeps old links and search results.
+    # /api/parse stays for anything still calling it.
+    return redirect("/demo", code=301)
 
-<div class="container">
-<h1>Parser Playground</h1>
-<p class="subtitle">Test how our parser handles your texts. No signup needed. Type however feels natural.</p>
-
-<div class="playground-card">
-<div class="input-area">
-<label>Your offer text</label>
-<textarea id="offer-input" rows="3" placeholder="725k 3% 21day 123 Main St, Austin"></textarea>
-</div>
-<button class="parse-btn" id="parse-btn">Parse &rarr;</button>
-
-<div class="error-msg" id="error-msg"></div>
-
-<div class="result" id="result">
-<div class="warn-msg" id="warn-msg"></div>
-<div class="result-grid">
-<div class="result-item"><div class="result-label">Address</div><div class="result-value" id="r-addr"></div></div>
-<div class="result-item"><div class="result-label">Sales Price</div><div class="result-value accent" id="r-price"></div></div>
-<div class="result-item"><div class="result-label">Down Payment</div><div class="result-value" id="r-down"></div></div>
-<div class="result-item"><div class="result-label">Loan Amount</div><div class="result-value" id="r-loan"></div></div>
-<div class="result-item"><div class="result-label">Closing Date</div><div class="result-value" id="r-close"></div></div>
-<div class="result-item"><div class="result-label">Location</div><div class="result-value" id="r-location"></div></div>
-<div class="result-item" style="grid-column:1 / -1;"><div class="result-label">Extras Detected</div><div class="result-value" id="r-extras"></div></div>
-</div>
-<div class="pdf-demo">
-<button class="pdf-btn" id="pdf-btn">Generate the real PDF &rarr;</button>
-<div class="pdf-result" id="pdf-result"></div>
-<div class="pdf-hint">This fills an actual TREC 20-19 &mdash; the same PDF you'd get back by text.</div>
-</div>
-</div>
-
-<div class="examples">
-<h3>Try these (click to load):</h3>
-<div class="example-chips">
-<span class="chip">725k 3% 21day 123 Main St, Austin, TX</span>
-<span class="chip">Offer 650000 3 percent close in 30 days 123 Main St Austin</span>
-<span class="chip">500k 5 down 14days 123 Main St Plano</span>
-<span class="chip">1.2m 10% 45day Travis 123 Main St</span>
-<span class="chip">825k 3% close in 14 123 Main St Houston</span>
-<span class="chip">375,000 3% 30days 123 Main St Dallas</span>
-<span class="chip">725k cash 21day 123 Main St</span>
-<span class="chip">725k 3% 21day 123 Main St HOA</span>
-</div>
-</div>
-
-<div class="formats">
-<h3>We handle messy texts. Just get the numbers in there.</h3>
-<div class="format-grid">
-<div class="format-item"><strong>Price:</strong> 725k, 725000, 725,000, 1.2m, 1.2mil</div>
-<div class="format-item"><strong>Down:</strong> 3%, 3 percent, 3 pct, 3 down</div>
-<div class="format-item"><strong>Days:</strong> 21day, 21 days, close in 21, 21-day close</div>
-<div class="format-item"><strong>Address:</strong> Just include street number + name + type</div>
-</div>
-</div>
-</div>
-</div>
-
-<script>
-(function(){
-var input=document.getElementById('offer-input'),
-    btn=document.getElementById('parse-btn'),
-    result=document.getElementById('result'),
-    errEl=document.getElementById('error-msg'),
-    warnEl=document.getElementById('warn-msg'),
-    pdfBtn=document.getElementById('pdf-btn'),
-    pdfResult=document.getElementById('pdf-result');
-
-document.querySelectorAll('.chip').forEach(function(c){
-  c.addEventListener('click',function(){
-    input.value=c.textContent;
-    btn.click();
-  });
-});
-
-btn.addEventListener('click',function(){
-  var text=input.value.trim();
-  if(!text)return;
-  result.classList.remove('show');
-  errEl.classList.remove('show');
-  warnEl.classList.remove('show');
-  pdfResult.classList.remove('show');
-  pdfResult.innerHTML='';
-  pdfBtn.disabled=false;
-  pdfBtn.textContent='Generate the real PDF →';
-  fetch('/api/parse',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({text:text})})
-  .then(function(r){return r.json();})
-  .then(function(d){
-    if(!d.success){errEl.textContent=d.error;errEl.classList.add('show');return;}
-    document.getElementById('r-addr').textContent=d.address;
-    document.getElementById('r-price').textContent='$'+d.price.toLocaleString();
-    document.getElementById('r-down').textContent=d.down_payment_pct+'% ($'+d.down_payment_amount.toLocaleString()+')';
-    document.getElementById('r-loan').textContent='$'+d.loan_amount.toLocaleString();
-    document.getElementById('r-close').textContent=d.close_date+' ('+d.close_days+' days)';
-    var loc=[];if(d.city)loc.push(d.city);if(d.county)loc.push(d.county+' County');loc.push('TX');
-    document.getElementById('r-location').textContent=loc.join(', ');
-    var extras=[];
-    if(d.financing_type)extras.push(d.financing_type.toUpperCase()+' financing');
-    if(d.inspection_days)extras.push(d.inspection_days+'-day option period');
-    if(d.has_hoa)extras.push('HOA Addendum (TREC 36-10)');
-    document.getElementById('r-extras').textContent=extras.length?extras.join(' · '):'None detected';
-    if(d.address_issue){
-      warnEl.textContent=(d.address_valid?'Heads up: ':'This address would be rejected when sent for real: ')+d.address_issue;
-      warnEl.classList.add('show');
-    }
-    result.classList.add('show');
-  })
-  .catch(function(){errEl.textContent='Something went wrong.';errEl.classList.add('show');});
-});
-
-input.addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();btn.click();}});
-
-pdfBtn.addEventListener('click',function(){
-  var text=input.value.trim();
-  if(!text)return;
-  pdfBtn.disabled=true;
-  pdfBtn.textContent='Generating…';
-  pdfResult.classList.remove('show');
-  fetch('/api/demo',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({offer_text:text})})
-  .then(function(r){return r.json();})
-  .then(function(d){
-    if(d.error){
-      pdfBtn.disabled=false;
-      pdfBtn.textContent='Generate the real PDF →';
-      errEl.textContent=d.error;
-      errEl.classList.add('show');
-      return;
-    }
-    pdfBtn.textContent='Generate another →';
-    pdfBtn.disabled=false;
-    pdfResult.innerHTML='<a href="'+d.pdf_url+'" target="_blank">View the filled TREC 20-19 &rarr;</a>';
-    pdfResult.classList.add('show');
-  })
-  .catch(function(){
-    pdfBtn.disabled=false;
-    pdfBtn.textContent='Generate the real PDF →';
-    errEl.textContent='Something went wrong generating the PDF.';
-    errEl.classList.add('show');
-  });
-});
-
-// Auto-run the classic example on load so the page demos itself immediately
-// -- text in, structured fields out, with the real PDF one click away.
-input.value='725k 3% 21day 123 Main St, Austin, TX';
-btn.click();
-})();
-</script>
-</body>
-</html>"""
-
-
-# --- Integration endpoints -------------------------------------------------
 
 @app.route("/api/send-email", methods=["POST"])
 def api_send_email():
@@ -12462,9 +12195,10 @@ def wins_page():
 
 # Public pages search engines should index. Signed/private routes (/review,
 # /offers, /transaction, /broker/dashboard, /admin, /analytics) are left out
-# on purpose and disallowed in robots.txt.
+# on purpose and disallowed in robots.txt. /tc-check/compare is live (linked
+# from /tc-check) but kept out until anyone uses it; /playground is a 301.
 _SITEMAP_PATHS = ["/", "/tc-check", "/brokers", "/pricing", "/trec-changes", "/tc-hub", "/tc-hub/colorado", "/trust",
-                  "/tc-check/bulk", "/tc-check/compare", "/playground", "/faq", "/about",
+                  "/tc-check/bulk", "/faq", "/about",
                   "/contact", "/privacy", "/terms", "/guides",
                   "/guides/trec-20-19-checklist", "/guides/trec-20-19-effective-date",
                   "/guides/broker-record-retention-texas", "/guides/40-11-loan-amount-mismatch",

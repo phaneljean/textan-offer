@@ -165,5 +165,21 @@ class UnreadableFile(unittest.TestCase):
         self.assertNotIn("Not recognized as a TREC 20-19 or Colorado CBS1", self.client.get("/tc-check", headers=UA).get_data(as_text=True))
 
 
+class PlaygroundAndSitemap(unittest.TestCase):
+    def test_playground_301s_to_demo(self):
+        r = app_module.app.test_client().get("/playground", headers=UA)
+        self.assertEqual(r.status_code, 301)
+        self.assertTrue(r.headers["Location"].endswith("/demo"))
+
+    def test_sitemap_drops_playground_and_compare_only(self):
+        xml = app_module.app.test_client().get("/sitemap.xml").get_data(as_text=True)
+        self.assertNotIn("/playground<", xml)
+        self.assertNotIn("/tc-check/compare<", xml)
+        for kept in ("/tc-check<", "/demo" if "/demo<" in xml else "/pricing<", "/tc-check/bulk<", "/trust<"):
+            self.assertIn(kept, xml)
+        # compare page itself still works
+        self.assertEqual(app_module.app.test_client().get("/tc-check/compare", headers=UA).status_code, 200)
+
+
 if __name__ == "__main__":
     unittest.main()
