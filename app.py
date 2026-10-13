@@ -426,12 +426,12 @@ def index():
   <title>TxtAnOffer — Catch What Title Kicks Back</title>
   <meta name="description" content="Built for Texas managing brokers and transaction coordinators: drop a filled TREC 20-19 (and its 40-11 addendum) and see what's missing or inconsistent before title kicks it back. TxtAnOffer also drafts new offers by text message in 10 seconds. Now also for Colorado's CBS1.">
   <meta property="og:title" content="TxtAnOffer — Catch What Title Kicks Back">
-  <meta property="og:description" content="Drop a filled TREC 20-19 and see what's missing or inconsistent before title kicks it back &mdash; blank dates, missing initials, mismatched checkboxes.">
+  <meta property="og:description" content="Drop a filled TREC 20-19 or Colorado CBS1 and see what's missing or inconsistent before title kicks it back &mdash; blank dates, missing initials, mismatched checkboxes.">
   <meta property="og:url" content="https://txtanoffer.com/">
   <meta property="og:type" content="website">
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="TxtAnOffer — Catch What Title Kicks Back">
-  <meta name="twitter:description" content="Drop a filled TREC 20-19 and see what's missing or inconsistent before title kicks it back &mdash; blank dates, missing initials, mismatched checkboxes.">
+  <meta name="twitter:description" content="Drop a filled TREC 20-19 or Colorado CBS1 and see what's missing or inconsistent before title kicks it back &mdash; blank dates, missing initials, mismatched checkboxes.">
   <link rel="icon" href="/static/favicon.ico?v=2" type="image/x-icon">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -550,6 +550,8 @@ def index():
     .sl-hero { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); min-height: 470px; position: relative; z-index: 1; }
     .sl-hero-panel { background: #0a3f3a; color: #fff; padding: 3.5rem 3rem 3.5rem max(2rem, calc((100vw - 1100px) / 2)); display: flex; flex-direction: column; justify-content: center; }
     .sl-hero-panel h1 { font-family: 'Source Serif 4', Georgia, 'Times New Roman', serif; font-weight: 600; font-size: 2.45rem; line-height: 1.14; letter-spacing: -0.01em; color: #fff; margin: 0; max-width: 30rem; }
+    .sl-hero-states { display: flex; flex-wrap: wrap; gap: 0.45rem; margin: 0 0 1rem; }
+    .sl-hero-states span { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #0a3f3a; background: #f5c242; border-radius: 999px; padding: 0.28rem 0.7rem; }
     .sl-hero-panel p { margin: 1.15rem 0 0; color: rgba(255,255,255,0.86); font-size: 1.02rem; line-height: 1.6; max-width: 27rem; }
     .sl-cta { display: inline-block; margin-top: 1.75rem; background: #f5c242; color: #0f1f2f; font-weight: 700; font-size: 1rem; padding: 0.95rem 1.6rem; border-radius: 4px; text-decoration: none; width: fit-content; transition: background 0.18s ease; }
     .sl-cta:hover { background: #ffd25e; }
@@ -1094,8 +1096,9 @@ def index():
 
   <section class="sl-hero">
     <div class="sl-hero-panel">
-      <h1>Catch what title kicks back &mdash; before you send the file.</h1>
-      <p>Drop a filled TREC 20-19 and see exactly what title would kick back &mdash; blank dates, missing initials, mismatched checkboxes &mdash; in seconds.</p>
+      <div class="sl-hero-states"><span>Texas &middot; TREC 20-19</span><span>Colorado &middot; CBS1</span></div>
+      <h1>Texas or Colorado: catch what title kicks back &mdash; before you send the file.</h1>
+      <p>Drop a filled TREC 20-19 or Colorado CBS1 and see what title would kick back in seconds &mdash; blank dates, price math that doesn&rsquo;t add up, missing initials on a TREC, and Colorado deadlines left blank that delete a contingency.</p>
       <div class="sl-hero-actions">
         <a class="sl-cta" href="#check" data-evt="hero_cta">Check a file free</a>
         <button type="button" class="sl-cta-secondary" id="heroSampleBtn" data-evt="hero_sample">See a sample report &rarr;</button>
@@ -1108,7 +1111,7 @@ def index():
 
   <div class="main">
   <section class="hero section" id="check">
-    <h2 class="check-title">Drop a TREC <span class="nw">20-19.</span> See exactly what&rsquo;s missing.</h2>
+    <h2 class="check-title">Drop a TREC <span class="nw">20-19</span> or a Colorado <span class="nw">CBS1.</span> See exactly what&rsquo;s missing.</h2>
     <p style="font-size:0.85rem;color:var(--accent-dark);font-weight:600;margin-top:0.6rem;">Built to help TCs catch what's missing &mdash; not to replace what you do.</p>
 
     <div class="input-card">
@@ -1175,7 +1178,7 @@ def index():
       <div class="step-card">
         <svg class="why-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="15" cy="9" r="5"/><path d="M8 20v12h14v11"/><path d="M11 17c0-2 2-3 4-3s3 1 4 3l3 5h5"/><path d="M14 26h8"/><path d="M5 18v18h10"/><path d="M10 36v6"/><path d="M6 42h8"/><path d="M24 28h20"/><path d="M36 28v15"/><path d="M30 24h7l3-9"/><path d="M39 33h2M39 38h2"/></svg>
         <h3>Committed to getting every form right</h3>
-        <p>Every check is mapped field-by-field to TREC&rsquo;s published 20-19, 40-11, 41-3 and 39-11 forms, and re-verified each time TREC revises them. You can count on the same careful check on every file, so the blank Effective Date or missing initial gets caught before title sees it.</p>
+        <p>Every check is mapped field-by-field to TREC&rsquo;s published 20-19, 40-11, 41-3 and 39-11 forms, and re-verified each time TREC revises them &mdash; and in Colorado, to the Commission&rsquo;s 2026 CBS1. You can count on the same careful check on every file, so the blank Effective Date or missing initial gets caught before title sees it.</p>
       </div>
       <div class="step-card">
         <svg class="why-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m11 17 2 2a1 1 0 1 0 3-3"/><path d="m14 14 2.5 2.5a1 1 0 1 0 3-3l-3.88-3.88a3 3 0 0 0-4.24 0l-.88.88a1 1 0 1 1-3-3l2.81-2.81a5.79 5.79 0 0 1 7.06-.87l.47.28a2 2 0 0 0 1.42.25L21 4"/><path d="m21 3 1 11h-2"/><path d="M3 3 2 14l6.5 6.5a1 1 0 1 0 3-3"/><path d="M3 4h8"/></svg>
@@ -1195,7 +1198,7 @@ def index():
       <div class="step-card path-card">
         <div class="path-kicker">Do it yourself</div>
         <h3>Check a file now</h3>
-        <p>Drop one filled TREC 20-19 and see what title would kick back.</p>
+        <p>Drop one filled TREC 20-19 or Colorado CBS1 and see what title would kick back.</p>
         <ul><li>3 free reports, no signup</li><li>Results in seconds</li><li>The file isn&rsquo;t kept</li></ul>
         <a class="path-btn solid" href="/tc-check" data-evt="path_self_cta">Check a file free</a>
       </div>
