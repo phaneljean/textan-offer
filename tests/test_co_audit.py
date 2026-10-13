@@ -116,6 +116,17 @@ class CoAuditTest(unittest.TestCase):
     def test_weekend_closing(self):
         self.assertOnly({"Closing Date": "10/31/2026", "Possession Date": "10/31/2026"}, "co_closing_weekend")
 
+    def test_holiday_closing(self):
+        self.assertOnly({"Closing Date": "11/11/2026", "Possession Date": "11/11/2026"}, "co_closing_holiday")
+
+    def test_holidays(self):
+        from co_audit import holiday_name
+        from datetime import date
+        self.assertEqual(holiday_name(date(2026, 11, 26)), "Thanksgiving")
+        self.assertEqual(holiday_name(date(2026, 10, 5)), "Cabrini Day (Colorado)")
+        self.assertEqual(holiday_name(date(2026, 7, 3)), "Independence Day (observed)")  # July 4 2026 is a Saturday
+        self.assertIsNone(holiday_name(date(2026, 10, 30)))
+
     def test_possession_before_closing(self):
         self.assertOnly({"Possession Date": "10/28/2026"}, "co_possession_before_closing")
 
@@ -136,6 +147,10 @@ class CoAuditTest(unittest.TestCase):
 
     def test_two_payers(self):
         self.assertOnly({"Closing Services Fee Buyer Checkbox": True}, "co_conflict_Closing Services Fee Buyer Checkbox")
+
+    def test_lead_paint_blank(self):
+        self.assertOnly({"Lead Based Paint Disclosure Deadline": None, "LeadBased Paint Termination Deadline": None},
+                        "co_lead_paint_blank")
 
     def test_comp_line_without_amount(self):
         self.assertOnly({"29.1 Checkbox": True}, "co_comp_1_blank")

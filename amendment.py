@@ -36,6 +36,10 @@ FIELD_MAP = {
 }
 
 
+CO_AMEND_MESSAGE = ("Amendments for Colorado offers aren't supported yet -- use the Colorado Real Estate "
+                    "Commission's Agreement to Amend/Extend Contract.")
+
+
 def fill_amendment_pdf(original_offer: dict, amendment: dict) -> str:
     """
     original_offer: a row from offers_db.get_offers_for_phone() -- has
@@ -45,6 +49,9 @@ def fill_amendment_pdf(original_offer: dict, amendment: dict) -> str:
         close -> number of days to extend the ORIGINAL closing date by
     Returns the path of the generated PDF.
     """
+    if (original_offer.get("filename") or "").startswith("CBS1_"):
+        # A TREC 39-11 must never amend a Colorado contract.
+        raise ValueError(CO_AMEND_MESSAGE)
     if not os.path.exists(TEMPLATE_PATH):
         raise FileNotFoundError(f"TREC 39-11 template not found at {TEMPLATE_PATH}")
 

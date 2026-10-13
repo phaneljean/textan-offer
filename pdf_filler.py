@@ -158,6 +158,9 @@ def _checkbox_on_state(annot) -> str:
 
 
 def fill_offer_pdf(parsed: dict, agent_phone: str) -> str:
+    if parsed.get("state") == "CO":
+        from co_filler import fill_cbs1  # Colorado drafts are a CBS1, never a TREC form
+        return fill_cbs1(parsed, agent_phone)
     if not os.path.exists(TEMPLATE_PATH):
         raise FileNotFoundError(
             f"Template not found at {TEMPLATE_PATH}. "

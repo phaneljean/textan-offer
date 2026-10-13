@@ -28,7 +28,7 @@ different field names and comes back unrecognized; other CREC forms in a
 multi-file upload are ignored (not audited), and the result says so.
 """
 import re
-from datetime import date
+from datetime import date, timedelta
 from pypdf import PdfReader
 from pdf_validator import _read_values, _is_checked
 
@@ -170,6 +170,50 @@ PAYER_GROUPS = [
 _NA = re.compile(r"^\s*(n\s*/?\s*a|deleted|none)\s*\.?\s*$", re.I)
 MONTHS = {m: i for i, m in enumerate(["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"], 1)}
 _PROPERTY_STATE_OK = {"CO", "COLO", "COLORADO"}
+
+
+def _nth_weekday(year, month, weekday, n):
+    """n-th (1-based) weekday of a month; n=-1 for the last one."""
+    if n > 0:
+        d = date(year, month, 1)
+        d += timedelta(days=(weekday - d.weekday()) % 7)
+        return d + timedelta(weeks=n - 1)
+    d = date(year + (month == 12), month % 12 + 1, 1) - timedelta(days=1)
+    return d - timedelta(days=(d.weekday() - weekday) % 7)
+
+
+def holidays(year: int) -> dict:
+    """§3.3.3 "federal or Colorado state holiday": {date: name}, with the
+    federal observed-day rule (Saturday -> Friday, Sunday -> Monday) for the
+    fixed-date ones. Cabrini Day (first Monday in October) is Colorado's."""
+    fixed = {date(year, 1, 1): "New Year's Day", date(year, 6, 19): "Juneteenth",
+             date(year, 7, 4): "Independence Day", date(year, 11, 11): "Veterans Day",
+             date(year, 12, 25): "Christmas Day"}
+    out = {}
+    for d, name in fixed.items():
+        out[d] = name
+        if d.weekday() == 5:
+            out[d - timedelta(days=1)] = name + " (observed)"
+        elif d.weekday() == 6:
+            out[d + timedelta(days=1)] = name + " (observed)"
+    out.update({
+        _nth_weekday(year, 1, 0, 3): "Martin Luther King Jr. Day",
+        _nth_weekday(year, 2, 0, 3): "Presidents' Day",
+        _nth_weekday(year, 5, 0, -1): "Memorial Day",
+        _nth_weekday(year, 9, 0, 1): "Labor Day",
+        _nth_weekday(year, 10, 0, 1): "Cabrini Day (Colorado)",
+        _nth_weekday(year, 10, 0, 2): "Columbus Day",
+        _nth_weekday(year, 11, 3, 4): "Thanksgiving",
+    })
+    return out
+
+
+def holiday_name(d: date):
+    return holidays(d.year).get(d)
+
+
+def is_business_day(d: date) -> bool:
+    return d.weekday() < 5 and holiday_name(d) is None
 
 
 def _v(values: dict, name: str) -> str:
@@ -329,6 +373,9 @@ def audit_values(values: dict) -> list:
     elif closing and closing.weekday() >= 5:
         issues.append(_issue("warning", f"§3.1 item 39: Closing Date ({closing_raw}) is a {closing.strftime('%A')} -- confirm the closing company is open",
                              "co_closing_weekend"))
+    elif closing and holiday_name(closing):
+        issues.append(_issue("warning", f"§3.1 item 39: Closing Date ({closing_raw}) is {holiday_name(closing)} -- banks may not move "
+                                        "wire funds; confirm the closing company and lender can fund", "co_closing_holiday"))
     if _blank_or_na(_v(values, F["possession_date"])) or _blank_or_na(_v(values, F["possession_time"])):
         issues.append(_issue("warning", "§3.1 items 40-41: Possession Date or Possession Time is blank", "co_possession_blank"))
     acc_raw, acc, _, _ = _deadline(values, "acceptance")
@@ -374,6 +421,12 @@ def audit_values(values: dict) -> list:
         # Fully qualified names -- these three rows are kids of a "29" parent field.
         if _is_checked(values, f"29.{n} Checkbox") and not (_v(values, f"29.{n} Percentage") or _v(values, f"29.{n} Amount")):
             issues.append(_issue("warning", f"§29: compensation line {n} is checked, but both the % and $ amount are blank", f"co_comp_{n}_blank"))
+
+    # Federal lead-based paint disclosure applies to homes built before 1978;
+    # "N/A" means someone decided, a bare blank may mean nobody looked.
+    if not _v(values, "Lead Based Paint Disclosure Deadline") and not _v(values, "LeadBased Paint Termination Deadline"):
+        issues.append(_issue("warning", "§3.1 items 12 and 38: Lead-Based Paint deadlines are blank -- required if the home "
+                                        "was built before 1978, otherwise write N/A", "co_lead_paint_blank"))
 
     if not _v(values, F["date"]):
         issues.append(_issue("warning", "Page 1: contract Date is blank", "co_date_blank"))

@@ -122,12 +122,14 @@ _CONSEQUENCE_TAGS = {
     "co_title_objection_deleted": "REVIEW: TITLE OBJECTION DELETED",
     "co_closing_blank": "NO CLOSING DATE",
     "co_closing_weekend": "REVIEW: WEEKEND CLOSING",
+    "co_closing_holiday": "REVIEW: HOLIDAY CLOSING",
     "co_possession_blank": "POSSESSION UNDEFINED",
     "co_acceptance_blank": "REVIEW: OFFER NEVER EXPIRES",
     "co_possession_before_closing": "REVIEW: EARLY POSSESSION",
     "co_acceptance_after_closing": "IMPOSSIBLE DATES",
     "co_title_selection_unchecked": "REVIEW: TITLE COMPANY UNASSIGNED",
     "co_date_blank": "REVIEW: CONTRACT UNDATED",
+    "co_lead_paint_blank": "REVIEW: LEAD PAINT DEADLINES",
     "co_other_files_not_checked": "ATTACHMENT NOT VERIFIED",
 }
 # Colorado keys that carry a suffix (which deadline, which checkbox).

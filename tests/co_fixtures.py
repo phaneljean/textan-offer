@@ -55,6 +55,8 @@ CLEAN = {
     "Seller Selects Title Checkbox": True,
     "Deadlines Will Not Checkbox": True,
     "Closing Services Fee 50 50 Checkbox": True,
+    "Lead Based Paint Disclosure Deadline": "N/A",
+    "LeadBased Paint Termination Deadline": "N/A",
 }
 
 
