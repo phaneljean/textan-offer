@@ -215,7 +215,7 @@ _BOT_UA_RE = re.compile(
 
 _MOBILE_UA_RE = re.compile(r"Mobi|Android|iPhone|iPad|iPod", re.I)
 _ENGAGEMENT_TYPES = ("js_ok", "hero_cta", "hero_sample", "hero_card", "dropzone_seen", "stay_10s", "stay_60s",
-                     "role_shown", "role_dismissed", "brokers_audit_cta", "brokers_email_cta", "brokers_plan_cta", "records_brokers_cta", "guide_check_cta", "guide_brokers_cta", "path_self_cta", "path_walkthrough_cta", "path_brokerage_cta", "guide_card_cta", "support_email_cta", "pricing_audit_cta", "tc_copy_agent_msg", "state_toggle_tx", "state_toggle_co", "states_tx_check", "states_tx_hub", "states_co_check", "states_co_hub", "states_request") + tuple("role_" + r for r in _VISITOR_ROLES)
+                     "role_shown", "role_dismissed", "brokers_audit_cta", "brokers_email_cta", "brokers_plan_cta", "records_brokers_cta", "guide_check_cta", "guide_brokers_cta", "path_self_cta", "path_walkthrough_cta", "tc_trust_link", "path_brokerage_cta", "guide_card_cta", "support_email_cta", "pricing_audit_cta", "tc_copy_agent_msg", "state_toggle_tx", "state_toggle_co", "states_tx_check", "states_tx_hub", "states_co_check", "states_co_hub", "states_request") + tuple("role_" + r for r in _VISITOR_ROLES)
 
 # Tiny, cookie-less-of-its-own beacon script appended to every page that
 # track_page_view() logs. Elements opt in with data-evt="<type>" for clicks;
@@ -891,6 +891,9 @@ def index():
       font-size: 0.8rem; color: var(--text-muted); }
     .dz-trust span { display: inline-flex; align-items: center; gap: 0.35rem; }
     .dz-trust svg { color: var(--accent); flex-shrink: 0; }
+    .dz-trust-line { display: flex; justify-content: center; align-items: baseline; gap: 0.4rem; margin: 0; font-size: 0.85rem; color: var(--text-muted); text-align: center; line-height: 1.5; }
+    .dz-trust-line svg { color: var(--accent); flex-shrink: 0; position: relative; top: 2px; }
+    .dz-trust-line a { color: var(--accent); font-weight: 600; text-decoration: underline; text-underline-offset: 2px; white-space: nowrap; }
     .demo-check-btn { display: block; width: 100%; margin-top: 1.1rem; padding: 0.8rem 1rem; background: #fff;
       border: 1px solid #d9dee3; border-radius: 12px; font: inherit; font-size: 0.9rem; font-weight: 600;
       color: var(--text); cursor: pointer; text-align: center; transition: var(--transition); }
@@ -1376,10 +1379,10 @@ def index():
       </div>
       <input type="file" id="homeFileInput" accept="application/pdf">
       <div class="dz-trust">
-        <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>Not kept unless your brokerage archives it</span>
         <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>3 free reports, no signup</span>
         <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>Results in seconds</span>
       </div>
+      <p class="dz-trust-line"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span>Checked, then deleted. No AI reads your contract. <a href="/trust#contracts" data-evt="tc_trust_link">How we handle files &rarr;</a></span></p>
       <div class="status" id="homeStatus"></div>
       <div class="result" id="homeResult"></div>
       <button type="button" class="demo-check-btn" id="homeDemoBtn">No PDF handy? Run a sample check &rarr;</button>
@@ -4284,6 +4287,12 @@ text-align:center;cursor:pointer;transition:border-color 0.18s ease,background 0
 .dz-trust{display:flex;justify-content:center;flex-wrap:wrap;gap:0.4rem 1.25rem;margin-top:0.9rem;font-size:0.8rem;color:var(--text-muted);}
 .dz-trust span{display:inline-flex;align-items:center;gap:0.35rem;}
 .dz-trust svg{color:var(--accent);flex-shrink:0;}
+.dz-trust-line{display:flex;justify-content:center;align-items:baseline;gap:0.4rem;margin-top:0.75rem;font-size:0.85rem;color:var(--text-muted);text-align:center;line-height:1.5;}
+.dz-trust-line svg{color:var(--accent);flex-shrink:0;position:relative;top:2px;}
+.dz-trust-line a,.dz-forward-line a{color:var(--accent);font-weight:600;text-decoration:underline;text-underline-offset:2px;white-space:nowrap;}
+.dz-forward-line{margin-top:0.4rem;font-size:0.85rem;color:var(--text-muted);text-align:center;line-height:1.5;}
+/* Card-inside-a-card left the drop zone ~260px wide on a phone. */
+@media(max-width:480px){.container{padding:2rem 1rem;}.card{padding:1.1rem;}}
 .demo-check-btn{display:block;width:100%;margin-top:1.1rem;padding:0.8rem 1rem;background:#fff;border:1px solid #d9dee3;border-radius:12px;font:inherit;font-size:0.9rem;font-weight:600;color:var(--text);cursor:pointer;text-align:center;transition:all 0.2s;}
 .demo-check-btn:hover{border-color:var(--accent);color:var(--accent);box-shadow:0 4px 14px rgba(11,93,82,0.18);}
 .demo-check-btn:disabled{opacity:0.6;cursor:default;}
@@ -4420,10 +4429,15 @@ __STATE_SWITCH_JS__
 </div>
 <input type="file" id="fileInput" accept="application/pdf">
 <div class="dz-trust">
-<span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>Not kept unless your brokerage archives it</span>
 <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>3 free reports, no signup</span>
 <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>Results in seconds</span>
 </div>
+<!-- The upload step is where real visitors have dropped (10-06), so the
+     privacy answer sits right at it. Both claims are on /trust and true of
+     the code: a web upload goes to a temp file that's deleted after the
+     check, and TC Check is rule code with no model/LLM dependency. -->
+<p class="dz-trust-line"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span>Checked, then deleted. No AI reads your contract. <a href="/trust#contracts" data-evt="tc_trust_link">How we handle files &rarr;</a></span></p>
+<p class="dz-forward-line">Or forward it to <a href="mailto:tc@check.txtanoffer.com">tc@check.txtanoffer.com</a> and the report comes back by email.</p>
 <div>
 <div class="addendum-toggle" id="addendumToggle"><span data-state="tx">+ Also have the 40-11, 41-3 or 39-11? Add up to 3 to cross-check them against the contract, too.</span><span data-state="co">+ Also have the buyer&rsquo;s Exclusive Right-to-Buy, an Amend/Extend, Counterproposal, Inspection Objection Notice or Source of Water Addendum? Add up to 3 to check them against the CBS1.</span></div>
 <div class="addendum-row" id="addendumRow" hidden>
