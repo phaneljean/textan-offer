@@ -162,6 +162,12 @@ def _consequence_tag(issue: dict) -> str:
     key = issue.get("key") or ""
     if key in _CONSEQUENCE_TAGS:
         return _CONSEQUENCE_TAGS[key]
+    # A problem an amendment introduced ("co_amend_<contract key>") reads
+    # the same as that problem on the contract itself.
+    if key.startswith("co_amend_co_"):
+        inner = _consequence_tag({"key": key[len("co_amend_"):], "severity": issue.get("severity")})
+        if inner != (issue.get("severity") or "issue").upper():
+            return inner
     for prefix, tag in _CONSEQUENCE_PREFIXES:
         if key.startswith(prefix):
             return tag
