@@ -36,6 +36,7 @@ from pdf_validator import _read_values, _is_checked, _money_to_int
 from pdf_filler import FIELD_MAP
 from financing_addendum import FIELD_MAP as FA_FIELDS
 from amendment import FIELD_MAP as AMEND_FIELDS
+import co_audit
 
 # (FIELD_MAP key, message shown to the TC, blocking)
 # "blocking" mirrors the same product decision pdf_validator.py already
@@ -807,6 +808,10 @@ def check_tc_file(pdf_paths) -> dict:
                 amend_values = values
 
     if main_values is None:
+        # Not a TREC 20-19 -- try Colorado's CBS1 before calling it unrecognized.
+        if any(co_audit.is_cbs1(v) for v in all_values):
+            return co_audit.check_co_file(pdf_paths, page_count=page_count,
+                                          all_values=all_values, summary=_severity_summary)
         unrecognized_issues = [{
             "severity": "blocker",
             "message": (

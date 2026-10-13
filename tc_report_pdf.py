@@ -22,7 +22,7 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.colors import HexColor
 
 from cover_page import _draw_rounded_rect, _wrap_text
-from tc_check_email import _streak_note, _UPSELL_URL, _DISCLAIMER
+from tc_check_email import _streak_note, _UPSELL_URL, _DISCLAIMER, _DISCLAIMER_CO
 
 GREEN_DARK = HexColor("#0a3f3a")
 GREEN = HexColor("#0b5d52")
@@ -61,6 +61,10 @@ _ARCHIVE_TEXT = ("On the Brokerage plan, forward executed contracts to tc@check.
                  "email or drop them into your archive. Each one is checked and kept 5 years, searchable by address "
                  "\u2014 longer than the 4 years TREC requires brokers to keep transaction records (22 TAC \u00a7535.2). "
                  "txtanoffer.com/archive")
+# The TREC record-keeping comparison is a Texas rule -- left off Colorado reports.
+_ARCHIVE_TEXT_CO = ("On the Brokerage plan, forward executed contracts to tc@check.txtanoffer.com from your brokerage "
+                    "email or drop them into your archive. Each one is checked and kept 5 years, searchable by address. "
+                    "txtanoffer.com/archive")
 _UPSELL_HEADING = "Every file, every agent, checked automatically"
 _UPSELL_TEXT = ("The Brokerage plan checks every offer your agents send before it goes out — $349/mo for your "
                 "whole roster. Start with a free audit of your last 20 closed files.")
@@ -85,7 +89,7 @@ def _header(c, width, height, compact=False) -> float:
     return top - band_h - 4 - 0.42 * inch
 
 
-def _footer(c, width, page_num, page_count, streak_note=""):
+def _footer(c, width, page_num, page_count, streak_note="", disclaimer=_DISCLAIMER):
     if page_num == page_count and streak_note:
         c.setFillColor(TEXT_DIM)
         c.setFont("Helvetica", 7.5)
@@ -95,7 +99,7 @@ def _footer(c, width, page_num, page_count, streak_note=""):
     c.line(MARGIN, 0.7 * inch, width - MARGIN, 0.7 * inch)
     c.setFillColor(TEXT_DIM)
     c.setFont("Helvetica", 6.5)
-    c.drawString(MARGIN, 0.52 * inch, _DISCLAIMER)
+    c.drawString(MARGIN, 0.52 * inch, disclaimer)
     c.drawRightString(width - MARGIN, 0.36 * inch, f"txtanoffer.com  ·  Page {page_num} of {page_count}")
 
 
@@ -227,13 +231,13 @@ def _draw_next(c, y, content_w, width):
     return y - h - 0.2 * inch
 
 
-def _archive_h(c, content_w):
-    lines = _wrap(c, _ARCHIVE_TEXT, "Helvetica", 8.8, content_w - 0.4 * inch)
+def _archive_h(c, content_w, text=_ARCHIVE_TEXT):
+    lines = _wrap(c, text, "Helvetica", 8.8, content_w - 0.4 * inch)
     return 0.46 * inch + len(lines) * 0.155 * inch + 0.14 * inch + 0.2 * inch
 
 
-def _draw_archive(c, y, content_w, width):
-    h = _archive_h(c, content_w) - 0.2 * inch
+def _draw_archive(c, y, content_w, width, text=_ARCHIVE_TEXT):
+    h = _archive_h(c, content_w, text) - 0.2 * inch
     _draw_rounded_rect(c, MARGIN, y - h, content_w, h, r=8, fill_color=YELLOW_TINT, stroke_color=YELLOW)
     x = MARGIN + 0.2 * inch
     ty = y - 0.26 * inch
@@ -243,7 +247,7 @@ def _draw_archive(c, y, content_w, width):
     ty -= 0.21 * inch
     c.setFillColor(YELLOW_TEXT)
     c.setFont("Helvetica", 8.8)
-    for line in _wrap(c, _ARCHIVE_TEXT, "Helvetica", 8.8, content_w - 0.4 * inch):
+    for line in _wrap(c, text, "Helvetica", 8.8, content_w - 0.4 * inch):
         c.drawString(x, ty, line)
         ty -= 0.155 * inch
     return y - h - 0.2 * inch
@@ -300,6 +304,7 @@ def generate_tc_report_pdf(filename: str, issues: list, generated_at=None, check
         rows += [("issue", i) for i in warnings]
     if issues:
         rows.append(("next",))
+    archive_text = _ARCHIVE_TEXT_CO if (files_line or "").startswith("Colorado") else _ARCHIVE_TEXT
     rows.append(("archive",))
     rows.append(("upsell",))
 
@@ -312,7 +317,7 @@ def generate_tc_report_pdf(filename: str, issues: list, generated_at=None, check
         if kind == "next":
             return _next_h(c, content_w)
         if kind == "archive":
-            return _archive_h(c, content_w)
+            return _archive_h(c, content_w, archive_text)
         return _upsell_h(c, content_w)
 
     def render(c, final: bool, page_count: int = 1) -> int:
@@ -331,7 +336,8 @@ def generate_tc_report_pdf(filename: str, issues: list, generated_at=None, check
                 h += height_of(c, nxt)
             if y - h < BOTTOM_LIMIT:
                 if final:
-                    _footer(c, width, page, page_count, streak_note)
+                    _footer(c, width, page, page_count, streak_note,
+                    _DISCLAIMER_CO if archive_text is _ARCHIVE_TEXT_CO else _DISCLAIMER)
                 c.showPage()
                 page += 1
                 y = _header(c, width, height, compact=True)
@@ -343,11 +349,12 @@ def generate_tc_report_pdf(filename: str, issues: list, generated_at=None, check
             elif kind == "next":
                 y = _draw_next(c, y - 0.08 * inch, content_w, width)
             elif kind == "archive":
-                y = _draw_archive(c, y, content_w, width)
+                y = _draw_archive(c, y, content_w, width, archive_text)
             else:
                 y = _draw_upsell(c, y, content_w, width)
         if final:
-            _footer(c, width, page, page_count, streak_note)
+            _footer(c, width, page, page_count, streak_note,
+                    _DISCLAIMER_CO if archive_text is _ARCHIVE_TEXT_CO else _DISCLAIMER)
         return page
 
     pages = render(canvas.Canvas(io.BytesIO(), pagesize=letter), final=False)

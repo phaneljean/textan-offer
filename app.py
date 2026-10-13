@@ -4134,7 +4134,7 @@ function buildMetaBar(data, file) {
   html += '<span><strong>' + escapeHtml(file.name) + '</strong></span>';
   html += '<span>' + formatBytes(file.size) + '</span>';
   if (typeof data.page_count === 'number') html += '<span>' + data.page_count + ' page' + (data.page_count === 1 ? '' : 's') + '</span>';
-  html += '<span>' + (data.recognized ? 'TREC 20-19 AcroForm detected' : 'Not recognized as a TREC 20-19') + '</span>';
+  html += '<span>' + (data.recognized ? (data.form ? escapeHtml(data.form) + ' detected' : 'TREC 20-19 AcroForm detected') : 'Not recognized as a TREC 20-19 or Colorado CBS1') + '</span>';
   if (data.has_addendum) html += '<span>40-11 addendum attached</span>';
   if (data.has_loan_assumption) html += '<span>41-3 addendum attached</span>';
   if (data.has_amendment) html += '<span>39-11 amendment attached</span>';
