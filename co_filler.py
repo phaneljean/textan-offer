@@ -353,7 +353,8 @@ def fill_ae41(original_offer: dict, amendment: dict, today: date = None) -> str:
 BC60_TEMPLATE_PATH = os.environ.get("BC60_TEMPLATE_PATH",
                                     os.path.join(os.path.dirname(os.path.abspath(__file__)), "BC60_2026.pdf"))
 BUYER_AGREEMENT_HELP = ('Format: BUYER AGREEMENT <buyer name> <fee % or $> <days> [agency or tb]\n'
-                        'Example: BUYER AGREEMENT Jane Doe 2.5% 90 days agency')
+                        'Example: BUYER AGREEMENT Jane Doe <fee> 90 days agency (compensation is negotiable '
+                        'and yours to state)')
 
 
 def parse_buyer_agreement_sms(text: str) -> dict:

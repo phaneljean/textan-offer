@@ -46,7 +46,9 @@ FINGERPRINTS = {
 # BC60 Exclusive Right-to-Buy (2026): field names are fully qualified by
 # section ("7.1.1.1 Percentage", "7.3.2 Checkbox") and unique -- checked
 # 2026-10-12 by rendering. §7 compensation fields:
-ERTB_COMP_FIELDS = ["7.1.1.1 Percentage", "7.1.1.1 Amount", "7.1.1.1 Other Description", "7.1.2 Hourly Fee",
+# ("7.1.1.1 Other Description" is NOT a fee: by position it is the §7.1.1.2
+# Adjusted Amount "Other" blank -- rect-checked by txo-trec-qa 2026-10-13.)
+ERTB_COMP_FIELDS = ["7.1.1.1 Percentage", "7.1.1.1 Amount", "7.1.2 Hourly Fee",
                     "7.1.3 Retainer Fee", "7.1.4 Other Compensation"]
 CBS1_BUYER_RELATIONSHIP = {
     "agent": "Broker Working With Buyer Buyers Agent Checkbox",
@@ -523,8 +525,11 @@ def _check_buyer_listing(contract: dict, values: dict) -> list:
     if not (start and end):
         issues.append(_issue("blocker", f"{label}: the Listing Period start or end date is blank", "co_ertb_period_blank"))
     elif signed and not (start <= signed <= end):
-        issues.append(_issue("blocker", f"{label}: the contract is dated {signed:%m/%d/%Y}, outside the Listing Period "
-                                        f"({start:%m/%d/%Y} to {end:%m/%d/%Y})", "co_ertb_period_outside"))
+        # Warning, not blocker: §3.6 also counts "any written extensions",
+        # and a renewal agreement can replace this one -- neither is read here.
+        issues.append(_issue("warning", f"{label}: the Listing Period is {start:%m/%d/%Y} to {end:%m/%d/%Y}; the contract is "
+                                        f"dated {signed:%m/%d/%Y} -- confirm a buyer agreement or written extension "
+                                        f"covered that date", "co_ertb_period_outside"))
     return issues
 
 

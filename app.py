@@ -2212,8 +2212,9 @@ def format_co_confirmation(parsed: dict) -> str:
         "",
         'Reply YES to create the Colorado CBS1 draft, or text a correction.',
         "",
-        "Colorado law (HB26-1426) needs a signed buyer agreement before you write this offer. "
-        "No agreement yet? Text: BUYER AGREEMENT Jane Doe 2.5% 90 days",
+        "If you're this buyer's agent or transaction-broker, Colorado law (HB26-1426) requires a signed "
+        "written buyer agreement before you perform brokerage services for them, which generally includes "
+        "writing the offer. No agreement yet? Text: BUYER AGREEMENT <buyer> <fee % or $> <days>",
         "",
         "Msg rates may apply. Reply STOP to unsubscribe, HELP for help.",
     ]
@@ -2690,12 +2691,27 @@ def sms_reply():
         pdf_url = sign_pdf_url(filename, request.host_url.rstrip("/"))
         fee = f"{ba['pct']:g}%" if ba.get("pct") else f"${ba['amount']:,.0f}"
         rel = {"agency": "Buyer Agency", "tb": "Transaction-Brokerage"}.get(ba.get("relationship"))
+        prof = get_agent_profile(agent_phone) or {}
+        filled = ["buyer"]
+        todo = []
+        if prof.get("name"):
+            filled.append("your name")
+        else:
+            todo.append("Broker (3.3)")
+        if prof.get("brokerage"):
+            filled.append("your brokerage")
+        else:
+            todo.append("Brokerage Firm (3.2)")
+        filled += [f"a {ba['days']}-day Listing Period", f"Success Fee {fee}"] + ([rel] if rel else [])
+        if not rel:
+            todo.append("Buyer Agency or Transaction-Brokerage")
+        todo += ["firm type (2.1/2.2)", "property (3.4)", "who pays (7.3)", "holdover (7.4)", "the 9 and 15 boxes"]
         twilio_send_sms(agent_phone,
             f"Colorado Exclusive Right-to-Buy for {ba['buyer']} is ready: {pdf_url}\n\n"
-            f"Filled: buyer, your name and brokerage, a {ba['days']}-day Listing Period, Success Fee {fee}"
-            f"{', ' + rel if rel else ''}.\n"
-            f"You fill in: {'' if rel else 'Buyer Agency or Transaction-Brokerage, '}firm type (2.1/2.2), "
-            f"property (3.4), who pays (7.3, blank = 7.3.1), then signatures.\n\n"
+            f"Filled: {', '.join(filled)}.\n"
+            f"You fill in: {', '.join(todo)}, then signatures -- review every blank. If 7.3 is left blank, 7.3.1 "
+            f"applies: the buyer owes any unpaid part of the fee only if you disclose that amount in writing "
+            f"before they sign a contract.\n\n"
             f"Draft only -- review with your buyer before signing.\n\nReply STOP to unsubscribe, HELP for help.")
         return "", 200
 
@@ -4281,7 +4297,7 @@ __STATE_SWITCH_JS__
 <li>Amend/Extend and Counterproposal: the contract re-checked as amended &mdash; a new date that lands after closing, a deleted loan or inspection deadline, conflicting boxes, a price change</li>
 <li>Inspection Objection Notice dated after the Inspection Objection Deadline, or with no description</li>
 <li>Attached forms that name a different property or contract date; a Source of Water Addendum listed in &sect;31 but not attached</li>
-<li>HB26-1426: a buyer&rsquo;s agent or transaction-broker with no signed Exclusive Right-to-Buy attached; one whose Listing Period doesn&rsquo;t cover the contract date, names a different buyer, or states no compensation</li>
+<li>HB26-1426: the CBS1 marks a buyer&rsquo;s agent or transaction-broker but no Exclusive Right-to-Buy is attached (signatures aren&rsquo;t checked); an attached one whose Listing Period doesn&rsquo;t cover the contract date, names a different buyer, or states no compensation</li>
 </ul>
 <ul class="not-checked">
 <li>Signatures</li>

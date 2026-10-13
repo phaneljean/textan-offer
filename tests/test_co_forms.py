@@ -166,8 +166,13 @@ class CoBuyerAgreement(unittest.TestCase):
         self.assertEqual(self.keys(self.ertb("ok.pdf")), [])
 
     def test_agreement_expired_before_contract(self):
-        self.assertEqual(self.keys(self.ertb("exp.pdf", **{"Listing Period Ends": "09/30/2026"})),
-                         ["co_ertb_period_outside"])
+        f = self.ertb("exp.pdf", **{"Listing Period Ends": "09/30/2026"})
+        issues = check_tc_file([self.contract, f])["issues"]
+        self.assertEqual([(i["key"], i["severity"]) for i in issues], [("co_ertb_period_outside", "warning")])
+
+    def test_adjusted_amount_other_is_not_a_fee(self):
+        f = self.ertb("adj.pdf", **{"7.1.1.1 Percentage": None, "7.1.1.1 Other Description": "see 23"})
+        self.assertIn("co_ertb_comp_blank", self.keys(f))
 
     def test_agreement_buyer_mismatch_and_no_fee(self):
         f = self.ertb("mm.pdf", Buyer="Chris Other", **{"7.1.1.1 Percentage": None, "7.1.1 Checkbox": None})

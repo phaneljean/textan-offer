@@ -138,6 +138,10 @@ class CoSmsFlow(unittest.TestCase):
         self.assertNotIn("\u00a7", sent[-1])   # GSM-7 only
         new = [n for n in set(os.listdir(OUTPUT_DIR)) - before if n.startswith("BC60_")]
         self.assertEqual(len(new), 1)
+        # No saved profile: the reply must not claim the agent's name/brokerage were filled.
+        self.assertNotIn("your name", sent[-1])
+        self.assertIn("Broker (3.3)", sent[-1])
+        self.assertIn("holdover (7.4)", sent[-1])
         bad = self._sms("+15125559004", "BUYER AGREEMENT Pat Buyer 90 days")
         self.assertIn("%", bad[-1])
 
