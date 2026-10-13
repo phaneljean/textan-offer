@@ -127,3 +127,73 @@ class CoForms(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class CoBuyerAgreement(unittest.TestCase):
+    """HB26-1426: BC60 Exclusive Right-to-Buy cross-check and BUYER AGREEMENT by text."""
+    OK = {"Buyer": "Pat Buyer", "Buyer Agency": True, "Listing Period Starts": "09/15/2026",
+          "Listing Period Ends": "12/15/2026", "7.1.1 Checkbox": True, "7.1.1.1 Percentage": "2.5"}
+
+    @classmethod
+    def setUpClass(cls):
+        cls.tmp = tempfile.TemporaryDirectory()
+        cls.contract = fill({"Broker Working With Buyer Buyers Agent Checkbox": True}, out=cls.p("c_agent.pdf"))
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.tmp.cleanup()
+
+    @classmethod
+    def p(cls, name):
+        return os.path.join(cls.tmp.name, name)
+
+    def keys(self, *files):
+        return sorted(i["key"] for i in check_tc_file([self.contract] + list(files))["issues"])
+
+    def ertb(self, name, **over):
+        vals = dict(self.OK)
+        vals.update(over)
+        return fill_form("ertb", {k: v for k, v in vals.items() if v is not None}, self.p(name))
+
+    def test_agent_without_agreement_is_flagged(self):
+        self.assertEqual(self.keys(), ["co_ertb_not_attached"])
+
+    def test_customer_relationship_not_flagged(self):
+        c = fill({"Broker Working With Buyer Customer Checkbox": True}, out=self.p("c_cust.pdf"))
+        self.assertEqual(check_tc_file([c])["issues"], [])
+
+    def test_good_agreement_is_clean(self):
+        self.assertEqual(self.keys(self.ertb("ok.pdf")), [])
+
+    def test_agreement_expired_before_contract(self):
+        self.assertEqual(self.keys(self.ertb("exp.pdf", **{"Listing Period Ends": "09/30/2026"})),
+                         ["co_ertb_period_outside"])
+
+    def test_agreement_buyer_mismatch_and_no_fee(self):
+        f = self.ertb("mm.pdf", Buyer="Chris Other", **{"7.1.1.1 Percentage": None, "7.1.1 Checkbox": None})
+        self.assertEqual(self.keys(f), ["co_ertb_buyer_mismatch", "co_ertb_comp_blank"])
+
+    def test_relationship_mismatch(self):
+        f = self.ertb("rel.pdf", **{"Buyer Agency": None, "Transaction Brokerage": True})
+        self.assertEqual(self.keys(f), ["co_ertb_relationship_mismatch"])
+
+    def test_text_command_fills_form(self):
+        from datetime import date
+        from co_filler import parse_buyer_agreement_sms, fill_buyer_agreement
+        from pdf_validator import _read_values
+        import pdf_filler
+        parsed = parse_buyer_agreement_sms("BUYER AGREEMENT Pat Buyer 2.5% 90 days agency")
+        old = pdf_filler.OUTPUT_DIR
+        try:
+            import co_filler
+            co_filler.OUTPUT_DIR = self.tmp.name
+            path = fill_buyer_agreement(parsed, {"name": "Jane Agent", "brokerage": "Example Realty"},
+                                        today=date(2026, 9, 20))
+        finally:
+            co_filler.OUTPUT_DIR = old
+        v = _read_values(path)
+        self.assertEqual(co_forms.classify(v), "ertb")
+        self.assertEqual((v["Buyer"], v["7.1.1.1 Percentage"], v["Listing Period Ends"]), ("Pat Buyer", "2.5", "12/19/2026"))
+        self.assertEqual(self.keys(path), [])   # the generated agreement passes its own check
+        for bad in ("BUYER AGREEMENT Pat Buyer 90 days", "BUYER AGREEMENT Pat Buyer 2.5%", "BUYER AGREEMENT 2.5% 90 days"):
+            self.assertIn("error", parse_buyer_agreement_sms(bad))

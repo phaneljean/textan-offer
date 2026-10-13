@@ -31,6 +31,7 @@ FORM_NAMES = {
     "insp": "Inspection Objection Notice",
     "swa": "Source of Water Addendum",
     "resadd": "Residential Addendum",
+    "ertb": "Exclusive Right-to-Buy Listing Contract",
 }
 
 FINGERPRINTS = {
@@ -39,6 +40,18 @@ FINGERPRINTS = {
     "insp": ["Description of What Is Unsatisfactory", "Number of Additional Pages", "Property Name"],
     "swa": ["If a well is the source of water for the Property a copy of the current Well Permit", "Contract Date"],
     "resadd": ["1 Checkbox Land", "Original Contract Date 01", "Metro District Website"],
+    "ertb": ["Listing Period Starts", "Listing Period Ends", "Buyer Agency", "Transaction Brokerage"],
+}
+
+# BC60 Exclusive Right-to-Buy (2026): field names are fully qualified by
+# section ("7.1.1.1 Percentage", "7.3.2 Checkbox") and unique -- checked
+# 2026-10-12 by rendering. §7 compensation fields:
+ERTB_COMP_FIELDS = ["7.1.1.1 Percentage", "7.1.1.1 Amount", "7.1.1.1 Other Description", "7.1.2 Hourly Fee",
+                    "7.1.3 Retainer Fee", "7.1.4 Other Compensation"]
+CBS1_BUYER_RELATIONSHIP = {
+    "agent": "Broker Working With Buyer Buyers Agent Checkbox",
+    "tb": "Broker Working With Buyer Transaction Broker Checkbox",
+    "customer": "Broker Working With Buyer Customer Checkbox",
 }
 
 PRICE_FIELDS = ["Purchase Price", "Earnest Money", "New Loan", "Assumption Balance", "Private Balance",
@@ -453,6 +466,18 @@ def cross_check(contract: dict, others: list) -> list:
     for kind, values in others:
         if kind == "insp":
             issues += _check_inspection_notice(effective, values)
+        if kind == "ertb":
+            issues += _check_buyer_listing(contract, values)
+
+    # HB26-1426 (effective Aug 12, 2026, C.R.S. 12-10-403): a buyer's agent or
+    # transaction-broker needs a signed written agreement with the buyer
+    # before performing licensed duties. Only raised when the CBS1 itself says
+    # the buyer's broker is acting as one of those (not "Customer").
+    rel = [k for k, f in CBS1_BUYER_RELATIONSHIP.items() if co_audit._is_checked(contract, f)]
+    if set(rel) & {"agent", "tb"} and "ertb" not in attached:
+        issues.append(_issue("warning", "The buyer's broker is marked as Buyer's Agent or Transaction-Broker. Since Aug 12, "
+                                        "2026 (HB26-1426) that needs a signed written agreement with the buyer -- attach the "
+                                        "Exclusive Right-to-Buy so it's checked too", "co_ertb_not_attached"))
 
     # §31.1 lists a form we can recognize, but it isn't attached.
     listed = _v(contract, "Documents Part of the Contract")
@@ -460,6 +485,46 @@ def cross_check(contract: dict, others: list) -> list:
         if listed and pattern.search(listed) and kind not in attached:
             issues.append(_issue("warning", f"§31.1 lists the {FORM_NAMES[kind]}, but it isn't attached here -- "
                                             f"attach it so it's checked too", f"co_{kind}_listed_missing"))
+    return issues
+
+
+def _check_buyer_listing(contract: dict, values: dict) -> list:
+    """BC60 Exclusive Right-to-Buy against the CBS1 it should cover."""
+    issues = []
+    label = FORM_NAMES["ertb"]
+    buyer = _v(values, "Buyer")
+    cbs1_buyer = _v(contract, co_audit.F["buyer"])
+    if not buyer:
+        issues.append(_issue("blocker", f"{label}: Buyer (§3.1) is blank", "co_ertb_buyer_blank"))
+    elif cbs1_buyer:
+        a = {w for w in re.findall(r"[a-z]{2,}", buyer.lower())}
+        b = {w for w in re.findall(r"[a-z]{2,}", cbs1_buyer.lower())}
+        if a and b and not (a & b):
+            issues.append(_issue("warning", f"{label}: Buyer ({buyer}) doesn't match the contract's Buyer ({cbs1_buyer})",
+                                 "co_ertb_buyer_mismatch"))
+    agency, tb = co_audit._is_checked(values, "Buyer Agency"), co_audit._is_checked(values, "Transaction Brokerage")
+    if agency and tb:
+        issues.append(_issue("blocker", f"{label}: both Buyer Agency and Transaction-Brokerage are checked", "co_ertb_relationship_conflict"))
+    elif not (agency or tb):
+        issues.append(_issue("warning", f"{label}: neither Buyer Agency nor Transaction-Brokerage is checked at the top",
+                             "co_ertb_relationship_blank"))
+    else:
+        cbs1_agent = co_audit._is_checked(contract, CBS1_BUYER_RELATIONSHIP["agent"])
+        cbs1_tb = co_audit._is_checked(contract, CBS1_BUYER_RELATIONSHIP["tb"])
+        if (agency and cbs1_tb and not cbs1_agent) or (tb and cbs1_agent and not cbs1_tb):
+            said = "Buyer Agency" if agency else "Transaction-Brokerage"
+            cbs1_said = "Transaction-Broker" if cbs1_tb else "Buyer's Agent"
+            issues.append(_issue("warning", f"{label} says {said}, but the CBS1 marks the buyer's broker as {cbs1_said}",
+                                 "co_ertb_relationship_mismatch"))
+    if not any(_v(values, f) for f in ERTB_COMP_FIELDS):
+        issues.append(_issue("warning", f"{label}: no compensation is filled in under §7", "co_ertb_comp_blank"))
+    start, end = _parse_date(_v(values, "Listing Period Starts")), _parse_date(_v(values, "Listing Period Ends"))
+    signed = _parse_date(_v(contract, co_audit.F["date"]))
+    if not (start and end):
+        issues.append(_issue("blocker", f"{label}: the Listing Period start or end date is blank", "co_ertb_period_blank"))
+    elif signed and not (start <= signed <= end):
+        issues.append(_issue("blocker", f"{label}: the contract is dated {signed:%m/%d/%Y}, outside the Listing Period "
+                                        f"({start:%m/%d/%Y} to {end:%m/%d/%Y})", "co_ertb_period_outside"))
     return issues
 
 

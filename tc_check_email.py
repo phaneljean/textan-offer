@@ -139,6 +139,15 @@ _CONSEQUENCE_TAGS = {
     "co_swa_listed_missing": "ADDENDUM MAY BE MISSING",
     "co_resadd_listed_missing": "ADDENDUM MAY BE MISSING",
     "co_ae41_empty": "REVIEW: NOTHING CHANGED",
+    "co_ertb_not_attached": "REVIEW: BUYER AGREEMENT (HB26-1426)",
+    "co_ertb_period_outside": "BUYER AGREEMENT NOT IN EFFECT",
+    "co_ertb_period_blank": "BUYER AGREEMENT INCOMPLETE",
+    "co_ertb_buyer_blank": "BUYER AGREEMENT INCOMPLETE",
+    "co_ertb_comp_blank": "COMPENSATION UNCLEAR",
+    "co_ertb_buyer_mismatch": "WRONG FILE ATTACHED",
+    "co_ertb_relationship_conflict": "CONFLICTING CHECKBOXES",
+    "co_ertb_relationship_blank": "REVIEW: RELATIONSHIP UNMARKED",
+    "co_ertb_relationship_mismatch": "REVIEW: RELATIONSHIP DIFFERS",
     "co_ctr_empty": "REVIEW: NOTHING CHANGED",
 }
 # Colorado keys that carry a suffix (which deadline, which checkbox).

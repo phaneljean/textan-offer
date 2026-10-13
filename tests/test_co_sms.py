@@ -130,6 +130,23 @@ class CoSmsFlow(unittest.TestCase):
         self.assertEqual(conflicts, [])
         self.assertEqual(v.get("Street Address"), "77 Birch Ln")
 
+    def test_buyer_agreement_by_text(self):
+        from pdf_filler import OUTPUT_DIR
+        before = set(os.listdir(OUTPUT_DIR))
+        sent = self._sms("+15125559004", "BUYER AGREEMENT Pat Buyer 2.5% 90 days agency")
+        self.assertIn("Exclusive Right-to-Buy for Pat Buyer", sent[-1])
+        self.assertNotIn("\u00a7", sent[-1])   # GSM-7 only
+        new = [n for n in set(os.listdir(OUTPUT_DIR)) - before if n.startswith("BC60_")]
+        self.assertEqual(len(new), 1)
+        bad = self._sms("+15125559004", "BUYER AGREEMENT Pat Buyer 90 days")
+        self.assertIn("%", bad[-1])
+
+    def test_co_confirmation_mentions_hb26(self):
+        sent = self._sms("+15125559005", "500k 20% 30day 123 Main St, Denver, CO 80202")
+        self.assertIn("HB26-1426", sent[0])
+        self.assertIn("BUYER AGREEMENT", sent[0])
+        sent[0].encode("ascii")
+
     def test_other_states_still_blocked(self):
         sent = self._sms("+15125559002", "500k 20% 30day 123 Main St, Phoenix, AZ 85001")
         self.assertIn("supports Texas and Colorado", sent[0])

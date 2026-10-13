@@ -1428,7 +1428,7 @@ def index():
     </div>
     <ul class="tc-checklist" style="max-width:560px;margin:1.5rem auto 0;">
       <li data-state="tx"><span class="tc-check">&check;</span><span>Forward the TREC 20-19 to <strong>tc@check.txtanoffer.com</strong>, or upload it above &mdash; attach the 40-11, 41-3 or 39-11 to the same email, or add them on the <a href="/tc-check">full check page</a>.</span></li>
-      <li data-state="co"><span class="tc-check">&check;</span><span>Forward the CBS1 to <strong>tc@check.txtanoffer.com</strong>, or upload it above &mdash; attach an Amend/Extend, Counterproposal, Inspection Objection Notice or Source of Water Addendum to the same email, or add them on the <a href="/tc-check?state=co">full check page</a>.</span></li>
+      <li data-state="co"><span class="tc-check">&check;</span><span>Forward the CBS1 to <strong>tc@check.txtanoffer.com</strong>, or upload it above &mdash; attach the buyer&rsquo;s Exclusive Right-to-Buy, an Amend/Extend, Counterproposal, Inspection Objection Notice or Source of Water Addendum to the same email, or add them on the <a href="/tc-check?state=co">full check page</a>.</span></li>
       <li><span class="tc-check">&check;</span><span>We re-read the actual filled-in PDF against <span data-state="tx">TREC's current form</span><span data-state="co">the 2026 CBS1</span> &mdash; not a guess based on file size or page count.</span></li>
       <li data-state="tx"><span class="tc-check">&check;</span><span>Get an itemized report back in under a minute: what's blank, what's missing an initial, what disagrees with the addendum.</span></li>
       <li data-state="co"><span class="tc-check">&check;</span><span>Get an itemized report back in under a minute: which deadlines are blank, whether the price math adds up, which dates land after closing.</span></li>
@@ -2212,6 +2212,9 @@ def format_co_confirmation(parsed: dict) -> str:
         "",
         'Reply YES to create the Colorado CBS1 draft, or text a correction.',
         "",
+        "Colorado law (HB26-1426) needs a signed buyer agreement before you write this offer. "
+        "No agreement yet? Text: BUYER AGREEMENT Jane Doe 2.5% 90 days",
+        "",
         "Msg rates may apply. Reply STOP to unsubscribe, HELP for help.",
     ]
     return "\n".join(lines)
@@ -2666,6 +2669,34 @@ def sms_reply():
             twilio_send_sms(agent_phone,
                 "You're on the list! We'll text you when TxtAnOffer expands "
                 "outside Texas. Reply STOP to unsubscribe.")
+        return "", 200
+
+    if keyword.startswith("BUYER AGREEMENT"):
+        # Colorado HB26-1426: signed written buyer agreement (CREC BC60
+        # Exclusive Right-to-Buy) before writing an offer.
+        from co_filler import parse_buyer_agreement_sms, fill_buyer_agreement
+        ba = parse_buyer_agreement_sms(incoming_msg)
+        if "error" in ba:
+            twilio_send_sms(agent_phone, ba["error"] + "\n\nReply STOP to unsubscribe, HELP for help.")
+            return "", 200
+        try:
+            pdf_path = fill_buyer_agreement(ba, get_agent_profile(agent_phone))
+        except Exception as e:
+            print(f"[SMS] BC60 ERROR: {e}")
+            twilio_send_sms(agent_phone, "Couldn't create the buyer agreement. Please try again or contact support.")
+            return "", 200
+        filename = os.path.basename(pdf_path)
+        track_event("co_buyer_agreement_generated", agent_phone, {"filename": filename})
+        pdf_url = sign_pdf_url(filename, request.host_url.rstrip("/"))
+        fee = f"{ba['pct']:g}%" if ba.get("pct") else f"${ba['amount']:,.0f}"
+        rel = {"agency": "Buyer Agency", "tb": "Transaction-Brokerage"}.get(ba.get("relationship"))
+        twilio_send_sms(agent_phone,
+            f"Colorado Exclusive Right-to-Buy for {ba['buyer']} is ready: {pdf_url}\n\n"
+            f"Filled: buyer, your name and brokerage, a {ba['days']}-day Listing Period, Success Fee {fee}"
+            f"{', ' + rel if rel else ''}.\n"
+            f"You fill in: {'' if rel else 'Buyer Agency or Transaction-Brokerage, '}firm type (2.1/2.2), "
+            f"property (3.4), who pays (7.3, blank = 7.3.1), then signatures.\n\n"
+            f"Draft only -- review with your buyer before signing.\n\nReply STOP to unsubscribe, HELP for help.")
         return "", 200
 
     if keyword.startswith("AMEND "):
@@ -4186,7 +4217,7 @@ __STATE_SWITCH_JS__
 <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>Results in seconds</span>
 </div>
 <div>
-<div class="addendum-toggle" id="addendumToggle"><span data-state="tx">+ Also have the 40-11, 41-3 or 39-11? Add up to 3 to cross-check them against the contract, too.</span><span data-state="co">+ Also have an Amend/Extend, Counterproposal, Inspection Objection Notice or Source of Water Addendum? Add up to 3 to check them against the CBS1.</span></div>
+<div class="addendum-toggle" id="addendumToggle"><span data-state="tx">+ Also have the 40-11, 41-3 or 39-11? Add up to 3 to cross-check them against the contract, too.</span><span data-state="co">+ Also have the buyer&rsquo;s Exclusive Right-to-Buy, an Amend/Extend, Counterproposal, Inspection Objection Notice or Source of Water Addendum? Add up to 3 to check them against the CBS1.</span></div>
 <div class="addendum-row" id="addendumRow" hidden>
 <input type="file" id="addendumInput" accept="application/pdf" multiple>
 <span class="addendum-filename" id="addendumFileName"></span>
@@ -4250,6 +4281,7 @@ __STATE_SWITCH_JS__
 <li>Amend/Extend and Counterproposal: the contract re-checked as amended &mdash; a new date that lands after closing, a deleted loan or inspection deadline, conflicting boxes, a price change</li>
 <li>Inspection Objection Notice dated after the Inspection Objection Deadline, or with no description</li>
 <li>Attached forms that name a different property or contract date; a Source of Water Addendum listed in &sect;31 but not attached</li>
+<li>HB26-1426: a buyer&rsquo;s agent or transaction-broker with no signed Exclusive Right-to-Buy attached; one whose Listing Period doesn&rsquo;t cover the contract date, names a different buyer, or states no compensation</li>
 </ul>
 <ul class="not-checked">
 <li>Signatures</li>

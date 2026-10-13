@@ -99,6 +99,7 @@ FORMS = {
     "ctr": os.path.join(HERE, "fixtures", "CO_CP40_blank.pdf"),
     "insp": os.path.join(HERE, "fixtures", "CO_NTC43_blank.pdf"),
     "swa": os.path.join(HERE, "fixtures", "CO_SWA35_blank.pdf"),
+    "ertb": os.path.join(HERE, "fixtures", "CO_BC60_blank.pdf"),
 }
 
 

@@ -344,3 +344,96 @@ def fill_ae41(original_offer: dict, amendment: dict, today: date = None) -> str:
         f.write(doc.tobytes(garbage=3, deflate=True))
     doc.close()
     return out_path
+
+
+# --- BUYER AGREEMENT by text -> Exclusive Right-to-Buy Listing Contract -----
+# HB26-1426 (effective Aug 12, 2026): a Colorado buyer's agent or
+# transaction-broker needs a signed written agreement with the buyer before
+# performing licensed duties such as writing an offer.
+BC60_TEMPLATE_PATH = os.environ.get("BC60_TEMPLATE_PATH",
+                                    os.path.join(os.path.dirname(os.path.abspath(__file__)), "BC60_2026.pdf"))
+BUYER_AGREEMENT_HELP = ('Format: BUYER AGREEMENT <buyer name> <fee % or $> <days> [agency or tb]\n'
+                        'Example: BUYER AGREEMENT Jane Doe 2.5% 90 days agency')
+
+
+def parse_buyer_agreement_sms(text: str) -> dict:
+    """'BUYER AGREEMENT Jane Doe 2.5% 90 days agency' ->
+    {buyer, pct, days, relationship} or {"error"}. Compensation and term are
+    the agent's to state -- nothing here is defaulted."""
+    m = re.match(r"^\s*buyer\s+agreement\b(.*)$", text or "", re.I | re.S)
+    if not m:
+        return {"error": BUYER_AGREEMENT_HELP}
+    rest = m.group(1)
+    pct = re.search(r"(\d+(?:\.\d+)?)\s*%", rest)
+    flat = re.search(r"\$\s*(\d[\d,]*(?:\.\d{1,2})?)\s*(k)?\b", rest, re.I)
+    days = re.search(r"\b(\d{1,3})\s*(?:days?|d)\b", rest, re.I)
+    # Relationship is only read from the last word(s), so a buyer named
+    # "Pat Buyer" or "Sam Agent" keeps their surname.
+    rel = None
+    tail = re.search(r"\b(transaction[\s-]*brok\w*|tb|buyer\s+agency|agency|agent)\s*$", rest, re.I)
+    if tail:
+        rel = "agency" if "agen" in tail.group(1).lower() else "tb"
+        rest = rest[:tail.start()]
+    name = rest
+    for pat in (r"(\d+(?:\.\d+)?)\s*%", r"\$\s*\d[\d,]*(?:\.\d{1,2})?\s*k?\b", r"\b\d{1,3}\s*(?:days?|d)\b"):
+        name = re.sub(pat, " ", name, flags=re.I)
+    name = re.sub(r"\s+", " ", name).strip(" ,.-")
+    if len(name) < 2:
+        return {"error": "Couldn't find the buyer's name.\n" + BUYER_AGREEMENT_HELP}
+    if bool(pct) == bool(flat):
+        return {"error": "Give the fee once, as a % or a $ amount -- compensation has to be stated in the agreement.\n"
+                         + BUYER_AGREEMENT_HELP}
+    if not days:
+        return {"error": "Add how long the agreement lasts, e.g. 90 days.\n" + BUYER_AGREEMENT_HELP}
+    d = int(days.group(1))
+    p = float(pct.group(1)) if pct else None
+    amount = None
+    if flat:
+        amount = float(flat.group(1).replace(",", "")) * (1000 if flat.group(2) else 1)
+        if not 0 < amount <= 250000:
+            return {"error": f"A ${amount:,.0f} fee looks off -- check it and resend.\n" + BUYER_AGREEMENT_HELP}
+    elif not 0 < p <= 10:
+        return {"error": f"A {p:g}% fee looks off -- check it and resend.\n" + BUYER_AGREEMENT_HELP}
+    if not 1 <= d <= 365:
+        return {"error": "The agreement term should be between 1 and 365 days.\n" + BUYER_AGREEMENT_HELP}
+    return {"buyer": name.title() if name.islower() or name.isupper() else name, "pct": p, "amount": amount,
+            "days": d, "relationship": rel}
+
+
+def fill_buyer_agreement(parsed: dict, agent: dict = None, today: date = None) -> str:
+    """Fill the BC60 Exclusive Right-to-Buy: parties, Listing Period, and the
+    §7.1.1 Success Fee as the agent stated it. Left for the agent and buyer:
+    §2.1/2.2 firm type, §3.4 property, §7.3 who pays (blank means §7.3.1
+    applies, per the form), and signatures."""
+    today = today or datetime.now().date()
+    agent = agent or {}
+    values = {
+        "Date": f"{today:%m/%d/%Y}",
+        "Buyer": parsed["buyer"],
+        "Brokerage Firm": agent.get("brokerage") or "",
+        "Broker": agent.get("name") or "",
+        "Listing Period Starts": f"{today:%m/%d/%Y}",
+        "Listing Period Ends": f"{today + timedelta(days=parsed['days']):%m/%d/%Y}",
+        "7.1.1.1 Percentage": f"{parsed['pct']:g}" if parsed.get("pct") else "",
+        "7.1.1.1 Amount": f"{parsed['amount']:,.2f}" if parsed.get("amount") else "",
+    }
+    checks = {"7.1.1 Checkbox"}
+    rel_box = {"agency": "Buyer Agency", "tb": "Transaction Brokerage"}.get(parsed.get("relationship"))
+    if rel_box:
+        checks.add(rel_box)
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    doc = fitz.open(BC60_TEMPLATE_PATH)
+    for page in doc:
+        for w in page.widgets():
+            if w.field_name in values and values[w.field_name]:
+                w.field_value = values[w.field_name]
+                w.update()
+            elif w.field_name in checks:
+                w.field_value = w.on_state()
+                w.update()
+    safe = "".join(ch for ch in parsed["buyer"] if ch.isalnum())[:30]
+    f, out_path = open_unique_output(OUTPUT_DIR, f"BC60_{safe}")
+    with f:
+        f.write(doc.tobytes(garbage=3, deflate=True))
+    doc.close()
+    return out_path
