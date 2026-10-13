@@ -198,7 +198,7 @@ _BOT_UA_RE = re.compile(
 
 _MOBILE_UA_RE = re.compile(r"Mobi|Android|iPhone|iPad|iPod", re.I)
 _ENGAGEMENT_TYPES = ("js_ok", "hero_cta", "hero_sample", "dropzone_seen", "stay_10s", "stay_60s",
-                     "role_shown", "role_dismissed", "brokers_audit_cta", "brokers_email_cta", "brokers_plan_cta", "records_brokers_cta", "guide_check_cta", "guide_brokers_cta", "path_self_cta", "path_walkthrough_cta", "path_brokerage_cta", "guide_card_cta", "support_email_cta", "pricing_audit_cta", "tc_copy_agent_msg", "state_toggle_tx", "state_toggle_co") + tuple("role_" + r for r in _VISITOR_ROLES)
+                     "role_shown", "role_dismissed", "brokers_audit_cta", "brokers_email_cta", "brokers_plan_cta", "records_brokers_cta", "guide_check_cta", "guide_brokers_cta", "path_self_cta", "path_walkthrough_cta", "path_brokerage_cta", "guide_card_cta", "support_email_cta", "pricing_audit_cta", "tc_copy_agent_msg", "state_toggle_tx", "state_toggle_co", "states_tx_check", "states_tx_hub", "states_co_check", "states_co_hub", "states_request") + tuple("role_" + r for r in _VISITOR_ROLES)
 
 # Tiny, cookie-less-of-its-own beacon script appended to every page that
 # track_page_view() logs. Elements opt in with data-evt="<type>" for clicks;
@@ -971,6 +971,12 @@ def index():
     /* Steps */
     .steps { max-width: 1000px; margin: 0 auto; padding: 4.5rem 2rem; border-top: 1px solid var(--border); }
     .steps-header { text-align: center; margin-bottom: 3rem; }
+    .state-card { display: flex; flex-direction: column; }
+    .state-badge { align-self: flex-start; font-size: 0.68rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; border-radius: 999px; padding: 0.25rem 0.65rem; margin-bottom: 0.7rem; }
+    .state-badge.live { background: #E7F3F1; color: #0a3f3a; }
+    .state-badge.soon { background: #fff3cf; color: #8a5a00; }
+    .state-links { margin-top: auto; padding-top: 0.75rem; font-size: 0.85rem; font-weight: 600; }
+    .state-links a { color: var(--accent-dark); text-decoration: underline; text-underline-offset: 2px; }
     .steps-kicker { font-size: 0.7rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase;
       letter-spacing: 0.07em; margin-bottom: 0.6rem; }
     .steps-header h2 { font-size: 2rem; font-weight: 800; margin: 0 0 0.5rem; letter-spacing: -0.02em; line-height: 1.15; }
@@ -1513,6 +1519,34 @@ def index():
         <h3>Forward a file</h3>
         <p>Send a filled <span data-state="tx">TREC 20-19</span><span data-state="co">CBS1</span> from your inbox and get the report back by email.</p>
         <a href="mailto:tc@check.txtanoffer.com">tc@check.txtanoffer.com</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="steps" id="states" style="border-top:none;padding-top:1rem;padding-bottom:2.5rem;">
+    <div class="steps-header" style="margin-bottom:1.75rem;">
+      <div class="steps-kicker">State by state</div>
+      <h2>Where TxtAnOffer works</h2>
+      <p>Built one state at a time, on each state&rsquo;s own commission-approved contract forms.</p>
+    </div>
+    <div class="steps-grid">
+      <div class="step-card state-card">
+        <span class="state-badge live">Live</span>
+        <h3>Texas</h3>
+        <p>TREC 20-19 contract, plus the 39-11 amendment and 40-11 / 41-3 addenda &mdash; TC Check and text-to-offer drafts.</p>
+        <p class="state-links"><a href="/tc-check?state=tx" data-evt="states_tx_check">Check a TREC 20-19</a> &middot; <a href="/tc-hub" data-evt="states_tx_hub">Texas TC Hub</a></p>
+      </div>
+      <div class="step-card state-card">
+        <span class="state-badge live">Live</span>
+        <h3>Colorado</h3>
+        <p>CBS1 contract, plus the Amend/Extend, Counterproposal, Inspection Objection Notice and Exclusive Right-to-Buy &mdash; TC Check and text-to-offer drafts.</p>
+        <p class="state-links"><a href="/tc-check?state=co" data-evt="states_co_check">Check a CBS1</a> &middot; <a href="/tc-hub/colorado" data-evt="states_co_hub">Colorado TC Hub</a></p>
+      </div>
+      <div class="step-card state-card">
+        <span class="state-badge soon">Coming soon</span>
+        <h3>Wisconsin &amp; Utah</h3>
+        <p>Next on the list: Wisconsin&rsquo;s WB-11 Residential Offer to Purchase and Utah&rsquo;s Real Estate Purchase Contract (REPC) &mdash; both state-approved forms. No date yet.</p>
+        <p class="state-links">Your state next? <a href="mailto:support@txtanoffer.com?subject=Add%20my%20state" data-evt="states_request">Tell us which contract your agents use</a></p>
       </div>
     </div>
   </section>
@@ -8496,6 +8530,7 @@ def tc_hub():
   <div class="page-header">
     <h1>Texas TC Hub</h1>
     <p>Practical transaction-coordination resources for Texas -- TREC form references, file-review checklists, and what actually goes wrong on real closing files.</p>
+    <p style="font-size:0.82rem;margin-top:0.5rem;">Working in Colorado? <a href="/tc-hub/colorado" style="color:var(--accent-dark);text-decoration:underline;">Colorado TC Hub &rarr;</a></p>
   </div>
 
   <div class="hub-nav">
@@ -8668,6 +8703,21 @@ function downloadHubChecklist(){
 </body>
 </html>"""
     return html
+
+
+@app.route("/tc-hub/colorado")
+def tc_hub_colorado():
+    """Colorado TC Hub -- same page shell as /tc-hub (head, styles, nav),
+    Colorado body from co_hub.py."""
+    import co_hub
+    shell = tc_hub()
+    head = shell[:shell.index('<div class="container">')]
+    head = head.replace("<title>Texas TC Hub — TxtAnOffer</title>", "<title>Colorado TC Hub — TxtAnOffer</title>")
+    head = head.replace(
+        '<meta name="description" content="Free reference material for Texas transaction coordinators: TREC form guides, file-review checklists, and the most common mistakes found across real audited closing files.">',
+        '<meta name="description" content="Free reference material for Colorado transaction coordinators: Colorado Real Estate Commission forms (CBS1, Amend/Extend, Counterproposal, Exclusive Right-to-Buy), deadline-table checklists and the 2026 changes including HB26-1426.">')
+    head = head.replace('<a href="/tc-check" class="nav-cta">', '<a href="/tc-check?state=co" class="nav-cta">')
+    return head + co_hub.body()
 
 
 @app.route("/about")
@@ -12114,7 +12164,7 @@ def wins_page():
 # Public pages search engines should index. Signed/private routes (/review,
 # /offers, /transaction, /broker/dashboard, /admin, /analytics) are left out
 # on purpose and disallowed in robots.txt.
-_SITEMAP_PATHS = ["/", "/tc-check", "/brokers", "/pricing", "/trec-changes", "/tc-hub",
+_SITEMAP_PATHS = ["/", "/tc-check", "/brokers", "/pricing", "/trec-changes", "/tc-hub", "/tc-hub/colorado",
                   "/tc-check/bulk", "/tc-check/compare", "/playground", "/faq", "/about",
                   "/contact", "/privacy", "/terms", "/guides",
                   "/guides/trec-20-19-checklist", "/guides/trec-20-19-effective-date",
