@@ -692,15 +692,15 @@ def index():
     .sl-hero-note svg { width: 16px; height: 16px; color: #f5c242; flex-shrink: 0; }
     /* Visual: contract scrap + report card */
     .hx-visual { position: relative; min-height: 730px; }
-    .hx-paper { position: absolute; left: 0; top: 0; width: 390px; z-index: 1; background: #fdfcf8; color: #222; border-radius: 4px; padding: 22px 24px 26px;
+    .hx-paper { position: absolute; left: 0; top: 0; width: 390px; z-index: 1; background: #fdfcf8; color: #222; border-radius: 4px; padding: 22px 24px 44px;
       transform: rotate(-4deg); box-shadow: 0 30px 60px -20px rgba(0,0,0,.55); font-family: 'Times New Roman', Georgia, serif; font-size: 13.5px; line-height: 1.5; }
     .hx-paper .ph { font-family: 'Inter', sans-serif; font-size: 10px; letter-spacing: .06em; color: #757575; text-transform: uppercase; margin-bottom: 10px; display: flex; justify-content: space-between; gap: 8px; }
     .hx-paper .row { display: flex; justify-content: space-between; gap: 12px; padding: 3px 0; border-bottom: 1px dotted #bbb; }
     .hx-paper .row span:last-child { font-family: 'Courier New', monospace; font-weight: 700; color: #1a3fa6; white-space: nowrap; }
     .hx-paper .circ { position: relative; }
     .hx-paper .circ svg { position: absolute; left: -14px; top: -10px; width: calc(100% + 28px); height: calc(100% + 20px); overflow: visible; }
-    .hx-paper .scrawl { font-family: 'Caveat', cursive; color: #dc2626; font-size: 24px; position: absolute; right: 16px; bottom: -8px; transform: rotate(-6deg); }
-    .hx-card { position: absolute; right: 0; top: 182px; width: 420px; z-index: 2; background: #fff; color: #0f1f2f; border-radius: 16px; overflow: hidden; cursor: pointer; text-align: left;
+    .hx-paper .scrawl { font-family: 'Caveat', cursive; color: #dc2626; font-size: 24px; position: absolute; right: 16px; bottom: 6px; transform: rotate(-6deg); }
+    .hx-card { position: absolute; right: 0; top: 212px; width: 420px; z-index: 2; background: #fff; color: #0f1f2f; border-radius: 16px; overflow: hidden; cursor: pointer; text-align: left;
       box-shadow: 0 40px 80px -24px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.06); }
     .hx-card:focus-visible { outline: 3px solid #f5c242; outline-offset: 3px; }
     .hx-card-head { background: #0a3f3a; display: flex; justify-content: space-between; align-items: center; padding: 12px 18px; }
@@ -732,7 +732,7 @@ def index():
     .hx-it span { display: block; font-size: 12.5px; color: #5b6b78; line-height: 1.45; margin-top: 1px; }
     .hx-more { font-size: 12.5px; font-weight: 600; color: #0b5d52; padding: 10px 18px 12px; border-top: 1px solid #eef0f2; }
     .hx-caption { background: #f6f8f9; border-top: 1px solid #eef0f2; padding: 9px 18px; font-size: 11px; color: #5f707f; line-height: 1.4; }
-    html.state-co .hx-card { top: 222px; } html.state-co .hx-visual { min-height: 760px; }
+    html.state-co .hx-card { top: 252px; } html.state-co .hx-visual { min-height: 790px; }
     @media (max-width: 1080px) and (min-width: 901px) {
       .hx-paper { width: 340px; } .hx-card { width: 380px; }
     }
@@ -744,10 +744,10 @@ def index():
       .sl-hero-actions .sl-cta { width: 100%; justify-content: center; }
       .sl-hero-note { font-size: 0.82rem; gap: 0.5rem 1rem; margin-top: 1.1rem; }
       .hx-visual, html.state-co .hx-visual { min-height: 0; display: flex; flex-direction: column; align-items: stretch; }
-      .hx-paper { position: relative; width: 92%; font-size: 12.5px; padding: 14px 16px 26px; transform: rotate(-2.5deg); margin-left: 2px; }
+      .hx-paper { position: relative; width: 92%; font-size: 12.5px; padding: 14px 16px 26px; transform: rotate(-2.5deg); margin-left: 2px; padding-bottom: 40px; }
       .hx-paper .hide-sm { display: none; }
-      .hx-paper .scrawl { font-size: 21px; right: 10px; bottom: -4px; }
-      .hx-card, html.state-co .hx-card { position: relative; top: -6px; width: 100%; }
+      .hx-paper .scrawl { font-size: 21px; right: 10px; bottom: 6px; }
+      .hx-card, html.state-co .hx-card { position: relative; top: -2px; width: 100%; }
     }
     /* Calm still-life rows (image on cream + plain headline + outlined button) */
     .sl-row { display: grid; grid-template-columns: 1fr 1fr; gap: 2.5rem; align-items: center; margin: 0 0 2.25rem; text-align: left; }
