@@ -424,7 +424,7 @@ def index():
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TxtAnOffer — Catch What Title Kicks Back</title>
-  <meta name="description" content="Built for Texas managing brokers and transaction coordinators: drop a filled TREC 20-19 (and its 40-11 addendum) and see what's missing or inconsistent before title kicks it back. TxtAnOffer also drafts new offers by text message in 10 seconds.">
+  <meta name="description" content="Built for Texas managing brokers and transaction coordinators: drop a filled TREC 20-19 (and its 40-11 addendum) and see what's missing or inconsistent before title kicks it back. TxtAnOffer also drafts new offers by text message in 10 seconds. Now also for Colorado's CBS1.">
   <meta property="og:title" content="TxtAnOffer — Catch What Title Kicks Back">
   <meta property="og:description" content="Drop a filled TREC 20-19 and see what's missing or inconsistent before title kicks it back &mdash; blank dates, missing initials, mismatched checkboxes.">
   <meta property="og:url" content="https://txtanoffer.com/">
@@ -886,6 +886,7 @@ def index():
     @media (min-width: 701px) {
       #records .steps-grid { grid-template-columns: repeat(2, 1fr); max-width: 760px; margin: 0 auto; }
       #why .steps-grid { grid-template-columns: repeat(2, 1fr); max-width: 760px; margin: 0 auto; }
+      #colorado .steps-grid { grid-template-columns: repeat(2, 1fr); max-width: 760px; margin: 0 auto; }
     }
     .why-icon { width: 44px; height: 44px; color: var(--text); display: block; margin: 0 0 0.9rem; }
     .step-card {
@@ -1116,7 +1117,7 @@ def index():
         <div class="dz-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 13v8"/><path d="m8 17 4-4 4 4"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg></div>
         <div class="dz-title"><span class="dz-mouse">Drop your contract PDF here</span><span class="dz-touch">Choose your contract PDF</span></div>
         <div class="dz-sub"><span class="dz-mouse">or <u>click to browse</u></span><span class="dz-touch"><u>Tap to browse files</u></span></div>
-        <div class="dz-meta">PDF only &middot; TREC 20-19, with or without the 40-11 addendum</div>
+        <div class="dz-meta">PDF only &middot; TREC 20-19, with or without the 40-11 addendum &middot; or a Colorado CBS1</div>
       </div>
       <input type="file" id="homeFileInput" accept="application/pdf">
       <div class="dz-trust">
@@ -1142,6 +1143,27 @@ def index():
       <div><div class="stat-num">__TC_STAT1_NUM__</div><div class="stat-label">__TC_STAT1_LABEL__</div></div>
       <div><div class="stat-num">__TC_STAT2_NUM__</div><div class="stat-label">__TC_STAT2_LABEL__</div></div>
       <div><div class="stat-num">__TC_STAT3_NUM__</div><div class="stat-label">__TC_STAT3_LABEL__</div></div>
+    </div>
+  </section>
+
+  <section class="steps" id="colorado" style="border-top:none;padding-top:2.5rem;padding-bottom:0.5rem;">
+    <div class="steps-header" style="margin-bottom:1.75rem;">
+      <div class="steps-kicker">New &middot; Colorado</div>
+      <h2>Working a Colorado deal? The CBS1 works here too.</h2>
+      <p>TC Check and text-in drafting now handle the Colorado Real Estate Commission&rsquo;s Contract to Buy and Sell Real Estate (Residential), the version mandatory since January 1, 2026.</p>
+    </div>
+    <div class="steps-grid">
+      <div class="step-card" style="display:flex;flex-direction:column;">
+        <h3>Check a filled CBS1</h3>
+        <p>In Colorado, a blank deadline deletes that contingency (&sect;3.2). TC Check flags a financed deal with no loan deadline, a blank inspection objection date, &sect;4.1 price math that doesn&rsquo;t add up, deadlines out of order or after closing, and a closing set on a weekend or holiday.</p>
+        <a class="path-btn solid" href="/tc-check#colorado" data-evt="co_check_cta" style="margin-top:1.1rem;">Check a CBS1 free</a>
+      </div>
+      <div class="step-card">
+        <h3>Text an offer, get a CBS1 draft</h3>
+        <p>Text the price, down payment, days to close and a Colorado address &mdash; for example <strong>500k 20% 30day 123 Main St, Denver, CO</strong>. You get back a filled CBS1 with a standard deadline schedule on business days, for you to review and adjust before anyone signs.</p>
+        <p style="margin-top:0.6rem;font-weight:600;">Text <a href="sms:+18338970333" data-evt="co_offer_sms" style="color:var(--accent-dark);text-decoration:underline;">(833) 897-0333</a></p>
+        <p style="font-size:0.72rem;color:var(--text-dim);margin-top:0.35rem;">By texting, you agree to receive SMS replies about your offers. Reply STOP to opt out, HELP for help. Msg &amp; data rates may apply. <a href="/privacy" style="color:inherit;text-decoration:underline;">Privacy</a> &middot; <a href="/terms" style="color:inherit;text-decoration:underline;">Terms</a></p>
+      </div>
     </div>
   </section>
 
@@ -1396,7 +1418,7 @@ def index():
   <footer class="footer">
     <div class="trust-badges">
       <span class="trust-badge">Checked, then deleted</span>
-      <span class="trust-badge">Made for Texas TREC forms</span>
+      <span class="trust-badge">Made for Texas TREC &amp; Colorado CBS1 forms</span>
       <span class="trust-badge">Billing by Stripe</span>
     </div>
     <div class="footer-links">
@@ -1419,7 +1441,7 @@ def index():
       <a href="https://www.linkedin.com/company/143677963/" target="_blank" rel="noopener" aria-label="Follow TxtAnOffer on LinkedIn" data-evt="footer_linkedin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="2.5" width="19" height="19" rx="3"/><path d="M7.5 10.5v6"/><circle cx="7.5" cy="7.5" r="0.6" fill="currentColor"/><path d="M11.5 16.5v-6"/><path d="M11.5 13.2c0-1.6 1-2.7 2.5-2.7s2.5 1 2.5 2.7v3.3"/></svg>Follow on LinkedIn</a>
     </div>
     <div class="footer-copy">
-      &copy; 2026 TxtAnOffer &middot; Texas, United States &middot; Not affiliated with TREC
+      &copy; 2026 TxtAnOffer &middot; Texas, United States &middot; Not affiliated with TREC or the Colorado Real Estate Commission
     </div>
   </footer>
 
@@ -1819,9 +1841,9 @@ def validate_address(address: str, raw_text: str = None) -> dict:
             return result
         result["other_state"] = other_state_display
         result["reason"] = (
-            f"This address looks like it's in {other_state_display}, not Texas. "
-            f"TxtAnOffer only generates Texas TREC contracts -- we can't produce a "
-            f"legally valid contract for a property outside Texas."
+            f"This address looks like it's in {other_state_display}. "
+            f"TxtAnOffer only generates Texas TREC and Colorado CBS1 contracts -- we can't produce a "
+            f"legally valid contract for a property in another state."
         )
         return result
 
@@ -1959,8 +1981,8 @@ def other_state_block_message(source_id: str, address: str, other_state: str) ->
     support WAITLIST capture since there's no real phone to notify later."""
     track_event("blocked_other_state", source_id, {"state": other_state, "address": address})
     return (
-        f"This looks like it's in {other_state}, not Texas. TxtAnOffer "
-        f"currently only supports Texas. Want to know when we launch in "
+        f"This looks like it's in {other_state}. TxtAnOffer "
+        f"currently supports Texas and Colorado. Want to know when we launch in "
         f"{other_state}? Reply WAITLIST to join the list."
     )
 
@@ -3830,7 +3852,7 @@ def tc_check_page():
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TC File Check — TxtAnOffer</title>
-<meta name="description" content="Drop a filled TREC 20-19 PDF and see what's missing before title kicks it back.">
+<meta name="description" content="Drop a filled TREC 20-19 or Colorado CBS1 PDF and see what's missing before title kicks it back.">
 <link rel="icon" href="/static/favicon.ico?v=2" type="image/x-icon">
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <style>
@@ -3979,13 +4001,13 @@ border-radius:var(--radius-sm);font-family:inherit;font-size:0.85rem;font-weight
 </nav>
 <div class="container">
 <h1>TC File Check</h1>
-<p class="subtitle">Drop a filled TREC 20-19 PDF. We'll tell you what's missing before title kicks it back.</p>
+<p class="subtitle">Drop a filled TREC 20-19 or Colorado CBS1 PDF. We'll tell you what's missing before title kicks it back.</p>
 <div class="card">
 <div class="drop-zone" id="dropZone">
 <div class="dz-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 13v8"/><path d="m8 17 4-4 4 4"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg></div>
 <div class="dz-title"><span class="dz-mouse">Drop your contract PDF here</span><span class="dz-touch">Choose your contract PDF</span></div>
 <div class="dz-sub"><span class="dz-mouse">or <u>click to browse</u></span><span class="dz-touch"><u>Tap to browse files</u></span></div>
-<div class="dz-meta">Fillable TREC 20-19 PDF &middot; not scanned or flattened files</div>
+<div class="dz-meta">Fillable TREC 20-19 or Colorado CBS1 PDF &middot; not scanned or flattened files</div>
 </div>
 <input type="file" id="fileInput" accept="application/pdf">
 <div class="dz-trust">
@@ -4010,7 +4032,7 @@ border-radius:var(--radius-sm);font-family:inherit;font-size:0.85rem;font-weight
 <div class="result" id="result"></div>
 </div>
 <div class="scope-card">
-<h3>What this checks</h3>
+<h3>What this checks &middot; Texas TREC 20-19</h3>
 <div class="scope-grid">
 <ul>
 <li>Property address, county &mdash; and the address header on every page</li>
@@ -4036,6 +4058,31 @@ border-radius:var(--radius-sm);font-family:inherit;font-size:0.85rem;font-weight
 <p class="scope-footnote">Comparing an original against a later version? <a href="/tc-check/compare" style="color:var(--accent);font-weight:700;text-decoration:underline;text-underline-offset:2px;">See exactly what changed &rarr;</a></p>
 <p class="scope-footnote">Auditing a whole closed-file archive? <a href="/tc-check/bulk" style="color:var(--accent);font-weight:700;text-decoration:underline;text-underline-offset:2px;">Bulk-check up to 20 files free (200 with a Brokerage join code) &rarr;</a></p>
 <p class="scope-footnote">Want checklists and TREC form references instead? <a href="/tc-hub" style="color:var(--accent);font-weight:700;text-decoration:underline;text-underline-offset:2px;">Visit the free TC Hub &rarr;</a></p>
+</div>
+<div class="scope-card" id="colorado">
+<h3>What this checks &middot; Colorado CBS1 (2026)</h3>
+<div class="scope-grid">
+<ul>
+<li>Property street, city, county &mdash; and that the state is Colorado</li>
+<li>Buyer &amp; Seller names, contract date</li>
+<li>&sect;4.1 price table: Earnest Money + loan + Cash at Closing = Purchase Price, and both TOTAL lines</li>
+<li>Earnest Money amount and Earnest Money Holder</li>
+<li>Loan amount vs. loan type checked (&sect;4.5.3), and Available Funds (&sect;4.4.3)</li>
+<li>Blank or N/A deadlines that delete a contingency under &sect;3.2: loan, appraisal, inspection, title objection</li>
+<li>&sect;3.1 deadlines out of order (delivery &rarr; objection &rarr; resolution) or after the Closing Date</li>
+<li>Closing Date blank, on a weekend, or on a federal or Colorado holiday</li>
+<li>Possession before closing, Acceptance Deadline after closing</li>
+<li>Both boxes checked where only one applies, and two payers on one &sect;15 fee</li>
+<li>&sect;29 compensation lines checked with no % or $</li>
+<li>Lead-based paint deadlines left blank</li>
+</ul>
+<ul class="not-checked">
+<li>Signatures</li>
+<li>Foreclosure CBS (CBSF1), counterproposals, amend/extend and other Colorado forms</li>
+<li>Scanned or flattened PDFs</li>
+</ul>
+</div>
+<p class="scope-footnote">Checked against the Colorado Real Estate Commission&rsquo;s published CBS1 (mandatory since January 1, 2026), field by field. Flags likely issues; not legal advice. Not affiliated with the Colorado Real Estate Commission.</p>
 </div>
 </div>
 <script>
