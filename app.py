@@ -198,7 +198,7 @@ _BOT_UA_RE = re.compile(
 
 _MOBILE_UA_RE = re.compile(r"Mobi|Android|iPhone|iPad|iPod", re.I)
 _ENGAGEMENT_TYPES = ("js_ok", "hero_cta", "hero_sample", "dropzone_seen", "stay_10s", "stay_60s",
-                     "role_shown", "role_dismissed", "brokers_audit_cta", "brokers_email_cta", "brokers_plan_cta", "records_brokers_cta", "guide_check_cta", "guide_brokers_cta", "path_self_cta", "path_walkthrough_cta", "path_brokerage_cta", "guide_card_cta", "support_email_cta", "pricing_audit_cta", "tc_copy_agent_msg") + tuple("role_" + r for r in _VISITOR_ROLES)
+                     "role_shown", "role_dismissed", "brokers_audit_cta", "brokers_email_cta", "brokers_plan_cta", "records_brokers_cta", "guide_check_cta", "guide_brokers_cta", "path_self_cta", "path_walkthrough_cta", "path_brokerage_cta", "guide_card_cta", "support_email_cta", "pricing_audit_cta", "tc_copy_agent_msg", "state_toggle_tx", "state_toggle_co") + tuple("role_" + r for r in _VISITOR_ROLES)
 
 # Tiny, cookie-less-of-its-own beacon script appended to every page that
 # track_page_view() logs. Elements opt in with data-evt="<type>" for clicks;
@@ -415,16 +415,92 @@ def verify_thread_action(filename, action, expires_str, sig):
     return hmac.compare_digest(sig or "", sign_thread_action(filename, action, expires))
 
 
+# --- Texas / Colorado site mode -------------------------------------------
+# The homepage and /tc-check render BOTH states' copy (data-state="tx"/"co"
+# blocks) and a class on <html> hides the inactive one -- so crawlers see
+# both and a visitor never sees the wrong state flash in before JS runs.
+# Texas is the default. On <html>, not <body>: track_page_view() injects
+# data-page by replacing the literal "<body>" tag.
+_SITE_STATES = ("tx", "co")
+
+
+def _is_co_src(src):
+    # co1012_..., co_..., li_co_... -- not any word that happens to start
+    # with "co" (cold_*, comedy_*, contact_*).
+    return bool(re.match(r"^(co\d|co_|li_co)", (src or "").lower()))
+
+
+def _site_state():
+    """Which state a page renders first: ?state= wins, then a Colorado
+    campaign src tag on this link (co1012_..., li_co_...), then the
+    ta_state cookie the switch sets, then a Colorado first-touch ta_src
+    cookie. Anything else is Texas."""
+    q = (request.args.get("state") or "").lower()
+    if q in _SITE_STATES:
+        return q
+    if _is_co_src(request.args.get("src")):
+        return "co"
+    c = (request.cookies.get("ta_state") or "").lower()
+    if c in _SITE_STATES:
+        return c
+    return "co" if _is_co_src(request.cookies.get("ta_src")) else "tx"
+
+
+def _apply_site_state(html, state):
+    pressed = {"tx": "false", "co": "false", state: "true"}
+    return (html.replace("__STATE_CLASS__", "state-" + state)
+                .replace("__TX_PRESSED__", pressed["tx"])
+                .replace("__CO_PRESSED__", pressed["co"]))
+
+
+def _remember_site_state(resp, state):
+    """An explicit ?state= or a Colorado ?src= link is remembered, so the
+    visitor's next click (nav, /tc-check) stays in the same state. Toggling
+    the switch sets the same cookie from JS."""
+    if (request.args.get("state") or "").lower() in _SITE_STATES or _is_co_src(request.args.get("src")):
+        resp.set_cookie("ta_state", state, max_age=365 * 24 * 3600, samesite="Lax")
+
+
+# Same switch markup on both pages; light = the white-card variant.
+STATE_SWITCH_JS = """<script>
+(function(){
+  var root = document.documentElement;
+  window.taState = function(){ return root.classList.contains('state-co') ? 'co' : 'tx'; };
+  function setState(s){
+    if(s !== 'tx' && s !== 'co') return;
+    root.classList.remove('state-tx', 'state-co');
+    root.classList.add('state-' + s);
+    document.querySelectorAll('[data-set-state]').forEach(function(b){
+      b.setAttribute('aria-pressed', b.getAttribute('data-set-state') === s ? 'true' : 'false');
+    });
+    try{ document.cookie = 'ta_state=' + s + '; max-age=31536000; path=/; SameSite=Lax' + (location.protocol === 'https:' ? '; Secure' : ''); }catch(e){}
+    try{
+      var u = new URL(location.href);
+      if(s === 'co') u.searchParams.set('state', 'co'); else u.searchParams.delete('state');
+      history.replaceState(history.state, '', u.pathname + u.search + u.hash);
+    }catch(e){}
+    try{ document.dispatchEvent(new CustomEvent('ta:state', {detail: s})); }catch(e){}
+  }
+  document.addEventListener('click', function(e){
+    var b = e.target.closest && e.target.closest('[data-set-state]');
+    if(b) setState(b.getAttribute('data-set-state'));
+  });
+  // Old links to the removed homepage #colorado section, and /tc-check#colorado.
+  if(location.hash === '#colorado' && window.taState() !== 'co') setState('co');
+})();
+</script>"""
+
+
 @app.route("/")
 def index():
     html = """
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="__STATE_CLASS__">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TxtAnOffer — Catch What Title Kicks Back</title>
-  <meta name="description" content="Built for Texas managing brokers and transaction coordinators: drop a filled TREC 20-19 (and its 40-11 addendum) and see what's missing or inconsistent before title kicks it back. TxtAnOffer also drafts new offers by text message in 10 seconds. Now also for Colorado's CBS1.">
+  <meta name="description" content="For transaction coordinators and managing brokers in Texas and Colorado: drop a filled TREC 20-19 or CBS1 and see what's missing or inconsistent before title kicks it back. TxtAnOffer also drafts new offers by text message.">
   <meta property="og:title" content="TxtAnOffer — Catch What Title Kicks Back">
   <meta property="og:description" content="Drop a filled TREC 20-19 or Colorado CBS1 and see what's missing or inconsistent before title kicks it back &mdash; blank dates, missing initials, mismatched checkboxes.">
   <meta property="og:url" content="https://txtanoffer.com/">
@@ -550,8 +626,26 @@ def index():
     .sl-hero { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); min-height: 470px; position: relative; z-index: 1; }
     .sl-hero-panel { background: #0a3f3a; color: #fff; padding: 3.5rem 3rem 3.5rem max(2rem, calc((100vw - 1100px) / 2)); display: flex; flex-direction: column; justify-content: center; }
     .sl-hero-panel h1 { font-family: 'Source Serif 4', Georgia, 'Times New Roman', serif; font-weight: 600; font-size: 2.45rem; line-height: 1.14; letter-spacing: -0.01em; color: #fff; margin: 0; max-width: 30rem; }
-    .sl-hero-states { display: flex; flex-wrap: wrap; gap: 0.45rem; margin: 0 0 1rem; }
-    .sl-hero-states span { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #0a3f3a; background: #f5c242; border-radius: 999px; padding: 0.28rem 0.7rem; }
+    /* Texas | Colorado switch. Both states' copy is server-rendered (crawlers
+       see both); the class on <html> -- set server-side from ?state=, the
+       ta_state cookie or a co* src tag, see _site_state() -- hides the
+       inactive one, so there's no flash of the wrong state before JS runs.
+       !important because some swapped cards carry an inline display. */
+    html.state-tx [data-state="co"], html.state-co [data-state="tx"] { display: none !important; }
+    .state-switch { display: inline-flex; gap: 0.2rem; padding: 0.22rem; margin: 0 0 1.1rem; border-radius: 999px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.22); width: fit-content; max-width: 100%; }
+    .state-switch button { appearance: none; -webkit-appearance: none; border: 0; background: transparent; color: rgba(255,255,255,0.88); font: inherit; font-size: 0.88rem; font-weight: 700; line-height: 1.2; padding: 0.42rem 0.95rem; border-radius: 999px; cursor: pointer; display: inline-flex; align-items: baseline; gap: 0.4rem; white-space: nowrap; transition: background 0.15s ease, color 0.15s ease; }
+    .state-switch button small { font-size: 0.68rem; font-weight: 600; letter-spacing: 0.03em; opacity: 0.75; }
+    .state-switch button:hover { color: #fff; background: rgba(255,255,255,0.1); }
+    .state-switch button[aria-pressed="true"] { background: #f5c242; color: #0a3f3a; }
+    .state-switch button[aria-pressed="true"] small { opacity: 0.85; }
+    .state-switch button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+    /* Light variant, on the white check card */
+    .state-switch.light { background: #eef1f3; border-color: rgba(15,31,47,0.08); margin: 0 auto 1rem; }
+    .state-switch.light button { color: var(--text-muted); }
+    .state-switch.light button:hover { color: var(--text); background: rgba(15,31,47,0.05); }
+    .state-switch.light button[aria-pressed="true"] { background: #0b5d52; color: #fff; }
+    .state-switch.light button:focus-visible { outline-color: #0b5d52; }
+    .state-switch-row { display: flex; justify-content: center; }
     .sl-hero-panel p { margin: 1.15rem 0 0; color: rgba(255,255,255,0.86); font-size: 1.02rem; line-height: 1.6; max-width: 27rem; }
     .sl-cta { display: inline-block; margin-top: 1.75rem; background: #f5c242; color: #0f1f2f; font-weight: 700; font-size: 1rem; padding: 0.95rem 1.6rem; border-radius: 4px; text-decoration: none; width: fit-content; transition: background 0.18s ease; }
     .sl-cta:hover { background: #ffd25e; }
@@ -1093,12 +1187,17 @@ def index():
     });
   })();
   </script>
+  __STATE_SWITCH_JS__
 
   <section class="sl-hero">
     <div class="sl-hero-panel">
-      <div class="sl-hero-states"><span>Texas &middot; TREC 20-19</span><span>Colorado &middot; CBS1</span></div>
-      <h1>Texas or Colorado: catch what title kicks back &mdash; before you send the file.</h1>
-      <p>Drop a filled TREC 20-19 or Colorado CBS1 and see what title would kick back in seconds &mdash; blank dates, price math that doesn&rsquo;t add up, missing initials on a TREC, and Colorado deadlines left blank that delete a contingency.</p>
+      <div class="state-switch" role="group" aria-label="Which state's contract">
+        <button type="button" data-set-state="tx" aria-pressed="__TX_PRESSED__" data-evt="state_toggle_tx">Texas <small>TREC 20-19</small></button>
+        <button type="button" data-set-state="co" aria-pressed="__CO_PRESSED__" data-evt="state_toggle_co">Colorado <small>CBS1</small></button>
+      </div>
+      <h1>Catch what title kicks back &mdash; before you send the file.</h1>
+      <p data-state="tx">Drop a filled TREC 20-19 and see what title would kick back in seconds &mdash; blank dates, missing initials, mismatched checkboxes.</p>
+      <p data-state="co">Drop a filled CBS1 and see what title would kick back in seconds &mdash; &sect;3.1 deadlines left blank that delete a contingency, &sect;4.1 price math that doesn&rsquo;t add up, deadlines that land after closing.</p>
       <div class="sl-hero-actions">
         <a class="sl-cta" href="#check" data-evt="hero_cta">Check a file free</a>
         <button type="button" class="sl-cta-secondary" id="heroSampleBtn" data-evt="hero_sample">See a sample report &rarr;</button>
@@ -1111,16 +1210,20 @@ def index():
 
   <div class="main">
   <section class="hero section" id="check">
-    <h2 class="check-title">Drop a TREC <span class="nw">20-19</span> or a Colorado <span class="nw">CBS1.</span> See exactly what&rsquo;s missing.</h2>
+    <h2 class="check-title"><span data-state="tx">Drop a TREC <span class="nw">20-19.</span></span><span data-state="co">Drop a <span class="nw">CBS1.</span></span> See exactly what&rsquo;s missing.</h2>
     <p style="font-size:0.85rem;color:var(--accent-dark);font-weight:600;margin-top:0.6rem;">Built to help TCs catch what's missing &mdash; not to replace what you do.</p>
 
     <div class="input-card">
+      <div class="state-switch-row"><div class="state-switch light" role="group" aria-label="Which state's contract">
+        <button type="button" data-set-state="tx" aria-pressed="__TX_PRESSED__" data-evt="state_toggle_tx">Texas <small>TREC 20-19</small></button>
+        <button type="button" data-set-state="co" aria-pressed="__CO_PRESSED__" data-evt="state_toggle_co">Colorado <small>CBS1</small></button>
+      </div></div>
       <div class="input-label">Try it now &mdash; first 3 reports need nothing, then just an email</div>
       <div class="drop-zone" id="homeDropZone">
         <div class="dz-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 13v8"/><path d="m8 17 4-4 4 4"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg></div>
         <div class="dz-title"><span class="dz-mouse">Drop your contract PDF here</span><span class="dz-touch">Choose your contract PDF</span></div>
         <div class="dz-sub"><span class="dz-mouse">or <u>click to browse</u></span><span class="dz-touch"><u>Tap to browse files</u></span></div>
-        <div class="dz-meta">PDF only &middot; TREC 20-19, with or without the 40-11 addendum &middot; or a Colorado CBS1</div>
+        <div class="dz-meta"><span data-state="tx">PDF only &middot; TREC 20-19, with or without the 40-11 addendum</span><span data-state="co">PDF only &middot; a fillable CBS1 (2026)</span></div>
       </div>
       <input type="file" id="homeFileInput" accept="application/pdf">
       <div class="dz-trust">
@@ -1131,7 +1234,7 @@ def index():
       <div class="status" id="homeStatus"></div>
       <div class="result" id="homeResult"></div>
       <button type="button" class="demo-check-btn" id="homeDemoBtn">No PDF handy? Run a sample check &rarr;</button>
-      <div class="demo-check-hint">See a real report on a sample TREC contract in 2 seconds.</div>
+      <div class="demo-check-hint"><span data-state="tx">See a real report on a sample TREC contract in 2 seconds.</span><span data-state="co">See a real report on a sample CBS1 in 2 seconds.</span></div>
       <div class="email-optin">
         <label class="email-optin-check"><input type="checkbox" id="homeEmailOptinCheckbox" checked> Email me this report + future checks for this address</label>
         <input type="email" id="homeEmailOptinInput" class="email-optin-input" placeholder="you@example.com" autocomplete="email">
@@ -1149,27 +1252,6 @@ def index():
     </div>
   </section>
 
-  <section class="steps" id="colorado" style="border-top:none;padding-top:2.5rem;padding-bottom:0.5rem;">
-    <div class="steps-header" style="margin-bottom:1.75rem;">
-      <div class="steps-kicker">New &middot; Colorado</div>
-      <h2>Working a Colorado deal? The CBS1 works here too.</h2>
-      <p>TC Check and text-in drafting now handle the Colorado Real Estate Commission&rsquo;s Contract to Buy and Sell Real Estate (Residential), the version mandatory since January 1, 2026.</p>
-    </div>
-    <div class="steps-grid">
-      <div class="step-card" style="display:flex;flex-direction:column;">
-        <h3>Check a filled CBS1</h3>
-        <p>In Colorado, a blank deadline deletes that contingency (&sect;3.2). TC Check flags a financed deal with no loan deadline, a blank inspection objection date, &sect;4.1 price math that doesn&rsquo;t add up, deadlines out of order or after closing, and a closing set on a weekend or holiday.</p>
-        <a class="path-btn solid" href="/tc-check#colorado" data-evt="co_check_cta" style="margin-top:1.1rem;">Check a CBS1 free</a>
-      </div>
-      <div class="step-card">
-        <h3>Text an offer, get a CBS1 draft</h3>
-        <p>Text the price, down payment, days to close and a Colorado address &mdash; for example <strong>500k 20% 30day 123 Main St, Denver, CO</strong>. You get back a filled CBS1 with a standard deadline schedule on business days, for you to review and adjust before anyone signs.</p>
-        <p style="margin-top:0.6rem;font-weight:600;">Text <a href="sms:+18338970333" data-evt="co_offer_sms" style="color:var(--accent-dark);text-decoration:underline;">(833) 897-0333</a></p>
-        <p style="font-size:0.72rem;color:var(--text-dim);margin-top:0.35rem;">By texting, you agree to receive SMS replies about your offers. Reply STOP to opt out, HELP for help. Msg &amp; data rates may apply. <a href="/privacy" style="color:inherit;text-decoration:underline;">Privacy</a> &middot; <a href="/terms" style="color:inherit;text-decoration:underline;">Terms</a></p>
-      </div>
-    </div>
-  </section>
-
   <section class="steps" id="why" style="border-top:none;padding-top:2.5rem;padding-bottom:0.5rem;">
     <div class="steps-header" style="margin-bottom:1.75rem;">
       <h2>Why choose TxtAnOffer?</h2>
@@ -1178,7 +1260,8 @@ def index():
       <div class="step-card">
         <svg class="why-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="15" cy="9" r="5"/><path d="M8 20v12h14v11"/><path d="M11 17c0-2 2-3 4-3s3 1 4 3l3 5h5"/><path d="M14 26h8"/><path d="M5 18v18h10"/><path d="M10 36v6"/><path d="M6 42h8"/><path d="M24 28h20"/><path d="M36 28v15"/><path d="M30 24h7l3-9"/><path d="M39 33h2M39 38h2"/></svg>
         <h3>Committed to getting every form right</h3>
-        <p>Every check is mapped field-by-field to TREC&rsquo;s published 20-19, 40-11, 41-3 and 39-11 forms, and re-verified each time TREC revises them &mdash; and in Colorado, to the Commission&rsquo;s 2026 CBS1. You can count on the same careful check on every file, so the blank Effective Date or missing initial gets caught before title sees it.</p>
+        <p data-state="tx">Every check is mapped field-by-field to TREC&rsquo;s published 20-19, 40-11, 41-3 and 39-11 forms, and re-verified each time TREC revises them. You can count on the same careful check on every file, so the blank Effective Date or missing initial gets caught before title sees it.</p>
+        <p data-state="co">Every check is mapped field-by-field to the Colorado Real Estate Commission&rsquo;s 2026 CBS1, the version mandatory since January 1, 2026. You can count on the same careful check on every file, so a blank loan or inspection deadline gets caught before it quietly deletes a contingency.</p>
       </div>
       <div class="step-card">
         <svg class="why-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m11 17 2 2a1 1 0 1 0 3-3"/><path d="m14 14 2.5 2.5a1 1 0 1 0 3-3l-3.88-3.88a3 3 0 0 0-4.24 0l-.88.88a1 1 0 1 1-3-3l2.81-2.81a5.79 5.79 0 0 1 7.06-.87l.47.28a2 2 0 0 0 1.42.25L21 4"/><path d="m21 3 1 11h-2"/><path d="M3 3 2 14l6.5 6.5a1 1 0 1 0 3-3"/><path d="M3 4h8"/></svg>
@@ -1198,7 +1281,7 @@ def index():
       <div class="step-card path-card">
         <div class="path-kicker">Do it yourself</div>
         <h3>Check a file now</h3>
-        <p>Drop one filled TREC 20-19 or Colorado CBS1 and see what title would kick back.</p>
+        <p><span data-state="tx">Drop one filled TREC 20-19</span><span data-state="co">Drop one filled CBS1</span> and see what title would kick back.</p>
         <ul><li>3 free reports, no signup</li><li>Results in seconds</li><li>The file isn&rsquo;t kept</li></ul>
         <a class="path-btn solid" href="/tc-check" data-evt="path_self_cta">Check a file free</a>
       </div>
@@ -1230,11 +1313,16 @@ def index():
       </div>
     </div>
     <ul class="tc-checklist">
-      <li><span class="tc-check">&check;</span><span><strong>Effective Date left blank</strong> &mdash; the date every other deadline counts from.</span></li>
-      <li><span class="tc-check">&check;</span><span><strong>Missing buyer or seller initials</strong> &mdash; easy to miss page-by-page, hard to fix once closed.</span></li>
-      <li><span class="tc-check">&check;</span><span><strong>40-11 addendum mismatches</strong> &mdash; loan amount or financing checkbox disagreeing with the contract.</span></li>
-      <li><span class="tc-check">&check;</span><span><strong>41-3 loan assumption gaps</strong> &mdash; addendum listed but not attached, blank rate or fee caps, assumed balance not matching 3B.</span></li>
-      <li><span class="tc-check">&check;</span><span><strong>39-11 amendment mismatches</strong> &mdash; sales price or property address disagreeing with the original contract.</span></li>
+      <li data-state="tx"><span class="tc-check">&check;</span><span><strong>Effective Date left blank</strong> &mdash; the date every other deadline counts from.</span></li>
+      <li data-state="tx"><span class="tc-check">&check;</span><span><strong>Missing buyer or seller initials</strong> &mdash; easy to miss page-by-page, hard to fix once closed.</span></li>
+      <li data-state="tx"><span class="tc-check">&check;</span><span><strong>40-11 addendum mismatches</strong> &mdash; loan amount or financing checkbox disagreeing with the contract.</span></li>
+      <li data-state="tx"><span class="tc-check">&check;</span><span><strong>41-3 loan assumption gaps</strong> &mdash; addendum listed but not attached, blank rate or fee caps, assumed balance not matching 3B.</span></li>
+      <li data-state="tx"><span class="tc-check">&check;</span><span><strong>39-11 amendment mismatches</strong> &mdash; sales price or property address disagreeing with the original contract.</span></li>
+      <li data-state="co"><span class="tc-check">&check;</span><span><strong>A blank or N/A deadline</strong> &mdash; under &sect;3.2 it deletes that contingency: loan, appraisal, inspection or title objection.</span></li>
+      <li data-state="co"><span class="tc-check">&check;</span><span><strong>&sect;4.1 price math</strong> &mdash; Earnest Money + loan + Cash at Closing not adding up to the Purchase Price.</span></li>
+      <li data-state="co"><span class="tc-check">&check;</span><span><strong>Deadlines out of order or after closing</strong> &mdash; an objection date before its delivery date, or any deadline past the Closing Date.</span></li>
+      <li data-state="co"><span class="tc-check">&check;</span><span><strong>Closing on a weekend or holiday</strong> &mdash; a Saturday, Sunday, or federal or Colorado holiday, when wires may not move.</span></li>
+      <li data-state="co"><span class="tc-check">&check;</span><span><strong>Check-one conflicts</strong> &mdash; both boxes checked where only one applies, or two payers on one &sect;15 fee.</span></li>
       <li><span class="tc-check">&check;</span><span><strong>Your whole closed-file backlog</strong> &mdash; free sample checks up to 20 files at once; a Brokerage join code raises that to 200, no extra charge. <a href="/tc-check/bulk" style="color:var(--accent-dark);text-decoration:underline;">Bulk check &rarr;</a></span></li>
       <li><span class="tc-check">&check;</span><span><strong>A text the moment it happens</strong> &mdash; on the Brokerage plan, a real blocker on any agent's file texts you directly, before it ever reaches title.</span></li>
     </ul>
@@ -1249,7 +1337,8 @@ def index():
     <div class="steps-header" style="margin-bottom:1.75rem;">
       <div class="steps-kicker">For managing brokers &mdash; Brokerage plan</div>
       <h2>Every offer your agents text in, archived for 5 years.</h2>
-      <p>TREC asks you to keep transaction records for 4 years from closing (22 TAC &sect;535.2). Here's how files land in your archive &mdash; your agents don't do anything extra.</p>
+      <p data-state="tx">TREC asks you to keep transaction records for 4 years from closing (22 TAC &sect;535.2). Here's how files land in your archive &mdash; your agents don't do anything extra.</p>
+      <p data-state="co">Here's how files land in your archive &mdash; your agents don't do anything extra.</p>
     </div>
     <div class="steps-grid">
       <div class="step-card">
@@ -1260,15 +1349,15 @@ def index():
       <div class="step-card">
         <div class="step-num">2</div>
         <h3>They text the offer</h3>
-        <p>The TREC 20-19 comes back in seconds, gets checked for blanks and mismatches, and a copy goes to your TC by email.</p>
+        <p>The <span data-state="tx">TREC 20-19</span><span data-state="co">CBS1</span> comes back in seconds, gets checked for blanks and mismatches, and a copy goes to your TC by email.</p>
       </div>
-      <div class="step-card">
+      <div class="step-card" data-state="tx">
         <div class="step-num">3</div>
         <h3>Changes are filed with it</h3>
         <p>When an agent texts a price or closing-date change (<code>AMEND 123 Main St price 730k</code>), it becomes a 39-11 amendment, archived under the same address.</p>
       </div>
       <div class="step-card">
-        <div class="step-num">4</div>
+        <div class="step-num"><span data-state="tx">4</span><span data-state="co">3</span></div>
         <h3>Find it in seconds</h3>
         <p>Search by address from your brokerage dashboard, open any PDF, or download the whole archive as a ZIP &mdash; anytime, even if you cancel. <a href="/broker/login" style="color:var(--accent-dark);text-decoration:underline;">Brokerage sign-in &rarr;</a></p>
       </div>
@@ -1280,7 +1369,8 @@ def index():
   <section class="steps" id="workflow" style="border-top:none;padding-top:1rem;padding-bottom:2.5rem;">
     <div class="steps-header" style="margin-bottom:1.75rem;">
       <div class="steps-kicker">The full picture</div>
-      <h2>From offer to closing, in one place.</h2>
+      <h2 data-state="tx">From offer to closing, in one place.</h2>
+      <h2 data-state="co">From a text to a checked contract, in one place.</h2>
       <p>TC File Check is the part most people try first. It's one stage of a longer workflow that runs underneath it, start to finish.</p>
     </div>
     <div class="steps-grid">
@@ -1288,18 +1378,22 @@ def index():
         <div class="step-num">1</div>
         <h3>Offer</h3>
         <p>Your agents text the terms in and get back a structured offer in seconds &mdash; the starting point everything else builds on, and the first record in your brokerage's archive.</p>
+        <p style="margin-top:0.6rem;">For example: <strong data-state="tx">725k 3% 21day 123 Main St, Austin, TX</strong><strong data-state="co">500k 20% 30day 123 Main St, Denver, CO</strong></p>
         <p style="margin-top:0.6rem;font-weight:600;">Text <a href="sms:+18338970333" data-evt="workflow_offer_sms" style="color:var(--accent-dark);text-decoration:underline;">(833) 897-0333</a></p>
         <p style="font-size:0.72rem;color:var(--text-dim);margin-top:0.35rem;">By texting, you agree to receive SMS replies about your offers. Reply STOP to opt out, HELP for help. Msg &amp; data rates may apply. <a href="/privacy" style="color:inherit;text-decoration:underline;">Privacy</a> &middot; <a href="/terms" style="color:inherit;text-decoration:underline;">Terms</a></p>
       </div>
       <div class="step-card">
         <div class="step-num">2</div>
-        <h3>TREC Documents</h3>
-        <p>The required forms are generated straight from the transaction: 20-19, 39-11, 40-11, IABS, 61-0, 36-10.</p>
+        <h3 data-state="tx">TREC Documents</h3>
+        <p data-state="tx">The required forms are generated straight from the transaction: 20-19, 39-11, 40-11, IABS, 61-0, 36-10.</p>
+        <h3 data-state="co">Contract</h3>
+        <p data-state="co">A filled CBS1 is generated straight from the text, with a standard &sect;3.1 deadline schedule on business days for you to review and adjust.</p>
       </div>
       <div class="step-card">
         <div class="step-num">3</div>
         <h3>Compliance &mdash; TC Check</h3>
-        <p>Checked for completeness, cross-document consistency, and version-to-version comparison &mdash; before it moves forward.</p>
+        <p data-state="tx">Checked for completeness, cross-document consistency, and version-to-version comparison &mdash; before it moves forward.</p>
+        <p data-state="co">Checked for blank deadlines, &sect;4.1 price math and dates out of order &mdash; before it moves forward.</p>
       </div>
       <div class="step-card">
         <div class="step-num">4</div>
@@ -1311,18 +1405,19 @@ def index():
         <h3>Communication</h3>
         <p>SMS confirmations, email notifications, and a listing-agent accept/decline thread, built in from the first text.</p>
       </div>
-      <div class="step-card">
+      <div class="step-card" data-state="tx">
         <div class="step-num">6</div>
         <h3>Transaction workspace</h3>
         <p>Once accepted, a stage timeline and task checklist track the deal &mdash; option period, earnest money, title, financing, inspections, amendments, final walkthrough &mdash; alongside accept/decline status and dashboard visibility.</p>
       </div>
-      <div class="step-card">
+      <div class="step-card" data-state="tx">
         <div class="step-num">7</div>
         <h3>Closing</h3>
         <p>Within 5 days of closing, a Closing Checklist pulls it together in one screen: documents complete, signature status, open tasks, and every key date.</p>
       </div>
     </div>
-    <div style="text-align:center;font-size:0.8rem;font-weight:600;color:var(--accent-dark);margin-top:1.75rem;">Offer &rarr; Documents &rarr; Compliance &rarr; Signatures &rarr; Communication &rarr; Transaction &rarr; Closing</div>
+    <div data-state="tx" style="text-align:center;font-size:0.8rem;font-weight:600;color:var(--accent-dark);margin-top:1.75rem;">Offer &rarr; Documents &rarr; Compliance &rarr; Signatures &rarr; Communication &rarr; Transaction &rarr; Closing</div>
+    <div data-state="co" style="text-align:center;font-size:0.8rem;font-weight:600;color:var(--accent-dark);margin-top:1.75rem;">Offer &rarr; Contract &rarr; Compliance &rarr; Review &rarr; Communication</div>
   </section>
   </div>
 
@@ -1331,9 +1426,11 @@ def index():
       <h2 style="max-width:620px;margin:0 auto;">Forward it, or drop it here. Get back exactly what's missing.</h2>
     </div>
     <ul class="tc-checklist" style="max-width:560px;margin:1.5rem auto 0;">
-      <li><span class="tc-check">&check;</span><span>Forward the TREC 20-19 to <strong>tc@check.txtanoffer.com</strong>, or upload it above &mdash; attach the 40-11, 41-3 or 39-11 to the same email, or add them on the <a href="/tc-check">full check page</a>.</span></li>
-      <li><span class="tc-check">&check;</span><span>We re-read the actual filled-in PDF against TREC's current form &mdash; not a guess based on file size or page count.</span></li>
-      <li><span class="tc-check">&check;</span><span>Get an itemized report back in under a minute: what's blank, what's missing an initial, what disagrees with the addendum.</span></li>
+      <li data-state="tx"><span class="tc-check">&check;</span><span>Forward the TREC 20-19 to <strong>tc@check.txtanoffer.com</strong>, or upload it above &mdash; attach the 40-11, 41-3 or 39-11 to the same email, or add them on the <a href="/tc-check">full check page</a>.</span></li>
+      <li data-state="co"><span class="tc-check">&check;</span><span>Forward the CBS1 to <strong>tc@check.txtanoffer.com</strong>, or upload it above.</span></li>
+      <li><span class="tc-check">&check;</span><span>We re-read the actual filled-in PDF against <span data-state="tx">TREC's current form</span><span data-state="co">the 2026 CBS1</span> &mdash; not a guess based on file size or page count.</span></li>
+      <li data-state="tx"><span class="tc-check">&check;</span><span>Get an itemized report back in under a minute: what's blank, what's missing an initial, what disagrees with the addendum.</span></li>
+      <li data-state="co"><span class="tc-check">&check;</span><span>Get an itemized report back in under a minute: which deadlines are blank, whether the price math adds up, which dates land after closing.</span></li>
     </ul>
     <div class="secondary-cta" style="margin:1.75rem auto 0;padding-top:1.75rem;max-width:540px;text-align:center;">
       <div class="secondary-cta-label">Free. No login. Checked, then deleted &mdash; no copy kept.</div>
@@ -1341,7 +1438,7 @@ def index():
     </div>
   </section>
 
-  <section class="steps" id="guides">
+  <section class="steps" id="guides" data-state="tx">
     <div class="steps-header">
       <div class="steps-kicker">Free guides</div>
       <h2>Guides for Texas TCs and brokers</h2>
@@ -1383,8 +1480,9 @@ def index():
       </div>
       <div class="step-card">
         <div class="step-num">&check;</div>
-        <h3>Checked against TREC's current form</h3>
-        <p>Every check is mapped field-by-field against TREC's actual published 20-19 form and re-verified when TREC revises it. <a href="/trec-changes" style="color:var(--text);text-decoration:underline;">See what changed &rarr;</a> &middot; <a href="/tc-hub" style="color:var(--text);text-decoration:underline;">Free TC Hub &rarr;</a></p>
+        <h3>Checked against the current form</h3>
+        <p data-state="tx">Every check is mapped field-by-field against TREC's actual published 20-19 form and re-verified when TREC revises it. <a href="/trec-changes" style="color:var(--text);text-decoration:underline;">See what changed &rarr;</a> &middot; <a href="/tc-hub" style="color:var(--text);text-decoration:underline;">Free TC Hub &rarr;</a></p>
+        <p data-state="co">Every check is mapped field-by-field against the Colorado Real Estate Commission&rsquo;s published 2026 CBS1, and each field was checked against where it sits on the printed form. <a href="/tc-check#colorado" style="color:var(--text);text-decoration:underline;">See what it checks &rarr;</a></p>
       </div>
       <div class="step-card">
         <div class="step-num">&check;</div>
@@ -1397,12 +1495,12 @@ def index():
   <section class="steps" id="support">
     <div class="steps-header" style="margin-bottom:1.75rem;">
       <h2>Questions? A real person answers.</h2>
-      <p>Built by Phanel Jean-Baptiste, for Texas TCs and brokers. You&rsquo;ll hear back from the person who built it, not a ticket queue.</p>
+      <p>Built by Phanel Jean-Baptiste, for TCs and brokers. You&rsquo;ll hear back from the person who built it, not a ticket queue.</p>
     </div>
     <div class="support-box">
       <div>
         <h3>Help yourself</h3>
-        <p>Common questions about TC Check, storage, and TREC forms.</p>
+        <p>Common questions about TC Check, storage, and the forms it reads.</p>
         <a href="/faq">Read the FAQ &rarr;</a>
       </div>
       <div>
@@ -1412,7 +1510,7 @@ def index():
       </div>
       <div>
         <h3>Forward a file</h3>
-        <p>Send a TREC 20-19 from your inbox and get the report back by email.</p>
+        <p>Send a filled <span data-state="tx">TREC 20-19</span><span data-state="co">CBS1</span> from your inbox and get the report back by email.</p>
         <a href="mailto:tc@check.txtanoffer.com">tc@check.txtanoffer.com</a>
       </div>
     </div>
@@ -1459,6 +1557,7 @@ def index():
       emailOptinConfirm = document.getElementById('homeEmailOptinConfirm'),
       demoBtn = document.getElementById('homeDemoBtn');
   if(!dropZone) return;
+  function stateMode(){ return window.taState ? window.taState() : 'tx'; }
 
   try{ var savedEmail = localStorage.getItem('tc_email_hint'); if(savedEmail) emailOptinInput.value = savedEmail; }catch(e){}
 
@@ -1486,10 +1585,15 @@ def index():
     demoBtn.addEventListener('click', function(){
       demoBtn.disabled = true;
       demoBtn.textContent = 'Checking the sample\u2026';
-      fetch('/static/sample_trec_20-19.pdf?v=2026-10-09')
+      // The sample follows the Texas | Colorado switch: a TREC 20-19, or a
+      // CBS1 at 123 Main St, Denver with 3 planted issues (static/sample_cbs1.pdf).
+      var sample = stateMode() === 'co'
+        ? {url: '/static/sample_cbs1.pdf?v=2026-10-12', name: 'sample_cbs1.pdf'}
+        : {url: '/static/sample_trec_20-19.pdf?v=2026-10-09', name: 'sample_trec_20-19.pdf'};
+      fetch(sample.url)
         .then(function(r){ return r.blob(); })
         .then(function(blob){
-          uploadFile(new File([blob], 'sample_trec_20-19.pdf', {type:'application/pdf'}), true);
+          uploadFile(new File([blob], sample.name, {type:'application/pdf'}), true);
         })
         .catch(function(){ demoDone(false); });
     });
@@ -1525,7 +1629,10 @@ def index():
 
   // Same perceived-progress pattern as /tc-check -- one real round trip,
   // staged labels just so the wait doesn't feel dead.
-  var STATUS_STEPS = ['Scanning TREC 20-19...', 'Checking mandatory fields...', 'Checking initials & consistency...'];
+  var STATUS_STEPS_BY_STATE = {
+    tx: ['Scanning TREC 20-19...', 'Checking mandatory fields...', 'Checking initials & consistency...'],
+    co: ['Scanning CBS1...', 'Checking \u00a73.1 deadlines...', 'Checking \u00a74.1 price math...']
+  };
   var statusTimers = [];
 
   var fileCarried = false;
@@ -1560,6 +1667,7 @@ def index():
     resultEl.classList.remove('show');
     emailOptinConfirm.classList.remove('show');
     statusTimers.forEach(clearTimeout);
+    var STATUS_STEPS = STATUS_STEPS_BY_STATE[stateMode()];
     statusTimers = STATUS_STEPS.map(function(label, i){
       return setTimeout(function(){ statusEl.textContent = label; }, i * 450);
     });
@@ -1571,6 +1679,7 @@ def index():
     var formData = new FormData();
     formData.append('file', file);
     formData.append('source_page', 'homepage');
+    formData.append('state_mode', stateMode());
     if(email) formData.append('email', email);
     if(isDemo) formData.append('is_demo', '1');
 
@@ -1635,7 +1744,7 @@ def index():
     // Demo replays the fixed static sample; a real file replays from the
     // sessionStorage stash above when it succeeded, otherwise this falls
     // back to a plain link (today's "start over" behavior).
-    var tcCheckHref = isDemo ? '/tc-check?demo=1' : (fileCarried ? '/tc-check?carry=1' : '/tc-check');
+    var tcCheckHref = isDemo ? '/tc-check?demo=1' + (stateMode() === 'co' ? '&state=co' : '') : (fileCarried ? '/tc-check?carry=1' : '/tc-check');
     if(totalIssues > shown.length){
       var linkText = data.gated ? 'enter your email to see exactly which pages and lines' : 'see the full checklist';
       html += '<div class="result-more">+' + (totalIssues - shown.length) + ' more &mdash; <a href="' + tcCheckHref + '">' + linkText + ' &rarr;</a></div>';
@@ -1651,15 +1760,15 @@ def index():
     // 3-offer trial (/signup) instead of $40/mo checkout -- the trial is
     // the step that was getting zero traffic from TC Check.
     if(!isDemo && !data.gated && totalIssues > 0){
-      html += buildIndividualUpgradeCard();
+      html += buildIndividualUpgradeCard(data.state === 'CO' ? 'Colorado CBS1' : 'TREC 20-19');
     }
     resultEl.innerHTML = html;
     resultEl.classList.add('show');
   }
 
-  function buildIndividualUpgradeCard(){
+  function buildIndividualUpgradeCard(formName){
     return '<div class="individual-upsell">'
-      + '<p class="individual-upsell-lead">Filling this out by hand? TxtAnOffer drafts a TREC 20-19 by text message instead &mdash; address, price, and closing date auto-fill correctly, so there\\'s nothing left for a check like this to catch.</p>'
+      + '<p class="individual-upsell-lead">Filling this out by hand? TxtAnOffer drafts a ' + formName + ' by text message instead &mdash; address, price, and closing date auto-fill correctly, so there\\'s nothing left for a check like this to catch.</p>'
       + '<a href="/signup" class="individual-upsell-btn" style="display:block;text-align:center;text-decoration:none;">Draft your next offer free &mdash; 3 offers, no card &rarr;</a>'
       + '<div class="individual-upsell-alt">Already sold? <a href="/pricing">See plans &rarr;</a></div>'
       + '</div>';
@@ -1704,7 +1813,8 @@ def index():
             stat3_num, stat3_label = f"{pct_incomplete:g}%", "had at least one issue TC File Check catches automatically"
     else:
         stat1_num, stat1_label = "Free", f"First {TC_FREE_FULL_REPORTS} reports need nothing, then just an email"
-        stat2_num, stat2_label = "Seconds", "to scan a full TREC 20-19 + 40-11 addendum"
+        stat2_num, stat2_label = "Seconds", ('<span data-state="tx">to scan a full TREC 20-19 + 40-11 addendum</span>'
+                                             '<span data-state="co">to scan a full CBS1</span>')
         stat3_num, stat3_label = "0", "checked PDFs kept after your report"
     for token, value in (
         ("__TC_STAT1_NUM__", stat1_num), ("__TC_STAT1_LABEL__", stat1_label),
@@ -1712,8 +1822,11 @@ def index():
         ("__TC_STAT3_NUM__", stat3_num), ("__TC_STAT3_LABEL__", stat3_label),
     ):
         html = html.replace(token, value)
+    site_state = _site_state()
+    html = _apply_site_state(html.replace("__STATE_SWITCH_JS__", STATE_SWITCH_JS), site_state)
 
     resp = make_response(html)
+    _remember_site_state(resp, site_state)
     # First-touch attribution cookie: the query-param rewrite above only
     # survives if the visitor clicks "Try TC Check Free" in this exact page
     # load. Cold-outreach signups routinely happen on a later visit (a
@@ -3459,9 +3572,14 @@ def tc_check():
     if source_page not in ("homepage", "tc_check_page"):
         source_page = "unknown"
 
+    # Which state the page's Texas | Colorado switch was on (see
+    # _site_state) -- metadata only, so /analytics can tell a Colorado-mode
+    # visitor apart without a schema change.
+    state_mode = request.form.get("state_mode") if request.form.get("state_mode") in _SITE_STATES else ""
+
     is_demo = request.form.get("is_demo") == "1"
     if is_demo:
-        track_event("tc_check_demo_used", metadata={"source": request.cookies.get("ta_src") or "direct", "source_page": source_page,
+        track_event("tc_check_demo_used", metadata={"source": request.cookies.get("ta_src") or "direct", "source_page": source_page, "state_mode": state_mode,
                                                     "visitor": request.cookies.get("ta_vid", "")})
     else:
         # Fires on every real attempt -- success, wrong file type, corrupted
@@ -3474,7 +3592,7 @@ def tc_check():
         # visits -> attempts -> recognized/complete funnel is fully visible,
         # not just the last two steps.
         track_event("tc_check_attempted", metadata={"source": request.cookies.get("ta_src") or "direct", "source_page": source_page,
-                                                    "visitor": request.cookies.get("ta_vid", "")})
+                                                    "state_mode": state_mode, "visitor": request.cookies.get("ta_vid", "")})
 
     # Product gate re-added 2026-09-10 (see tc_gate.py's own history) --
     # this comment previously said "no product gate," which stopped being
@@ -3850,12 +3968,12 @@ def tc_compare():
 @app.route("/tc-check")
 def tc_check_page():
     html = """<!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="__STATE_CLASS__">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TC File Check — TxtAnOffer</title>
-<meta name="description" content="Drop a filled TREC 20-19 or Colorado CBS1 PDF and see what's missing before title kicks it back.">
+<meta name="description" content="Drop a filled Texas TREC 20-19 or Colorado CBS1 PDF and see what's missing before title kicks it back.">
 <link rel="icon" href="/static/favicon.ico?v=2" type="image/x-icon">
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <style>
@@ -3963,6 +4081,16 @@ font-size:0.8rem;color:var(--text-muted);}
 .download-btn{background:#fff;color:var(--text);border:1px solid rgba(15,31,47,0.14);padding:0.7rem 1.5rem;
 border-radius:var(--radius-sm);font-family:inherit;font-size:0.85rem;font-weight:600;cursor:pointer;margin-left:0.6rem;margin-top:0.6rem;}
 .download-btn:hover{border-color:var(--accent);}
+/* Texas | Colorado switch -- same markup and behavior as the homepage's
+   light variant; see _site_state() / STATE_SWITCH_JS. */
+html.state-tx [data-state="co"],html.state-co [data-state="tx"]{display:none !important;}
+.state-switch{display:inline-flex;gap:0.2rem;padding:0.22rem;margin:0 0 1.1rem;border-radius:999px;background:#e8ecef;border:1px solid var(--border);width:fit-content;max-width:100%;}
+.state-switch button{appearance:none;-webkit-appearance:none;border:0;background:transparent;color:var(--text-muted);font:inherit;font-size:0.88rem;font-weight:700;line-height:1.2;padding:0.42rem 0.95rem;border-radius:999px;cursor:pointer;display:inline-flex;align-items:baseline;gap:0.4rem;white-space:nowrap;transition:background 0.15s ease,color 0.15s ease;}
+.state-switch button small{font-size:0.68rem;font-weight:600;letter-spacing:0.03em;opacity:0.75;}
+.state-switch button:hover{color:var(--text);background:rgba(15,31,47,0.05);}
+.state-switch button[aria-pressed="true"]{background:var(--accent);color:#fff;}
+.state-switch button[aria-pressed="true"] small{opacity:0.85;}
+.state-switch button:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
 .scope-card{margin-top:2rem;background:var(--accent-tint);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem 1.75rem;}
 .scope-card h3{font-size:0.75rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-dim);margin-bottom:0.9rem;}
 .scope-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.5rem 2rem;margin-bottom:1rem;}
@@ -4004,13 +4132,18 @@ border-radius:var(--radius-sm);font-family:inherit;font-size:0.85rem;font-weight
 </nav>
 <div class="container">
 <h1>TC File Check</h1>
-<p class="subtitle">Drop a filled TREC 20-19 or Colorado CBS1 PDF. We'll tell you what's missing before title kicks it back.</p>
+<div class="state-switch" role="group" aria-label="Which state's contract">
+<button type="button" data-set-state="tx" aria-pressed="__TX_PRESSED__" data-evt="state_toggle_tx">Texas <small>TREC 20-19</small></button>
+<button type="button" data-set-state="co" aria-pressed="__CO_PRESSED__" data-evt="state_toggle_co">Colorado <small>CBS1</small></button>
+</div>
+__STATE_SWITCH_JS__
+<p class="subtitle"><span data-state="tx">Drop a filled TREC 20-19 PDF.</span><span data-state="co">Drop a filled CBS1 PDF.</span> We'll tell you what's missing before title kicks it back.</p>
 <div class="card">
 <div class="drop-zone" id="dropZone">
 <div class="dz-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 13v8"/><path d="m8 17 4-4 4 4"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg></div>
 <div class="dz-title"><span class="dz-mouse">Drop your contract PDF here</span><span class="dz-touch">Choose your contract PDF</span></div>
 <div class="dz-sub"><span class="dz-mouse">or <u>click to browse</u></span><span class="dz-touch"><u>Tap to browse files</u></span></div>
-<div class="dz-meta">Fillable TREC 20-19 or Colorado CBS1 PDF &middot; not scanned or flattened files</div>
+<div class="dz-meta"><span data-state="tx">Fillable TREC 20-19 PDF</span><span data-state="co">Fillable CBS1 (2026) PDF</span> &middot; not scanned or flattened files</div>
 </div>
 <input type="file" id="fileInput" accept="application/pdf">
 <div class="dz-trust">
@@ -4018,11 +4151,13 @@ border-radius:var(--radius-sm);font-family:inherit;font-size:0.85rem;font-weight
 <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>3 free reports, no signup</span>
 <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>Results in seconds</span>
 </div>
+<div data-state="tx">
 <div class="addendum-toggle" id="addendumToggle">+ Also have the 40-11, 41-3 or 39-11? Add up to 3 to cross-check them against the contract, too.</div>
 <div class="addendum-row" id="addendumRow" hidden>
 <input type="file" id="addendumInput" accept="application/pdf" multiple>
 <span class="addendum-filename" id="addendumFileName"></span>
 <button type="button" class="addendum-clear" id="addendumClear" title="Remove">&times;</button>
+</div>
 </div>
 <button type="button" class="demo-check-btn" id="demoBtn">No PDF handy? Run a sample check &rarr;</button>
 <div class="email-optin">
@@ -4034,7 +4169,7 @@ border-radius:var(--radius-sm);font-family:inherit;font-size:0.85rem;font-weight
 <div class="status" id="status"></div>
 <div class="result" id="result"></div>
 </div>
-<div class="scope-card">
+<div class="scope-card" data-state="tx">
 <h3>What this checks &middot; Texas TREC 20-19</h3>
 <div class="scope-grid">
 <ul>
@@ -4062,7 +4197,7 @@ border-radius:var(--radius-sm);font-family:inherit;font-size:0.85rem;font-weight
 <p class="scope-footnote">Auditing a whole closed-file archive? <a href="/tc-check/bulk" style="color:var(--accent);font-weight:700;text-decoration:underline;text-underline-offset:2px;">Bulk-check up to 20 files free (200 with a Brokerage join code) &rarr;</a></p>
 <p class="scope-footnote">Want checklists and TREC form references instead? <a href="/tc-hub" style="color:var(--accent);font-weight:700;text-decoration:underline;text-underline-offset:2px;">Visit the free TC Hub &rarr;</a></p>
 </div>
-<div class="scope-card" id="colorado">
+<div class="scope-card" id="colorado" data-state="co">
 <h3>What this checks &middot; Colorado CBS1 (2026)</h3>
 <div class="scope-grid">
 <ul>
@@ -4102,6 +4237,7 @@ const emailOptinCheckbox = document.getElementById('emailOptinCheckbox');
 const emailOptinInput = document.getElementById('emailOptinInput');
 const emailOptinConfirm = document.getElementById('emailOptinConfirm');
 const demoBtn = document.getElementById('demoBtn');
+const stateMode = () => (window.taState ? window.taState() : 'tx');
 
 try { const savedEmail = localStorage.getItem('tc_email_hint'); if (savedEmail) emailOptinInput.value = savedEmail; } catch (e) {}
 
@@ -4129,10 +4265,14 @@ if (demoBtn) {
   demoBtn.addEventListener('click', () => {
     demoBtn.disabled = true;
     demoBtn.textContent = 'Checking the sample\u2026';
-    fetch('/static/sample_trec_20-19.pdf?v=2026-10-09')
+    // Same per-state sample as the homepage (see index()).
+    const sample = stateMode() === 'co'
+      ? { url: '/static/sample_cbs1.pdf?v=2026-10-12', name: 'sample_cbs1.pdf' }
+      : { url: '/static/sample_trec_20-19.pdf?v=2026-10-09', name: 'sample_trec_20-19.pdf' };
+    fetch(sample.url)
       .then(r => r.blob())
       .then(blob => {
-        uploadFile(new File([blob], 'sample_trec_20-19.pdf', {type: 'application/pdf'}), '', true);
+        uploadFile(new File([blob], sample.name, {type: 'application/pdf'}), '', true);
       })
       .catch(() => demoDone(false));
   });
@@ -4178,6 +4318,11 @@ addendumInput.addEventListener('change', () => {
     addendumFileName.textContent = pendingAddendumFiles.map(f => f.name).join(', ');
   }
 });
+// Switching to Colorado hides the addendum picker; drop anything already
+// picked so a hidden TREC addendum can't ride along on a CBS1 check.
+document.addEventListener('ta:state', e => {
+  if (e.detail === 'co' && pendingAddendumFiles.length) addendumClear.click();
+});
 addendumClear.addEventListener('click', () => {
   pendingAddendumFiles = [];
   addendumInput.value = '';
@@ -4190,7 +4335,10 @@ addendumClear.addEventListener('click', () => {
 // round trip -- the backend doesn't stream distinct stages back. Labeled
 // generically (not "AI analyzing..." theater) and never blocks: whichever
 // line is showing when the real response lands, that's when it finishes.
-const STATUS_STEPS = ['Scanning TREC 20-19...', 'Checking mandatory fields...', 'Checking initials & consistency...'];
+const STATUS_STEPS_BY_STATE = {
+  tx: ['Scanning TREC 20-19...', 'Checking mandatory fields...', 'Checking initials & consistency...'],
+  co: ['Scanning CBS1...', 'Checking \u00a73.1 deadlines...', 'Checking \u00a74.1 price math...'],
+};
 let statusTimers = [];
 let pendingFile = null;
 
@@ -4213,6 +4361,7 @@ function uploadFile(file, email, isDemo) {
   resultEl.classList.remove('show');
   emailOptinConfirm.classList.remove('show');
   statusTimers.forEach(clearTimeout);
+  const STATUS_STEPS = STATUS_STEPS_BY_STATE[stateMode()];
   statusTimers = STATUS_STEPS.map((label, i) =>
     setTimeout(() => { statusEl.textContent = label; }, i * 450)
   );
@@ -4222,6 +4371,7 @@ function uploadFile(file, email, isDemo) {
   const formData = new FormData();
   formData.append('file', file);
   formData.append('source_page', 'tc_check_page');
+  formData.append('state_mode', stateMode());
   // A real addendum picked for a prior real upload should never ride along
   // on a demo run -- the sample file is the whole check, on its own.
   if (!isDemo) pendingAddendumFiles.forEach(f => formData.append('file', f));
@@ -4292,7 +4442,7 @@ function renderError(msg) {
 const ADDENDUM_MISMATCH_KEYS = new Set(['loan_amount_mismatch', 'addendum_checkbox_mismatch']);
 const BLANK_FIELD_KEYS = new Set(['address', 'city', 'county', 'buyer_name', 'seller_name', 'escrow_agent_name', 'earnest_money_amount', 'option_fee_amount', 'title_company', 'effective_date']);
 
-function buildUpsellCta(issues) {
+function buildUpsellCta(issues, formName) {
   let addendumCount = 0, blankCount = 0;
   for (const issue of issues) {
     if (ADDENDUM_MISMATCH_KEYS.has(issue.key)) addendumCount++;
@@ -4304,7 +4454,7 @@ function buildUpsellCta(issues) {
   if (blankCount >= 2) {
     return '<div class="fixit-cta"><p>Tired of chasing agents to fill in blank fields? TxtAnOffer&rsquo;s review screen physically blocks emailing the listing agent until every required TREC field is filled in.</p><a href="/signup">Draft your next offer free &mdash; 3 offers, no card &rarr;</a></div>';
   }
-  return '<div class="fixit-cta"><p>Every gap above happened because this file was filled out by hand. TxtAnOffer drafts the 20-19 by text message, so these fields are never blank to begin with.</p><a href="/signup">Draft your next offer free &mdash; 3 offers, no card &rarr;</a></div>';
+  return '<div class="fixit-cta"><p>Every gap above happened because this file was filled out by hand. TxtAnOffer drafts the ' + formName + ' by text message, so these fields are never blank to begin with.</p><a href="/signup">Draft your next offer free &mdash; 3 offers, no card &rarr;</a></div>';
 }
 
 // Shown once a report has actually been delivered (email on file, or a
@@ -4434,7 +4584,7 @@ function renderResult(data, file, isDemo) {
       // template match, not anything the agent could fix.
       if (data.recognized) html += '<button class="download-btn" onclick="copyAgentMessage()" data-evt="tc_copy_agent_msg">Copy as message to agent</button>';
       html += '<button class="download-btn" onclick="downloadReport(this)">Download report</button>';
-      html += buildUpsellCta(issues);
+      html += buildUpsellCta(issues, data.state === 'CO' ? 'CBS1' : '20-19');
     }
     if (!isDemo && typeof data.free_reports_left === 'number') html += buildEmailReportAsk(data.free_reports_left);
     if (!isDemo) html += buildNextStepCta();
@@ -4547,7 +4697,10 @@ function escapeHtml(s) {
     # (LinkedIn, a DM) drove any traffic here at all.
     import re as _re
     src = _re.sub(r"[^a-zA-Z0-9_-]", "", request.args.get("src", ""))[:60]
+    site_state = _site_state()
+    html = _apply_site_state(html.replace("__STATE_SWITCH_JS__", STATE_SWITCH_JS), site_state)
     resp = make_response(html)
+    _remember_site_state(resp, site_state)
     if src and not request.cookies.get("ta_src"):
         resp.set_cookie("ta_src", src, max_age=30 * 24 * 3600, httponly=True, samesite="Lax")
         track_event("landing_visit", None, {"source": src})
