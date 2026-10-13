@@ -1810,6 +1810,13 @@ def validate_address(address: str, raw_text: str = None) -> dict:
         # 2-letter postal codes read as shouting-then-Title-Case if .title()'d
         # ("CA" -> "Ca"); only title-case genuine multi-word/full names.
         other_state_display = other_state.upper() if len(other_state) == 2 else other_state.title()
+        # Colorado drafts as a CBS1 (co_filler.py) instead of being blocked.
+        if other_state_display in ("CO", "Colorado"):
+            result["state"] = "CO"
+            if len(cleaned.split()) < 3:
+                result["warnings"].append("Address looks short. Please confirm city is included before signing.")
+            result["valid"] = True
+            return result
         result["other_state"] = other_state_display
         result["reason"] = (
             f"This address looks like it's in {other_state_display}, not Texas. "
@@ -1976,6 +1983,8 @@ def build_offer_draft(incoming_msg: str, source_id: str):
         return parsed, addr_check["reason"], []
     parsed["address"] = addr_check["normalized"]
     warnings = addr_check["warnings"]
+    if addr_check.get("state") == "CO":
+        return _build_co_draft(parsed, source_id), None, warnings
     parsed["_tx_needs_confirm"] = TX_UNVERIFIED_WARNING in warnings
 
     # No state was mentioned at all (e.g. bare "Long Beach") -- before
@@ -2017,6 +2026,58 @@ def build_offer_draft(incoming_msg: str, source_id: str):
     return parsed, None, warnings
 
 
+def _build_co_draft(parsed: dict, source_id: str) -> dict:
+    """Colorado CBS1 draft. Skips lookup_mls() (it forces ", TX" onto the
+    search) and the TX state checks; county/city/zip come from the text via
+    co_filler.split_co_address. Colorado has no option fee."""
+    from co_filler import split_co_address, contract_dates
+    parsed["state"] = "CO"
+    parsed["_tx_needs_confirm"] = False
+    addr = split_co_address(parsed["address"])
+    parsed["street"] = addr["street"]
+    parsed["city"] = addr["city"]
+    parsed["zip"] = addr["zip"]
+    parsed["county"] = addr["county"]
+    agent = get_agent_profile(source_id)
+    parsed["agent"] = agent
+    price = parsed["price"]
+    parsed["down_payment_amount"] = int(price * parsed["down_payment_pct"])
+    parsed["loan_amount"] = price - parsed["down_payment_amount"]
+    parsed["earnest_money"] = int(price * agent["default_earnest_pct"])
+    parsed["option_fee"] = 0
+    acceptance, closing = contract_dates(parsed["close_days"])
+    parsed["co_acceptance"] = f"{acceptance:%b} {acceptance.day}"
+    parsed["co_closing"] = f"{closing:%b} {closing.day}"
+    return parsed
+
+
+def format_co_confirmation(parsed: dict) -> str:
+    """Colorado version of format_offer_confirmation. Plain GSM-7 only."""
+    where = ", ".join(x for x in (parsed.get("street") or parsed["address"], parsed.get("city"),
+                                  ("CO " + parsed["zip"]) if parsed.get("zip") else "CO") if x)
+    county = f"{parsed['county']} County" if parsed.get("county") else 'County missing - add it, ex: "Denver county"'
+    if parsed["loan_amount"] > 0:
+        fin = FINANCING_LABELS.get(parsed.get("financing_type") or "conventional", "Conventional")
+        money = [f"Price ${parsed['price']:,}, {_fmt_pct(parsed['down_payment_pct'])}% down",
+                 f"{fin} loan ${parsed['loan_amount']:,}"]
+    else:
+        money = [f"Price ${parsed['price']:,}, all cash"]
+    insp = parsed.get("inspection_days") or 10
+    lines = ["TxtAnOffer: got it (Colorado).", "", where, county] + money + [
+        f"Earnest ${parsed['earnest_money']:,}",
+        f"Closing {parsed['co_closing']} ({parsed['close_days']} days)",
+        f"Offer expires {parsed['co_acceptance']} 5:00 PM",
+        "",
+        f"Deadlines: standard defaults (inspection objection {insp} days, title, "
+        + ("loan, appraisal" if parsed["loan_amount"] > 0 else "no loan") + "). Review each before signing.",
+        "",
+        'Reply YES to create the Colorado CBS1 draft, or text a correction.',
+        "",
+        "Msg rates may apply. Reply STOP to unsubscribe, HELP for help.",
+    ]
+    return "\n".join(lines)
+
+
 def process_offer(incoming_msg: str, source_id: str):
     """Shared logic: build_offer_draft() then immediately fill the PDF, no
     confirmation step. Used by callers that don't do the AI Offer Builder
@@ -2055,6 +2116,8 @@ def format_offer_confirmation(parsed: dict) -> str:
     generated. Financing/inspection lines only appear when the agent actually
     specified them -- never silently guessed. Agent name/license line is
     omitted if the agent hasn't set up their profile yet."""
+    if parsed.get("state") == "CO":
+        return format_co_confirmation(parsed)
     close_dt = datetime.now() + timedelta(days=parsed["close_days"])
 
     addr_parts = [parsed["address"]]
@@ -2327,6 +2390,16 @@ def finalize_offer_sms(agent_phone: str, draft: dict):
             payment_url = request.host_url.rstrip("/") + "/pricing"
             status_line = f"\n\nThat was your last free offer. Unlimited offers: {payment_url}"
 
+    if draft.get("state") == "CO":
+        twilio_send_sms(agent_phone, (
+            f"Your Colorado CBS1 draft for {draft['address']} is ready.\n\n"
+            f"Review and email it: {pdf_url}\n\n"
+            f"Deadlines are standard defaults, and Earnest Money Holder, title selection and lead-paint "
+            f"rows are yours to fill. Draft only: review every page before signing."
+            f"{status_line}\n\n"
+            f"Reply STOP to unsubscribe, HELP for help."))
+        return
+
     forms = ["TREC 20-19"]
     if draft.get("loan_amount", 0) > 0:
         forms.append("40-11 Financing Addendum")
@@ -2455,6 +2528,10 @@ def sms_reply():
             twilio_send_sms(agent_phone,
                 f'No offer found matching "{amend["address"]}". '
                 f'Text DASHBOARD to see your offer history.')
+            return "", 200
+        if (offer.get("filename") or "").startswith("CBS1_"):
+            from amendment import CO_AMEND_MESSAGE
+            twilio_send_sms(agent_phone, CO_AMEND_MESSAGE.replace(" -- ", ". ") + "\n\nReply STOP to unsubscribe, HELP for help.")
             return "", 200
         try:
             pdf_path = fill_amendment_pdf(offer, amend)
@@ -4134,7 +4211,7 @@ function buildMetaBar(data, file) {
   html += '<span><strong>' + escapeHtml(file.name) + '</strong></span>';
   html += '<span>' + formatBytes(file.size) + '</span>';
   if (typeof data.page_count === 'number') html += '<span>' + data.page_count + ' page' + (data.page_count === 1 ? '' : 's') + '</span>';
-  html += '<span>' + (data.recognized ? 'TREC 20-19 AcroForm detected' : 'Not recognized as a TREC 20-19') + '</span>';
+  html += '<span>' + (data.recognized ? (data.form ? escapeHtml(data.form) + ' detected' : 'TREC 20-19 AcroForm detected') : 'Not recognized as a TREC 20-19 or Colorado CBS1') + '</span>';
   if (data.has_addendum) html += '<span>40-11 addendum attached</span>';
   if (data.has_loan_assumption) html += '<span>41-3 addendum attached</span>';
   if (data.has_amendment) html += '<span>39-11 amendment attached</span>';
@@ -10164,6 +10241,20 @@ def review_offer(filename):
         created_dt = datetime.now()
     close_dt = created_dt + timedelta(days=close_days) if close_days else None
     close_date = f"{close_dt:%B} {close_dt.day}, {close_dt.year}" if close_dt else ""
+    is_co = filename.startswith("CBS1_")
+    if is_co:
+        # The CBS1 closing date moves off weekends (co_filler.contract_dates),
+        # so show what's actually on the contract.
+        from pdf_validator import _read_values
+        raw_close = _read_values(pdf_path_on_disk).get("Closing Date", "")
+        try:
+            cd = datetime.strptime(raw_close, "%m/%d/%Y")
+            close_date = f"{cd:%B} {cd.day}, {cd.year}"
+        except ValueError:
+            pass
+    form_meta = ("Colorado CBS1 Contract to Buy and Sell Real Estate (Residential) &middot; current form, mandatory since January 1, 2026"
+                 if is_co else f"TREC 20-19 One to Four Family Residential Contract &middot; current form, mandatory since {TREC_FORM_CURRENT_AS_OF}")
+    regulator = "the Colorado Real Estate Commission" if is_co else "TREC"
 
     def _qa_item(msg):
         # Validator messages are plain text written with ASCII "--"; escape
@@ -10267,7 +10358,7 @@ border-top:1px solid var(--border);margin-top:1rem;}}
 <div class="address-card">
 <div class="kicker">Offer review</div>
 <h1>{address_html}</h1>
-<div class="meta">TREC 20-19 One to Four Family Residential Contract &middot; current form, mandatory since {TREC_FORM_CURRENT_AS_OF}</div>
+<div class="meta">{form_meta}</div>
 </div>
 
 <div class="stats">
@@ -10324,7 +10415,7 @@ border-top:1px solid var(--border);margin-top:1rem;}}
 
 <div class="disclaimer">
 This is a draft generated by TxtAnOffer. The agent must review every field before signing or presenting.<br>
-<a href="/" style="color:var(--accent-dark);">txtanoffer.com</a> &middot; <a href="mailto:support@txtanoffer.com" style="color:var(--accent-dark);">support@txtanoffer.com</a> &middot; Not affiliated with TREC
+<a href="/" style="color:var(--accent-dark);">txtanoffer.com</a> &middot; <a href="mailto:support@txtanoffer.com" style="color:var(--accent-dark);">support@txtanoffer.com</a> &middot; Not affiliated with {regulator}
 </div>
 </div>
 

@@ -130,6 +130,12 @@ def validate_offer_pdf(pdf_path: str, parsed: dict) -> dict:
     """Returns {"ok": bool, "blocking": [str], "warnings": [str]}.
     "ok" reflects `blocking` only -- warnings never block sending."""
     values = _read_values(pdf_path)
+    import co_audit  # imports this module, so not at the top
+    if co_audit.is_cbs1(values):
+        issues = co_audit.audit_values(values)
+        blocking = [i["message"] for i in issues if i["severity"] == "blocker"]
+        return {"ok": not blocking, "blocking": blocking,
+                "warnings": [i["message"] for i in issues if i["severity"] != "blocker"]}
     text = _read_text(pdf_path)
     blocking = []
     warnings = []

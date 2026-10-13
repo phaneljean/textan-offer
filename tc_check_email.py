@@ -96,13 +96,61 @@ _CONSEQUENCE_TAGS = {
     "la_release_not_listed": "REVIEW: SELLER RELEASE OF LIABILITY",
     "la_note_unchecked": "REVIEW: LOAN BOX UNCHECKED",
     "la_unreadable": "ATTACHMENT NOT VERIFIED",
+    # Colorado CBS1 (co_audit.py)
+    "co_street_blank": "PROPERTY NOT IDENTIFIED",
+    "co_city_blank": "PROPERTY NOT IDENTIFIED",
+    "co_county_blank": "TITLE KICKBACK",
+    "co_legal_blank": "REVIEW: NO LEGAL DESCRIPTION",
+    "co_buyer_blank": "PARTY NOT NAMED",
+    "co_seller_blank": "PARTY NOT NAMED",
+    "co_state_not_colorado": "WRONG FORM FOR THIS STATE",
+    "co_price_blank": "DEAL TERMS INCOMPLETE",
+    "co_earnest_blank": "DEAL TERMS INCOMPLETE",
+    "co_earnest_holder_blank": "NO EARNEST MONEY HOLDER",
+    "co_price_math": "PRICE DOESN'T ADD UP",
+    "co_total_right": "PRICE DOESN'T ADD UP",
+    "co_total_left": "PRICE DOESN'T ADD UP",
+    "co_loan_type_missing": "FINANCING TERMS INCOMPLETE",
+    "co_loan_amount_missing": "FINANCING TERMS DISAGREE",
+    "co_loan_avail_deleted": "REVIEW: LOAN CONTINGENCY DELETED",
+    "co_loan_terms_deleted": "REVIEW: LOAN CONTINGENCY DELETED",
+    "co_appraisal_deleted": "REVIEW: APPRAISAL RIGHT DELETED",
+    "co_seller_fin_deadline_blank": "DEADLINE UNDEFINED",
+    "co_assumption_deadline_blank": "DEADLINE UNDEFINED",
+    "co_available_funds_unchecked": "REVIEW: FUNDS NOT REPRESENTED",
+    "co_inspection_deleted": "REVIEW: INSPECTION RIGHT DELETED",
+    "co_title_objection_deleted": "REVIEW: TITLE OBJECTION DELETED",
+    "co_closing_blank": "NO CLOSING DATE",
+    "co_closing_weekend": "REVIEW: WEEKEND CLOSING",
+    "co_closing_holiday": "REVIEW: HOLIDAY CLOSING",
+    "co_possession_blank": "POSSESSION UNDEFINED",
+    "co_acceptance_blank": "REVIEW: OFFER NEVER EXPIRES",
+    "co_possession_before_closing": "REVIEW: EARLY POSSESSION",
+    "co_acceptance_after_closing": "IMPOSSIBLE DATES",
+    "co_title_selection_unchecked": "REVIEW: TITLE COMPANY UNASSIGNED",
+    "co_date_blank": "REVIEW: CONTRACT UNDATED",
+    "co_lead_paint_blank": "REVIEW: LEAD PAINT DEADLINES",
+    "co_other_files_not_checked": "ATTACHMENT NOT VERIFIED",
 }
+# Colorado keys that carry a suffix (which deadline, which checkbox).
+_CONSEQUENCE_PREFIXES = [
+    ("co_order_", "DEADLINES OUT OF ORDER"),
+    ("co_after_closing_", "DEADLINE AFTER CLOSING"),
+    ("co_conflict_", "CONFLICTING CHECKBOXES"),
+    ("co_comp_", "COMPENSATION UNCLEAR"),
+]
 
 _UPSELL_URL = "https://txtanoffer.com/brokers?src=report_email"
 
 
 def _consequence_tag(issue: dict) -> str:
-    return _CONSEQUENCE_TAGS.get(issue.get("key"), issue.get("severity", "issue").upper())
+    key = issue.get("key") or ""
+    if key in _CONSEQUENCE_TAGS:
+        return _CONSEQUENCE_TAGS[key]
+    for prefix, tag in _CONSEQUENCE_PREFIXES:
+        if key.startswith(prefix):
+            return tag
+    return issue.get("severity", "issue").upper()
 
 
 def _join_pages(labels: list) -> str:
@@ -279,7 +327,7 @@ def _clean(msg: str) -> str:
 
 
 def _files_line(result: dict) -> str:
-    parts = ["TREC 20-19"]
+    parts = [result.get("form") or "TREC 20-19"]
     if result.get("has_addendum"):
         parts.append("40-11 addendum")
     if result.get("has_loan_assumption"):
@@ -316,6 +364,20 @@ _UPSELL_TEXT = (
 _DISCLAIMER = ("TC Check flags blanks and mismatches on the fields it can verify. "
                "It isn't legal advice and doesn't replace your review. "
                "TxtAnOffer is not affiliated with TREC.")
+_DISCLAIMER_CO = ("TC Check flags blanks and mismatches on the fields it can verify. "
+                  "It isn't legal advice and doesn't replace your review. "
+                  "Not affiliated with the Colorado Real Estate Commission.")
+# The TREC record-keeping comparison is a Texas rule -- left off Colorado reports.
+_ARCHIVE_TEXT_CO = (
+    "Keep every contract on file: on the Brokerage plan, forward executed "
+    "contracts here from your brokerage email or drop them into your archive. "
+    "Each one is checked and kept 5 years, searchable by address. "
+    "https://txtanoffer.com/archive"
+)
+
+
+def _is_co(result: dict) -> bool:
+    return (result or {}).get("state") == "CO"
 
 
 def _ordinal(n: int) -> str:
@@ -356,8 +418,8 @@ def _archived_text(archived) -> str:
 def format_reply_body(result: dict, check_count: int = 0, archived: dict = None) -> str:
     if not result["recognized"]:
         return (
-            "We couldn't read that as a TREC 20-19 we recognize.\n\n"
-            "This works with AcroForm-fillable TREC 20-19 PDFs (not scanned "
+            "We couldn't read that as a TREC 20-19 or Colorado CBS1 we recognize.\n\n"
+            "This works with AcroForm-fillable TREC 20-19 and Colorado CBS1 PDFs (not scanned "
             "or flattened files). If you forwarded a scan, try re-sending "
             "the original fillable PDF instead.\n\n"
             "-- TxtAnOffer TC Check"
@@ -368,7 +430,7 @@ def format_reply_body(result: dict, check_count: int = 0, archived: dict = None)
     warnings = [i for i in issues if i.get("severity") == "warning"]
     label, _, _ = _status_headline(result)
     prop = result.get("property") or {}
-    where = _property_line(result) or "Property address not filled in (Section 2A)"
+    where = _property_line(result) or ("Property address not filled in (§2.4)" if _is_co(result) else "Property address not filled in (Section 2A)")
     county = f" · {prop['county']} County" if prop.get("county") else ""
 
     body = (f"TC FILE CHECK REPORT\n{where}{county}\n"
@@ -385,10 +447,10 @@ def format_reply_body(result: dict, check_count: int = 0, archived: dict = None)
                  "2. Check it again: forward the corrected file to tc@check.txtanoffer.com, "
                  "or upload it at txtanoffer.com/tc-check.\n"
                  "3. Share this with your agent: just forward this email.\n\n")
-    body += _ARCHIVE_TEXT + "\n\n" + _UPSELL_TEXT + "\n\n"
+    body += (_ARCHIVE_TEXT_CO if _is_co(result) else _ARCHIVE_TEXT) + "\n\n" + _UPSELL_TEXT + "\n\n"
     body += ("---\n"
              f"{_streak_note(check_count)}Check another file: tc@check.txtanoffer.com "
-             "or txtanoffer.com/tc-check\n" + _DISCLAIMER)
+             "or txtanoffer.com/tc-check\n" + (_DISCLAIMER_CO if _is_co(result) else _DISCLAIMER))
     return body
 
 
@@ -496,11 +558,14 @@ def _next_steps_html() -> str:
             f'<p style="{step}margin-bottom:0;"><strong>3.</strong> Share this with your agent: just forward this email.</p></div>')
 
 
-def _archive_html() -> str:
+def _archive_html(co: bool = False) -> str:
+    # The TREC record-keeping comparison is a Texas rule -- left off Colorado reports.
+    retention = ("searchable by address." if co else
+                 "searchable by address &mdash; longer than the 4 years TREC requires brokers to keep transaction records (22 TAC &sect;535.2).")
     return (f'<div style="margin-top:16px;background:{_YELLOW_TINT};border:1px solid {_YELLOW};border-radius:10px;padding:16px 18px;">'
             f'<p style="margin:0 0 6px;font-size:14px;font-weight:700;color:#0f1f2f;font-family:{_FONT};">Keep every contract on file</p>'
             f'<p style="margin:0;font-size:13px;line-height:1.55;color:#3a3320;font-family:{_FONT};">On the Brokerage plan, forward executed contracts here from your brokerage email or drop them into your archive. '
-            f'Each one is checked and <strong>kept 5 years</strong>, searchable by address &mdash; longer than the 4 years TREC requires brokers to keep transaction records (22 TAC &sect;535.2). '
+            f'Each one is checked and <strong>kept 5 years</strong>, {retention} '
             f'<a href="https://txtanoffer.com/archive" style="color:{_GREEN};font-weight:600;">How it works &rarr;</a></p></div>')
 
 
@@ -511,13 +576,13 @@ def _upsell_html() -> str:
             f'<a href="{_UPSELL_URL}" style="display:inline-block;font-size:13px;font-weight:700;color:#0f1f2f;background:{_YELLOW};padding:10px 18px;border-radius:999px;text-decoration:none;font-family:{_FONT};">Get a free 20-file audit &rarr;</a></div>')
 
 
-def _footer_html(check_count: int = 0) -> str:
+def _footer_html(check_count: int = 0, co: bool = False) -> str:
     streak = _streak_note(check_count)
     streak_html = f"{escape(streak)}<br>" if streak else ""
     return (f'<p style="margin:24px 0 0;padding-top:16px;border-top:1px solid #eef0f2;font-size:12px;line-height:1.6;color:#8a9aa9;font-family:{_FONT};">'
             f'{streak_html}Check another file: <a href="mailto:tc@check.txtanoffer.com" style="color:{_GREEN};">tc@check.txtanoffer.com</a> or '
             f'<a href="https://txtanoffer.com/tc-check" style="color:{_GREEN};">txtanoffer.com/tc-check</a><br>'
-            f'<span style="font-size:11px;">{escape(_DISCLAIMER)}</span></p>')
+            f'<span style="font-size:11px;">{escape(_DISCLAIMER_CO if co else _DISCLAIMER)}</span></p>')
 
 
 def _archived_html(archived) -> str:
@@ -534,11 +599,11 @@ def _archived_html(archived) -> str:
 def format_reply_html(result: dict, check_count: int = 0, archived: dict = None) -> str:
     if not result["recognized"]:
         body = (
-            f'<p style="{_P_STYLE}">This works with AcroForm-fillable TREC 20-19 PDFs '
+            f'<p style="{_P_STYLE}">This works with AcroForm-fillable TREC 20-19 and Colorado CBS1 PDFs '
             f"(not scanned or flattened files). If you forwarded a scan, try re-sending "
             f"the original fillable PDF instead.</p>"
         )
-        return _email_shell("We couldn&rsquo;t read that file", "It didn&rsquo;t match a TREC 20-19 we recognize", body)
+        return _email_shell("We couldn&rsquo;t read that file", "It didn&rsquo;t match a TREC 20-19 or Colorado CBS1 we recognize", body)
 
     issues = _display_issues(result.get("issues") or [])
     blockers = [i for i in issues if i.get("severity") == "blocker"]
@@ -562,9 +627,9 @@ def format_reply_html(result: dict, check_count: int = 0, archived: dict = None)
         body += _issue_group_html(blockers, "Fix before this goes to title")
         body += _issue_group_html(warnings, "Worth fixing")
         body += _next_steps_html()
-    body += _archive_html()
+    body += _archive_html(_is_co(result))
     body += _upsell_html()
-    body += _footer_html(check_count)
+    body += _footer_html(check_count, _is_co(result))
     return _email_shell(heading, subheading, body, kicker="TC File Check report")
 
 
