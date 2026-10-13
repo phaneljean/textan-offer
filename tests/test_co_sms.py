@@ -118,8 +118,8 @@ class CoSmsFlow(unittest.TestCase):
 
     def test_other_states_still_blocked(self):
         sent = self._sms("+15125559002", "500k 20% 30day 123 Main St, Phoenix, AZ 85001")
-        self.assertIn("not Texas", sent[0])
-        self.assertNotIn("Colorado", sent[0])
+        self.assertIn("supports Texas and Colorado", sent[0])
+        self.assertIn("Arizona", sent[0].replace("AZ", "Arizona"))
 
 
 if __name__ == "__main__":
