@@ -7377,8 +7377,8 @@ def login():
 </html>"""
 
 
-# TODO(Phanel): confirm legal entity + address. Until then the operator line
-# names the person only -- no entity type, state or address claim.
+# Mailing address added 2026-10-13 (Phanel). TODO(Phanel): legal entity +
+# governing-law state are still unconfirmed -- no entity type claimed.
 @app.route("/terms")
 def terms():
     html = """<!DOCTYPE html>
@@ -7522,7 +7522,7 @@ def terms():
   </div>
 
   <div class="legal-card">
-    <p>These Terms of Service ("Terms") govern your use of TxtAnOffer ("Service"), operated by Phanel Jean-Baptiste ("we," "us," or "our"). By accessing or using the Service, you agree to be bound by these Terms. If you do not agree, do not use the Service.</p>
+    <p>These Terms of Service ("Terms") govern your use of TxtAnOffer ("Service"), operated by Phanel Jean-Baptiste, 807 W 112th St, Los Angeles, CA 90044 ("we," "us," or "our"). By accessing or using the Service, you agree to be bound by these Terms. If you do not agree, do not use the Service.</p>
 
     <h2><span class="section-num">1.</span> Service Description</h2>
     <p>TxtAnOffer is a document drafting tool that converts shorthand offer text into pre-filled TREC One to Four Family Residential Contract (Resale) forms (TREC No. 20-19). The Service accepts offer parameters via SMS or a web interface and generates a partially completed PDF contract for review by a licensed Texas real estate agent.</p>
@@ -7650,8 +7650,8 @@ def terms():
     return html.replace("__TREC_FORM_DATE__", TREC_FORM_CURRENT_AS_OF)
 
 
-# TODO(Phanel): confirm legal entity + address. Until then the operator line
-# names the person only -- no entity type, state or address claim.
+# Mailing address added 2026-10-13 (Phanel). TODO(Phanel): legal entity +
+# governing-law state are still unconfirmed -- no entity type claimed.
 @app.route("/privacy")
 def privacy():
     return """<!DOCTYPE html>
@@ -7789,7 +7789,7 @@ def privacy():
   </div>
 
   <div class="legal-card">
-    <p>TxtAnOffer ("Service") is operated by Phanel Jean-Baptiste. This Privacy Policy explains how we collect, use, and protect your information.</p>
+    <p>TxtAnOffer ("Service") is operated by Phanel Jean-Baptiste, 807 W 112th St, Los Angeles, CA 90044. This Privacy Policy explains how we collect, use, and protect your information.</p>
 
     <h2>1. Information We Collect</h2>
     <p><strong>Information you provide:</strong></p>

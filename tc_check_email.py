@@ -396,6 +396,9 @@ _UPSELL_TEXT = (
 _DISCLAIMER = ("TC Check flags blanks and mismatches on the fields it can verify. "
                "It isn't legal advice and doesn't replace your review. "
                "TxtAnOffer is not affiliated with TREC.")
+# Sender's physical mailing address (CAN-SPAM / CASL), provided by Phanel 2026-10-13.
+MAILING_ADDRESS = "TxtAnOffer · 807 W 112th St, Los Angeles, CA 90044"
+
 _DISCLAIMER_CO = ("TC Check flags blanks and mismatches on the fields it can verify. "
                   "It isn't legal advice and doesn't replace your review. "
                   "Not affiliated with the Colorado Real Estate Commission.")
@@ -482,7 +485,8 @@ def format_reply_body(result: dict, check_count: int = 0, archived: dict = None)
     body += (_ARCHIVE_TEXT_CO if _is_co(result) else _ARCHIVE_TEXT) + "\n\n" + _UPSELL_TEXT + "\n\n"
     body += ("---\n"
              f"{_streak_note(check_count)}Check another file: tc@check.txtanoffer.com "
-             "or txtanoffer.com/tc-check\n" + (_DISCLAIMER_CO if _is_co(result) else _DISCLAIMER))
+             "or txtanoffer.com/tc-check\n" + (_DISCLAIMER_CO if _is_co(result) else _DISCLAIMER)
+             + "\n" + MAILING_ADDRESS)
     return body
 
 
@@ -614,7 +618,7 @@ def _footer_html(check_count: int = 0, co: bool = False) -> str:
     return (f'<p style="margin:24px 0 0;padding-top:16px;border-top:1px solid #eef0f2;font-size:12px;line-height:1.6;color:#8a9aa9;font-family:{_FONT};">'
             f'{streak_html}Check another file: <a href="mailto:tc@check.txtanoffer.com" style="color:{_GREEN};">tc@check.txtanoffer.com</a> or '
             f'<a href="https://txtanoffer.com/tc-check" style="color:{_GREEN};">txtanoffer.com/tc-check</a><br>'
-            f'<span style="font-size:11px;">{escape(_DISCLAIMER_CO if co else _DISCLAIMER)}</span></p>')
+            f'<span style="font-size:11px;">{escape(_DISCLAIMER_CO if co else _DISCLAIMER)}<br>{escape(MAILING_ADDRESS)}</span></p>')
 
 
 def _archived_html(archived) -> str:

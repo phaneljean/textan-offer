@@ -47,6 +47,13 @@ def issue_summary(result: dict) -> str:
     return "\n".join(lines)
 
 
+# Marketing email: opt-out + physical address (CAN-SPAM / CASL). Opt-outs
+# arrive as replies to support@ and are honored by hand.
+from tc_check_email import MAILING_ADDRESS as _MAILING_ADDRESS
+_COMPLIANCE_FOOTER = ("\n\nDon't want these? Reply \"unsubscribe\" and we won't email you again.\n"
+                      + _MAILING_ADDRESS)
+
+
 def send_immediate_nudge(email: str, result: dict) -> None:
     """Fire-and-forget. Call right after tc_gate.save_email() succeeds,
     once you have the check `result` dict from tc_audit.check_tc_file."""
@@ -59,7 +66,7 @@ def send_immediate_nudge(email: str, result: dict) -> None:
         f"closing date fill in correctly every time, so there's nothing "
         f"left to catch.\n\n"
         f"Try it free -- 3 offers, no card required: {PRICING_URL}\n\n"
-        f"-- TxtAnOffer"
+        f"-- TxtAnOffer" + _COMPLIANCE_FOOTER
     )
 
     def _do():
@@ -116,7 +123,7 @@ def run_followup_if_due() -> None:
                     f"them by text message instead -- address, price, and closing date "
                     f"auto-fill correctly, so there's nothing left to catch.\n\n"
                     f"Try it free -- 3 offers, no card required: {PRICING_URL}\n\n"
-                    f"-- TxtAnOffer"
+                    f"-- TxtAnOffer" + _COMPLIANCE_FOOTER
                 )
                 result = send_plain_email(client["email"], subject, body)
                 if result.get("success"):
