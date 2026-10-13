@@ -82,5 +82,20 @@ class HeroCardMatchesSample(unittest.TestCase):
         self.assertNotIn("home-hero.jpg", self.html)
 
 
+class NavCta(unittest.TestCase):
+    PAGES = ("/", "/demo", "/pricing", "/faq", "/about", "/trust", "/tc-hub", "/tc-hub/colorado",
+             "/trec-changes", "/terms", "/privacy", "/contact", "/guides/trec-20-19-checklist")
+
+    def test_every_nav_cta_is_short_and_nowrap(self):
+        c = app_module.app.test_client()
+        for path in self.PAGES:
+            html = c.get(path, headers=UA).get_data(as_text=True)
+            self.assertNotIn("Try TC Check Free", html, path)
+            self.assertIn(">Check a file free</a>", html, path)
+            self.assertIn('id="nav-cta-shared"', html, path)
+            # injected after the page's own CSS so it wins the cascade
+            self.assertLess(html.rfind("</style>", 0, html.find('id="nav-cta-shared"')), html.find('id="nav-cta-shared"'))
+
+
 if __name__ == "__main__":
     unittest.main()

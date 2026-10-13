@@ -104,6 +104,20 @@ def _redirect_www():
         return redirect(f"https://{CANONICAL_HOST}{request.path}" + (f"?{qs}" if qs else ""), code=301)
 
 
+# One shared rule for the nav CTA, injected after each page's own <style>
+# so it wins the cascade. There are ~17 hand-copied navs in this file with
+# their own .nav-cta CSS; some let the pill wrap to two lines at phone width
+# and butt into the wordmark/hamburger, some hid it entirely under 480px.
+# Until the navs are unified (Phanel's call), this keeps every copy on one
+# line and visible, sized to fit next to the logo and menu button at 390px.
+NAV_CTA_CSS = """<style id="nav-cta-shared">
+.nav-cta{white-space:nowrap;flex-shrink:0}
+@media(max-width:480px){nav.nav{padding-left:1rem;padding-right:1rem}
+.nav-cta{display:inline-block;font-size:.8rem;padding:.5rem .85rem;margin-left:auto}
+.nav-cta + .nav-toggle,.nav-cta + button{margin-left:.6rem}}
+</style>"""
+
+
 @app.after_request
 def _add_canonical(resp):
     # Self-referencing canonical without the query string, so ?src=... links
@@ -112,6 +126,9 @@ def _add_canonical(resp):
     if (request.method == "GET" and resp.status_code == 200 and resp.mimetype == "text/html"
             and not resp.direct_passthrough):
         body = resp.get_data(as_text=True)
+        if 'class="nav-cta"' in body and "</head>" in body and 'id="nav-cta-shared"' not in body:
+            body = body.replace("</head>", NAV_CTA_CSS + "\n</head>", 1)
+            resp.set_data(body)
         if "</head>" in body and 'rel="canonical"' not in body:
             tag = f'<link rel="canonical" href="https://{CANONICAL_HOST}{request.path}">'
             resp.set_data(body.replace("</head>", tag + "\n</head>", 1))
@@ -1244,7 +1261,7 @@ def index():
       <a href="/tc-hub">TC Hub</a>
       <a href="/login">Log In</a>
     </div>
-    <a href="/tc-check" class="nav-cta">Try TC Check Free</a>
+    <a href="/tc-check" class="nav-cta">Check a file free</a>
     <button class="nav-toggle" id="navToggle" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
   </nav>
   <script>
@@ -1960,16 +1977,16 @@ def index():
 </body>
 </html>
 """
-    # Carry ?src=name (e.g. from a Direct Reach email) through the "Try TC
-    # Check Free" CTA to /tc-check, so a click through this exact nav
+    # Carry ?src=name (e.g. from a Direct Reach email) through the nav "Check a
+    # file free" CTA to /tc-check, so a click through this exact nav
     # button still attributes correctly even though it lands on the
     # homepage first -- see get_landing_visits_by_source() on /analytics.
     import re as _re
     src = _re.sub(r"[^a-zA-Z0-9_-]", "", request.args.get("src", ""))[:60]
     if src:
         html = html.replace(
-            '<a href="/tc-check" class="nav-cta">Try TC Check Free</a>',
-            f'<a href="/tc-check?src={src}" class="nav-cta">Try TC Check Free</a>',
+            '<a href="/tc-check" class="nav-cta">Check a file free</a>',
+            f'<a href="/tc-check?src={src}" class="nav-cta">Check a file free</a>',
             1,
         )
     # Real TC File Check production numbers, not marketing copy -- swapped
@@ -2004,7 +2021,7 @@ def index():
     resp = make_response(html)
     _remember_site_state(resp, site_state)
     # First-touch attribution cookie: the query-param rewrite above only
-    # survives if the visitor clicks "Try TC Check Free" in this exact page
+    # survives if the visitor clicks the nav "Check a file free" in this exact page
     # load. Cold-outreach signups routinely happen on a later visit (a
     # different page, a different day) with no ?src on that later click,
     # which silently misattributes real Direct Reach conversions as
@@ -3354,7 +3371,7 @@ DEMO_FORM = """
       <a href="/faq">FAQ</a>
       <a href="/login">Log In</a>
     </div>
-    <a href="/tc-check" class="nav-cta">Try TC Check Free</a>
+    <a href="/tc-check" class="nav-cta">Check a file free</a>
     <button class="nav-toggle" id="navToggle" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
   </nav>
   <script>
@@ -5446,7 +5463,7 @@ padding:0.6rem 1.1rem;border-radius:9999px;font-size:0.85rem;font-weight:600;}
 <a href="/faq">FAQ</a>
 <a href="/login">Log In</a>
 </div>
-<a href="/tc-check" class="nav-cta">Try TC Check Free</a>
+<a href="/tc-check" class="nav-cta">Check a file free</a>
 <button class="nav-toggle" id="navToggle" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
 </nav>
 <script>
@@ -5997,7 +6014,7 @@ def pricing():
     <a href="/faq">FAQ</a>
     <a href="/login">Log In</a>
   </div>
-  <a href="/tc-check" class="nav-cta">Try TC Check Free</a>
+  <a href="/tc-check" class="nav-cta">Check a file free</a>
   <button class="nav-toggle" id="navToggle" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
 </nav>
 <script>
@@ -7673,7 +7690,7 @@ def terms():
     <a href="/faq">FAQ</a>
     <a href="/login">Log In</a>
   </div>
-  <a href="/tc-check" class="nav-cta">Try TC Check Free</a>
+  <a href="/tc-check" class="nav-cta">Check a file free</a>
   <button class="nav-toggle" id="navToggle" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
 </nav>
 <script>
@@ -7941,7 +7958,7 @@ def privacy():
     <a href="/faq">FAQ</a>
     <a href="/login">Log In</a>
   </div>
-  <a href="/tc-check" class="nav-cta">Try TC Check Free</a>
+  <a href="/tc-check" class="nav-cta">Check a file free</a>
   <button class="nav-toggle" id="navToggle" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
 </nav>
 <script>
@@ -8163,7 +8180,7 @@ def faq():
     <a href="/faq">FAQ</a>
     <a href="/login">Log In</a>
   </div>
-  <a href="/tc-check" class="nav-cta">Try TC Check Free</a>
+  <a href="/tc-check" class="nav-cta">Check a file free</a>
   <button class="nav-toggle" id="navToggle" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
 </nav>
 <script>
@@ -8380,7 +8397,7 @@ def trec_changes():
     <a href="/faq">FAQ</a>
     <a href="/login">Log In</a>
   </div>
-  <a href="/tc-check" class="nav-cta">Try TC Check Free</a>
+  <a href="/tc-check" class="nav-cta">Check a file free</a>
   <button class="nav-toggle" id="navToggle" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
 </nav>
 <script>
@@ -8650,7 +8667,7 @@ def tc_hub():
     <a href="/faq">FAQ</a>
     <a href="/login">Log In</a>
   </div>
-  <a href="/tc-check" class="nav-cta">Try TC Check Free</a>
+  <a href="/tc-check" class="nav-cta">Check a file free</a>
   <button class="nav-toggle" id="navToggle" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
 </nav>
 <script>
@@ -8976,7 +8993,7 @@ def about():
     <a href="/faq">FAQ</a>
     <a href="/login">Log In</a>
   </div>
-  <a href="/tc-check" class="nav-cta">Try TC Check Free</a>
+  <a href="/tc-check" class="nav-cta">Check a file free</a>
   <button class="nav-toggle" id="navToggle" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
 </nav>
 <script>
@@ -10344,7 +10361,7 @@ def contact():
     <a href="/faq">FAQ</a>
     <a href="/login">Log In</a>
   </div>
-  <a href="/tc-check" class="nav-cta">Try TC Check Free</a>
+  <a href="/tc-check" class="nav-cta">Check a file free</a>
   <button class="nav-toggle" id="navToggle" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
 </nav>
 <script>
@@ -10599,7 +10616,7 @@ def profile():
     <a href="/demo">Demo</a>
     <a href="/pricing">Pricing</a>
   </div>
-  <a href="/tc-check" class="nav-cta">Try TC Check Free</a>
+  <a href="/tc-check" class="nav-cta">Check a file free</a>
   <button class="nav-toggle" id="navToggle" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
 </nav>
 <script>
