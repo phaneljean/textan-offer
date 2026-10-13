@@ -73,6 +73,10 @@ def _li(items):
 
 
 def body() -> str:
+    # No "Common TC Mistakes" section until real Colorado files exist to
+    # rank (the Texas hub shows its own only past a 5-file floor, see
+    # tc_hub() in app.py). An empty placeholder box read as "nobody uses
+    # this" (2026-10-13).
     forms = "".join(
         f'<div class="form-card"><div class="form-num">{num}</div><h3>{name}</h3><p>{desc}</p>'
         f'<div class="form-meta">{dates}</div>'
@@ -90,7 +94,6 @@ def body() -> str:
   <div class="hub-nav">
     <a href="#forms">Colorado Forms</a>
     <a href="#checklists">File-Review Checklists</a>
-    <a href="#mistakes">Common TC Mistakes</a>
     <a href="#changes">2026 Changes</a>
     <a href="#checklist-download">Free Checklist</a>
   </div>
@@ -104,16 +107,8 @@ def body() -> str:
   <div class="section" id="checklists">
     <h2>File-Review Checklists</h2>
     <p class="section-sub">Organized by the point in the transaction where each check matters -- built from the exact checks TC Check runs on a CBS1 and the forms attached to it, not a generic industry list.</p>
+    <p class="section-sub"><a href="/tc-check?demo=1&amp;state=co" style="color:var(--accent-dark);font-weight:600;text-decoration:underline;">Run the sample to see what TC Check flags &rarr;</a></p>
     <div class="checklist-grid">{checklists}</div>
-  </div>
-
-  <div class="section" id="mistakes">
-    <h2>Common TC Mistakes</h2>
-    <p class="section-sub">What shows up blank or inconsistent on real Colorado files, ranked by how often TC Check finds it.</p>
-    <div class="mistakes-card">
-      <p style="font-size:0.85rem;color:var(--text-muted);">No data yet -- check back after real Colorado files have been run through TC Check.</p>
-      <p class="mistakes-note">Not enough real-world CBS1 files have been audited yet to publish an honest breakdown. TC Check is built to catch blank &sect;3.1 deadlines that delete a contingency, &sect;4.1 price math, and deadlines out of order or after closing -- run your own file at <a href="/tc-check?state=co" style="color:var(--accent-dark);text-decoration:underline;">/tc-check</a> to see where yours stands.</p>
-    </div>
   </div>
 
   <div class="section" id="changes">

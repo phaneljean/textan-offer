@@ -8370,6 +8370,11 @@ def tc_hub():
             f'<div class="mistake-pct">{issue["pct_of_recognized"]}%</div>'
             '</div>'
         )
+    # "Common TC Mistakes" only renders once there's real data to show --
+    # same 5-file floor as the homepage stats. An empty "No data yet" box
+    # was the page's only social signal, and it was a negative one
+    # (2026-10-13). Until then the hub points at the sample check instead.
+    show_mistakes = bool(mistake_rows) and summary["recognized"] >= 5
     mistakes_note = (
         f"Based on {summary['recognized']} real TREC 20-19 files run through TC Check in the last 30 days, "
         f"updated live &mdash; not a static list."
@@ -8555,7 +8560,7 @@ def tc_hub():
   <div class="hub-nav">
     <a href="#forms">TREC Forms</a>
     <a href="#checklists">File-Review Checklists</a>
-    <a href="#mistakes">Common TC Mistakes</a>
+    """ + ('<a href="#mistakes">Common TC Mistakes</a>' if show_mistakes else '') + """
     <a href="#changes">2026 Changes</a>
     <a href="#checklist-download">Free Checklist</a>
   </div>
@@ -8592,6 +8597,7 @@ def tc_hub():
   <div class="section" id="checklists">
     <h2>File-Review Checklists</h2>
     <p class="section-sub">Organized by the point in the transaction where each check actually matters -- built from the exact fields TC Check verifies on a real file, not a generic industry list.</p>
+    <p class="section-sub"><a href="/tc-check?demo=1" style="color:var(--accent-dark);font-weight:600;text-decoration:underline;">Run the sample to see what TC Check flags &rarr;</a></p>
     <div class="checklist-grid">
       <div class="checklist-card">
         <h3>Before Sending an Offer</h3>
@@ -8638,14 +8644,14 @@ def tc_hub():
     </div>
   </div>
 
-  <div class="section" id="mistakes">
+  """ + ("""<div class="section" id="mistakes">
     <h2>Common TC Mistakes</h2>
     <p class="section-sub">What actually shows up blank or inconsistent, ranked by how often TC Check has found it on real uploaded files.</p>
     <div class="mistakes-card">
-      """ + (mistake_rows or '<p style="font-size:0.85rem;color:var(--text-muted);">No data yet -- check back after a few real files have been run through TC Check.</p>') + """
+      """ + mistake_rows + """
       <p class="mistakes-note">""" + mistakes_note + """</p>
     </div>
-  </div>
+  </div>""" if show_mistakes else "") + """
 
   <div class="section" id="changes">
     <h2>2026 Changes</h2>

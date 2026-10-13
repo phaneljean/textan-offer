@@ -181,5 +181,15 @@ class PlaygroundAndSitemap(unittest.TestCase):
         self.assertEqual(app_module.app.test_client().get("/tc-check/compare", headers=UA).status_code, 200)
 
 
+class HubsHideEmptyMistakes(unittest.TestCase):
+    def test_no_data_yet_hidden_on_both_hubs(self):
+        c = app_module.app.test_client()
+        for path in ("/tc-hub", "/tc-hub/colorado"):
+            html = c.get(path, headers=UA).get_data(as_text=True)
+            self.assertNotIn("No data yet", html, path)
+            self.assertNotIn('href="#mistakes"', html, path)
+            self.assertIn("Run the sample to see what TC Check flags", html, path)
+
+
 if __name__ == "__main__":
     unittest.main()
