@@ -105,10 +105,12 @@ def body() -> str:
       <div><b>1 &middot; Receive</b>Your PDF is written to a temporary file.</div>
       <div><b>2 &middot; Check</b>Rule code reads the form fields and builds your report.</div>
       <div><b>3 &middot; Delete</b>The file is deleted, normally within seconds (bulk uploads: when the batch finishes).</div>
-      <div><b>4 &middot; Record</b>We keep a short record &mdash; your email if you gave one and issue codes &mdash; not the file, the property address or its contents.</div>
+      <div><b>4 &middot; Record</b>We keep a short record &mdash; your email if you gave one and short issue codes &mdash; not the file or its contents. (Bulk checks keep a little more; see below.)</div>
     </div>
     <ul>
       <li><strong>Check records</strong> older than 90 days are removed by an automatic cleanup that doesn&rsquo;t run on a fixed schedule, so some may last a little longer.</li>
+      <li><strong>Bulk checks</strong> keep your email, the number of files, each file&rsquo;s original name (often the property address), whether it was recognized and up to 10 issue messages per file, with no set expiry. Anyone with the batch results link can view them. To have a batch deleted, <a href="{_mail('Privacy request')}">email us</a>.</li>
+      <li><strong>Report emails</strong> include the property address in the subject line.</li>
       <li><strong>Brokerage archive (opt-out):</strong> on the Brokerage plan, executed contracts a brokerage forwards from a linked email or uploads while signed in are kept for 5 years, visible only to that brokerage&rsquo;s signed-in users and exportable anytime. The brokerage can turn this off.</li>
       <li><strong>Drafts you generate by text</strong> are kept 30 days on the free trial and 5 years on a paid plan, in your dashboard.</li>
       <li><strong>Links to your PDFs</strong> are signed and expire &mdash; they can&rsquo;t be guessed from the file name.</li>
