@@ -4506,10 +4506,9 @@ __STATE_SWITCH_JS__
 <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>3 free reports, no signup</span>
 <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>Results in seconds</span>
 </div>
-<!-- The upload step is where real visitors have dropped (10-06), so the
-     privacy answer sits right at it. Both claims are on /trust and true of
-     the code: a web upload goes to a temp file that's deleted after the
-     check, and TC Check is rule code with no model/LLM dependency. -->
+<!-- The privacy answer sits at the upload step. Both claims are on /trust
+     and true of the code: a web upload goes to a temp file that's deleted
+     after the check, and TC Check is rule code with no model/LLM dependency. -->
 <p class="dz-trust-line"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span>Checked, then deleted. No AI reads your contract. <a href="/trust#contracts" data-evt="tc_trust_link">How we handle files &rarr;</a></span></p>
 <p class="dz-forward-line">Or forward it to <a href="mailto:tc@check.txtanoffer.com">tc@check.txtanoffer.com</a> and the report comes back by email.</p>
 <div>
