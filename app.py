@@ -197,7 +197,7 @@ _BOT_UA_RE = re.compile(
 
 
 _MOBILE_UA_RE = re.compile(r"Mobi|Android|iPhone|iPad|iPod", re.I)
-_ENGAGEMENT_TYPES = ("js_ok", "hero_cta", "hero_sample", "dropzone_seen", "stay_10s", "stay_60s",
+_ENGAGEMENT_TYPES = ("js_ok", "hero_cta", "hero_sample", "hero_card", "dropzone_seen", "stay_10s", "stay_60s",
                      "role_shown", "role_dismissed", "brokers_audit_cta", "brokers_email_cta", "brokers_plan_cta", "records_brokers_cta", "guide_check_cta", "guide_brokers_cta", "path_self_cta", "path_walkthrough_cta", "path_brokerage_cta", "guide_card_cta", "support_email_cta", "pricing_audit_cta", "tc_copy_agent_msg", "state_toggle_tx", "state_toggle_co", "states_tx_check", "states_tx_hub", "states_co_check", "states_co_hub", "states_request") + tuple("role_" + r for r in _VISITOR_ROLES)
 
 # Tiny, cookie-less-of-its-own beacon script appended to every page that
@@ -511,7 +511,7 @@ def index():
   <link rel="icon" href="/static/favicon.ico?v=2" type="image/x-icon">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&display=swap" rel="stylesheet"></noscript>
+  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Caveat:wght@700&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Caveat:wght@700&display=swap" rel="stylesheet"></noscript>
   <style>
     :root {
       --bg: #F5F5F7;
@@ -622,10 +622,22 @@ def index():
     .nav-toggle { display: none; flex-direction: column; justify-content: center; gap: 5px; width: 34px; height: 34px; background: none; border: none; cursor: pointer; padding: 0; }
     .nav-toggle span { display: block; width: 100%; height: 2px; background: var(--text); border-radius: 2px; }
 
-    /* Sun Life-style hero band: deep teal panel + full-bleed photo */
-    .sl-hero { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); min-height: 470px; position: relative; z-index: 1; }
-    .sl-hero-panel { background: #0a3f3a; color: #fff; padding: 3.5rem 3rem 3.5rem max(2rem, calc((100vw - 1100px) / 2)); display: flex; flex-direction: column; justify-content: center; }
-    .sl-hero-panel h1 { font-family: 'Source Serif 4', Georgia, 'Times New Roman', serif; font-weight: 600; font-size: 2.45rem; line-height: 1.14; letter-spacing: -0.01em; color: #fff; margin: 0; max-width: 30rem; }
+    /* Hero (2026-10-13, from ad-creative's hero mockup): the product itself
+       instead of a stock photo -- a Paragraph 3 / §4.1 scrap from the sample
+       contract with the mistake circled, and the TC Check report that caught
+       it. Every number and finding on the card is copied from the live
+       output of tc_audit / co_audit on static/sample_trec_20-19.pdf and
+       static/sample_cbs1.pdf (the same files "See a sample report" runs);
+       if either sample or the rules change, re-run both and update the card
+       -- tests/test_site_polish.py fails when the counts drift. */
+    .sl-hero { position: relative; z-index: 1; overflow: hidden; background-color: #0a3f3a; color: #fff;
+      background-image: radial-gradient(900px 500px at 85% 40%, rgba(11,93,82,.95), rgba(10,63,58,0) 70%),
+        linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
+      background-size: auto, 32px 32px, 32px 32px; }
+    .sl-hero-in { max-width: 1180px; margin: 0 auto; padding: 48px 1.5rem 56px; display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1.05fr); gap: 56px; align-items: center; }
+    .sl-hero-panel { display: flex; flex-direction: column; min-width: 0; }
+    .sl-hero-panel h1 { font-family: 'Inter', -apple-system, sans-serif; font-weight: 800; font-size: 3.5rem; line-height: 1.04; letter-spacing: -0.035em; color: #fff; margin: 0; max-width: 560px; }
+    .sl-hero-panel h1 em { font-style: normal; color: #f5c242; }
     /* Texas | Colorado switch. Both states' copy is server-rendered (crawlers
        see both); the class on <html> -- set server-side from ?state=, the
        ta_state cookie or a co* src tag, see _site_state() -- hides the
@@ -646,24 +658,79 @@ def index():
     .state-switch.light button[aria-pressed="true"] { background: #0b5d52; color: #fff; }
     .state-switch.light button:focus-visible { outline-color: #0b5d52; }
     .state-switch-row { display: flex; justify-content: center; }
-    .sl-hero-panel p { margin: 1.15rem 0 0; color: rgba(255,255,255,0.86); font-size: 1.02rem; line-height: 1.6; max-width: 27rem; }
-    .sl-cta { display: inline-block; margin-top: 1.75rem; background: #f5c242; color: #0f1f2f; font-weight: 700; font-size: 1rem; padding: 0.95rem 1.6rem; border-radius: 4px; text-decoration: none; width: fit-content; transition: background 0.18s ease; }
+    .sl-hero-panel p { margin: 1.35rem 0 0; color: rgba(255,255,255,0.86); font-size: 1.15rem; line-height: 1.55; max-width: 470px; }
+    .sl-cta { display: inline-flex; align-items: center; gap: 10px; margin-top: 1.75rem; background: #f5c242; color: #0f1f2f; font-weight: 700; font-size: 1.05rem; padding: 1.05rem 1.6rem; border-radius: 10px; text-decoration: none; width: fit-content; box-shadow: 0 10px 30px -10px rgba(245,194,66,.6); transition: background 0.18s ease; }
+    .sl-cta svg { width: 18px; height: 18px; }
     .sl-cta:hover { background: #ffd25e; }
-    .sl-hero-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.9rem 1.25rem; margin-top: 1.75rem; }
+    .sl-hero-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.9rem 1.6rem; margin-top: 2rem; }
     .sl-hero-actions .sl-cta { margin-top: 0; }
-    .sl-cta-secondary { background: none; border: 0; padding: 0.5rem 0; font: inherit; font-size: 0.98rem; font-weight: 600; color: #fff; text-decoration: underline; text-underline-offset: 4px; text-decoration-color: rgba(255,255,255,0.45); cursor: pointer; }
+    .sl-cta-secondary { background: none; border: 0; padding: 0.5rem 0; font: inherit; font-size: 1rem; font-weight: 600; color: #fff; text-decoration: underline; text-underline-offset: 5px; text-decoration-color: rgba(255,255,255,0.45); cursor: pointer; }
     .sl-cta-secondary:hover { text-decoration-color: #fff; }
     .sl-cta-secondary:disabled { opacity: 0.75; cursor: default; }
-    .sl-hero-phone { display: none; margin-top: 1rem; font-size: 0.86rem; line-height: 1.5; color: rgba(255,255,255,0.85); }
+    .sl-hero-phone { display: none; margin-top: 1rem; font-size: 0.875rem; line-height: 1.5; color: rgba(255,255,255,0.85); }
     .sl-hero-phone a { color: #f5c242; font-weight: 600; }
-    @media (max-width: 820px), (hover: none) { .sl-hero-phone { display: block; } }
-    .sl-hero-note { margin-top: 0.9rem; font-size: 0.82rem; color: rgba(255,255,255,0.7); }
-    .sl-hero-photo { background: #0f5a52 url('/static/home-hero.jpg') 68% center / cover no-repeat; min-height: 320px; }
-    @media (max-width: 820px) {
-      .sl-hero { grid-template-columns: 1fr; }
-      .sl-hero-photo { order: -1; min-height: 240px; }
-      .sl-hero-panel { padding: 2.25rem 1.5rem 2.5rem; }
-      .sl-hero-panel h1 { font-size: 2rem; }
+    @media (max-width: 900px), (hover: none) { .sl-hero-phone { display: block; } }
+    .sl-hero-note { display: flex; flex-wrap: wrap; gap: 0.6rem 1.4rem; margin-top: 1.6rem; font-size: 0.875rem; color: rgba(255,255,255,0.78); }
+    .sl-hero-note span { display: inline-flex; align-items: center; gap: 7px; }
+    .sl-hero-note svg { width: 16px; height: 16px; color: #f5c242; flex-shrink: 0; }
+    /* Visual: contract scrap + report card */
+    .hx-visual { position: relative; min-height: 730px; }
+    .hx-paper { position: absolute; left: 0; top: 0; width: 390px; z-index: 1; background: #fdfcf8; color: #222; border-radius: 4px; padding: 22px 24px 26px;
+      transform: rotate(-4deg); box-shadow: 0 30px 60px -20px rgba(0,0,0,.55); font-family: 'Times New Roman', Georgia, serif; font-size: 13.5px; line-height: 1.5; }
+    .hx-paper .ph { font-family: 'Inter', sans-serif; font-size: 10px; letter-spacing: .06em; color: #757575; text-transform: uppercase; margin-bottom: 10px; display: flex; justify-content: space-between; gap: 8px; }
+    .hx-paper .row { display: flex; justify-content: space-between; gap: 12px; padding: 3px 0; border-bottom: 1px dotted #bbb; }
+    .hx-paper .row span:last-child { font-family: 'Courier New', monospace; font-weight: 700; color: #1a3fa6; white-space: nowrap; }
+    .hx-paper .circ { position: relative; }
+    .hx-paper .circ svg { position: absolute; left: -14px; top: -10px; width: calc(100% + 28px); height: calc(100% + 20px); overflow: visible; }
+    .hx-paper .scrawl { font-family: 'Caveat', cursive; color: #dc2626; font-size: 24px; position: absolute; right: 16px; bottom: -8px; transform: rotate(-6deg); }
+    .hx-card { position: absolute; right: 0; top: 182px; width: 420px; z-index: 2; background: #fff; color: #0f1f2f; border-radius: 16px; overflow: hidden; cursor: pointer; text-align: left;
+      box-shadow: 0 40px 80px -24px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.06); }
+    .hx-card:focus-visible { outline: 3px solid #f5c242; outline-offset: 3px; }
+    .hx-card-head { background: #0a3f3a; display: flex; justify-content: space-between; align-items: center; padding: 12px 18px; }
+    .hx-card-head img { height: 16px; width: auto; display: block; }
+    .hx-card-head .k { font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #f5c242; }
+    .hx-card-bar { height: 3px; background: #f5c242; }
+    .hx-card-body { padding: 16px 18px 6px; }
+    .hx-addr { font-size: 19px; font-weight: 800; letter-spacing: -.02em; }
+    .hx-sub { font-size: 12px; color: #5b6b78; margin-top: 2px; }
+    .hx-banner { margin-top: 12px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 3px; }
+    .hx-banner b { font-size: 13px; color: #991b1b; }
+    .hx-counts { font-size: 12px; font-weight: 700; white-space: nowrap; }
+    .hx-counts .m { color: #dc2626; margin-right: 8px; } .hx-counts .r { color: #b45309; }
+    .hx-list { list-style: none; margin: 6px 0 0; padding: 0; }
+    .hx-list li { display: flex; gap: 10px; align-items: flex-start; padding: 11px 0; border-bottom: 1px solid #eef0f2; }
+    .hx-list li:last-child { border-bottom: 0; }
+    /* Findings "fill in" one at a time, like a real check. Visible by
+       default; JS adds .hx-anim (hidden) and then .hx-go once the card is
+       on screen, so on a phone -- where the card is below the fold -- the
+       reveal plays when it's actually seen, and with no JS nothing hides. */
+    .hx-card.hx-anim .hx-list li { opacity: 0; transform: translateY(8px); }
+    .hx-card.hx-anim.hx-go .hx-list li { animation: hxIn .45s ease forwards; }
+    .hx-list li:nth-child(1) { animation-delay: .25s; } .hx-list li:nth-child(2) { animation-delay: .55s; } .hx-list li:nth-child(3) { animation-delay: .85s; }
+    @keyframes hxIn { to { opacity: 1; transform: none; } }
+    @media (prefers-reduced-motion: reduce) { .hx-card.hx-anim .hx-list li { animation: none; opacity: 1; transform: none; } }
+    .hx-tag { flex-shrink: 0; font-size: 10px; font-weight: 800; letter-spacing: .05em; padding: 4px 8px; border-radius: 999px; margin-top: 1px; min-width: 66px; text-align: center; }
+    .hx-tag.b { background: rgba(239,68,68,.12); color: #dc2626; } .hx-tag.w { background: rgba(245,158,11,.14); color: #b45309; }
+    .hx-it b { display: block; font-size: 13.5px; font-weight: 700; }
+    .hx-it span { display: block; font-size: 12.5px; color: #5b6b78; line-height: 1.45; margin-top: 1px; }
+    .hx-more { font-size: 12.5px; font-weight: 600; color: #0b5d52; padding: 10px 18px 12px; border-top: 1px solid #eef0f2; }
+    .hx-caption { background: #f6f8f9; border-top: 1px solid #eef0f2; padding: 9px 18px; font-size: 11px; color: #5f707f; line-height: 1.4; }
+    html.state-co .hx-card { top: 222px; } html.state-co .hx-visual { min-height: 760px; }
+    @media (max-width: 1080px) and (min-width: 901px) {
+      .hx-paper { width: 340px; } .hx-card { width: 380px; }
+    }
+    @media (max-width: 900px) {
+      .sl-hero-in { grid-template-columns: 1fr; gap: 34px; padding: 34px 20px 44px; }
+      .sl-hero-panel h1 { font-size: 2.35rem; line-height: 1.06; }
+      .sl-hero-panel p { font-size: 1.03rem; margin-top: 1rem; }
+      .sl-hero-actions { margin-top: 1.5rem; gap: 0.9rem 1.25rem; }
+      .sl-hero-actions .sl-cta { width: 100%; justify-content: center; }
+      .sl-hero-note { font-size: 0.82rem; gap: 0.5rem 1rem; margin-top: 1.1rem; }
+      .hx-visual, html.state-co .hx-visual { min-height: 0; display: flex; flex-direction: column; align-items: stretch; }
+      .hx-paper { position: relative; width: 92%; font-size: 12.5px; padding: 14px 16px 26px; transform: rotate(-2.5deg); margin-left: 2px; }
+      .hx-paper .hide-sm { display: none; }
+      .hx-paper .scrawl { font-size: 21px; right: 10px; bottom: -4px; }
+      .hx-card, html.state-co .hx-card { position: relative; top: -6px; width: 100%; }
     }
     /* Calm still-life rows (image on cream + plain headline + outlined button) */
     .sl-row { display: grid; grid-template-columns: 1fr 1fr; gap: 2.5rem; align-items: center; margin: 0 0 2.25rem; text-align: left; }
@@ -1196,22 +1263,81 @@ def index():
   __STATE_SWITCH_JS__
 
   <section class="sl-hero">
+   <div class="sl-hero-in">
     <div class="sl-hero-panel">
       <div class="state-switch" role="group" aria-label="Which state's contract">
         <button type="button" data-set-state="tx" aria-pressed="__TX_PRESSED__" data-evt="state_toggle_tx">Texas <small>TREC 20-19</small></button>
         <button type="button" data-set-state="co" aria-pressed="__CO_PRESSED__" data-evt="state_toggle_co">Colorado <small>CBS1</small></button>
       </div>
-      <h1>Catch what title kicks back &mdash; before you send the file.</h1>
+      <h1>Catch what title kicks back <em>before you send the file.</em></h1>
       <p data-state="tx">Drop a filled TREC 20-19 and see what title would kick back in seconds &mdash; blank dates, missing initials, mismatched checkboxes.</p>
       <p data-state="co">Drop a filled CBS1 and see what title would kick back in seconds &mdash; &sect;3.1 deadlines left blank that delete a contingency, &sect;4.1 price math that doesn&rsquo;t add up, deadlines that land after closing.</p>
       <div class="sl-hero-actions">
-        <a class="sl-cta" href="#check" data-evt="hero_cta">Check a file free</a>
+        <a class="sl-cta" href="#check" data-evt="hero_cta">Check a file free <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a>
         <button type="button" class="sl-cta-secondary" id="heroSampleBtn" data-evt="hero_sample">See a sample report &rarr;</button>
       </div>
-      <div class="sl-hero-note">3 free reports, no signup &middot; Checked, then deleted &mdash; no copy kept</div>
+      <div class="sl-hero-note">
+        <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>3 free reports, no signup</span>
+        <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>Checked, then deleted &mdash; no copy kept</span>
+      </div>
       <div class="sl-hero-phone">On your phone? Forward the contract email to <a href="mailto:tc@check.txtanoffer.com">tc@check.txtanoffer.com</a> &mdash; the report comes back by email.</div>
     </div>
-    <div class="sl-hero-photo" role="img" aria-label="A father and daughter painting a room in their new home"></div>
+
+    <!-- Illustration only. Scrap values are the sample files' own fields;
+         card findings/counts are the sample report's display_issues,
+         verbatim or a verbatim leading clause (see the CSS comment above). -->
+    <div class="hx-visual">
+      <div class="hx-paper" data-state="tx" aria-hidden="true">
+        <div class="ph"><span><span class="hide-sm">Contract concerning </span>123 Main St</span><span>Page 1 of 12</span></div>
+        <p><b>3. SALES PRICE:</b></p>
+        <div class="row"><span>A. Cash portion of Sales Price</span><span>$85,000</span></div>
+        <div class="row"><span>B. Sum of all financing</span><span>$340,000</span></div>
+        <div class="row circ"><span>C. Sales Price (Sum of A and B)</span><span>$435,000</span>
+          <svg viewBox="0 0 340 40" preserveAspectRatio="none"><path d="M215 6 C 260 -2, 335 2, 336 20 C 337 36, 270 41, 228 38 C 196 36, 190 22, 205 12" fill="none" stroke="#dc2626" stroke-width="3" stroke-linecap="round"/></svg></div>
+        <div class="scrawl">= $425,000?</div>
+      </div>
+      <div class="hx-paper" data-state="co" aria-hidden="true">
+        <div class="ph"><span>CBS1 &middot; 123 Main St, Denver</span><span>&sect;4.1</span></div>
+        <p><b>4.1 Price and Terms</b></p>
+        <div class="row"><span>Earnest Money</span><span>$10,000</span></div>
+        <div class="row"><span>New Loan</span><span>$400,000</span></div>
+        <div class="row"><span>Cash at Closing</span><span>$80,000</span></div>
+        <div class="row circ"><span>Purchase Price</span><span>$500,000</span>
+          <svg viewBox="0 0 340 40" preserveAspectRatio="none"><path d="M215 6 C 260 -2, 335 2, 336 20 C 337 36, 270 41, 228 38 C 196 36, 190 22, 205 12" fill="none" stroke="#dc2626" stroke-width="3" stroke-linecap="round"/></svg></div>
+        <div class="scrawl">= $490,000?</div>
+      </div>
+
+      <div class="hx-card" id="heroReportCard" role="button" tabindex="0" aria-label="Illustration of a TC Check report on the sample contract. Open the full sample report." data-evt="hero_card">
+        <div class="hx-card-head"><img src="/static/logo-wordmark-white.png?v=1" alt=""><span class="k">TC Check report</span></div>
+        <div class="hx-card-bar"></div>
+        <div class="hx-card-body">
+          <div data-state="tx">
+            <div class="hx-addr">123 Main St, Austin, TX 78704</div>
+            <div class="hx-sub">Austin &middot; Travis County &middot; sample TREC 20-19</div>
+            <div class="hx-banner"><b>Not ready &mdash; fix before this goes to title</b><span class="hx-counts"><span class="m">12 must fix</span><span class="r">4 to review</span></span></div>
+            <ul class="hx-list">
+              <li><span class="hx-tag b">MUST FIX</span><div class="hx-it"><b>Price doesn&rsquo;t add up</b><span>Paragraph 3: Cash portion (3A) $85,000 + financing (3B) $340,000 = $425,000, but the Sales Price (3C) says $435,000</span></div></li>
+              <li><span class="hx-tag b">MUST FIX</span><div class="hx-it"><b>Impossible closing date</b><span>Paragraph 9A: Closing date &ldquo;November 31&rdquo; is not a real date</span></div></li>
+              <li><span class="hx-tag w">REVIEW</span><div class="hx-it"><b>Notices will bounce</b><span>Buyer&rsquo;s notice email (Paragraph 21) &ldquo;john.doe@gmailcom&rdquo; is not a valid email address</span></div></li>
+            </ul>
+          </div>
+          <div data-state="co">
+            <div class="hx-addr">123 Main St</div>
+            <div class="hx-sub">Denver &middot; Denver County &middot; sample CBS1</div>
+            <div class="hx-banner"><b>Not ready &mdash; fix before this goes to title</b><span class="hx-counts"><span class="m">1 must fix</span><span class="r">2 to review</span></span></div>
+            <ul class="hx-list">
+              <li><span class="hx-tag b">MUST FIX</span><div class="hx-it"><b>Price doesn&rsquo;t add up</b><span>&sect;4.1: Earnest Money + loan + Cash at Closing add up to $490,000, not the $500,000 Purchase Price</span></div></li>
+              <li><span class="hx-tag w">REVIEW</span><div class="hx-it"><b>Loan contingency deleted</b><span>&sect;3.1 item 15: New Loan Availability Deadline is N/A with a New Loan in &sect;4.1</span></div></li>
+              <li><span class="hx-tag w">REVIEW</span><div class="hx-it"><b>Holiday closing</b><span>&sect;3.1 item 39: Closing Date (11/11/2026) is Veterans Day</span></div></li>
+            </ul>
+          </div>
+        </div>
+        <div class="hx-more" data-state="tx">+ 13 more in the full sample report &rarr;</div>
+        <div class="hx-more" data-state="co">See the full sample report &rarr;</div>
+        <div class="hx-caption">Illustration: real findings from TC Check&rsquo;s sample contract, which has planted mistakes. Not a client file.</div>
+      </div>
+    </div>
+   </div>
   </section>
 
   <div class="main">
@@ -1646,6 +1772,20 @@ def index():
       heroSampleBtn.textContent = 'Checking the sample\u2026';
       demoBtn.click();
     });
+    // The hero's illustrated report card is the same sample, so clicking it
+    // runs the real check and scrolls to the real report.
+    var heroCard = document.getElementById('heroReportCard');
+    if(heroCard && 'IntersectionObserver' in window && !(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)){
+      heroCard.classList.add('hx-anim');
+      var go = function(){ heroCard.classList.add('hx-go'); };
+      new IntersectionObserver(function(es, o){ es.forEach(function(x){ if(x.isIntersecting){ go(); o.disconnect(); } }); }, {threshold: 0.35}).observe(heroCard);
+    }
+    if(heroCard){
+      heroCard.addEventListener('click', function(){ heroSampleBtn.click(); });
+      heroCard.addEventListener('keydown', function(e){
+        if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); heroSampleBtn.click(); }
+      });
+    }
   }
   // The result renders ABOVE this button (right under the drop zone), so
   // without this the click looked like a no-op: the button snapped back to
