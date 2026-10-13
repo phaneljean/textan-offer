@@ -1116,18 +1116,21 @@ def index():
     }
     .step-card h3 { font-size: 1.05rem; font-weight: 700; margin: 0 0 0.5rem; letter-spacing: -0.01em; }
     /* "3 ways to get started" + guide cards + support block (2026-10-07) */
-    .path-card { display: flex; flex-direction: column; background: #f5c242; border-color: #e6b230; }
-    .path-card:hover { border-color: #d9a520; }
-    .step-card.path-card p, .step-card.path-card li { color: #2b2615; }
+    /* White cards, 2026-10-13: three solid-yellow blocks competed with each
+       other and with the yellow primary buttons. Yellow now marks the main
+       action only -- the self-serve card's top edge and its button. */
+    .path-card { display: flex; flex-direction: column; background: #fff; }
+    .path-card.primary { border-top: 4px solid #f5c242; }
+    .step-card.path-card p, .step-card.path-card li { color: var(--text-muted); }
     .path-card .path-kicker { font-size: 0.7rem; font-weight: 700; color: #0a3f3a; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 0.5rem; }
     .path-card ul { list-style: none; margin: 0.9rem 0 1.25rem; padding: 0; }
     .path-card li { font-size: 0.85rem; color: var(--text-muted); padding: 0.3rem 0 0.3rem 1.3rem; position: relative; }
     .path-card li::before { content: "\\2713"; position: absolute; left: 0; color: #0a3f3a; font-weight: 700; }
     .path-btn { margin-top: auto; display: block; text-align: center; padding: 0.7rem 1rem; border-radius: 9999px; font-weight: 600; font-size: 0.9rem; text-decoration: none; transition: var(--transition); }
-    .path-btn.solid { background: var(--accent); color: #fff; }
-    .path-btn.solid:hover { background: var(--accent-light); }
-    .path-btn.outline { border: 1.5px solid #0a3f3a; color: #0a3f3a; background: rgba(255,255,255,0.35); }
-    .path-btn.outline:hover { background: rgba(255,255,255,0.7); }
+    .path-btn.solid { background: #f5c242; color: #0f1f2f; font-weight: 700; }
+    .path-btn.solid:hover { background: #ffd25e; }
+    .path-btn.outline { border: 1.5px solid #0a3f3a; color: #0a3f3a; background: #fff; }
+    .path-btn.outline:hover { background: #0a3f3a; color: #fff; }
     a.guide-card { display: flex; flex-direction: column; text-decoration: none; color: inherit; }
     a.guide-card .guide-tag { font-size: 0.7rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 0.6rem; }
     a.guide-card .guide-more { margin-top: auto; padding-top: 1rem; font-size: 0.85rem; font-weight: 600; color: var(--accent); }
@@ -1444,7 +1447,7 @@ def index():
       <p>Check one file on your own, get a walkthrough, or set it up for your whole brokerage.</p>
     </div>
     <div class="steps-grid">
-      <div class="step-card path-card">
+      <div class="step-card path-card primary">
         <div class="path-kicker">Do it yourself</div>
         <h3>Check a file now</h3>
         <p><span data-state="tx">Drop one filled TREC 20-19</span><span data-state="co">Drop one filled CBS1</span> and see what title would kick back.</p>
