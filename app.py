@@ -3265,7 +3265,7 @@ DEMO_FORM = """
   .card input[type=text]::placeholder {{color:#b8c2ca;}}
   .card button {{
     width:100%;margin-top:0.75rem;
-    background:linear-gradient(135deg,var(--accent),#000);color:#fff;border:none;
+    background:var(--accent);color:#fff;border:none;
     border-radius:var(--radius-sm);padding:0.85rem;font-weight:600;font-size:0.95rem;
     font-family:inherit;cursor:pointer;transition:var(--transition);
   }}
@@ -3303,7 +3303,7 @@ DEMO_FORM = """
 
   .download-btn {{
     margin-top:1rem;display:block;text-align:center;
-    background:linear-gradient(135deg,var(--accent),#000);color:#fff;
+    background:var(--accent);color:#fff;
     font-weight:600;font-size:0.9rem;padding:0.85rem;border-radius:var(--radius-sm);
     text-decoration:none;transition:var(--transition);
   }}
