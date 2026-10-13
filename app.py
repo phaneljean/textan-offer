@@ -425,7 +425,9 @@ _SITE_STATES = ("tx", "co")
 
 
 def _is_co_src(src):
-    return (src or "").lower().startswith(("co", "li_co"))
+    # co1012_..., co_..., li_co_... -- not any word that happens to start
+    # with "co" (cold_*, comedy_*, contact_*).
+    return bool(re.match(r"^(co\d|co_|li_co)", (src or "").lower()))
 
 
 def _site_state():
@@ -1480,7 +1482,7 @@ def index():
         <div class="step-num">&check;</div>
         <h3>Checked against the current form</h3>
         <p data-state="tx">Every check is mapped field-by-field against TREC's actual published 20-19 form and re-verified when TREC revises it. <a href="/trec-changes" style="color:var(--text);text-decoration:underline;">See what changed &rarr;</a> &middot; <a href="/tc-hub" style="color:var(--text);text-decoration:underline;">Free TC Hub &rarr;</a></p>
-        <p data-state="co">Every check is mapped field-by-field against the Colorado Real Estate Commission&rsquo;s published 2026 CBS1, verified by where each field sits on the page &mdash; not by its name. <a href="/tc-check#colorado" style="color:var(--text);text-decoration:underline;">See what it checks &rarr;</a></p>
+        <p data-state="co">Every check is mapped field-by-field against the Colorado Real Estate Commission&rsquo;s published 2026 CBS1, and each field was checked against where it sits on the printed form. <a href="/tc-check#colorado" style="color:var(--text);text-decoration:underline;">See what it checks &rarr;</a></p>
       </div>
       <div class="step-card">
         <div class="step-num">&check;</div>
