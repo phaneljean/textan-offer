@@ -215,7 +215,7 @@ _BOT_UA_RE = re.compile(
 
 _MOBILE_UA_RE = re.compile(r"Mobi|Android|iPhone|iPad|iPod", re.I)
 _ENGAGEMENT_TYPES = ("js_ok", "hero_cta", "hero_sample", "hero_card", "dropzone_seen", "stay_10s", "stay_60s",
-                     "role_shown", "role_dismissed", "brokers_audit_cta", "brokers_email_cta", "brokers_plan_cta", "records_brokers_cta", "guide_check_cta", "guide_brokers_cta", "path_self_cta", "path_walkthrough_cta", "tc_trust_link", "path_brokerage_cta", "guide_card_cta", "support_email_cta", "pricing_audit_cta", "tc_copy_agent_msg", "state_toggle_tx", "state_toggle_co", "states_tx_check", "states_tx_hub", "states_co_check", "states_co_hub", "states_request") + tuple("role_" + r for r in _VISITOR_ROLES)
+                     "role_shown", "role_dismissed", "brokers_audit_cta", "brokers_email_cta", "brokers_plan_cta", "records_brokers_cta", "guide_check_cta", "guide_brokers_cta", "path_self_cta", "path_walkthrough_cta", "tc_trust_link", "tc_own_file_cta", "path_brokerage_cta", "guide_card_cta", "support_email_cta", "pricing_audit_cta", "tc_copy_agent_msg", "state_toggle_tx", "state_toggle_co", "states_tx_check", "states_tx_hub", "states_co_check", "states_co_hub", "states_request") + tuple("role_" + r for r in _VISITOR_ROLES)
 
 # Tiny, cookie-less-of-its-own beacon script appended to every page that
 # track_page_view() logs. Elements opt in with data-evt="<type>" for clicks;
@@ -934,8 +934,18 @@ def index():
       padding: 0.12rem 0.45rem; border-radius: 9999px; height: fit-content; }
     .issue-tag.blocker { background: rgba(239,68,68,0.12); color: #dc2626; }
     .issue-tag.warning { background: rgba(245,158,11,0.12); color: #b45309; }
+    .rep-counts { margin-top: 4px; font-size: 0.8rem; font-weight: 700; }
+    .rep-counts .must { color: #dc2626; margin-right: 10px; }
+    .rep-counts .review { color: #b45309; }
     .result-more { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem; }
     .result-more a { color: var(--text); font-weight: 600; text-decoration: underline; }
+    .own-file-cta { margin-top: 1rem; padding: 1.05rem 1.2rem; background: var(--accent-tint); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+    .own-file-lead { font-size: 0.88rem; color: var(--text); line-height: 1.55; margin: 0; }
+    .own-file-lead a { color: var(--accent); font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
+    .own-file-btn { margin-top: 0.8rem; background: #f5c242; color: #0f1f2f; border: none; padding: 0.72rem 1.35rem; border-radius: 10px; font: inherit; font-size: 0.9rem; font-weight: 700; cursor: pointer; }
+    .own-file-btn:hover { background: #ffd25e; }
+    .agent-alt { margin: 0.7rem 0 0; font-size: 0.8rem; color: var(--text-muted); }
+    .agent-alt a { color: var(--text-muted); text-decoration: underline; text-underline-offset: 2px; }
     .individual-upsell { margin-top: 1.25rem; padding: 1.1rem 1.25rem; background: var(--accent-tint); border: 1px solid var(--border); border-radius: var(--radius-sm); }
     .individual-upsell-lead { font-size: 0.85rem; color: var(--text); margin: 0 0 0.85rem; line-height: 1.5; }
     .individual-upsell-btn { background: var(--accent); color: #fff; border: none; padding: 0.7rem 1.25rem; border-radius: 9999px; font: inherit; font-size: 0.85rem; font-weight: 700; cursor: pointer; }
@@ -1907,33 +1917,59 @@ def index():
     resultEl.classList.add('show');
   }
 
+  // Homepage widget shows a short preview -- the full checklist, email gate,
+  // copy/download buttons live on /tc-check itself. Built from
+  // display_issues (per-page initials folded into one line, each with its
+  // consequence tag), the same list and counts the full report shows.
+  // Preview pick (2026-10-13): on the sample the first four raw lines were
+  // all initials, hiding the price math and "November 31" behind "+13
+  // more". Now: findings with the most concrete downstream consequence
+  // first, then other must-fix, then to-review, initials last -- one per
+  // tag, so four lines show four different problems.
+  var PREVIEW_FIRST = ["PRICE DOESN'T ADD UP", 'IMPOSSIBLE CLOSING DATE', 'NOTICES WILL BOUNCE'];
+  var INITIALS_TAGS = {'PAGES NOT INITIALED': 1, 'WRONG PARTY INITIALED': 1};
+  function previewRank(i){
+    var p = PREVIEW_FIRST.indexOf(i.tag);
+    if(p >= 0) return p;
+    if(INITIALS_TAGS[i.tag]) return 30;
+    return i.severity === 'blocker' ? 10 : 20;
+  }
+  function pickPreview(list){
+    var seen = {}, out = [];
+    list.map(function(i, n){ return {i: i, r: previewRank(i) * 100 + n}; })
+      .sort(function(a, b){ return a.r - b.r; })
+      .forEach(function(x){ if(out.length < 4 && !seen[x.i.tag]){ seen[x.i.tag] = 1; out.push(x.i); } });
+    return out;
+  }
+
   function renderResult(data, isDemo){
-    var issues = data.issues || [];
-    var totalIssues = typeof data.issue_count === 'number' ? data.issue_count : issues.length;
+    var display = data.display_issues || [];
+    var issues = display.length ? display : (data.issues || []);
+    var totalIssues = display.length || (typeof data.issue_count === 'number' ? data.issue_count : issues.length);
     var html = '';
     if(isDemo){
       html += '<div class="demo-banner">Demo result &mdash; a sample contract with planted mistakes, not your file.</div>';
     }
     if(data.complete){
       html += '<div class="result-banner complete">All checked fields are filled in.</div>';
+    } else if(display.length){
+      // Same headline and counts as the /tc-check report.
+      var nb = display.filter(function(i){ return i.severity === 'blocker'; }).length, nw = display.length - nb;
+      html += '<div class="result-banner incomplete">' + (nb ? 'Not ready &mdash; fix before this goes to title' : nw + ' item' + (nw === 1 ? '' : 's') + ' to review')
+        + '<div class="rep-counts">' + (nb ? '<span class="must">' + nb + ' must fix</span>' : '') + (nw ? '<span class="review">' + nw + ' to review</span>' : '') + '</div></div>';
     } else {
-      // Lead with the blocking count -- the concrete "title will reject this"
-      // number -- when there is one; fall back to a plain issue count for a
-      // file whose only findings are non-blocking warnings.
+      // Gated preview: only counts come back, not the itemized list.
       var blockerCount = typeof data.blocker_count === 'number' ? data.blocker_count : 0;
       var bannerText = blockerCount > 0
         ? blockerCount + ' title-blocking error' + (blockerCount === 1 ? '' : 's') + ' found'
         : totalIssues + ' issue' + (totalIssues === 1 ? '' : 's') + ' found';
       html += '<div class="result-banner incomplete">' + bannerText + '</div>';
     }
-    // Homepage widget shows the first few issues -- the full checklist,
-    // email gate, copy/download buttons, and blank-draft CTA live on
-    // /tc-check itself.
-    var shown = data.gated ? issues : issues.slice(0, 4);
+    var shown = display.length ? pickPreview(display) : (data.gated ? issues : issues.slice(0, 4));
     if(shown.length){
       html += '<ul class="issue-list">';
       shown.forEach(function(issue){
-        html += '<li class="issue-item"><span class="issue-tag ' + issue.severity + '">' + issue.severity + '</span><span>' + escapeHtml(issue.message) + '</span></li>';
+        html += '<li class="issue-item"><span class="issue-tag ' + issue.severity + '">' + escapeHtml(issue.tag || issue.severity) + '</span><span>' + escapeHtml(issue.message) + '</span></li>';
       });
       html += '</ul>';
     }
@@ -1947,28 +1983,28 @@ def index():
     } else if(issues.length){
       html += '<div class="result-more"><a href="' + tcCheckHref + '">Copy or download this checklist &rarr;</a></div>';
     }
-    // Self-serve upgrade path for a solo agent/TC drafting these by hand --
-    // only once the email gate is already cleared (email on file, or this
-    // particular file had nothing to gate), same as /tc-check's own
-    // buildUpsellCta(). Never shown alongside the gate itself: the gate's
-    // one job is getting an email, and a second ask right next to it would
-    // just split attention. Since 2026-10-02 the card leads with the free
-    // 3-offer trial (/signup) instead of $40/mo checkout -- the trial is
-    // the step that was getting zero traffic from TC Check.
-    if(!isDemo && !data.gated && totalIssues > 0){
-      html += buildIndividualUpgradeCard(data.state === 'CO' ? 'Colorado CBS1' : 'TREC 20-19');
+    // Next step (2026-10-13): the visitor's own file, not the agent SMS
+    // pitch that used to sit here (buildIndividualUpgradeCard) -- TCs don't
+    // write offers, and it claimed drafting by text leaves nothing for a
+    // check to catch, which wasn't true. Same CTAs as /tc-check; the agent
+    // offer is one small link.
+    var form = data.state === 'CO' ? 'CBS1' : 'TREC 20-19';
+    if(isDemo){
+      html += '<div class="own-file-cta"><p class="own-file-lead"><strong>That was our sample. Now run one of yours.</strong> Drop a filled ' + form + ' above, or forward it to <a href="mailto:tc@check.txtanoffer.com">tc@check.txtanoffer.com</a>. It&rsquo;s checked, then deleted.</p>'
+        + '<button type="button" class="own-file-btn" id="homeOwnFileBtn" data-evt="tc_own_file_cta">Check my own file &rarr;</button>'
+        + AGENT_ALT + '</div>';
+    } else if(!data.gated){
+      html += '<div class="own-file-cta"><p class="own-file-lead"><strong>Next file?</strong> Forward it to <a href="mailto:tc@check.txtanoffer.com">tc@check.txtanoffer.com</a> straight from your inbox and the report comes back by email.</p>' + AGENT_ALT + '</div>';
     }
     resultEl.innerHTML = html;
     resultEl.classList.add('show');
+    var ownBtn = document.getElementById('homeOwnFileBtn');
+    if(ownBtn) ownBtn.addEventListener('click', function(){
+      dropZone.scrollIntoView({behavior:'smooth', block:'center'});
+      fileInput.click();
+    });
   }
-
-  function buildIndividualUpgradeCard(formName){
-    return '<div class="individual-upsell">'
-      + '<p class="individual-upsell-lead">Filling this out by hand? TxtAnOffer drafts a ' + formName + ' by text message instead &mdash; address, price, and closing date auto-fill correctly, so there\\'s nothing left for a check like this to catch.</p>'
-      + '<a href="/signup" class="individual-upsell-btn" style="display:block;text-align:center;text-decoration:none;">Draft your next offer free &mdash; 3 offers, no card &rarr;</a>'
-      + '<div class="individual-upsell-alt">Already sold? <a href="/pricing">See plans &rarr;</a></div>'
-      + '</div>';
-  }
+  var AGENT_ALT = '<p class="agent-alt">Agent writing the offer? <a href="/demo">Draft the next one by text &rarr;</a></p>';
 
   function escapeHtml(s){
     var div = document.createElement('div');
@@ -4397,6 +4433,13 @@ html.state-tx [data-state="co"],html.state-co [data-state="tx"]{display:none !im
 .addendum-filename{color:var(--text-muted);}
 .addendum-clear{background:none;border:none;color:var(--text-dim);font-size:1rem;cursor:pointer;line-height:1;padding:0.15rem 0.4rem;}
 .addendum-clear:hover{color:var(--text);}
+.own-file-cta{margin-top:1.25rem;padding:1.1rem 1.25rem;background:var(--accent-tint);border:1px solid var(--border);border-radius:var(--radius-sm);}
+.own-file-lead{font-size:0.9rem;color:var(--text);line-height:1.55;margin:0;}
+.own-file-lead a{color:var(--accent);font-weight:600;text-decoration:underline;text-underline-offset:2px;}
+.own-file-btn{margin-top:0.85rem;background:#f5c242;color:#0f1f2f;border:none;padding:0.75rem 1.4rem;border-radius:10px;font-family:inherit;font-size:0.92rem;font-weight:700;cursor:pointer;}
+.own-file-btn:hover{background:#ffd25e;}
+.agent-alt{margin:0.75rem 0 0;font-size:0.8rem;color:var(--text-muted);}
+.agent-alt a{color:var(--text-muted);text-decoration:underline;text-underline-offset:2px;}
 .next-step-cta{margin-top:1.25rem;padding-top:1.1rem;border-top:1px solid var(--border);}
 .next-step-lead{font-size:0.85rem;color:var(--text-muted);line-height:1.6;}
 .next-step-lead a{color:var(--accent);font-weight:600;text-decoration:underline;text-underline-offset:2px;}
@@ -4722,39 +4765,45 @@ function renderError(msg) {
   resultEl.classList.add('show');
 }
 
-// Buckets an issue key into which upsell pitch it supports -- each pitch
-// below is a claim actually verified against this codebase (send-blocking
-// in pdf_validator.py / api_send_email, and the shared loan_amount value
-// financing_addendum.py + pdf_filler.py both fill from), not a generic
-// "try our tool" line. Deliberately no bucket for initials_buyer/seller:
-// TxtAnOffer's own generated contracts leave initials for the agent to add
-// after generation too (same as any tool), so there's no honest claim that
-// it prevents that specific gap -- those reports fall through to the
-// generic default pitch instead of a fabricated one.
-const ADDENDUM_MISMATCH_KEYS = new Set(['loan_amount_mismatch', 'addendum_checkbox_mismatch']);
-const BLANK_FIELD_KEYS = new Set(['address', 'city', 'county', 'buyer_name', 'seller_name', 'escrow_agent_name', 'earnest_money_amount', 'option_fee_amount', 'title_company', 'effective_date']);
+// Next steps after a report (2026-10-13). The agent SMS-drafting pitch that
+// used to sit here (buildUpsellCta) was aimed at the wrong buyer -- TCs
+// check files, they don't write offers -- and made claims the product
+// doesn't back (that drafted fields are never blank, when drafts leave
+// names, earnest money and financing blank on purpose). The primary step is
+// now the TC's own next file: upload it here, or forward it by email. The
+// agent offer survives only as one small link.
+function formLabel(data) { return data.state === 'CO' ? 'CBS1' : 'TREC 20-19'; }
 
-function buildUpsellCta(issues, formName) {
-  let addendumCount = 0, blankCount = 0;
-  for (const issue of issues) {
-    if (ADDENDUM_MISMATCH_KEYS.has(issue.key)) addendumCount++;
-    else if (BLANK_FIELD_KEYS.has(issue.key)) blankCount++;
-  }
-  if (addendumCount > 0) {
-    return '<div class="fixit-cta"><p>This file&rsquo;s financing addendum doesn&rsquo;t agree with the contract itself &mdash; the kind of mismatch that only happens when a loan amount gets retyped by hand in two places. TxtAnOffer fills it once and uses it everywhere, so the 40-11 and the contract can never disagree.</p><a href="/signup">Draft your next offer free &mdash; 3 offers, no card &rarr;</a></div>';
-  }
-  if (blankCount >= 2) {
-    return '<div class="fixit-cta"><p>Tired of chasing agents to fill in blank fields? TxtAnOffer&rsquo;s review screen physically blocks emailing the listing agent until every required TREC field is filled in.</p><a href="/signup">Draft your next offer free &mdash; 3 offers, no card &rarr;</a></div>';
-  }
-  return '<div class="fixit-cta"><p>Every gap above happened because this file was filled out by hand. TxtAnOffer drafts the ' + formName + ' by text message, so these fields are never blank to begin with.</p><a href="/signup">Draft your next offer free &mdash; 3 offers, no card &rarr;</a></div>';
+function buildOwnFileCta(data) {
+  return '<div class="own-file-cta">' +
+    '<p class="own-file-lead"><strong>That was our sample. Now run one of yours.</strong> Drop a filled ' + formLabel(data) + ' above, or forward it to <a href="mailto:tc@check.txtanoffer.com">tc@check.txtanoffer.com</a>. It&rsquo;s checked, then deleted.</p>' +
+    '<button type="button" class="own-file-btn" onclick="pickOwnFile()" data-evt="tc_own_file_cta">Check my own file &rarr;</button>' +
+    buildAgentAltLink() +
+  '</div>';
+}
+
+function buildForwardNextCta() {
+  return '<div class="own-file-cta">' +
+    '<p class="own-file-lead"><strong>Next file?</strong> Forward it to <a href="mailto:tc@check.txtanoffer.com">tc@check.txtanoffer.com</a> straight from your inbox and the report comes back by email.</p>' +
+    buildAgentAltLink() +
+  '</div>';
+}
+
+function buildAgentAltLink() {
+  return '<p class="agent-alt">Agent writing the offer? <a href="/demo">Draft the next one by text &rarr;</a></p>';
+}
+
+function pickOwnFile() {
+  dropZone.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  fileInput.click();
 }
 
 // Shown once a report has actually been delivered (email on file, or a
 // clean/complete result) -- the point where the old flow just went dead.
 // Two guided next steps instead of a static stop: run another file right
 // here, or route the next one by email. The Brokerage pitch that used to
-// sit here was removed 2026-10-02 so buildUpsellCta()'s free-offer signup
-// is the one sales ask after a report.
+// sit here was removed 2026-10-02; the agent SMS pitch was cut to one
+// small link 2026-10-13 (see buildForwardNextCta above).
 function buildNextStepCta() {
   return '<div class="next-step-cta">' +
     '<p class="next-step-lead">Want to test another file? <a href="#" onclick="resetForm();return false;">Check another one &rarr;</a></p>' +
@@ -4876,10 +4925,10 @@ function renderResult(data, file, isDemo) {
       // template match, not anything the agent could fix.
       if (data.recognized) html += '<button class="download-btn" onclick="copyAgentMessage()" data-evt="tc_copy_agent_msg">Copy as message to agent</button>';
       html += '<button class="download-btn" onclick="downloadReport(this)">Download report</button>';
-      html += buildUpsellCta(issues, data.state === 'CO' ? 'CBS1' : '20-19');
     }
+    if (isDemo) html += buildOwnFileCta(data);
     if (!isDemo && typeof data.free_reports_left === 'number') html += buildEmailReportAsk(data.free_reports_left);
-    if (!isDemo) html += buildNextStepCta();
+    if (!isDemo) html += buildForwardNextCta() + buildNextStepCta();
   }
   resultEl.innerHTML = html;
   resultEl.classList.add('show');

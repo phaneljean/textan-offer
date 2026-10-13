@@ -97,5 +97,18 @@ class NavCta(unittest.TestCase):
             self.assertLess(html.rfind("</style>", 0, html.find('id="nav-cta-shared"')), html.find('id="nav-cta-shared"'))
 
 
+class ResultNextSteps(unittest.TestCase):
+    def test_no_false_upsell_claims_and_own_file_cta_present(self):
+        c = app_module.app.test_client()
+        for path in ("/", "/tc-check"):
+            html = c.get(path, headers=UA).get_data(as_text=True)
+            for gone in ("never blank to begin with", "can never disagree", "nothing left for a check like this to catch",
+                         "until every required TREC field", "buildUpsellCta(", "buildIndividualUpgradeCard("):
+                self.assertNotIn(gone, html, (path, gone))
+            self.assertIn("That was our sample. Now run one of yours.", html, path)
+            self.assertIn("Check my own file &rarr;", html, path)
+            self.assertIn("<strong>Next file?</strong> Forward it to", html, path)
+
+
 if __name__ == "__main__":
     unittest.main()
