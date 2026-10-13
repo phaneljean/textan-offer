@@ -1,6 +1,7 @@
 """
 analytics.py — Track key conversion metrics
 """
+import re
 import sqlite3
 import os
 import hmac
@@ -18,6 +19,29 @@ DB_PATH = os.environ.get("DATABASE_PATH", "subscriptions.db")
 # the same secret already needed to view /analytics at all -- rather than
 # adding a second one to manage.
 _INTERNAL_COOKIE = "ta_internal"
+
+# Every "check a file" button or link on the site, one data-evt name per
+# placement so /analytics can say which one got the click. Until 2026-10-13
+# the funnel's "Clicked 'Check a file'" column counted hero_cta alone (the
+# homepage hero button), so the nav button on every page, the second homepage
+# button and anyone landing straight on /tc-check never showed up and the
+# column read ~0. The older names stay in this list so earlier days still
+# count the same clicks they always did.
+CHECK_CTA_EVENTS = (
+    "hero_cta", "path_self_cta", "guide_check_cta", "states_tx_check", "states_co_check", "tc_own_file_cta",
+    # Added 2026-10-13
+    "nav_check_cta", "home_check_cta", "home_tryit_cta", "home_check_link", "footer_check_link",
+    "pricing_check_cta", "hub_check_cta", "trust_check_link", "brokers_single_check_cta", "archive_check_link", "nav_check_link",
+)
+# Opening a sample report rather than running your own file. hero_sample is
+# the original; the rest were added 2026-10-13. The server-side
+# tc_check_demo_used event still counts actual sample runs.
+SAMPLE_CTA_EVENTS = ("hero_sample", "hero_card", "home_sample_btn", "tc_sample_btn", "hub_sample_cta")
+# "Saw drop box" fires on load on /tc-check (the box is above the fold), so
+# it can't separate interest from arrival. This one needs a hand on it:
+# clicking/tapping the box, dragging a file over the page, or focusing the
+# email field under it.
+DROPZONE_INTERACT_EVENT = "dropzone_interact"
 
 
 def _is_internal_traffic() -> bool:
@@ -394,7 +418,8 @@ def get_daily_funnel(days: int = 14) -> list:
     for i in range(days):
         d = (today - timedelta(days=i)).isoformat()
         by_day[d] = {"date": d, "visitors": set(), "mobile": set(), "js_ok": set(), "hero_cta": set(), "hero_sample": set(),
-                     "dropzone_seen": set(), "stay_10s": set(), "views": 0, "attempts": 0, "demos": 0,
+                     "dropzone_seen": set(), "stay_10s": set(), "check_cta": set(), "sample_cta": set(),
+                     "dropzone_interact": set(), "views": 0, "attempts": 0, "demos": 0,
                      "recognized": 0, "emails_captured": 0, "email_checks": 0, "email_junk": 0}
     internal = _internal_visitor_ids()
     for event_type, metadata_json, created_at in rows:
@@ -411,8 +436,14 @@ def get_daily_funnel(days: int = 14) -> list:
                 day["mobile"].add(metadata.get("visitor") or "")
         elif event_type == "page_engagement":
             key = metadata.get("type")
-            if key in ("js_ok", "hero_cta", "hero_sample", "dropzone_seen", "stay_10s"):
-                day[key].add(metadata.get("visitor") or "")
+            vid = metadata.get("visitor") or ""
+            if key in ("js_ok", "hero_cta", "hero_sample", "dropzone_seen", "stay_10s", "dropzone_interact"):
+                day[key].add(vid)
+            # Unique browsers that clicked ANY check / sample CTA that day.
+            if key in CHECK_CTA_EVENTS:
+                day["check_cta"].add(vid)
+            if key in SAMPLE_CTA_EVENTS:
+                day["sample_cta"].add(vid)
         elif event_type == "tc_check_attempted":
             day["attempts"] += 1
         elif event_type == "tc_check_demo_used":
@@ -430,20 +461,24 @@ def get_daily_funnel(days: int = 14) -> list:
     result = []
     for d in sorted(by_day, reverse=True):
         day = by_day[d]
-        for key in ("visitors", "mobile", "js_ok", "hero_cta", "hero_sample", "dropzone_seen", "stay_10s"):
+        for key in ("visitors", "mobile", "js_ok", "hero_cta", "hero_sample", "dropzone_seen", "stay_10s",
+                    "check_cta", "sample_cta", "dropzone_interact"):
             day[key] = len(day[key])
         result.append(day)
     return result
 
 
-def get_recent_visitors(hours: int = 48, limit: int = 150) -> list:
+def get_recent_visitors(hours: int = 48, limit: int = 150, source_prefix: str = "") -> list:
     """One row per visitor (ta_vid) seen in the last `hours`, newest first:
     pages loaded, referrer, ?src=, device, user agent (logged from
     2026-10-07), and which engagement beacons fired. Added 2026-10-07 so
     "who were today's visitors?" can be answered row by row instead of
     guessed from daily totals. Bots and link scanners don't keep cookies,
     so each of their hits shows up as a separate one-page visitor with no
-    "real browser" -- that pattern is the tell."""
+    "real browser" -- that pattern is the tell. source_prefix (added
+    2026-10-13) keeps only visitors whose ?src= starts with it, so "were the
+    ti_* title-outreach hits people or mail scanners?" can be answered from
+    their user agents over a longer window than 48h."""
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cutoff = (datetime.utcnow() - timedelta(hours=hours)).isoformat()
@@ -476,11 +511,103 @@ def get_recent_visitors(hours: int = 48, limit: int = 150) -> list:
                 v["ua"] = metadata["ua"]
         else:
             v["events"].add(metadata.get("type") or "")
+    if source_prefix:
+        visitors = {k: v for k, v in visitors.items() if any(s.startswith(source_prefix) for s in v["sources"])}
     result = sorted(visitors.values(), key=lambda v: v["first"], reverse=True)[:limit]
     for v in result:
         for key in ("referrers", "sources", "devices"):
             v[key] = sorted(v[key])
     return result
+
+
+def _channel_for_source(src: str) -> str:
+    """Rolls ?src= tags up to the channel they were posted on, so LinkedIn
+    vs Facebook vs Instagram vs cold email can be compared in one table.
+    Tag conventions from ~/txtanoffer-team (RULES.md rule 10); anything that
+    doesn't match lands in "other" rather than being guessed."""
+    s = (src or "direct").lower()
+    if s == "direct":
+        return "direct (no tag)"
+    if s.startswith(("li_", "linkedin")) or "linkedin" in s:
+        return "LinkedIn"
+    if s.startswith("fb_") or re.search(r"(^|_)fb", s) or "facebook" in s:
+        return "Facebook"
+    if s.startswith("ig_") or "instagram" in s:
+        return "Instagram"
+    if s.startswith("seo_"):
+        return "Search (guides)"
+    if (s.startswith(("ti_", "title_reach", "tc_check_reach", "zillow_broker_reach", "direct_reach", "apollo"))
+            or re.match(r"(d|co)\d{4}_", s)):
+        return "Cold email"
+    return "other"
+
+
+def get_engagement_by_source(days: int = 30) -> dict:
+    """Per ?src= tag (and rolled up per channel): real humans, not landings.
+    Added 2026-10-13 because the landing-visit table counts every link
+    scanner and preview fetch, so "83 LinkedIn landings, 0 files" couldn't
+    say whether any of those 83 were people. Each browser (ta_vid) is
+    credited to the src on its FIRST page view in the window. Columns are
+    unique browsers: ran the page's JS, stayed 10s+, clicked any check CTA,
+    tried the sample (clicked a sample link or ran it), uploaded a file."""
+    import json
+    cutoff = (datetime.utcnow() - timedelta(days=days)).isoformat()
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        rows = conn.execute("""SELECT event_type, metadata FROM events WHERE created_at > ? AND event_type IN
+                               ('page_view', 'page_engagement', 'tc_check_attempted', 'tc_check_demo_used')
+                               ORDER BY created_at""", (cutoff,)).fetchall()
+    finally:
+        conn.close()
+    internal = _internal_visitor_ids()
+    src_of, loads = {}, {}
+    real, stayed, checked, sampled, uploaded = set(), set(), set(), set(), set()
+    for event_type, metadata_json in rows:
+        m = json.loads(metadata_json) if metadata_json else {}
+        v = m.get("visitor") or ""
+        if v in internal:
+            continue
+        if event_type == "page_view":
+            src = m.get("source") or "direct"
+            loads[src] = loads.get(src, 0) + 1
+            if v:
+                src_of.setdefault(v, src)
+            continue
+        if not v:
+            continue
+        if event_type == "tc_check_attempted":
+            uploaded.add(v)
+        elif event_type == "tc_check_demo_used":
+            sampled.add(v)
+        else:
+            t = m.get("type") or ""
+            # Any beacon proves the page's JS ran (js_ok only exists from 10-06).
+            real.add(v)
+            if t == "stay_10s":
+                stayed.add(v)
+            if t in CHECK_CTA_EVENTS:
+                checked.add(v)
+            if t in SAMPLE_CTA_EVENTS:
+                sampled.add(v)
+
+    def _row(key, who, page_loads):
+        return {"key": key, "loads": page_loads, "real": len(who & real), "stayed": len(who & stayed),
+                "checked": len(who & checked), "sampled": len(who & sampled), "uploaded": len(who & uploaded)}
+
+    by_src, by_channel, channel_loads = {}, {}, {}
+    for v, src in src_of.items():
+        by_src.setdefault(src, set()).add(v)
+        by_channel.setdefault(_channel_for_source(src), set()).add(v)
+    for src, n in loads.items():
+        ch = _channel_for_source(src)
+        channel_loads[ch] = channel_loads.get(ch, 0) + n
+        by_src.setdefault(src, set())
+        by_channel.setdefault(ch, set())
+    order = lambda r: (-r["real"], -r["loads"], r["key"])
+    return {
+        "sources": sorted((_row(s, who, loads.get(s, 0)) for s, who in by_src.items()), key=order),
+        "channels": sorted((_row(c, who, channel_loads.get(c, 0)) for c, who in by_channel.items()), key=order),
+    }
 
 
 def get_archive_early_access(limit: int = 200) -> list:
@@ -1045,8 +1172,8 @@ def get_engagement_by_device(days: int = 7) -> list:
     finally:
         conn.close()
     internal = _internal_visitor_ids()
-    keys = ("js_ok", "stay_10s", "dropzone_seen", "hero_cta")
-    out = {d: {"device": d, "visitors": set(), **{k: set() for k in keys}} for d in ("desktop", "mobile")}
+    keys = ("js_ok", "stay_10s", "dropzone_seen", "hero_cta", "dropzone_interact")
+    out = {d: {"device": d, "visitors": set(), "check_cta": set(), **{k: set() for k in keys}} for d in ("desktop", "mobile")}
     for event_type, metadata_json in rows:
         m = json.loads(metadata_json) if metadata_json else {}
         v, d = m.get("visitor") or "", out.get(m.get("device"))
@@ -1054,8 +1181,11 @@ def get_engagement_by_device(days: int = 7) -> list:
             continue
         if event_type == "page_view":
             d["visitors"].add(v)
-        elif m.get("type") in keys:
-            d[m["type"]].add(v)
+        else:
+            if m.get("type") in keys:
+                d[m["type"]].add(v)
+            if m.get("type") in CHECK_CTA_EVENTS:
+                d["check_cta"].add(v)
     return [{k: (len(x) if isinstance(x, set) else x) for k, x in row.items()} for row in out.values()]
 
 

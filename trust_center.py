@@ -124,7 +124,7 @@ def body() -> str:
     <ul>
       <li><strong>No AI reads your contract.</strong> TC Check is rule code: each rule checks specific fields of the official form and names the paragraph it&rsquo;s about.</li>
       <li><strong>Built on the official forms.</strong> Texas checks map to TREC&rsquo;s published 20-19 and its addenda; Colorado checks map to the Colorado Real Estate Commission&rsquo;s CBS1 and related forms. Field positions are verified by rendering the real form, because field names on these PDFs are sometimes wrong.</li>
-      <li><strong>We publish what it checks &mdash; and what it doesn&rsquo;t.</strong> See the lists on <a href="/tc-check">TC Check</a> (Texas) and <a href="/tc-check?state=co#colorado">TC Check &middot; Colorado</a>. It doesn&rsquo;t verify signatures or read scanned or flattened PDFs.</li>
+      <li><strong>We publish what it checks &mdash; and what it doesn&rsquo;t.</strong> See the lists on <a href="/tc-check" data-evt="trust_check_link">TC Check</a> (Texas) and <a href="/tc-check?state=co#colorado" data-evt="trust_check_link">TC Check &middot; Colorado</a>. It doesn&rsquo;t verify signatures or read scanned or flattened PDFs.</li>
       <li><strong>Likely issues, not legal advice.</strong> A clean report means none of the checked items were found blank or inconsistent &mdash; not that the contract is correct. Your own review and your broker&rsquo;s still matter.</li>
       <li><strong>Severity is honest.</strong> Only things that are clearly wrong are marked as blockers; choices that can be intentional (like deleting a contingency) are flagged as warnings for you to confirm.</li>
     </ul>

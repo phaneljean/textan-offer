@@ -107,7 +107,7 @@ def body() -> str:
   <div class="section" id="checklists">
     <h2>File-Review Checklists</h2>
     <p class="section-sub">Organized by the point in the transaction where each check matters -- built from the exact checks TC Check runs on a CBS1 and the forms attached to it, not a generic industry list.</p>
-    <p class="section-sub"><a href="/tc-check?demo=1&amp;state=co" style="color:var(--accent-dark);font-weight:600;text-decoration:underline;">Run the sample to see what TC Check flags &rarr;</a></p>
+    <p class="section-sub"><a href="/tc-check?demo=1&amp;state=co" style="color:var(--accent-dark);font-weight:600;text-decoration:underline;" data-evt="hub_sample_cta">Run the sample to see what TC Check flags &rarr;</a></p>
     <div class="checklist-grid">{checklists}</div>
   </div>
 
@@ -127,7 +127,7 @@ def body() -> str:
       <p>The combined "Before Sending" + "After Execution" checklist above, as a plain-text file you can keep on hand.</p>
       <div class="cta-buttons">
         <button class="cta-primary" onclick="downloadCoChecklist()">Download checklist</button>
-        <a class="cta-secondary" href="/tc-check?state=co">Want the computer to check it instead? Try TC Check &rarr;</a>
+        <a class="cta-secondary" href="/tc-check?state=co" data-evt="hub_check_cta">Want the computer to check it instead? Try TC Check &rarr;</a>
       </div>
     </div>
   </div>

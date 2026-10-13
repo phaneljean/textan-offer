@@ -34,6 +34,7 @@ from agent_profiles import get_agent_profile, save_agent_profile, find_by_email,
 from subscriptions import can_generate_offer, increment_offer_count, activate_subscription, deactivate_subscription, get_user, create_user, FREE_OFFER_LIMIT, is_admin_phone, has_professional_access
 from analytics import _is_internal_traffic
 from analytics import track_event, get_conversion_metrics, get_revenue_metrics, get_recent_sms, get_recent_sms_failures, get_last_blocked_state, get_waitlist_signups, get_signups_by_source, get_signup_details, get_landing_visits_by_source, get_tc_check_summary, get_recent_tc_check_email_senders, get_tc_check_count_for_sender, get_tc_check_repeat_senders, get_tc_check_bulk_summary, get_tc_check_attempts_by_source, get_tc_check_attempts_by_page, get_brokerage_alert_delivery, get_daily_funnel, get_top_referrers, set_internal_visitor, get_visitor_roles, get_engagement_by_device, get_recent_email_send_failures, get_recent_visitors, get_archive_early_access
+from analytics import get_engagement_by_source, CHECK_CTA_EVENTS, SAMPLE_CTA_EVENTS, DROPZONE_INTERACT_EVENT
 from integrations import send_offer_email, fire_webhook, save_webhook, get_webhook, delete_webhook, send_to_docusign, send_plain_email, send_html_email
 from offers_db import record_offer, get_offers_for_phone, get_offer_by_filename, record_amendment, get_amendments_for_phone, record_thread_response, record_email_sent, record_docusign_sent
 from brokerages import extract_brokerage_prefix, link_user_to_brokerage, get_brokerage, get_brokerage_by_code, create_brokerage, list_brokerages, list_brokerage_agents, list_brokerage_records
@@ -214,8 +215,15 @@ _BOT_UA_RE = re.compile(
 
 
 _MOBILE_UA_RE = re.compile(r"Mobi|Android|iPhone|iPad|iPod", re.I)
+# workflow_offer_sms and footer_* were tagged in the HTML but missing here,
+# so /v1/evt dropped them (found 2026-10-13 by tests/test_tracking.py, which
+# now fails on any data-evt not in this list).
 _ENGAGEMENT_TYPES = ("js_ok", "hero_cta", "hero_sample", "hero_card", "dropzone_seen", "stay_10s", "stay_60s",
-                     "role_shown", "role_dismissed", "brokers_audit_cta", "brokers_email_cta", "brokers_plan_cta", "records_brokers_cta", "guide_check_cta", "guide_brokers_cta", "path_self_cta", "path_walkthrough_cta", "tc_trust_link", "tc_own_file_cta", "path_brokerage_cta", "guide_card_cta", "support_email_cta", "pricing_audit_cta", "tc_copy_agent_msg", "state_toggle_tx", "state_toggle_co", "states_tx_check", "states_tx_hub", "states_co_check", "states_co_hub", "states_request") + tuple("role_" + r for r in _VISITOR_ROLES)
+                     "role_shown", "role_dismissed", "brokers_audit_cta", "brokers_email_cta", "brokers_plan_cta", "records_brokers_cta", "guide_check_cta", "guide_brokers_cta", "path_self_cta", "path_walkthrough_cta", "tc_trust_link", "tc_own_file_cta", "path_brokerage_cta", "guide_card_cta", "support_email_cta", "pricing_audit_cta", "tc_copy_agent_msg", "state_toggle_tx", "state_toggle_co", "states_tx_check", "states_tx_hub", "states_co_check", "states_co_hub", "states_request", "workflow_offer_sms", "footer_instagram", "footer_linkedin") + tuple("role_" + r for r in _VISITOR_ROLES) \
+    + CHECK_CTA_EVENTS + SAMPLE_CTA_EVENTS + (DROPZONE_INTERACT_EVENT,)
+# Pages whose beacons /v1/evt accepts: the ones with their own
+# track_page_view() call, plus _BEACON_ONLY_PAGES below.
+_TRACKED_PAGES = {"homepage", "tc_check_page", "brokers_page", "guide_page", "archive_page"}
 
 # Tiny, cookie-less-of-its-own beacon script appended to every page that
 # track_page_view() logs. Elements opt in with data-evt="<type>" for clicks;
@@ -241,6 +249,19 @@ _ENGAGEMENT_JS = """<script>
   var dz = document.getElementById('homeDropZone') || document.getElementById('dropZone');
   if(dz && 'IntersectionObserver' in window){
     new IntersectionObserver(function(es, o){ es.forEach(function(x){ if(x.isIntersecting){ evt('dropzone_seen'); o.disconnect(); } }); }, {threshold:0.5}).observe(dz);
+  }
+  // A hand on the drop box, not just the box on screen (it's above the
+  // fold on /tc-check, so dropzone_seen fires on load): click/tap to
+  // browse, a file dragged over the page, or the email field focused.
+  if(dz){
+    var touched = function(){ evt('dropzone_interact'); };
+    dz.addEventListener('click', touched);
+    document.addEventListener('dragenter', function(e){
+      var t = e.dataTransfer && e.dataTransfer.types;
+      if(t && Array.prototype.indexOf.call(t, 'Files') !== -1) touched();
+    });
+    var em = document.getElementById('homeEmailOptinInput') || document.getElementById('emailOptinInput');
+    if(em) em.addEventListener('focus', touched);
   }
   // Visible time, not wall-clock: a link opened in a background tab only
   // starts counting once the visitor actually looks at it.
@@ -308,12 +329,36 @@ def engagement_event():
     page = request.form.get("page", "")
     visitor = request.cookies.get("ta_vid", "")
     if (ua and not _BOT_UA_RE.search(ua) and etype in _ENGAGEMENT_TYPES
-            and page in ("homepage", "tc_check_page", "brokers_page", "guide_page") and re.fullmatch(r"[0-9a-f]{32}", visitor)):
+            and page in _TRACKED_PAGES and re.fullmatch(r"[0-9a-f]{32}", visitor)):
         track_event("page_engagement", None, {
             "type": etype, "page": page, "visitor": visitor,
             "device": "mobile" if _is_mobile_request() else "desktop",
         })
     return "", 204
+
+
+# Pages that carry the nav "Check a file free" (and other check CTAs) but
+# never called track_page_view(), so a click there was invisible. Added
+# 2026-10-13. Done as one after_request hook keyed on the endpoint instead of
+# editing each route: /trust and /tc-hub/colorado build their HTML by
+# slicing privacy() and tc_hub() as plain strings, which a Response
+# wouldn't survive. Side effect worth knowing on /analytics: from this
+# date "Real visitors" also counts people who only saw these pages.
+_BEACON_ONLY_PAGES = {
+    "pricing": "pricing_page", "tc_hub": "tc_hub_page", "tc_hub_colorado": "co_hub_page",
+    "trust_center": "trust_page", "about": "about_page", "faq": "faq_page",
+    "terms": "terms_page", "privacy": "privacy_page", "trec_changes": "trec_changes_page", "contact": "contact_page",
+}
+_TRACKED_PAGES.update(_BEACON_ONLY_PAGES.values())
+
+
+@app.after_request
+def _track_beacon_only_pages(resp):
+    page = _BEACON_ONLY_PAGES.get(request.endpoint or "")
+    if (page and request.method == "GET" and resp.status_code == 200 and resp.mimetype == "text/html"
+            and not resp.direct_passthrough):
+        track_page_view(resp, page)
+    return resp
 
 
 def require_api_or_pdf_signature_auth(pdf_filename, expires, sig):
@@ -1281,7 +1326,7 @@ def index():
       <a href="/tc-hub">TC Hub</a>
       <a href="/login">Log In</a>
     </div>
-    <a href="/tc-check" class="nav-cta">Check a file free</a>
+    <a href="/tc-check" class="nav-cta" data-evt="nav_check_cta">Check a file free</a>
     <button class="nav-toggle" id="navToggle" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
   </nav>
   <script>
@@ -1402,7 +1447,7 @@ def index():
       <p class="dz-trust-line"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span>Checked, then deleted. No AI reads your contract. <a href="/trust#contracts" data-evt="tc_trust_link">How we handle files &rarr;</a></span></p>
       <div class="status" id="homeStatus"></div>
       <div class="result" id="homeResult"></div>
-      <button type="button" class="demo-check-btn" id="homeDemoBtn">No PDF handy? Run a sample check &rarr;</button>
+      <button type="button" class="demo-check-btn" id="homeDemoBtn" data-evt="home_sample_btn">No PDF handy? Run a sample check &rarr;</button>
       <div class="demo-check-hint"><span data-state="tx">See a real report on a sample TREC contract in 2 seconds.</span><span data-state="co">See a real report on a sample CBS1 in 2 seconds.</span></div>
       <div class="email-optin">
         <label class="email-optin-check"><input type="checkbox" id="homeEmailOptinCheckbox" checked> Email me this report + future checks for this address</label>
@@ -1478,7 +1523,7 @@ def index():
         <div class="steps-kicker">For TCs &mdash; in-house, independent, or running a roster</div>
         <h2>A second set of eyes, so you can actually log off.</h2>
         <p>You already catch nearly everything by hand. This is for the one blank that slips past even a careful TC &mdash; because it's your name on the file, whether that's one brokerage or six.</p>
-        <a class="sl-outline" href="#check">Check a file free</a>
+        <a class="sl-outline" href="#check" data-evt="home_check_cta">Check a file free</a>
       </div>
     </div>
     <ul class="tc-checklist">
@@ -1596,15 +1641,15 @@ def index():
       <h2 style="max-width:620px;margin:0 auto;">Forward it, or drop it here. Get back exactly what's missing.</h2>
     </div>
     <ul class="tc-checklist" style="max-width:560px;margin:1.5rem auto 0;">
-      <li data-state="tx"><span class="tc-check">&check;</span><span>Forward the TREC 20-19 to <strong>tc@check.txtanoffer.com</strong>, or upload it above &mdash; attach the 40-11, 41-3 or 39-11 to the same email, or add them on the <a href="/tc-check">full check page</a>.</span></li>
-      <li data-state="co"><span class="tc-check">&check;</span><span>Forward the CBS1 to <strong>tc@check.txtanoffer.com</strong>, or upload it above &mdash; attach the buyer&rsquo;s Exclusive Right-to-Buy, an Amend/Extend, Counterproposal, Inspection Objection Notice or Source of Water Addendum to the same email, or add them on the <a href="/tc-check?state=co">full check page</a>.</span></li>
+      <li data-state="tx"><span class="tc-check">&check;</span><span>Forward the TREC 20-19 to <strong>tc@check.txtanoffer.com</strong>, or upload it above &mdash; attach the 40-11, 41-3 or 39-11 to the same email, or add them on the <a href="/tc-check" data-evt="home_check_link">full check page</a>.</span></li>
+      <li data-state="co"><span class="tc-check">&check;</span><span>Forward the CBS1 to <strong>tc@check.txtanoffer.com</strong>, or upload it above &mdash; attach the buyer&rsquo;s Exclusive Right-to-Buy, an Amend/Extend, Counterproposal, Inspection Objection Notice or Source of Water Addendum to the same email, or add them on the <a href="/tc-check?state=co" data-evt="home_check_link">full check page</a>.</span></li>
       <li><span class="tc-check">&check;</span><span>We re-read the actual filled-in PDF against <span data-state="tx">TREC's current form</span><span data-state="co">the 2026 CBS1</span> &mdash; not a guess based on file size or page count.</span></li>
       <li data-state="tx"><span class="tc-check">&check;</span><span>Get an itemized report back in under a minute: what's blank, what's missing an initial, what disagrees with the addendum.</span></li>
       <li data-state="co"><span class="tc-check">&check;</span><span>Get an itemized report back in under a minute: which deadlines are blank, whether the price math adds up, which dates land after closing.</span></li>
     </ul>
     <div class="secondary-cta" style="margin:1.75rem auto 0;padding-top:1.75rem;max-width:540px;text-align:center;">
       <div class="secondary-cta-label">Free. No login. Checked, then deleted &mdash; no copy kept.</div>
-      <a href="/tc-check" class="input-btn" style="display:inline-block;text-decoration:none;">Try TC File Check &rarr;</a>
+      <a href="/tc-check" class="input-btn" style="display:inline-block;text-decoration:none;" data-evt="home_tryit_cta">Try TC File Check &rarr;</a>
     </div>
   </section>
 
@@ -1652,7 +1697,7 @@ def index():
         <div class="step-num">&check;</div>
         <h3>Checked against the current form</h3>
         <p data-state="tx">Every check is mapped field-by-field against TREC's actual published 20-19 form and re-verified when TREC revises it. <a href="/trec-changes" style="color:var(--text);text-decoration:underline;">See what changed &rarr;</a> &middot; <a href="/tc-hub" style="color:var(--text);text-decoration:underline;">Free TC Hub &rarr;</a></p>
-        <p data-state="co">Every check is mapped field-by-field against the Colorado Real Estate Commission&rsquo;s published 2026 CBS1, and each field was checked against where it sits on the printed form. <a href="/tc-check#colorado" style="color:var(--text);text-decoration:underline;">See what it checks &rarr;</a></p>
+        <p data-state="co">Every check is mapped field-by-field against the Colorado Real Estate Commission&rsquo;s published 2026 CBS1, and each field was checked against where it sits on the printed form. <a href="/tc-check#colorado" style="color:var(--text);text-decoration:underline;" data-evt="home_check_link">See what it checks &rarr;</a></p>
       </div>
       <div class="step-card">
         <div class="step-num">&check;</div>
@@ -1730,7 +1775,7 @@ def index():
       <a href="/privacy#sms-messaging">SMS Terms</a>
       <a href="/pricing">Pricing</a>
       <a href="/demo#commands">Text Commands</a>
-      <a href="/tc-check">TC File Check</a>
+      <a href="/tc-check" data-evt="footer_check_link">TC File Check</a>
       <a href="/broker/login">Brokerage Sign-In</a>
       <a href="/guides">Guides</a>
       <a href="mailto:support@txtanoffer.com">Support</a>
@@ -2043,8 +2088,8 @@ def index():
     src = _re.sub(r"[^a-zA-Z0-9_-]", "", request.args.get("src", ""))[:60]
     if src:
         html = html.replace(
-            '<a href="/tc-check" class="nav-cta">Check a file free</a>',
-            f'<a href="/tc-check?src={src}" class="nav-cta">Check a file free</a>',
+            '<a href="/tc-check" class="nav-cta" data-evt="nav_check_cta">Check a file free</a>',
+            f'<a href="/tc-check?src={src}" class="nav-cta" data-evt="nav_check_cta">Check a file free</a>',
             1,
         )
     # Real TC File Check production numbers, not marketing copy -- swapped
@@ -3429,7 +3474,7 @@ DEMO_FORM = """
       <a href="/faq">FAQ</a>
       <a href="/login">Log In</a>
     </div>
-    <a href="/tc-check" class="nav-cta">Check a file free</a>
+    <a href="/tc-check" class="nav-cta" data-evt="nav_check_cta">Check a file free</a>
     <button class="nav-toggle" id="navToggle" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
   </nav>
   <script>
@@ -4519,7 +4564,7 @@ __STATE_SWITCH_JS__
 <button type="button" class="addendum-clear" id="addendumClear" title="Remove">&times;</button>
 </div>
 </div>
-<button type="button" class="demo-check-btn" id="demoBtn">No PDF handy? Run a sample check &rarr;</button>
+<button type="button" class="demo-check-btn" id="demoBtn" data-evt="tc_sample_btn">No PDF handy? Run a sample check &rarr;</button>
 <div class="email-optin">
 <label class="email-optin-check"><input type="checkbox" id="emailOptinCheckbox" checked> Email me this report + future checks for this address</label>
 <input type="email" id="emailOptinInput" class="email-optin-input" placeholder="you@example.com" autocomplete="email">
@@ -5872,7 +5917,7 @@ def pricing():
     <a href="/faq">FAQ</a>
     <a href="/login">Log In</a>
   </div>
-  <a href="/tc-check" class="nav-cta">Check a file free</a>
+  <a href="/tc-check" class="nav-cta" data-evt="nav_check_cta">Check a file free</a>
   <button class="nav-toggle" id="navToggle" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
 </nav>
 <script>
@@ -5908,7 +5953,7 @@ def pricing():
       <li><span class="check">&#10003;</span> 3 full reports with no signup, then just your email</li>
       <li><span class="check">&#10003;</span> Your file isn&rsquo;t kept</li>
     </ul>
-    <a href="/tc-check" class="cta-btn primary">Check a file free</a>
+    <a href="/tc-check" class="cta-btn primary" data-evt="pricing_check_cta">Check a file free</a>
     <div class="plan-sub" aria-hidden="true"></div>
   </div>
 
@@ -5979,7 +6024,7 @@ def pricing():
 <div class="footer-note">
   By subscribing you agree to our <a href="/terms">Terms of Service</a>.
   <br><br>
-  <a href="/tc-check">&larr; Try TC File Check</a> &middot; <a href="/">Home</a>
+  <a href="/tc-check" data-evt="pricing_check_cta">&larr; Try TC File Check</a> &middot; <a href="/">Home</a>
 </div>
 
 </body>
@@ -6369,8 +6414,8 @@ def analytics_dashboard():
         f"<tr><td>{v['source']}</td><td>{v['count']}</td><td>{v['count_24h']}</td></tr>" for v in landing_visits_by_source_merged
     ) or '<tr><td colspan="3" style="padding:10px;color:#666;">No tagged visits yet.</td></tr>'
     daily_rows = "".join(
-        f"<tr><td>{d['date'][5:]}</td><td><strong>{d['js_ok']}</strong></td><td style='color:#999;'>{d['visitors']}</td><td>{d['mobile']}</td><td>{d['stay_10s']}</td><td>{d['hero_cta']}</td>"
-        f"<td>{d['hero_sample']}</td><td>{d['dropzone_seen']}</td><td>{d['attempts']}</td>"
+        f"<tr><td>{d['date'][5:]}</td><td><strong>{d['js_ok']}</strong></td><td style='color:#999;'>{d['visitors']}</td><td>{d['mobile']}</td><td>{d['stay_10s']}</td><td>{d['check_cta']}</td>"
+        f"<td>{d['sample_cta']}</td><td>{d['dropzone_seen']}</td><td>{d['dropzone_interact']}</td><td>{d['attempts']}</td>"
         f"<td>{d['demos']}</td><td>{d['recognized']}</td><td>{d['emails_captured']}</td><td>{d['email_checks']}</td><td>{d['email_junk']}</td></tr>"
         for d in daily_funnel
     )
@@ -6401,9 +6446,13 @@ def analytics_dashboard():
         # seen, 10s stay...) also proves the page's JS ran, so older rows count.
         real = bool(v["events"] - {""})
         engaged = [label for key, label in (("stay_10s", "10s+"), ("stay_60s", "60s+"), ("dropzone_seen", "saw drop box"),
-                                            ("hero_cta", "clicked check"), ("hero_sample", "sample"))
+                                            ("dropzone_interact", "used drop box"))
                    if key in v["events"]]
-        engaged += [e.replace("_", " ") for e in v["events"] if e.endswith("_cta") and e != "hero_cta"]
+        # Name the exact button: "clicked check (nav check cta)".
+        engaged += ["clicked check (" + e.replace("_", " ") + ")" for e in sorted(v["events"] & set(CHECK_CTA_EVENTS))]
+        engaged += ["sample (" + e.replace("_", " ") + ")" for e in sorted(v["events"] & set(SAMPLE_CTA_EVENTS))]
+        engaged += [e.replace("_", " ") for e in sorted(v["events"]) if e.endswith("_cta")
+                    and e not in CHECK_CTA_EVENTS and e not in SAMPLE_CTA_EVENTS]
         engaged += [e[5:] for e in v["events"] if e.startswith("role_") and e not in ("role_shown", "role_dismissed")]
         pages = ", ".join(f"{p}&times;{n}" if n > 1 else p for p, n in v["pages"].items()) or "(beacon only)"
         style = "" if real else "color:#999;"
@@ -6420,9 +6469,38 @@ def analytics_dashboard():
         "<tr><td colspan='8' style='padding:6px;color:#666;'>No visitors in the last 48 hours.</td></tr>"
     recent_real = sum(1 for v in recent_visitors if v["events"] - {""})
 
+    # Per-channel humans (added 2026-10-13): landings by src count scanners
+    # and preview fetches; this counts browsers that ran the page.
+    by_source = get_engagement_by_source(days=30)
+    def _src_row(r):
+        return (f"<tr><td style='padding:6px;'>{escape(r['key'])}</td><td style='padding:6px;color:#999;'>{r['loads']}</td>"
+                f"<td style='padding:6px;'><strong>{r['real']}</strong></td><td style='padding:6px;'>{r['stayed']}</td>"
+                f"<td style='padding:6px;'>{r['checked']}</td><td style='padding:6px;'>{r['sampled']}</td>"
+                f"<td style='padding:6px;'>{r['uploaded']}</td></tr>")
+    channel_rows = "".join(_src_row(r) for r in by_source["channels"]) or \
+        "<tr><td colspan='7' style='padding:6px;color:#666;'>No page views in the last 30 days.</td></tr>"
+    src_engagement_rows = "".join(_src_row(r) for r in by_source["sources"]) or \
+        "<tr><td colspan='7' style='padding:6px;color:#666;'>No page views in the last 30 days.</td></tr>"
+    # ?src_ua=ti_ lists every visitor whose src starts with that prefix over
+    # 30 days, with user agent, so "people or mail scanners?" can be read
+    # straight off the UA (the 48h table above has rolled past most of them).
+    src_ua = re.sub(r"[^a-zA-Z0-9_-]", "", request.args.get("src_ua", ""))[:60]
+    if src_ua:
+        _ua_visitors = get_recent_visitors(hours=30 * 24, limit=300, source_prefix=src_ua)
+        src_ua_section = (
+            f"<div class='metric'><h3>Visitors with src starting &ldquo;{escape(src_ua)}&rdquo; (30 days, Central time)</h3>"
+            f"<p style='color:#666;font-size:13px;'>{len(_ua_visitors)} visitors &middot; "
+            f"{sum(1 for v in _ua_visitors if v['events'] - {''})} ran the page in a real browser. Several firms opening in the same "
+            f"minute, no JavaScript, or a Linux/old-Chrome UA = mail scanner, not a person.</p><div style='overflow-x:auto;'>"
+            "<table><tr><th>First seen</th><th>Pages</th><th>Referrer</th><th>Source</th><th>Device</th><th>Real browser</th><th>Did</th><th>Browser (user agent)</th></tr>"
+            + ("".join(_visitor_row(v) for v in _ua_visitors) or "<tr><td colspan='8' style='padding:6px;color:#666;'>None.</td></tr>")
+            + "</table></div></div>")
+    else:
+        src_ua_section = ""
+
     device_rows = "".join(
         f"<tr><td>{d['device']}</td><td><strong>{d['js_ok']}</strong></td><td style='color:#999;'>{d['visitors']}</td><td>{d['stay_10s']}</td>"
-        f"<td>{d['dropzone_seen']}</td><td>{d['hero_cta']}</td></tr>"
+        f"<td>{d['dropzone_seen']}</td><td>{d['check_cta']}</td></tr>"
         for d in engagement_by_device
     )
     send_failure_rows = "".join(
@@ -6479,8 +6557,9 @@ body{{font-family:system-ui;max-width:800px;margin:40px auto;padding:20px;}}
       <th style="padding:6px;">Loads on phone</th>
       <th style="padding:6px;">Stayed 10s+</th>
       <th style="padding:6px;">Clicked &ldquo;Check a file&rdquo;</th>
-      <th style="padding:6px;">Hero sample</th>
+      <th style="padding:6px;">Clicked sample</th>
       <th style="padding:6px;">Saw drop box</th>
+      <th style="padding:6px;">Used drop box</th>
       <th style="padding:6px;">Widget attempts</th>
       <th style="padding:6px;">Sample used</th>
       <th style="padding:6px;">Recognized</th>
@@ -6491,7 +6570,7 @@ body{{font-family:system-ui;max-width:800px;margin:40px auto;padding:20px;}}
     {daily_rows}
   </table>
   </div>
-  <p class="label" style="margin-top:8px;"><strong>Real visitors</strong> = browsers that actually ran the page (from 2026-10-06; earlier days show 0) &mdash; this is the number to watch. <strong>Page loads (incl. bots)</strong> = every load of <code>/</code> or <code>/tc-check</code> not caught by the bot filter; link scanners and crawlers that pose as browsers land here and don&rsquo;t keep cookies, so each of their hits counts again. Stayed / clicked / saw drop box are unique browsers (tracked from 2026-10-03). Real visitors minus &ldquo;Stayed 10s+&rdquo; &asymp; bounced. &ldquo;Sample used&rdquo; counts every sample run (hero button or the one under the drop box). Widget attempts = real uploads, excluding the sample. Email checks exclude junk senders from 2026-10-02 on.</p>
+  <p class="label" style="margin-top:8px;"><strong>Real visitors</strong> = browsers that actually ran the page (from 2026-10-06; earlier days show 0) &mdash; this is the number to watch. <strong>Page loads (incl. bots)</strong> = every load of <code>/</code> or <code>/tc-check</code> not caught by the bot filter; link scanners and crawlers that pose as browsers land here and don&rsquo;t keep cookies, so each of their hits counts again. Stayed / clicked / saw drop box are unique browsers (tracked from 2026-10-03). Real visitors minus &ldquo;Stayed 10s+&rdquo; &asymp; bounced. <strong>Clicked &ldquo;Check a file&rdquo;</strong> = any check button or link on any page (nav, hero, second homepage button, /pricing, hubs, /trust, guides, state links, &ldquo;Check my own file&rdquo;); before 2026-10-14 only the homepage hero button and a few others were tagged, so earlier days undercount. <strong>Clicked sample</strong> = any sample-report button or link (was the hero sample button only). <strong>Saw drop box</strong> fires on page load on /tc-check, so it isn&rsquo;t interest; <strong>Used drop box</strong> (from 2026-10-14) = clicked/tapped the box, dragged a file over the page, or clicked into the email field. From 2026-10-14 visitors also include /pricing, /trust, /about, /faq, the TC hubs, /terms, /privacy, /trec-changes and /contact. &ldquo;Sample used&rdquo; counts every sample run (hero button or the one under the drop box). Widget attempts = real uploads, excluding the sample. Email checks exclude junk senders from 2026-10-02 on.</p>
 </div>
 <div class="metric">
   <h3>What Brings You Here? (self-ID card)</h3>
@@ -6512,6 +6591,15 @@ body{{font-family:system-ui;max-width:800px;margin:40px auto;padding:20px;}}
   </div>
   <p class="label" style="margin-top:8px;">One row per browser cookie. Bots don't keep cookies, so each bot hit shows up as its own one-page row. Your own visits are excluded once you've opened /internal-mode on that device. User agent is logged from 2026-10-07; older rows say "(not logged)".</p>
 </div>
+<div class="metric">
+  <h3>Real Humans by Channel (30 days)</h3>
+  <table><tr><th>Channel</th><th style="color:#999;">Page loads (incl. bots)</th><th>Real visitors</th><th>Stayed 10s+</th><th>Clicked &ldquo;Check a file&rdquo;</th><th>Tried sample</th><th>Uploaded</th></tr>{channel_rows}</table>
+  <details style="margin-top:10px;"><summary style="cursor:pointer;">By src tag</summary>
+  <table><tr><th>src</th><th style="color:#999;">Page loads (incl. bots)</th><th>Real visitors</th><th>Stayed 10s+</th><th>Clicked &ldquo;Check a file&rdquo;</th><th>Tried sample</th><th>Uploaded</th></tr>{src_engagement_rows}</table>
+  </details>
+  <p class="label" style="margin-top:8px;">Unique browsers, each credited to the src of its first page view in the window (later visits without a tag keep the first tag via cookie). Real visitors = ran the page&rsquo;s JavaScript. Tried sample = clicked a sample link or ran the sample. Uploaded = a real file attempt on the web (email forwards aren&rsquo;t tied to a browser). Channel roll-up: li_/linkedin &rarr; LinkedIn, fb &rarr; Facebook, ig_ &rarr; Instagram, seo_ &rarr; Search, ti_/d1013_/co1012_/*_reach &rarr; Cold email, anything else &rarr; other. To see user agents for one tag, add <code>&amp;src_ua=ti_</code> (any prefix) to this page&rsquo;s URL.</p>
+</div>
+{src_ua_section}
 <div class="metric">
   <h3>Tracking Check: Phone vs Desktop (7 days)</h3>
   <table><tr><th>Device</th><th>Real visitors</th><th style="color:#999;">Page loads (incl. bots)</th><th>Stayed 10s+</th><th>Saw drop box</th><th>Clicked &ldquo;Check a file&rdquo;</th></tr>{device_rows}</table>
@@ -7550,7 +7638,7 @@ def terms():
     <a href="/faq">FAQ</a>
     <a href="/login">Log In</a>
   </div>
-  <a href="/tc-check" class="nav-cta">Check a file free</a>
+  <a href="/tc-check" class="nav-cta" data-evt="nav_check_cta">Check a file free</a>
   <button class="nav-toggle" id="navToggle" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
 </nav>
 <script>
@@ -7818,7 +7906,7 @@ def privacy():
     <a href="/faq">FAQ</a>
     <a href="/login">Log In</a>
   </div>
-  <a href="/tc-check" class="nav-cta">Check a file free</a>
+  <a href="/tc-check" class="nav-cta" data-evt="nav_check_cta">Check a file free</a>
   <button class="nav-toggle" id="navToggle" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
 </nav>
 <script>
@@ -8040,7 +8128,7 @@ def faq():
     <a href="/faq">FAQ</a>
     <a href="/login">Log In</a>
   </div>
-  <a href="/tc-check" class="nav-cta">Check a file free</a>
+  <a href="/tc-check" class="nav-cta" data-evt="nav_check_cta">Check a file free</a>
   <button class="nav-toggle" id="navToggle" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
 </nav>
 <script>
@@ -8257,7 +8345,7 @@ def trec_changes():
     <a href="/faq">FAQ</a>
     <a href="/login">Log In</a>
   </div>
-  <a href="/tc-check" class="nav-cta">Check a file free</a>
+  <a href="/tc-check" class="nav-cta" data-evt="nav_check_cta">Check a file free</a>
   <button class="nav-toggle" id="navToggle" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
 </nav>
 <script>
@@ -8532,7 +8620,7 @@ def tc_hub():
     <a href="/faq">FAQ</a>
     <a href="/login">Log In</a>
   </div>
-  <a href="/tc-check" class="nav-cta">Check a file free</a>
+  <a href="/tc-check" class="nav-cta" data-evt="nav_check_cta">Check a file free</a>
   <button class="nav-toggle" id="navToggle" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
 </nav>
 <script>
@@ -8596,7 +8684,7 @@ def tc_hub():
   <div class="section" id="checklists">
     <h2>File-Review Checklists</h2>
     <p class="section-sub">Organized by the point in the transaction where each check actually matters -- built from the exact fields TC Check verifies on a real file, not a generic industry list.</p>
-    <p class="section-sub"><a href="/tc-check?demo=1" style="color:var(--accent-dark);font-weight:600;text-decoration:underline;">Run the sample to see what TC Check flags &rarr;</a></p>
+    <p class="section-sub"><a href="/tc-check?demo=1" style="color:var(--accent-dark);font-weight:600;text-decoration:underline;" data-evt="hub_sample_cta">Run the sample to see what TC Check flags &rarr;</a></p>
     <div class="checklist-grid">
       <div class="checklist-card">
         <h3>Before Sending an Offer</h3>
@@ -8667,7 +8755,7 @@ def tc_hub():
       <p>The combined "Before Sending" + "After Execution" checklist above, as a plain-text file you can keep on hand.</p>
       <div class="cta-buttons">
         <button class="cta-primary" onclick="downloadHubChecklist()">Download checklist</button>
-        <a class="cta-secondary" href="/tc-check">Want the computer to check it instead? Try TC Check &rarr;</a>
+        <a class="cta-secondary" href="/tc-check" data-evt="hub_check_cta">Want the computer to check it instead? Try TC Check &rarr;</a>
       </div>
     </div>
   </div>
@@ -8740,7 +8828,7 @@ def tc_hub_colorado():
     head = head.replace(
         '<meta name="description" content="Free reference material for Texas transaction coordinators: TREC form guides, file-review checklists, and the most common mistakes found across real audited closing files.">',
         '<meta name="description" content="Free reference material for Colorado transaction coordinators: Colorado Real Estate Commission forms (CBS1, Amend/Extend, Counterproposal, Exclusive Right-to-Buy), deadline-table checklists and the 2026 changes including HB26-1426.">')
-    head = head.replace('<a href="/tc-check" class="nav-cta">', '<a href="/tc-check?state=co" class="nav-cta">')
+    head = head.replace('<a href="/tc-check" class="nav-cta" ', '<a href="/tc-check?state=co" class="nav-cta" ')
     return head + co_hub.body()
 
 
@@ -8859,7 +8947,7 @@ def about():
     <a href="/faq">FAQ</a>
     <a href="/login">Log In</a>
   </div>
-  <a href="/tc-check" class="nav-cta">Check a file free</a>
+  <a href="/tc-check" class="nav-cta" data-evt="nav_check_cta">Check a file free</a>
   <button class="nav-toggle" id="navToggle" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
 </nav>
 <script>
@@ -9267,7 +9355,7 @@ def _guide_page(slug, g, body_html):
 <body>
 <nav class="nav">
   <a href="/"><img src="/static/logo-wordmark.png?v=2" alt="TxtAnOffer" style="height:24px;width:auto;display:block;"></a>
-  <a class="nav-cta" href="/tc-check?src=seo_""" + slug + """_nav">Check a file free</a>
+  <a class="nav-cta" href="/tc-check?src=seo_""" + slug + """_nav" data-evt="nav_check_cta">Check a file free</a>
 </nav>
 <main class="wrap">
   <div class="crumbs"><a href="/">Home</a> / <a href="/guides">Guides</a></div>
@@ -9915,7 +10003,7 @@ def archive_early_access():
                 "agents": (request.form.get("agents") or "").strip()[:20],
                 "source": request.cookies.get("ta_src") or "direct",
             })
-        return _ARCHIVE_EA_PAGE.replace("__FORM__", '<div class="ok"><b>Thanks &mdash; we&rsquo;ll be in touch shortly</b> to set up your brokerage. In the meantime you can <a href="/tc-check" style="color:#0b5d52;font-weight:600;">check a file free</a>.</div>')
+        return _ARCHIVE_EA_PAGE.replace("__FORM__", '<div class="ok"><b>Thanks &mdash; we&rsquo;ll be in touch shortly</b> to set up your brokerage. In the meantime you can <a href="/tc-check" style="color:#0b5d52;font-weight:600;" data-evt="archive_check_link">check a file free</a>.</div>')
     src = re.sub(r"[^a-zA-Z0-9_-]", "", request.args.get("src", ""))[:60]
     resp = make_response(_ARCHIVE_EA_PAGE.replace("__FORM__", _ARCHIVE_EA_FORM))
     if src and not request.cookies.get("ta_src"):
@@ -10053,7 +10141,7 @@ def brokers():
     <img src="/static/logo-wordmark.png?v=2" alt="TxtAnOffer" style="height:26px;width:auto;display:block;">
   </a>
   <div class="nav-links" id="navLinks">
-    <a href="/tc-check">TC Check</a>
+    <a href="/tc-check" data-evt="nav_check_link">TC Check</a>
     <a href="/pricing">Pricing</a>
     <a href="/faq">FAQ</a>
     <a href="/broker/login">Broker Sign-In</a>
@@ -10091,7 +10179,7 @@ def brokers():
       <a class="btn" href="/tc-check/bulk?src=brokers_page" data-evt="brokers_audit_cta">Start the free audit &rarr;</a>
       <a class="btn-outline" href="mailto:support@txtanoffer.com?subject=Brokerage%20backlog%20audit" data-evt="brokers_email_cta">Walk me through it</a>
     </div>
-    <p class="fine">Want to check just one file first? <a href="/tc-check" style="text-decoration:underline;">Try a single file</a>. TC Check flags what's missing or inconsistent; it isn't legal advice and doesn't replace your own review.</p>
+    <p class="fine">Want to check just one file first? <a href="/tc-check" style="text-decoration:underline;" data-evt="brokers_single_check_cta">Try a single file</a>. TC Check flags what's missing or inconsistent; it isn't legal advice and doesn't replace your own review.</p>
   </div>
 
   <h2>What the audit looks for</h2>
@@ -10227,7 +10315,7 @@ def contact():
     <a href="/faq">FAQ</a>
     <a href="/login">Log In</a>
   </div>
-  <a href="/tc-check" class="nav-cta">Check a file free</a>
+  <a href="/tc-check" class="nav-cta" data-evt="nav_check_cta">Check a file free</a>
   <button class="nav-toggle" id="navToggle" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
 </nav>
 <script>
@@ -10482,7 +10570,7 @@ def profile():
     <a href="/demo">Demo</a>
     <a href="/pricing">Pricing</a>
   </div>
-  <a href="/tc-check" class="nav-cta">Check a file free</a>
+  <a href="/tc-check" class="nav-cta" data-evt="nav_check_cta">Check a file free</a>
   <button class="nav-toggle" id="navToggle" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
 </nav>
 <script>
