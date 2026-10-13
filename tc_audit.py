@@ -1096,6 +1096,15 @@ def compare_contracts(original_path: str, updated_path: str) -> dict:
     orig_values = _read_values(original_path)
     upd_values = _read_values(updated_path)
 
+    # Two Colorado CBS1s: compared by co_forms with the same result shape.
+    o_co, u_co = co_audit.is_cbs1(orig_values), co_audit.is_cbs1(upd_values)
+    if o_co and u_co:
+        import co_forms
+        return co_forms.compare_cbs1(orig_values, upd_values)
+    if o_co != u_co:
+        return {"recognized": False,
+                "message": "One file is a Colorado CBS1 and the other isn't -- compare two versions of the same form."}
+
     unrecognized = []
     if _matched_main(orig_values) < MIN_MATCHED_FIELDS:
         unrecognized.append("original")

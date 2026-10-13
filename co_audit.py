@@ -435,18 +435,32 @@ def audit_values(values: dict) -> list:
 
 def check_co_file(pdf_paths, page_count=None, all_values=None, summary=None) -> dict:
     """Same result shape as tc_audit.check_tc_file. `summary` is
-    tc_audit._severity_summary, passed in to avoid a circular import."""
+    tc_audit._severity_summary, passed in to avoid a circular import. Up to
+    4 files: the CBS1 plus any Amend/Extend, Counterproposal, Inspection
+    Objection Notice, Source of Water or Residential Addendum, each
+    cross-checked against it by co_forms."""
+    import co_forms
     if all_values is None:
         all_values = [_read_values(p) for p in pdf_paths]
     if page_count is None:
         page_count = sum(len(PdfReader(p).pages) for p in pdf_paths)
     values = next(v for v in all_values if is_cbs1(v))
     issues = audit_values(values)
-    others = len(all_values) - 1
-    if others:
+    others, unknown, seen_contract = [], 0, False
+    for v in all_values:
+        if v is values and not seen_contract:
+            seen_contract = True
+            continue
+        kind = co_forms.classify(v)
+        if kind and kind != "cbs1":
+            others.append((kind, v))
+        else:
+            unknown += 1
+    issues += co_forms.cross_check(values, others)
+    if unknown:
         issues.append(_issue("warning",
-                             f"{others} other file{'s' if others != 1 else ''} attached -- only the CBS1 itself is checked in this version",
-                             "co_other_files_not_checked"))
+                             f"{unknown} attached file{'s' if unknown != 1 else ''} wasn't recognized as a Colorado form "
+                             f"this check reads -- not checked", "co_other_files_not_checked"))
     blockers = [i for i in issues if i["severity"] == "blocker"]
     core = ["street", "city", "county", "price", "earnest", "earnest_holder", "closing"]
     core_missing = sum(1 for k in core if not _v(values, F[k]))
@@ -459,8 +473,9 @@ def check_co_file(pdf_paths, page_count=None, all_values=None, summary=None) -> 
         "looks_like_blank_draft": core_missing / len(core) >= 0.7,
         "page_count": page_count,
         "has_addendum": False,
-        "has_amendment": False,
+        "has_amendment": any(k == "ae41" for k, _ in others),
         "has_loan_assumption": False,
+        "co_attachments": [co_forms.FORM_NAMES[k] for k, _ in others],
         "severity": summary(issues) if summary else None,
         "property": {
             "address": _v(values, F["street"]),

@@ -92,3 +92,28 @@ if __name__ == "__main__":
     for p in (1, 3, 4, 5, 8):
         d[p - 1].get_pixmap(dpi=90).save(f"{out[:-4]}_p{p}.png")
     print("wrote", out)
+
+
+FORMS = {
+    "ae41": os.path.join(HERE, "fixtures", "CO_AE41_blank.pdf"),
+    "ctr": os.path.join(HERE, "fixtures", "CO_CP40_blank.pdf"),
+    "insp": os.path.join(HERE, "fixtures", "CO_NTC43_blank.pdf"),
+    "swa": os.path.join(HERE, "fixtures", "CO_SWA35_blank.pdf"),
+}
+
+
+def fill_form(kind, vals, out):
+    """Fill one of the companion Colorado forms by exact field name."""
+    doc = fitz.open(FORMS[kind])
+    for page in doc:
+        for w in page.widgets():
+            if w.field_name in vals:
+                v = vals[w.field_name]
+                if w.field_type == fitz.PDF_WIDGET_TYPE_CHECKBOX:
+                    w.field_value = w.on_state() if v else "Off"
+                else:
+                    w.field_value = str(v)
+                w.update()
+    doc.save(out)
+    doc.close()
+    return out

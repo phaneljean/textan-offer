@@ -1428,7 +1428,7 @@ def index():
     </div>
     <ul class="tc-checklist" style="max-width:560px;margin:1.5rem auto 0;">
       <li data-state="tx"><span class="tc-check">&check;</span><span>Forward the TREC 20-19 to <strong>tc@check.txtanoffer.com</strong>, or upload it above &mdash; attach the 40-11, 41-3 or 39-11 to the same email, or add them on the <a href="/tc-check">full check page</a>.</span></li>
-      <li data-state="co"><span class="tc-check">&check;</span><span>Forward the CBS1 to <strong>tc@check.txtanoffer.com</strong>, or upload it above.</span></li>
+      <li data-state="co"><span class="tc-check">&check;</span><span>Forward the CBS1 to <strong>tc@check.txtanoffer.com</strong>, or upload it above &mdash; attach an Amend/Extend, Counterproposal, Inspection Objection Notice or Source of Water Addendum to the same email, or add them on the <a href="/tc-check?state=co">full check page</a>.</span></li>
       <li><span class="tc-check">&check;</span><span>We re-read the actual filled-in PDF against <span data-state="tx">TREC's current form</span><span data-state="co">the 2026 CBS1</span> &mdash; not a guess based on file size or page count.</span></li>
       <li data-state="tx"><span class="tc-check">&check;</span><span>Get an itemized report back in under a minute: what's blank, what's missing an initial, what disagrees with the addendum.</span></li>
       <li data-state="co"><span class="tc-check">&check;</span><span>Get an itemized report back in under a minute: which deadlines are blank, whether the price math adds up, which dates land after closing.</span></li>
@@ -2680,8 +2680,26 @@ def sms_reply():
                 f'Text DASHBOARD to see your offer history.')
             return "", 200
         if (offer.get("filename") or "").startswith("CBS1_"):
-            from amendment import CO_AMEND_MESSAGE
-            twilio_send_sms(agent_phone, CO_AMEND_MESSAGE.replace(" -- ", ". ") + "\n\nReply STOP to unsubscribe, HELP for help.")
+            # Colorado: an Agreement to Amend/Extend (AE41), never a TREC 39-11.
+            from co_filler import fill_ae41
+            try:
+                pdf_path = fill_ae41(offer, amend)
+            except Exception as e:
+                print(f"[SMS] AE41 ERROR: {e}")
+                twilio_send_sms(agent_phone, "Couldn't create the Colorado Amend/Extend for that offer. Please try again or contact support.")
+                return "", 200
+            filename = os.path.basename(pdf_path)
+            record_amendment(offer["id"], agent_phone, amend["field"], amend["value"], filename)
+            pdf_url = sign_pdf_url(filename, request.host_url.rstrip("/"))
+            if amend["field"] == "price":
+                change_line = (f"New Purchase Price: ${amend['value']:,}. Update the New Loan and "
+                               f"Cash at Closing amounts with the parties before signing.")
+            else:
+                change_line = "Closing Date extended (moved to a business day if needed)."
+            twilio_send_sms(agent_phone,
+                f"Agreement to Amend/Extend (Colorado) for {offer['address']}:\n{change_line}\n\n{pdf_url}\n\n"
+                f"Draft only -- review before signing.\n\n"
+                f"Reply STOP to unsubscribe, HELP for help.")
             return "", 200
         try:
             pdf_path = fill_amendment_pdf(offer, amend)
@@ -3211,7 +3229,11 @@ def demo():
                     result_html = f'<div class="error">No demo offer found matching "{amend["address"]}". Generate an offer for that address above first, then amend it.</div>'
                 else:
                     try:
-                        pdf_path = fill_amendment_pdf(offer, amend)
+                        if (offer.get("filename") or "").startswith("CBS1_"):
+                            from co_filler import fill_ae41
+                            pdf_path = fill_ae41(offer, amend)
+                        else:
+                            pdf_path = fill_amendment_pdf(offer, amend)
                     except Exception as e:
                         result_html = f'<div class="error">Couldn\'t generate amendment: {e}</div>'
                     else:
@@ -4163,8 +4185,8 @@ __STATE_SWITCH_JS__
 <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>3 free reports, no signup</span>
 <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>Results in seconds</span>
 </div>
-<div data-state="tx">
-<div class="addendum-toggle" id="addendumToggle">+ Also have the 40-11, 41-3 or 39-11? Add up to 3 to cross-check them against the contract, too.</div>
+<div>
+<div class="addendum-toggle" id="addendumToggle"><span data-state="tx">+ Also have the 40-11, 41-3 or 39-11? Add up to 3 to cross-check them against the contract, too.</span><span data-state="co">+ Also have an Amend/Extend, Counterproposal, Inspection Objection Notice or Source of Water Addendum? Add up to 3 to check them against the CBS1.</span></div>
 <div class="addendum-row" id="addendumRow" hidden>
 <input type="file" id="addendumInput" accept="application/pdf" multiple>
 <span class="addendum-filename" id="addendumFileName"></span>
@@ -4225,10 +4247,13 @@ __STATE_SWITCH_JS__
 <li>Both boxes checked where only one applies, and two payers on one &sect;15 fee</li>
 <li>&sect;29 compensation lines checked with no % or $</li>
 <li>Lead-based paint deadlines left blank</li>
+<li>Amend/Extend and Counterproposal: the contract re-checked as amended &mdash; a new date that lands after closing, a deleted loan or inspection deadline, conflicting boxes, a price change</li>
+<li>Inspection Objection Notice dated after the Inspection Objection Deadline, or with no description</li>
+<li>Attached forms that name a different property or contract date; a Source of Water Addendum listed in &sect;31 but not attached</li>
 </ul>
 <ul class="not-checked">
 <li>Signatures</li>
-<li>Foreclosure CBS (CBSF1), counterproposals, amend/extend and other Colorado forms</li>
+<li>Foreclosure CBS (CBSF1) and Colorado forms not listed here</li>
 <li>Scanned or flattened PDFs</li>
 </ul>
 </div>
@@ -4330,10 +4355,11 @@ addendumInput.addEventListener('change', () => {
     addendumFileName.textContent = pendingAddendumFiles.map(f => f.name).join(', ');
   }
 });
-// Switching to Colorado hides the addendum picker; drop anything already
-// picked so a hidden TREC addendum can't ride along on a CBS1 check.
-document.addEventListener('ta:state', e => {
-  if (e.detail === 'co' && pendingAddendumFiles.length) addendumClear.click();
+// Texas and Colorado take different companion forms; drop anything already
+// picked when the state changes so a TREC addendum can't ride along on a
+// CBS1 check (or the reverse).
+document.addEventListener('ta:state', () => {
+  if (pendingAddendumFiles.length) addendumClear.click();
 });
 addendumClear.addEventListener('click', () => {
   pendingAddendumFiles = [];

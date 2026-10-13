@@ -106,15 +106,29 @@ class CoSmsFlow(unittest.TestCase):
         self.assertIn("Colorado CBS1 Contract to Buy and Sell", html)
         self.assertNotIn("Not affiliated with TREC", html)
 
-    def test_amend_never_makes_trec_amendment_for_colorado(self):
+    def test_amend_makes_colorado_amend_extend(self):
         phone = "+15125559003"
         self._sms(phone, "500k 20% 30day 77 Birch Ln, Boulder, CO 80302", "YES")
         from pdf_filler import OUTPUT_DIR
         before = set(os.listdir(OUTPUT_DIR))
-        sent = self._sms(phone, "AMEND 77 Birch Ln price 510k")
-        self.assertIn("Colorado", sent[-1])
+        sent = self._sms(phone, "AMEND 77 Birch Ln close +7")
+        self.assertIn("Amend/Extend (Colorado)", sent[-1])
         self.assertNotIn("39-11", sent[-1])
-        self.assertEqual(set(os.listdir(OUTPUT_DIR)), before)
+        new = set(os.listdir(OUTPUT_DIR)) - before
+        self.assertEqual(len(new), 1)
+        name = new.pop()
+        self.assertTrue(name.startswith("AE41_"), name)
+        # The amendment is a real AE41 that co_forms reads back: new Closing
+        # Date on a business day, after the original.
+        import co_audit, co_forms
+        from pdf_validator import _read_values
+        v = _read_values(os.path.join(OUTPUT_DIR, name))
+        self.assertEqual(co_forms.classify(v), "ae41")
+        changes, conflicts = co_forms.amendment_changes(v, "ae41")
+        new_close = co_audit._parse_date(changes["Closing Date"])
+        self.assertTrue(co_audit.is_business_day(new_close))
+        self.assertEqual(conflicts, [])
+        self.assertEqual(v.get("Street Address"), "77 Birch Ln")
 
     def test_other_states_still_blocked(self):
         sent = self._sms("+15125559002", "500k 20% 30day 123 Main St, Phoenix, AZ 85001")

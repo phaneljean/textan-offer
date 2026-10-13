@@ -131,13 +131,28 @@ _CONSEQUENCE_TAGS = {
     "co_date_blank": "REVIEW: CONTRACT UNDATED",
     "co_lead_paint_blank": "REVIEW: LEAD PAINT DEADLINES",
     "co_other_files_not_checked": "ATTACHMENT NOT VERIFIED",
+    "co_amend_row_conflict": "CONFLICTING CHECKBOXES",
+    "co_amend_price_change": "REVIEW: PRICE CHANGED",
+    "co_insp_late": "OBJECTION MAY BE LATE",
+    "co_insp_description_blank": "OBJECTION INCOMPLETE",
+    "co_insp_no_deadline": "REVIEW: NO OBJECTION DEADLINE",
+    "co_swa_listed_missing": "ADDENDUM MAY BE MISSING",
+    "co_resadd_listed_missing": "ADDENDUM MAY BE MISSING",
+    "co_ae41_empty": "REVIEW: NOTHING CHANGED",
+    "co_ctr_empty": "REVIEW: NOTHING CHANGED",
 }
 # Colorado keys that carry a suffix (which deadline, which checkbox).
 _CONSEQUENCE_PREFIXES = [
     ("co_order_", "DEADLINES OUT OF ORDER"),
+    ("co_ae41_", "AMENDMENT MISMATCH"),
+    ("co_ctr_", "COUNTERPROPOSAL MISMATCH"),
+    ("co_insp_", "WRONG FILE ATTACHED"),
+    ("co_swa_", "WRONG FILE ATTACHED"),
+    ("co_resadd_", "WRONG FILE ATTACHED"),
     ("co_after_closing_", "DEADLINE AFTER CLOSING"),
     ("co_conflict_", "CONFLICTING CHECKBOXES"),
     ("co_comp_", "COMPENSATION UNCLEAR"),
+    ("co_amend_", "AMENDED DATES CONFLICT"),
 ]
 
 _UPSELL_URL = "https://txtanoffer.com/brokers?src=report_email"
@@ -328,6 +343,8 @@ def _clean(msg: str) -> str:
 
 def _files_line(result: dict) -> str:
     parts = [result.get("form") or "TREC 20-19"]
+    if result.get("state") == "CO":
+        return " + ".join(parts + list(result.get("co_attachments") or []))
     if result.get("has_addendum"):
         parts.append("40-11 addendum")
     if result.get("has_loan_assumption"):

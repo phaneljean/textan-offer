@@ -271,3 +271,76 @@ def fill_cbs1(parsed: dict, agent_phone: str = None, today: date = None) -> str:
         f.write(doc.tobytes(garbage=3, deflate=True))
     doc.close()
     return out_path
+
+
+# --- AMEND by text -> Agreement to Amend/Extend Contract (AE41) -------------
+AE41_TEMPLATE_PATH = os.environ.get("AE41_TEMPLATE_PATH",
+                                    os.path.join(os.path.dirname(os.path.abspath(__file__)), "AE41_2024.pdf"))
+
+
+def fill_ae41(original_offer: dict, amendment: dict, today: date = None) -> str:
+    """Colorado counterpart of amendment.fill_amendment_pdf (TREC 39-11).
+    Parties, property and Original Contract Date are copied from the CBS1
+    this app generated (original_offer["filename"]).
+      price -> §4 of AE41 has no price table, so the change is written in
+               "Additional amendments" as the new Purchase Price; the loan and
+               Cash at Closing are left to the parties (the SMS says so).
+      close -> new Closing Date = the contract's printed Closing Date + N days,
+               moved to the next business day if it lands on a weekend or
+               §3.3.3 holiday; Possession Date moves with it when it was the
+               same day as closing. Cells are addressed by co_forms.AMEND_CELLS
+               (position-verified), never by field name alone."""
+    import co_audit
+    import co_forms
+    today = today or datetime.now().date()
+    contract = co_audit.read_contract(os.path.join(OUTPUT_DIR, original_offer["filename"]))
+    if not contract:
+        raise ValueError("Couldn't read the original Colorado contract for this offer.")
+    v = co_audit._v
+    values = {
+        "Document Date": f"{today:%m/%d/%Y}",
+        "Original Contract Date": v(contract, "Date"),
+        "Seller/Sellers Name": v(contract, "Seller Name"),
+        "Buyer/Buyers Name": v(contract, "Buyer Name"),
+        "Property County": v(contract, "County"),
+        "Property Legal Description": v(contract, "Property Legal Description"),
+        "Street Address": v(contract, "Street Address"),
+        "City": v(contract, "City"),
+        "State": "CO",
+        "Zip": v(contract, "Zip Code"),
+    }
+    cells = co_forms.AMEND_CELLS["ae41"]
+    if amendment["field"] == "price":
+        values["Additional Amendments Field"] = (
+            f"The Purchase Price in § 4.1 of the Contract is changed to ${amendment['value']:,}.")
+        suffix = f"price{amendment['value']}"
+    else:
+        old_close = co_audit._parse_date(v(contract, "Closing Date"))
+        if not old_close:
+            raise ValueError("The original contract's Closing Date isn't a date this can extend.")
+        new_close = old_close + timedelta(days=amendment["value"])
+        while not is_business_day(new_close):
+            new_close += timedelta(days=1)
+        values[cells["Closing Date"]["new"]] = f"{new_close:%m/%d/%Y}"
+        if co_audit._parse_date(v(contract, "Possession Date")) == old_close:
+            values[cells["Possession Date"]["new"]] = f"{new_close:%m/%d/%Y}"
+        suffix = f"close{new_close:%Y%m%d}"
+    acceptance = today + timedelta(days=1)
+    while not is_business_day(acceptance):
+        acceptance += timedelta(days=1)
+    values["Acceptance Date"] = f"{acceptance:%m/%d/%Y}"
+    values["Acceptance Time"] = "5:00 PM"
+
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    doc = fitz.open(AE41_TEMPLATE_PATH)
+    for page in doc:
+        for w in page.widgets():
+            if w.field_name in values and values[w.field_name]:
+                w.field_value = str(values[w.field_name])
+                w.update()
+    safe_addr = "".join(ch for ch in (original_offer.get("address") or "amend").split(",")[0] if ch.isalnum())[:30]
+    f, out_path = open_unique_output(OUTPUT_DIR, f"AE41_{safe_addr}_{suffix}")
+    with f:
+        f.write(doc.tobytes(garbage=3, deflate=True))
+    doc.close()
+    return out_path
