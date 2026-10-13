@@ -737,9 +737,9 @@ def _matched_fa(values: dict) -> int:
 
 # Traffic-light rollup of an issues list -- pure arithmetic over data
 # check_tc_file() already computes (severity + count), not a new signal.
-# "attention" fires on ANY blocker, including the single-issue
-# "unrecognized file" case, which is already a blocker -- no special case
-# needed for that path. Kept as three flat levels, not a numeric score:
+# "attention" fires on ANY blocker. An unrecognized file doesn't come
+# through here -- check_tc_file() gives it its own "unreadable" level,
+# since it says nothing about the contract itself. Kept as three flat levels, not a numeric score:
 # a single number inviting a false sense of precision (is 6 issues twice
 # as bad as 3?) is exactly the kind of overclaim this module's docstring
 # already warns against for individual fields.
@@ -812,17 +812,24 @@ def check_tc_file(pdf_paths) -> dict:
         if any(co_audit.is_cbs1(v) for v in all_values):
             return co_audit.check_co_file(pdf_paths, page_count=page_count,
                                           all_values=all_values, summary=_severity_summary)
+        # Severity "info", not "blocker" (2026-10-13): this is about whether
+        # TC Check could read the file, not about the contract. As a blocker
+        # it showed a real TC's likely first upload -- a signed, flattened
+        # e-sign export -- as "Not ready -- 1 title-blocking error". The
+        # message names both forms because this result has no state; the
+        # web pages show their own state-aware wording off "unreadable".
         unrecognized_issues = [{
-            "severity": "blocker",
+            "severity": "info",
             "message": (
-                "This doesn't look like a TREC 20-19 form we recognize -- "
-                "field names didn't match our template. Only AcroForm-fillable "
-                "20-19 PDFs are supported in this version (not scanned or flattened files)."
+                "We couldn't read the form fields in this file. It may be scanned, "
+                "or flattened when it was signed or exported, or it may not be a "
+                "TREC 20-19 or Colorado CBS1. TC Check reads fillable PDFs of those forms only."
             ),
             "key": "unrecognized",
         }]
         return {
             "recognized": False,
+            "unreadable": True,
             "complete": False,
             "issues": unrecognized_issues,
             "looks_like_blank_draft": False,
@@ -830,7 +837,7 @@ def check_tc_file(pdf_paths) -> dict:
             "has_addendum": False,
             "has_amendment": False,
             "has_loan_assumption": False,
-            "severity": _severity_summary(unrecognized_issues),
+            "severity": {"level": "unreadable", "emoji": "\u26AA", "label": "Couldn't read the form fields", "issue_count": 0},
         }
 
     values = main_values

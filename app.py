@@ -939,6 +939,10 @@ def index():
     .rep-counts .review { color: #b45309; }
     .result-more { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem; }
     .result-more a { color: var(--text); font-weight: 600; text-decoration: underline; }
+    .unreadable-box { padding: 1.05rem 1.2rem; background: #f3f5f7; border: 1px solid #dde2e7; border-radius: var(--radius-sm); font-size: 0.88rem; color: var(--text-muted); line-height: 1.55; }
+    .unreadable-box p + p { margin-top: 0.5rem; }
+    .unreadable-box .unreadable-title { font-weight: 700; color: var(--text); font-size: 0.93rem; }
+    .unreadable-box .unreadable-note { font-size: 0.8rem; }
     .own-file-cta { margin-top: 1rem; padding: 1.05rem 1.2rem; background: var(--accent-tint); border: 1px solid var(--border); border-radius: var(--radius-sm); }
     .own-file-lead { font-size: 0.88rem; color: var(--text); line-height: 1.55; margin: 0; }
     .own-file-lead a { color: var(--accent); font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
@@ -1943,6 +1947,19 @@ def index():
   }
 
   function renderResult(data, isDemo){
+    // Unreadable file: neutral note, no red banner or count -- same wording
+    // as /tc-check's buildUnreadable().
+    if(!data.recognized){
+      var f = stateMode() === 'co' ? 'CBS1' : 'TREC 20-19';
+      resultEl.innerHTML = '<div class="unreadable-box">'
+        + '<p class="unreadable-title">We couldn&rsquo;t read the form fields in this file.</p>'
+        + '<p>It may be scanned, or flattened when it was signed or exported, or it may not be a ' + f + '. That isn&rsquo;t a finding about your contract: TC Check reads fillable ' + f + ' PDFs only.</p>'
+        + '<p>Try an unsigned copy exported from your forms software.</p>'
+        + (data.free_report_not_used ? '<p class="unreadable-note">This check didn&rsquo;t use one of your free reports.</p>' : '')
+        + '</div>';
+      resultEl.classList.add('show');
+      return;
+    }
     var display = data.display_issues || [];
     var issues = display.length ? display : (data.issues || []);
     var totalIssues = display.length || (typeof data.issue_count === 'number' ? data.issue_count : issues.length);
@@ -3950,7 +3967,10 @@ def tc_check():
             except OSError:
                 pass
 
-    if not is_demo:
+    # A file we couldn't read (scanned, flattened e-sign export, not a
+    # 20-19/CBS1) doesn't use up one of the free reports -- there was no
+    # report. It's still tracked as an attempt/tc_check below.
+    if not is_demo and result.get("recognized"):
         record_tc_use(cid)
 
     # Email-capture gate (see tc_gate.py): the check itself always runs and
@@ -3974,7 +3994,9 @@ def tc_check():
     # the first TC_FREE_FULL_REPORTS checks show everything, with an
     # optional "email me this report" ask instead of a wall.
     free_report = not client["email"] and client["use_count"] < TC_FREE_FULL_REPORTS
-    gate_cleared = is_demo or bool(client["email"]) or free_report
+    # Nothing to gate on an unreadable file: its only "finding" is that we
+    # couldn't read it.
+    gate_cleared = is_demo or bool(client["email"]) or free_report or not result.get("recognized")
 
     # Deduped per file -- initials/addendum checks can fire multiple times
     # per file (once per page), and issue_frequency's "% of recognized
@@ -4049,7 +4071,10 @@ def tc_check():
     )
     payload["files_line"] = _files_line(result) if result.get("recognized") else ""
     if not is_demo and not client["email"]:
-        payload["free_reports_left"] = max(TC_FREE_FULL_REPORTS - client["use_count"] - 1, 0)
+        if result.get("recognized"):
+            payload["free_reports_left"] = max(TC_FREE_FULL_REPORTS - client["use_count"] - 1, 0)
+        else:
+            payload["free_report_not_used"] = True
 
     resp = jsonify(payload)
 
@@ -4433,6 +4458,10 @@ html.state-tx [data-state="co"],html.state-co [data-state="tx"]{display:none !im
 .addendum-filename{color:var(--text-muted);}
 .addendum-clear{background:none;border:none;color:var(--text-dim);font-size:1rem;cursor:pointer;line-height:1;padding:0.15rem 0.4rem;}
 .addendum-clear:hover{color:var(--text);}
+.unreadable-box{margin-top:0.25rem;padding:1.1rem 1.25rem;background:#f3f5f7;border:1px solid #dde2e7;border-radius:var(--radius-sm);font-size:0.9rem;color:var(--text-muted);line-height:1.55;}
+.unreadable-box p+p{margin-top:0.5rem;}
+.unreadable-box .unreadable-title{font-weight:700;color:var(--text);font-size:0.95rem;}
+.unreadable-box .unreadable-note{font-size:0.82rem;}
 .own-file-cta{margin-top:1.25rem;padding:1.1rem 1.25rem;background:var(--accent-tint);border:1px solid var(--border);border-radius:var(--radius-sm);}
 .own-file-lead{font-size:0.9rem;color:var(--text);line-height:1.55;margin:0;}
 .own-file-lead a{color:var(--accent);font-weight:600;text-decoration:underline;text-underline-offset:2px;}
@@ -4746,7 +4775,7 @@ function buildMetaBar(data, file) {
   html += '<span><strong>' + escapeHtml(file.name) + '</strong></span>';
   html += '<span>' + formatBytes(file.size) + '</span>';
   if (typeof data.page_count === 'number') html += '<span>' + data.page_count + ' page' + (data.page_count === 1 ? '' : 's') + '</span>';
-  html += '<span>' + (data.recognized ? (data.form ? escapeHtml(data.form) + ' detected' : 'TREC 20-19 AcroForm detected') : 'Not recognized as a TREC 20-19 or Colorado CBS1') + '</span>';
+  html += '<span>' + (data.recognized ? (data.form ? escapeHtml(data.form) + ' detected' : 'TREC 20-19 AcroForm detected') : 'Form fields not readable') + '</span>';
   if (data.has_addendum) html += '<span>40-11 addendum attached</span>';
   if (data.has_loan_assumption) html += '<span>41-3 addendum attached</span>';
   if (data.has_amendment) html += '<span>39-11 amendment attached</span>';
@@ -4850,7 +4879,27 @@ function buildReportHead(data) {
   return html;
 }
 
+// A file TC Check couldn't read (scanned, flattened e-sign export, or not
+// the form) gets a neutral grey note -- never the red "Not ready" banner,
+// a blocker tag or a count, since nothing was found wrong with the
+// contract. Worded for the state the visitor picked, so a Colorado visitor
+// isn't told about the TREC 20-19.
+function buildUnreadable(data, formName) {
+  return '<div class="unreadable-box">' +
+    '<p class="unreadable-title">We couldn&rsquo;t read the form fields in this file.</p>' +
+    '<p>It may be scanned, or flattened when it was signed or exported, or it may not be a ' + formName + '. That isn&rsquo;t a finding about your contract: TC Check reads fillable ' + formName + ' PDFs only.</p>' +
+    '<p>Try an unsigned copy exported from your forms software.</p>' +
+    (data.free_report_not_used ? '<p class="unreadable-note">This check didn&rsquo;t use one of your free reports.</p>' : '') +
+  '</div>';
+}
+
 function renderResult(data, file, isDemo) {
+  if (!data.recognized) {
+    resultEl.innerHTML = buildMetaBar(data, file) + buildUnreadable(data, stateMode() === 'co' ? 'CBS1' : 'TREC 20-19') + buildNextStepCta();
+    resultEl.classList.add('show');
+    resultEl.dataset.issues = '[]';
+    return;
+  }
   const issues = (data.display_issues && data.display_issues.length) ? data.display_issues : (data.issues || []);
   const totalIssues = typeof data.issue_count === 'number' ? data.issue_count : issues.length;
   let html = isDemo ? '<div class="demo-banner">Demo result &mdash; a sample contract with planted mistakes, not your file.</div>' : '';
@@ -5241,7 +5290,7 @@ def tc_check_bulk_results(batch_id):
 
     def _badge(f):
         if f["unreadable"] or not f["recognized"]:
-            return '<span class="badge unread">Unreadable</span>'
+            return '<span class="badge unread">Couldn&rsquo;t read</span>'
         return '<span class="badge clean">Clean</span>' if f["complete"] else f'<span class="badge issues">{f["issue_count"]} issue(s)</span>'
 
     file_rows = "".join(

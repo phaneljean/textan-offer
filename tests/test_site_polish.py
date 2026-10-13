@@ -110,5 +110,60 @@ class ResultNextSteps(unittest.TestCase):
             self.assertIn("<strong>Next file?</strong> Forward it to", html, path)
 
 
+def _flattened_sample():
+    """The TX sample, flattened the way an e-sign export is: values baked
+    into the page, form fields gone."""
+    import fitz
+    doc = fitz.open(TX_SAMPLE)
+    doc.bake()
+    return doc.tobytes()
+
+
+class UnreadableFile(unittest.TestCase):
+    def setUp(self):
+        self.client = app_module.app.test_client()
+        self.flat = _flattened_sample()
+
+    def check(self, data, name="file.pdf", **form):
+        form = {"file": (io.BytesIO(data), name), "source_page": "claude_verify", **form}
+        return self.client.post("/v1/tc/check", data=form, headers=UA, content_type="multipart/form-data").get_json()
+
+    def test_audit_result_is_not_a_blocker(self):
+        path = os.path.join(_TMP, "flat.pdf")
+        with open(path, "wb") as f:
+            f.write(self.flat)
+        r = check_tc_file([path])
+        self.assertFalse(r["recognized"])
+        self.assertTrue(r["unreadable"])
+        self.assertEqual([i["severity"] for i in r["issues"]], ["info"])
+        self.assertEqual(r["severity"]["level"], "unreadable")
+
+    def test_api_no_blocker_and_no_free_report_used(self):
+        r = self.check(self.flat)
+        self.assertFalse(r["recognized"])
+        self.assertEqual(r["blocker_count"], 0)
+        self.assertFalse(r["gated"])
+        self.assertTrue(r["free_report_not_used"])
+        self.assertNotIn("free_reports_left", r)
+        self.assertFalse(any(i["severity"] == "blocker" for i in r["display_issues"]))
+        # Three more unreadable files still don't touch the allowance: the
+        # next readable file is the first of the 3 free reports.
+        for _ in range(3):
+            self.check(self.flat)
+        with open(TX_SAMPLE, "rb") as f:
+            real = self.check(f.read(), name="sample.pdf")
+        self.assertTrue(real["recognized"])
+        self.assertEqual(real["free_reports_left"], app_module.TC_FREE_FULL_REPORTS - 1)
+        self.assertFalse(real["gated"])
+
+    def test_pages_word_it_honestly_and_by_state(self):
+        for path in ("/", "/tc-check"):
+            html = self.client.get(path, headers=UA).get_data(as_text=True)
+            self.assertIn("We couldn&rsquo;t read the form fields in this file.", html, path)
+            self.assertIn("stateMode() === 'co' ? 'CBS1' : 'TREC 20-19'", html, path)
+            self.assertIn("This check didn&rsquo;t use one of your free reports.", html, path)
+        self.assertNotIn("Not recognized as a TREC 20-19 or Colorado CBS1", self.client.get("/tc-check", headers=UA).get_data(as_text=True))
+
+
 if __name__ == "__main__":
     unittest.main()
