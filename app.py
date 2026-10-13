@@ -1955,7 +1955,7 @@ def index():
       var f = stateMode() === 'co' ? 'CBS1' : 'TREC 20-19';
       resultEl.innerHTML = '<div class="unreadable-box">'
         + '<p class="unreadable-title">We couldn&rsquo;t read the form fields in this file.</p>'
-        + '<p>It may be scanned, or flattened when it was signed or exported, or it may not be a ' + f + '. That isn&rsquo;t a finding about your contract: TC Check reads fillable ' + f + ' PDFs only.</p>'
+        + '<p>It may be scanned, or flattened when it was signed or exported, or it may not be a ' + f + '. That isn&rsquo;t a finding about your contract: TC Check needs a fillable ' + f + ' PDF (addenda are checked alongside it).</p>'
         + '<p>Try an unsigned copy exported from your forms software.</p>'
         + (data.free_report_not_used ? '<p class="unreadable-note">This check didn&rsquo;t use one of your free reports.</p>' : '')
         + '</div>';
@@ -2009,7 +2009,7 @@ def index():
     // offer is one small link.
     var form = data.state === 'CO' ? 'CBS1' : 'TREC 20-19';
     if(isDemo){
-      html += '<div class="own-file-cta"><p class="own-file-lead"><strong>That was our sample. Now run one of yours.</strong> Drop a filled ' + form + ' above, or forward it to <a href="mailto:tc@check.txtanoffer.com">tc@check.txtanoffer.com</a>. It&rsquo;s checked, then deleted.</p>'
+      html += '<div class="own-file-cta"><p class="own-file-lead"><strong>That was our sample. Now run one of yours.</strong> Drop a filled ' + form + ' above, or forward it to <a href="mailto:tc@check.txtanoffer.com">tc@check.txtanoffer.com</a>. It&rsquo;s checked, then deleted, unless your brokerage archives it.</p>'
         + '<button type="button" class="own-file-btn" id="homeOwnFileBtn" data-evt="tc_own_file_cta">Check my own file &rarr;</button>'
         + AGENT_ALT + '</div>';
     } else if(!data.gated){
@@ -4806,7 +4806,7 @@ function formLabel(data) { return data.state === 'CO' ? 'CBS1' : 'TREC 20-19'; }
 
 function buildOwnFileCta(data) {
   return '<div class="own-file-cta">' +
-    '<p class="own-file-lead"><strong>That was our sample. Now run one of yours.</strong> Drop a filled ' + formLabel(data) + ' above, or forward it to <a href="mailto:tc@check.txtanoffer.com">tc@check.txtanoffer.com</a>. It&rsquo;s checked, then deleted.</p>' +
+    '<p class="own-file-lead"><strong>That was our sample. Now run one of yours.</strong> Drop a filled ' + formLabel(data) + ' above, or forward it to <a href="mailto:tc@check.txtanoffer.com">tc@check.txtanoffer.com</a>. It&rsquo;s checked, then deleted, unless your brokerage archives it.</p>' +
     '<button type="button" class="own-file-btn" onclick="pickOwnFile()" data-evt="tc_own_file_cta">Check my own file &rarr;</button>' +
     buildAgentAltLink() +
   '</div>';
@@ -4888,7 +4888,7 @@ function buildReportHead(data) {
 function buildUnreadable(data, formName) {
   return '<div class="unreadable-box">' +
     '<p class="unreadable-title">We couldn&rsquo;t read the form fields in this file.</p>' +
-    '<p>It may be scanned, or flattened when it was signed or exported, or it may not be a ' + formName + '. That isn&rsquo;t a finding about your contract: TC Check reads fillable ' + formName + ' PDFs only.</p>' +
+    '<p>It may be scanned, or flattened when it was signed or exported, or it may not be a ' + formName + '. That isn&rsquo;t a finding about your contract: TC Check needs a fillable ' + formName + ' PDF (addenda are checked alongside it).</p>' +
     '<p>Try an unsigned copy exported from your forms software.</p>' +
     (data.free_report_not_used ? '<p class="unreadable-note">This check didn&rsquo;t use one of your free reports.</p>' : '') +
   '</div>';

@@ -823,7 +823,8 @@ def check_tc_file(pdf_paths) -> dict:
             "message": (
                 "We couldn't read the form fields in this file. It may be scanned, "
                 "or flattened when it was signed or exported, or it may not be a "
-                "TREC 20-19 or Colorado CBS1. TC Check reads fillable PDFs of those forms only."
+                "TREC 20-19 or Colorado CBS1. TC Check needs a fillable TREC 20-19 or CBS1 PDF; "
+                "addenda and amendments are checked alongside one."
             ),
             "key": "unrecognized",
         }]
