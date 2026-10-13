@@ -1563,6 +1563,7 @@ def index():
       <a href="/contact">Contact</a>
       <a href="/terms">Terms of Service</a>
       <a href="/privacy">Privacy Policy</a>
+      <a href="/trust">Trust Center</a>
       <a href="/privacy#sms-messaging">SMS Terms</a>
       <a href="/pricing">Pricing</a>
       <a href="/playground">Try a Sample Text</a>
@@ -8720,6 +8721,19 @@ def tc_hub_colorado():
     return head + co_hub.body()
 
 
+@app.route("/trust")
+def trust_center():
+    """Trust Center -- same page shell as /privacy (head, styles, nav), body
+    from trust_center.py."""
+    import trust_center as tc
+    shell = privacy()
+    head = shell[:shell.index('<div class="container">')]
+    head = head.replace("<title>Privacy Policy — TxtAnOffer</title>",
+                        '<title>Trust Center — TxtAnOffer</title>\n<meta name="description" content="How TxtAnOffer handles your contracts and data: files checked then deleted, rule-based checks with no AI reading your contract, who we share data with, security, and how to report a problem.">')
+    head = head.replace("</head>", tc.EXTRA_CSS + "</head>", 1)
+    return head + tc.body()
+
+
 @app.route("/about")
 def about():
     html = """<!DOCTYPE html>
@@ -12164,7 +12178,7 @@ def wins_page():
 # Public pages search engines should index. Signed/private routes (/review,
 # /offers, /transaction, /broker/dashboard, /admin, /analytics) are left out
 # on purpose and disallowed in robots.txt.
-_SITEMAP_PATHS = ["/", "/tc-check", "/brokers", "/pricing", "/trec-changes", "/tc-hub", "/tc-hub/colorado",
+_SITEMAP_PATHS = ["/", "/tc-check", "/brokers", "/pricing", "/trec-changes", "/tc-hub", "/tc-hub/colorado", "/trust",
                   "/tc-check/bulk", "/tc-check/compare", "/playground", "/faq", "/about",
                   "/contact", "/privacy", "/terms", "/guides",
                   "/guides/trec-20-19-checklist", "/guides/trec-20-19-effective-date",
