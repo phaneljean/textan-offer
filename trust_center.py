@@ -47,8 +47,34 @@ EXTRA_CSS = """
   .report-btn:hover {border-color:var(--accent);}
   @media(max-width:820px){ .trust-cards{grid-template-columns:1fr 1fr;} .flow{grid-template-columns:1fr 1fr;} }
   @media(max-width:520px){ .trust-cards,.flow,.report-grid{grid-template-columns:1fr;} .trust-section{padding:1.4rem 1.1rem;} }
+  .ti {width:22px;height:22px;color:var(--accent);flex-shrink:0;}
+  .ti-badge {display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:12px;background:var(--accent-tint);margin-bottom:0.8rem;}
+  .ti-badge .ti {width:24px;height:24px;}
+  .trust-section h2 {display:flex;align-items:center;gap:0.6rem;}
+  .trust-section h2 .ti-badge {width:36px;height:36px;border-radius:10px;margin:0;}
+  .trust-section h2 .ti {width:20px;height:20px;}
+  .hero-icon {display:inline-flex;align-items:center;justify-content:center;width:56px;height:56px;border-radius:16px;background:var(--accent-tint);margin-bottom:0.9rem;}
+  .hero-icon .ti {width:30px;height:30px;}
 </style>
 """
+
+
+# Line icons: Lucide v0.460.0 (ISC license, lucide.dev), inlined.
+_ICONS = {
+    'file-check': '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /><path d="M14 2v4a2 2 0 0 0 2 2h4" /><path d="m9 15 2 2 4-4" />',
+    'badge-check': '<path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z" /><path d="m9 12 2 2 4-4" />',
+    'shield-check': '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" /><path d="m9 12 2 2 4-4" />',
+    'flag': '<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" /><line x1="4" x2="4" y1="22" y2="15" />',
+    'lock': '<rect width="18" height="11" x="3" y="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />',
+    'scale': '<path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z" /><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z" /><path d="M7 21h10" /><path d="M12 3v18" /><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2" />',
+    'handshake': '<path d="m11 17 2 2a1 1 0 1 0 3-3" /><path d="m14 14 2.5 2.5a1 1 0 1 0 3-3l-3.88-3.88a3 3 0 0 0-4.24 0l-.88.88a1 1 0 1 1-3-3l2.81-2.81a5.79 5.79 0 0 1 7.06-.87l.47.28a2 2 0 0 0 1.42.25L21 4" /><path d="m21 3 1 11h-2" /><path d="M3 3 2 14l6.5 6.5a1 1 0 1 0 3-3" /><path d="M3 4h8" />',
+    'hand-heart': '<path d="M11 14h2a2 2 0 1 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 16" /><path d="m7 20 1.6-1.4c.3-.4.8-.6 1.4-.6h4c1.1 0 2.1-.4 2.8-1.2l4.6-4.4a2 2 0 0 0-2.75-2.91l-4.2 3.9" /><path d="m2 15 6 6" /><path d="M19.5 8.5c.7-.7 1.5-1.6 1.5-2.7A2.73 2.73 0 0 0 16 4a2.78 2.78 0 0 0-5 1.8c0 1.2.8 2 1.5 2.8L16 12Z" />',
+}
+
+
+def _icon(name: str, cls: str = "ti") -> str:
+    return ('<svg class="' + cls + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" '
+            'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + _ICONS[name] + '</svg>')
 
 
 def _mail(subject: str) -> str:
@@ -59,20 +85,21 @@ def body() -> str:
     return f"""
 <div class="container trust">
   <div class="page-header trust-hero">
+    <span class="hero-icon">{_icon("hand-heart")}</span>
     <h1>Trust Center</h1>
     <div class="updated">Last reviewed October 13, 2026</div>
     <p>How TxtAnOffer handles your contracts, your data and your trust &mdash; in plain language. Everything here matches our <a href="/privacy" style="color:var(--accent-dark);text-decoration:underline;">Privacy Policy</a> and <a href="/terms" style="color:var(--accent-dark);text-decoration:underline;">Terms</a>; if anything ever differs, those documents control.</p>
   </div>
 
   <div class="trust-cards">
-    <div class="trust-card"><h3>Your contracts</h3><p>What happens to a file you check: read, checked, deleted.</p><a href="#contracts">How files are handled &darr;</a></div>
-    <div class="trust-card"><h3>How TC Check works</h3><p>Rule-based checks tied to the official forms. No AI reads your contract.</p><a href="#how-it-works">What it checks &darr;</a></div>
-    <div class="trust-card"><h3>Your data &amp; rights</h3><p>We don&rsquo;t sell data. Who we share with, how long we keep it, and how to ask for it back.</p><a href="#data">Data &amp; rights &darr;</a></div>
-    <div class="trust-card"><h3>Report a problem</h3><p>A wrong finding, a privacy request, a security issue or an unwanted message.</p><a href="#report">Report it &darr;</a></div>
+    <div class="trust-card"><span class="ti-badge">{_icon("file-check")}</span><h3>Your contracts</h3><p>What happens to a file you check: read, checked, deleted.</p><a href="#contracts">How files are handled &darr;</a></div>
+    <div class="trust-card"><span class="ti-badge">{_icon("badge-check")}</span><h3>How TC Check works</h3><p>Rule-based checks tied to the official forms. No AI reads your contract.</p><a href="#how-it-works">What it checks &darr;</a></div>
+    <div class="trust-card"><span class="ti-badge">{_icon("shield-check")}</span><h3>Your data &amp; rights</h3><p>We don&rsquo;t sell data. Who we share with, how long we keep it, and how to ask for it back.</p><a href="#data">Data &amp; rights &darr;</a></div>
+    <div class="trust-card"><span class="ti-badge">{_icon("flag")}</span><h3>Report a problem</h3><p>A wrong finding, a privacy request, a security issue or an unwanted message.</p><a href="#report">Report it &darr;</a></div>
   </div>
 
   <div class="trust-section" id="contracts">
-    <h2>Your contracts</h2>
+    <h2><span class="ti-badge">{_icon("file-check")}</span>Your contracts</h2>
     <p class="sub">A contract is a confidential document. Here is exactly what happens when you upload one or forward it to tc@check.txtanoffer.com.</p>
     <div class="flow">
       <div><b>1 &middot; Receive</b>Your PDF is written to a temporary file.</div>
@@ -90,7 +117,7 @@ def body() -> str:
   </div>
 
   <div class="trust-section" id="how-it-works">
-    <h2>How TC Check works</h2>
+    <h2><span class="ti-badge">{_icon("badge-check")}</span>How TC Check works</h2>
     <p class="sub">Predictable, explainable checks &mdash; not a black box.</p>
     <ul>
       <li><strong>No AI reads your contract.</strong> TC Check is rule code: each rule checks specific fields of the official form and names the paragraph it&rsquo;s about.</li>
@@ -103,7 +130,7 @@ def body() -> str:
   </div>
 
   <div class="trust-section" id="data">
-    <h2>Your data &amp; rights</h2>
+    <h2><span class="ti-badge">{_icon("shield-check")}</span>Your data &amp; rights</h2>
     <p class="sub">We do not sell, rent or trade your personal information. We share it only with the services that run TxtAnOffer:</p>
     <table class="vendors">
       <tr><td>Twilio</td><td>Text messages &mdash; your phone number and message content</td></tr>
@@ -123,7 +150,7 @@ def body() -> str:
   </div>
 
   <div class="trust-section" id="security">
-    <h2>Security</h2>
+    <h2><span class="ti-badge">{_icon("lock")}</span>Security</h2>
     <p class="sub">Reasonable, plain measures &mdash; described honestly.</p>
     <ul>
       <li>The site is served over HTTPS.</li>
@@ -136,7 +163,7 @@ def body() -> str:
   </div>
 
   <div class="trust-section" id="independence">
-    <h2>Independence</h2>
+    <h2><span class="ti-badge">{_icon("scale")}</span>Independence</h2>
     <ul>
       <li>TxtAnOffer is an independent tool. It is <strong>not affiliated with, endorsed by, or partnered with</strong> the Texas Real Estate Commission (TREC), the Colorado Real Estate Commission or the Colorado Division of Real Estate.</li>
       <li>Commission forms are used as published; the Service fills in their blanks and does not change their printed text.</li>
@@ -145,7 +172,7 @@ def body() -> str:
   </div>
 
   <div class="trust-section" id="report">
-    <h2>Report a problem</h2>
+    <h2><span class="ti-badge">{_icon("flag")}</span>Report a problem</h2>
     <p class="sub">Every report goes to the person who built TxtAnOffer.</p>
     <div class="report-grid">
       <a class="report-btn" href="{_mail('TC Check - finding looks wrong')}"><b>A finding looks wrong</b><span>A false flag, or something TC Check missed</span></a>
@@ -156,7 +183,7 @@ def body() -> str:
   </div>
 
   <div class="trust-section">
-    <h2>Who runs TxtAnOffer</h2>
+    <h2><span class="ti-badge">{_icon("handshake")}</span>Who runs TxtAnOffer</h2>
     <p>TxtAnOffer is operated by Phanel Jean-Baptiste, 807 W 112th St, Los Angeles, CA 90044 &middot; <a href="mailto:support@txtanoffer.com">support@txtanoffer.com</a>. Read the full <a href="/privacy">Privacy Policy</a>, <a href="/terms">Terms of Service</a> and <a href="/privacy#sms-messaging">SMS Terms</a>.</p>
   </div>
 
