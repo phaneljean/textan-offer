@@ -1543,7 +1543,7 @@ def index():
       <a href="https://www.linkedin.com/company/143677963/" target="_blank" rel="noopener" aria-label="Follow TxtAnOffer on LinkedIn" data-evt="footer_linkedin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="2.5" width="19" height="19" rx="3"/><path d="M7.5 10.5v6"/><circle cx="7.5" cy="7.5" r="0.6" fill="currentColor"/><path d="M11.5 16.5v-6"/><path d="M11.5 13.2c0-1.6 1-2.7 2.5-2.7s2.5 1 2.5 2.7v3.3"/></svg>Follow on LinkedIn</a>
     </div>
     <div class="footer-copy">
-      &copy; 2026 TxtAnOffer &middot; Texas, United States &middot; Not affiliated with TREC or the Colorado Real Estate Commission
+      &copy; 2026 TxtAnOffer &middot; Serving Texas &amp; Colorado &middot; Not affiliated with TREC or the Colorado Real Estate Commission
     </div>
   </footer>
 
@@ -7525,8 +7525,8 @@ def terms():
     <p>These Terms of Service ("Terms") govern your use of TxtAnOffer ("Service"), operated by Phanel Jean-Baptiste, 807 W 112th St, Los Angeles, CA 90044 ("we," "us," or "our"). By accessing or using the Service, you agree to be bound by these Terms. If you do not agree, do not use the Service.</p>
 
     <h2><span class="section-num">1.</span> Service Description</h2>
-    <p>TxtAnOffer is a document drafting tool that converts shorthand offer text into pre-filled TREC One to Four Family Residential Contract (Resale) forms (TREC No. 20-19). The Service accepts offer parameters via SMS or a web interface and generates a partially completed PDF contract for review by a licensed Texas real estate agent.</p>
-    <p>The Service fills in standard TREC form fields based on information you provide. It does not create custom legal documents, negotiate terms, or exercise professional judgment on your behalf.</p>
+    <p>TxtAnOffer is a document drafting and checking tool. For Texas properties it converts shorthand offer text into pre-filled TREC One to Four Family Residential Contract (Resale) forms (TREC No. 20-19); for Colorado properties it fills the Colorado Real Estate Commission's Contract to Buy and Sell Real Estate (Residential) (CBS1) and related Commission forms. The Service accepts offer parameters via SMS or a web interface and generates a partially completed PDF for review by a real estate licensee in the state where the property is located.</p>
+    <p>The Service fills in standard TREC and Colorado Real Estate Commission form fields based on information you provide. It does not create custom legal documents, negotiate terms, or exercise professional judgment on your behalf.</p>
 
     <h2><span class="section-num">2.</span> Not Legal Advice — No Attorney-Client Relationship</h2>
     <div class="emphasis">
@@ -7537,9 +7537,9 @@ def terms():
       <li>Interpret or advise on the legal effect of any contract term</li>
       <li>Evaluate whether a particular offer is appropriate, enforceable, or in your best interest</li>
       <li>Replace the judgment of a qualified real estate attorney</li>
-      <li>Provide guidance on TREC rules, disclosure requirements, or regulatory compliance</li>
+      <li>Provide guidance on TREC or Colorado Real Estate Commission rules, disclosure requirements, or regulatory compliance</li>
     </ul>
-    <p>We strongly recommend that all generated documents be reviewed by a licensed Texas attorney before execution, particularly for complex transactions, commercial properties, or situations involving material contingencies.</p>
+    <p>We strongly recommend that all generated documents be reviewed by an attorney licensed in the state where the property is located before execution, particularly for complex transactions, commercial properties, or situations involving material contingencies.</p>
 
     <h2><span class="section-num">3.</span> Draft Documents — Agent Responsibility</h2>
     <div class="emphasis">
@@ -7562,14 +7562,15 @@ def terms():
       <li>Incorrect placement of data in PDF form fields</li>
       <li>Mathematical or date calculation errors</li>
       <li>PDF rendering issues, corrupted files, or formatting problems</li>
-      <li>Use of an outdated form version if TREC revises the 20-19 form</li>
+      <li>Use of an outdated form version if TREC or the Colorado Real Estate Commission revises a form</li>
       <li>Any downstream consequence of relying on a generated draft without independent review</li>
     </ul>
     <p>THE SERVICE IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTIES OF ANY KIND, WHETHER EXPRESS, IMPLIED, STATUTORY, OR OTHERWISE, INCLUDING WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT.</p>
 
-    <h2><span class="section-num">5.</span> TREC Disclaimer</h2>
+    <h2><span class="section-num">5.</span> TREC and Colorado Real Estate Commission Disclaimer</h2>
     <p>TxtAnOffer is an independent, third-party tool. We are NOT affiliated with, endorsed by, or partnered with the Texas Real Estate Commission (TREC) in any capacity. "TREC" and the form numbers referenced herein are trademarks or designations of the Texas Real Estate Commission.</p>
     <p>We use publicly available TREC promulgated forms as templates. The template currently in use is TREC 20-19, mandatory as of __TREC_FORM_DATE__. If TREC revises or replaces a form, there may be a delay before we update the Service. You are responsible for confirming that the form version used is current and appropriate for your transaction.</p>
+    <p>We are likewise NOT affiliated with, endorsed by, or partnered with the Colorado Real Estate Commission or the Colorado Division of Real Estate. Colorado forms are used as published by the Commission for public use; the Service fills in their blanks and does not modify their printed text. The Colorado forms currently supported are the CBS1 (mandatory January 1, 2026) and, for checking or drafting, the Agreement to Amend/Extend Contract, Counterproposal, Inspection Objection Notice, Source of Water Addendum and Exclusive Right-to-Buy Listing Contract. The same responsibility to confirm the current form version applies.</p>
 
     <h2><span class="section-num">6.</span> Subscription, Payment, and Cancellation</h2>
     <p><strong>Pricing:</strong> Plans start at $40.00 per month, billed monthly via Stripe. See <a href="/pricing" style="color:var(--accent-light);">pricing page</a> for current tiers.</p>
@@ -7613,7 +7614,7 @@ def terms():
     </ul>
     <p>We use this data solely to operate and improve the Service. We do not sell your personal information to third parties.</p>
     <p><strong>Third-party services:</strong> The Service uses Twilio (SMS delivery), Stripe (payment processing), and Railway on Google Cloud Platform (infrastructure). These services have their own privacy policies and may process your data in accordance with their terms.</p>
-    <p><strong>Data retention:</strong> Generated PDFs on the free trial are stored temporarily and may be deleted after a reasonable period (currently 30 days); on a paid plan they are kept for 5 years from creation and shown in your dashboard. On the Brokerage plan, offers and amendments drafted by an agent linked to the brokerage are kept for 5 years from creation while that agent stays linked, and can be exported at any time from the brokerage dashboard. These are the drafts generated by the Service, not the executed contracts. Brokerage plan accounts may also store executed contracts in the contract archive, by forwarding them from an email linked to the brokerage or uploading them while signed in; those files are kept for 5 years from when they are added unless the brokerage deletes them sooner, are accessible only to the brokerage's signed-in users, and can be exported at any time. You are responsible for having the right to store any document you add. We retain account and billing records as required by law. <strong>Outside the Brokerage plan, this is shorter than the 4-year offer/contract/addenda retention period brokers are independently required to maintain under TREC Rule &sect;535.2.</strong> Our retention does not satisfy that obligation &mdash; you are responsible for downloading and separately retaining your own copy of every offer and amendment.</p>
+    <p><strong>Data retention:</strong> Generated PDFs on the free trial are stored temporarily and may be deleted after a reasonable period (currently 30 days); on a paid plan they are kept for 5 years from creation and shown in your dashboard. On the Brokerage plan, offers and amendments drafted by an agent linked to the brokerage are kept for 5 years from creation while that agent stays linked, and can be exported at any time from the brokerage dashboard. These are the drafts generated by the Service, not the executed contracts. Brokerage plan accounts may also store executed contracts in the contract archive, by forwarding them from an email linked to the brokerage or uploading them while signed in; those files are kept for 5 years from when they are added unless the brokerage deletes them sooner, are accessible only to the brokerage's signed-in users, and can be exported at any time. You are responsible for having the right to store any document you add. We retain account and billing records as required by law. <strong>Outside the Brokerage plan, this is shorter than the 4-year offer/contract/addenda retention period Texas brokers are independently required to maintain under TREC Rule &sect;535.2, and may be shorter than your own state's broker record-keeping requirements.</strong> Our retention does not satisfy that obligation &mdash; you are responsible for downloading and separately retaining your own copy of every offer and amendment.</p>
     <p><strong>Security:</strong> We implement reasonable technical and organizational measures to protect your data. However, no system is perfectly secure, and we cannot guarantee absolute security of your information.</p>
 
     <h2><span class="section-num">10.</span> Acceptable Use</h2>
@@ -7628,8 +7629,8 @@ def terms():
     </ul>
 
     <h2><span class="section-num">11.</span> Governing Law and Dispute Resolution</h2>
-    <p><strong>Governing law:</strong> These Terms shall be governed by and construed in accordance with the laws of the State of Texas, without regard to its conflict-of-law provisions.</p>
-    <p><strong>Jurisdiction:</strong> Any legal action or proceeding arising out of or relating to these Terms or the Service shall be brought exclusively in the state or federal courts located in Texas, and you consent to the personal jurisdiction of such courts.</p>
+    <p><strong>Governing law:</strong> These Terms shall be governed by and construed in accordance with the laws of the State of Texas, without regard to its conflict-of-law provisions, except that any dispute arising out of the Service's use for a property located in Colorado, or out of a Colorado Real Estate Commission form generated or checked by the Service, shall be governed by the laws of the State of Colorado, without regard to its conflict-of-law provisions.</p>
+    <p><strong>Jurisdiction:</strong> Any legal action or proceeding arising out of or relating to these Terms or the Service shall be brought exclusively in the state or federal courts located in Texas, except that an action governed by Colorado law under the preceding paragraph shall be brought exclusively in the state or federal courts located in Colorado. You consent to the personal jurisdiction of those courts.</p>
     <p><strong>Informal resolution:</strong> Before filing any formal legal proceeding, you agree to attempt to resolve any dispute informally by contacting us. We will attempt to resolve the dispute within 30 days of receiving your notice.</p>
 
     <h2><span class="section-num">12.</span> Modifications to Terms</h2>
@@ -7641,9 +7642,9 @@ def terms():
 
     <h2><span class="section-num">14.</span> Contact</h2>
     <p>For questions about these Terms or the Service, contact us at:</p>
-    <p>TxtAnOffer<br>Operated by Phanel<br>Texas, United States<br>Email: support@txtanoffer.com</p>
+    <p>TxtAnOffer<br>Operated by Phanel Jean-Baptiste<br>807 W 112th St, Los Angeles, CA 90044<br>Email: support@txtanoffer.com</p>
   </div>
-  <p class="foot">TxtAnOffer is not affiliated with the Texas Real Estate Commission (TREC).<br><a href="/">&larr; Back to home</a> &middot; <a href="/privacy">Privacy Policy</a></p>
+  <p class="foot">TxtAnOffer is not affiliated with the Texas Real Estate Commission (TREC) or the Colorado Real Estate Commission.<br><a href="/">&larr; Back to home</a> &middot; <a href="/privacy">Privacy Policy</a></p>
 </div>
 </body>
 </html>"""
@@ -7851,7 +7852,7 @@ def privacy():
       <li>Billing records: retained as required by applicable tax and accounting laws</li>
       <li>SMS logs: retained for 90 days for support and debugging purposes</li>
     </ul>
-    <p><strong>Note for licensees:</strong> TREC Rule &sect;535.2 requires brokers to independently retain offers, contracts, and related addenda for at least 4 years from closing or termination. Our 30-day PDF retention does not satisfy that requirement. The Brokerage plan's contract archive can hold the executed contracts your brokerage forwards or uploads, plus the drafts generated here. It helps with that requirement, but it is not a guarantee of compliance &mdash; you remain responsible for keeping complete transaction records.</p>
+    <p><strong>Note for licensees:</strong> In Texas, TREC Rule &sect;535.2 requires brokers to independently retain offers, contracts, and related addenda for at least 4 years from closing or termination. Our 30-day PDF retention does not satisfy that requirement. The Brokerage plan's contract archive can hold the executed contracts your brokerage forwards or uploads, plus the drafts generated here. It helps with that requirement, but it is not a guarantee of compliance &mdash; you remain responsible for keeping complete transaction records under your own state's rules.</p>
 
     <h2>6. Data Security</h2>
     <p>We implement reasonable technical and organizational measures to protect your data:</p>
@@ -7881,9 +7882,9 @@ def privacy():
 
     <h2>10. Contact</h2>
     <p>For privacy-related questions or requests:</p>
-    <p>TxtAnOffer<br>Operated by Phanel<br>Texas, United States<br>Email: support@txtanoffer.com</p>
+    <p>TxtAnOffer<br>Operated by Phanel Jean-Baptiste<br>807 W 112th St, Los Angeles, CA 90044<br>Email: support@txtanoffer.com</p>
   </div>
-  <p class="foot">TxtAnOffer is not affiliated with the Texas Real Estate Commission (TREC).<br><a href="/">&larr; Back to home</a> &middot; <a href="/terms">Terms of Service</a></p>
+  <p class="foot">TxtAnOffer is not affiliated with the Texas Real Estate Commission (TREC) or the Colorado Real Estate Commission.<br><a href="/">&larr; Back to home</a> &middot; <a href="/terms">Terms of Service</a></p>
 </div>
 </body>
 </html>"""
