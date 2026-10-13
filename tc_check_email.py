@@ -19,6 +19,7 @@ SendGrid Inbound Parse posts multipart/form-data with (among other fields):
   attachment1..attachmentN (files), attachment-info (JSON metadata)
 Docs: https://www.twilio.com/docs/sendgrid/for-developers/parsing-email/setting-up-the-inbound-parse-webhook
 """
+import os
 import re
 from html import escape
 
@@ -396,8 +397,12 @@ _UPSELL_TEXT = (
 _DISCLAIMER = ("TC Check flags blanks and mismatches on the fields it can verify. "
                "It isn't legal advice and doesn't replace your review. "
                "TxtAnOffer is not affiliated with TREC.")
-# Sender's physical mailing address (CAN-SPAM / CASL), provided by Phanel 2026-10-13.
-MAILING_ADDRESS = "TxtAnOffer · 807 W 112th St, Los Angeles, CA 90044"
+# Sender's physical mailing address for marketing email (CAN-SPAM / CASL).
+# Comes from the server environment, never from code (the repo is public):
+# set TXO_MAILING_ADDRESS on Railway to a PO box / virtual mailbox. Empty
+# means "no address on file" -- marketing nudges are not sent then.
+MAILING_ADDRESS = ("TxtAnOffer · " + os.environ["TXO_MAILING_ADDRESS"].strip()
+                   if os.environ.get("TXO_MAILING_ADDRESS", "").strip() else "")
 
 _DISCLAIMER_CO = ("TC Check flags blanks and mismatches on the fields it can verify. "
                   "It isn't legal advice and doesn't replace your review. "
@@ -486,7 +491,7 @@ def format_reply_body(result: dict, check_count: int = 0, archived: dict = None)
     body += ("---\n"
              f"{_streak_note(check_count)}Check another file: tc@check.txtanoffer.com "
              "or txtanoffer.com/tc-check\n" + (_DISCLAIMER_CO if _is_co(result) else _DISCLAIMER)
-             + "\n" + MAILING_ADDRESS)
+             + ("\n" + MAILING_ADDRESS if MAILING_ADDRESS else ""))
     return body
 
 
@@ -618,7 +623,8 @@ def _footer_html(check_count: int = 0, co: bool = False) -> str:
     return (f'<p style="margin:24px 0 0;padding-top:16px;border-top:1px solid #eef0f2;font-size:12px;line-height:1.6;color:#8a9aa9;font-family:{_FONT};">'
             f'{streak_html}Check another file: <a href="mailto:tc@check.txtanoffer.com" style="color:{_GREEN};">tc@check.txtanoffer.com</a> or '
             f'<a href="https://txtanoffer.com/tc-check" style="color:{_GREEN};">txtanoffer.com/tc-check</a><br>'
-            f'<span style="font-size:11px;">{escape(_DISCLAIMER_CO if co else _DISCLAIMER)}<br>{escape(MAILING_ADDRESS)}</span></p>')
+            f'<span style="font-size:11px;">{escape(_DISCLAIMER_CO if co else _DISCLAIMER)}'
+            + (f'<br>{escape(MAILING_ADDRESS)}' if MAILING_ADDRESS else '') + '</span></p>')
 
 
 def _archived_html(archived) -> str:

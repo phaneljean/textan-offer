@@ -7377,8 +7377,8 @@ def login():
 </html>"""
 
 
-# Mailing address added 2026-10-13 (Phanel). TODO(Phanel): legal entity +
-# governing-law state are still unconfirmed -- no entity type claimed.
+# Address shown on the website only (Phanel 2026-10-13: fine on the site,
+# not inside emails). TODO(Phanel): legal entity still unconfirmed.
 @app.route("/terms")
 def terms():
     html = """<!DOCTYPE html>
@@ -7651,8 +7651,8 @@ def terms():
     return html.replace("__TREC_FORM_DATE__", TREC_FORM_CURRENT_AS_OF)
 
 
-# Mailing address added 2026-10-13 (Phanel). TODO(Phanel): legal entity +
-# governing-law state are still unconfirmed -- no entity type claimed.
+# Address shown on the website only (Phanel 2026-10-13: fine on the site,
+# not inside emails). TODO(Phanel): legal entity still unconfirmed.
 @app.route("/privacy")
 def privacy():
     return """<!DOCTYPE html>

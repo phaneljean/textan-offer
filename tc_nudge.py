@@ -54,6 +54,15 @@ _COMPLIANCE_FOOTER = ("\n\nDon't want these? Reply \"unsubscribe\" and we won't 
                       + _MAILING_ADDRESS)
 
 
+def _can_send_marketing() -> bool:
+    """No physical address on file (TXO_MAILING_ADDRESS unset) -> these
+    marketing nudges would break CAN-SPAM/CASL, so they're skipped."""
+    if not _MAILING_ADDRESS:
+        print("[tc_nudge] skipped: TXO_MAILING_ADDRESS not set")
+        return False
+    return True
+
+
 def send_immediate_nudge(email: str, result: dict) -> None:
     """Fire-and-forget. Call right after tc_gate.save_email() succeeds,
     once you have the check `result` dict from tc_audit.check_tc_file."""
@@ -71,7 +80,8 @@ def send_immediate_nudge(email: str, result: dict) -> None:
 
     def _do():
         try:
-            send_plain_email(email, subject, body)
+            if _can_send_marketing():
+                send_plain_email(email, subject, body)
         except Exception as e:
             print(f"[tc_nudge] immediate send failed for {email}: {e}")
 
@@ -125,7 +135,8 @@ def run_followup_if_due() -> None:
                     f"Try it free -- 3 offers, no card required: {PRICING_URL}\n\n"
                     f"-- TxtAnOffer" + _COMPLIANCE_FOOTER
                 )
-                result = send_plain_email(client["email"], subject, body)
+                result = (send_plain_email(client["email"], subject, body) if _can_send_marketing()
+                          else {"success": False})
                 if result.get("success"):
                     mark_followup_sent(client["client_id"])
         except Exception as e:
