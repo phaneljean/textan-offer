@@ -204,5 +204,117 @@ class FunnelCountsAnyCheckCta(unittest.TestCase):
         self.assertIn("clicked check (nav check cta)", html)
 
 
+class TrimmedAnalyticsPage(unittest.TestCase):
+    """/analytics trimmed 2026-10-14 to one screen: headline strip, channel
+    table, funnel, TC Check senders, revenue, CBS1 tool; diagnostics folded."""
+    def setUp(self):
+        _clear_events()
+        self.client = app_module.app.test_client()
+        self._old = app_module.ANALYTICS_PASSWORD
+        app_module.ANALYTICS_PASSWORD = "pw"
+
+    def tearDown(self):
+        app_module.ANALYTICS_PASSWORD = self._old
+
+    def _rows(self, event_type, rows, ago_days=0, phone=None):
+        from datetime import timedelta
+        ts = (datetime.utcnow() - timedelta(days=ago_days)).isoformat()
+        conn = sqlite3.connect(analytics.DB_PATH)
+        conn.executemany("INSERT INTO events (event_type, phone, metadata, created_at) VALUES (?, ?, ?, ?)",
+                         [(event_type, phone, json.dumps(m), ts) for m in rows])
+        conn.commit()
+        conn.close()
+
+    def _page(self):
+        return self.client.get("/analytics?token=pw", headers=UA).get_data(as_text=True)
+
+    def test_auth_unchanged(self):
+        self.assertEqual(self.client.get("/analytics?token=nope", headers=UA).status_code, 403)
+        self.assertEqual(self.client.get("/analytics", headers=UA).status_code, 403)
+
+    def test_headline_excludes_own_traffic(self):
+        own, out = _vid(1), _vid(2)
+        _beacon(self.client, "js_ok", "homepage", out)
+        _beacon(self.client, "nav_check_cta", "homepage", out)
+        _beacon(self.client, "js_ok", "homepage", own)
+        # Phanel's browser, never put in internal mode, but checked a file under his own email.
+        self._rows("tc_check_attempted", [{"visitor": own}, {"visitor": out}])
+        self._rows("tc_check", [{"recognized": True, "sender": "pejeanbaptiste@gmail.com", "visitor": own}])
+        self._rows("tc_check", [
+            {"source": "email", "recognized": True, "sender": "jane@brokerage-example.com"},
+            {"source": "email", "recognized": True, "sender": "JoveBull396@gmail.com"},
+            {"source": "email", "recognized": True, "sender": "support@txtanoffer.com"},
+            {"source": "email", "recognized": False, "reason": "no_pdf", "sender": "bob@example.org"},
+        ])
+        self._rows("tc_check_demo_used", [{"visitor": out}])   # sample: never an outside file
+        self._rows("tc_check_attempted", [{"visitor": out}], ago_days=9)   # outside the 7-day window
+        h = analytics.get_headline(days=7)
+        self.assertEqual((h["real_visitors"], h["clicked_check"]), (1, 1))
+        self.assertEqual((h["outside_web"], h["outside_email"], h["outside_files"]), (1, 1, 2))
+        today = analytics.get_daily_funnel(days=1)[0]
+        self.assertEqual((today["js_ok"], today["attempts"], today["email_checks"], today["tried_sample"]), (1, 1, 1, 1))
+
+    def test_email_senders_filtered_by_default(self):
+        self._rows("tc_check", [{"source": "email", "recognized": True, "sender": "jane@brokerage-example.com"},
+                                {"source": "email", "recognized": True, "sender": "pejeanbaptiste@gmail.com"}])
+        self._rows("tc_check_email_rejected", [{"reason": "own_intake", "sender": "tc@check.txtanoffer.com"}])
+        html = self._page()
+        visible, folded = html.split("Show filtered (2:", 1)
+        self.assertIn("jane@brokerage-example.com", visible.split("TC Check: Recent Email Senders", 1)[1])
+        self.assertNotIn("pejeanbaptiste@gmail.com", visible)
+        self.assertIn("pejeanbaptiste@gmail.com", folded)
+        self.assertIn("own_intake", folded)
+
+    def test_removed_sections_gone_and_diagnostics_folded(self):
+        html = self._page()
+        for gone in ("What Brings You Here", "Archive Early Access", "Trial Activation", "Paywall", "Conversion Funnel",
+                     "Widget Attempts by", "Page loads (incl. bots)</th><th>Loads on phone", "Saw drop box</th><th>Used drop box",
+                     "Junk filtered", "Brokerage Alert Delivery", "Outbound Email Failures", "Out-of-State Waitlist",
+                     "Send Failures", "Signups by source"):
+            self.assertNotIn(gone, html, gone)
+        for title in ("Recent Visitors (48 hours", "Top Referrers", "Phone vs Desktop", "Top Issues", "Recent SMS Activity",
+                      "Bulk TC Check", "Landing Visits by src"):
+            i = html.index(title)
+            self.assertEqual(html.rfind("<summary>", 0, i), html.rfind("<", 0, i), title)   # inside a <summary>
+        self.assertNotIn("<details open", html)
+        self.assertIn('name="viewport"', html)
+        self.assertLess(html.index("Real Humans by Channel"), html.index("Daily Funnel"))
+        self.assertLess(html.index("Daily Funnel"), html.index("TC Check: Recent Email Senders"))
+        self.assertLess(html.index("TC Check: Recent Email Senders"), html.index("<h2>Revenue"))
+        self.assertLess(html.index("<h2>Revenue"), html.index("CBS1 Deadline Calculator"))
+
+    def test_conditional_sections_show_when_non_empty(self):
+        self._rows("sms_send_failed", [{"error": "30034 blocked", "body": "<b>hi</b>"}], phone="+15125550100")
+        self._rows("email_send_failed", [{"to": "a@b.com", "subject": "TC report", "error": "401"}])
+        self._rows("email_send_failed", [{"to": "old@b.com", "subject": "old", "error": "sendgrid"}], ago_days=12)
+        self._rows("waitlist_joined", [{"state": "FL"}], phone="+13055550100")
+        self._rows("brokerage_alert_sent", [{"source": "zillow_broker_reach", "brokerage_id": 1, "email_sent": True}])
+        self._rows("signup", [{"source": "li_post"}], phone="+15125550101")
+        html = self._page()
+        for shown in ("Recent SMS Send Failures", "Outbound Email Failures (7 days)", "Out-of-State Waitlist: 1 new",
+                      "Brokerage Alert Delivery", "Signups by source"):
+            self.assertIn(shown, html, shown)
+        self.assertNotIn("old@b.com", html)          # stale (12 days) failure stays hidden
+        self.assertNotIn("<b>hi</b>", html)          # SMS bodies are escaped now
+        self.assertIn("&lt;b&gt;hi&lt;/b&gt;", html)
+
+    def test_pages_column_shows_times_not_escaped_entity(self):
+        v = _vid(4)
+        self._rows("page_view", [{"page": "homepage", "visitor": v, "source": "direct", "device": "desktop", "ua": "Mac"}] * 2)
+        _beacon(self.client, "js_ok", "homepage", v)
+        html = self._page()
+        self.assertIn("homepage&times;2", html)
+        self.assertNotIn("&amp;times;", html)
+
+    def test_role_card_events_no_longer_accepted(self):
+        for name in ("role_shown", "role_dismissed", "role_tc", "role_agent", "role_broker", "role_investor", "role_browsing"):
+            self.assertNotIn(name, app_module._ENGAGEMENT_TYPES)
+            _beacon(self.client, name, "homepage", _vid(5))
+        conn = sqlite3.connect(analytics.DB_PATH)
+        n = conn.execute("SELECT COUNT(*) FROM events WHERE event_type = 'page_engagement'").fetchone()[0]
+        conn.close()
+        self.assertEqual(n, 0)
+
+
 if __name__ == "__main__":
     unittest.main()

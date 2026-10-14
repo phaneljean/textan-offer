@@ -102,6 +102,71 @@ def _internal_visitor_ids() -> set:
         conn.close()
 
 
+def is_self_sender(email: str) -> bool:
+    """Phanel's own address, or any @txtanoffer.com sender (support@ via
+    Gmail "send as", the intake itself). The ta_internal cookie can't see
+    an email forward, so this is the self-filter for that path. Reuses
+    real_upload_alert's hashed list rather than a raw ADMIN_SENDER_EMAILS:
+    the repo is public, and it already covers pejeanbaptiste@ and jovebull396@."""
+    from real_upload_alert import is_internal_email
+    e = (email or "").strip().lower()
+    domain = e.rpartition("@")[2]
+    return is_internal_email(e) or domain == "txtanoffer.com" or domain.endswith(".txtanoffer.com")
+
+
+def _is_outside_email_check(metadata: dict) -> bool:
+    """A forwarded file from someone other than Phanel. Junk senders never
+    get here (they're 'tc_check_email_rejected'); a forward with no PDF
+    attached isn't a file tried."""
+    return (metadata.get("source") == "email" and metadata.get("reason") != "no_pdf"
+            and not is_self_sender(metadata.get("sender")))
+
+
+def _self_visitor_ids(rows) -> set:
+    """internal_visitors plus any browser that ran a web check under one of
+    Phanel's own emails (opted in before /internal-mode was set on it).
+    rows: (event_type, metadata dict) pairs already loaded by the caller."""
+    ids = _internal_visitor_ids()
+    for event_type, m in rows:
+        if event_type == "tc_check" and m.get("visitor") and is_self_sender(m.get("sender")):
+            ids.add(m["visitor"])
+    return ids
+
+
+def get_headline(days: int = 7) -> dict:
+    """The four numbers at the top of /analytics (2026-10-14): did a real
+    outside person try TC Check, and did anyone get that far at all.
+    Unique browsers that ran the page's JS; unique browsers that clicked
+    any check CTA; files from outside people (web attempts from a
+    non-internal browser + forwards from a non-self sender)."""
+    import json
+    cutoff = (datetime.utcnow() - timedelta(days=days)).isoformat()
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        raw = conn.execute("""SELECT event_type, metadata FROM events WHERE created_at > ? AND event_type IN
+                              ('page_engagement', 'tc_check_attempted', 'tc_check')""", (cutoff,)).fetchall()
+    finally:
+        conn.close()
+    rows = [(t, json.loads(m) if m else {}) for t, m in raw]
+    own = _self_visitor_ids(rows)
+    real, clicked = set(), set()
+    web = email = 0
+    for event_type, m in rows:
+        v = m.get("visitor") or ""
+        if event_type == "page_engagement":
+            if v and v not in own:
+                real.add(v)
+                if m.get("type") in CHECK_CTA_EVENTS:
+                    clicked.add(v)
+        elif event_type == "tc_check_attempted":
+            if v not in own:
+                web += 1
+        elif _is_outside_email_check(m):
+            email += 1
+    return {"days": days, "real_visitors": len(real), "clicked_check": len(clicked),
+            "outside_files": web + email, "outside_web": web, "outside_email": email}
+
+
 def track_event(event_type: str, phone: str = None, metadata: dict = None):
     """Track an analytics event. Silently a no-op for the site owner's own
     browser once flagged via /internal-mode -- see _is_internal_traffic().
@@ -326,73 +391,6 @@ def get_landing_visits_by_source(days: int = 30) -> list:
         key=lambda r: -r["count"]
     )
 
-def get_tc_check_attempts_by_source(days: int = 30) -> list:
-    """Same idea as get_landing_visits_by_source, one funnel step later:
-    counts every real submission to /v1/tc/check (success OR error --
-    wrong file type, corrupted PDF, whatever) grouped by the same ta_src
-    attribution. Added 2026-09-09 specifically to answer "LinkedIn drives
-    visits but conversions stay flat -- are visitors even touching the
-    upload widget, or trying and hitting an error?" -- neither question
-    was answerable before this, since the pre-existing 'tc_check' event
-    only fires after a file is successfully parsed. Compare this against
-    get_landing_visits_by_source's count for the same source: a big gap
-    means visitors aren't engaging the widget at all (a page/copy
-    problem); attempts close to visits but recognized/complete much
-    lower (see get_tc_check_summary) means they're trying and something
-    downstream is failing."""
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cutoff = (datetime.utcnow() - timedelta(days=days)).isoformat()
-    cursor.execute("""
-        SELECT metadata FROM events
-        WHERE event_type = 'tc_check_attempted' AND created_at > ?
-    """, (cutoff,))
-    rows = cursor.fetchall()
-    conn.close()
-
-    import json
-    counts = {}
-    for row in rows:
-        metadata = json.loads(row[0]) if row[0] else {}
-        source = metadata.get("source") or "direct"
-        counts[source] = counts.get(source, 0) + 1
-
-    return sorted(
-        [{"source": source, "count": count} for source, count in counts.items()],
-        key=lambda r: -r["count"]
-    )
-
-
-def get_tc_check_attempts_by_page(days: int = 30) -> list:
-    """Same 'tc_check_attempted' events as get_tc_check_attempts_by_source,
-    grouped by source_page instead of campaign source -- homepage widget vs
-    the dedicated /tc-check page. Added 2026-09-11 to answer a different
-    question than the source breakdown: not which channel drove the visit,
-    but which UI they actually used once there. 'unknown' covers events
-    tracked before this field existed, or a request that didn't set it."""
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cutoff = (datetime.utcnow() - timedelta(days=days)).isoformat()
-    cursor.execute("""
-        SELECT metadata FROM events
-        WHERE event_type = 'tc_check_attempted' AND created_at > ?
-    """, (cutoff,))
-    rows = cursor.fetchall()
-    conn.close()
-
-    import json
-    counts = {}
-    for row in rows:
-        metadata = json.loads(row[0]) if row[0] else {}
-        page = metadata.get("source_page") or "unknown"
-        counts[page] = counts.get(page, 0) + 1
-
-    return sorted(
-        [{"page": page, "count": count} for page, count in counts.items()],
-        key=lambda r: -r["count"]
-    )
-
-
 def get_daily_funnel(days: int = 14) -> list:
     """One row per UTC day, newest first: visitors -> widget attempts ->
     recognized files, plus email intake. Added 2026-10-02: every other
@@ -401,34 +399,39 @@ def get_daily_funnel(days: int = 14) -> list:
     load of / and /tc-check, tagged or not -- unlike 'landing_visit',
     which only fires on ?src= links); days before page_view existed show
     0 visitors, not missing data. Every day in the window gets a row, so a
-    dead day reads as an explicit row of zeros instead of a gap."""
+    dead day reads as an explicit row of zeros instead of a gap.
+    2026-10-14: attempts, email checks and emails captured drop Phanel's
+    own browsers/addresses (see is_self_sender); tried_sample = clicked a
+    sample link or ran the sample, unique browsers."""
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cutoff = (datetime.utcnow() - timedelta(days=days)).isoformat()
     cursor.execute("""
-        SELECT event_type, metadata, created_at FROM events
+        SELECT event_type, metadata, created_at, phone FROM events
         WHERE created_at > ? AND event_type IN
             ('page_view', 'page_engagement', 'tc_check_attempted', 'tc_check_demo_used', 'tc_check', 'tc_check_email_captured', 'tc_check_email_rejected')
     """, (cutoff,))
-    rows = cursor.fetchall()
+    import json
+    rows = [(t, json.loads(m) if m else {}, c, ph) for t, m, c, ph in cursor.fetchall()]
     conn.close()
 
-    import json
     today = datetime.utcnow().date()
     by_day = {}
     for i in range(days):
         d = (today - timedelta(days=i)).isoformat()
         by_day[d] = {"date": d, "visitors": set(), "mobile": set(), "js_ok": set(), "hero_cta": set(), "hero_sample": set(),
                      "dropzone_seen": set(), "stay_10s": set(), "check_cta": set(), "sample_cta": set(),
-                     "dropzone_interact": set(), "views": 0, "attempts": 0, "demos": 0,
+                     "dropzone_interact": set(), "tried_sample": set(), "views": 0, "attempts": 0, "demos": 0,
                      "recognized": 0, "emails_captured": 0, "email_checks": 0, "email_junk": 0}
-    internal = _internal_visitor_ids()
-    for event_type, metadata_json, created_at in rows:
+    # Phanel's browsers, including one that ran a web check under his own
+    # email before /internal-mode was set on it (2026-10-14).
+    internal = _self_visitor_ids([(t, m) for t, m, _, _ in rows])
+    for event_type, metadata, created_at, phone in rows:
         day = by_day.get(created_at[:10])
         if day is None:
             continue
-        metadata = json.loads(metadata_json) if metadata_json else {}
-        if event_type in ("page_view", "page_engagement") and metadata.get("visitor") in internal:
+        if event_type in ("page_view", "page_engagement", "tc_check_attempted", "tc_check_demo_used") \
+                and metadata.get("visitor") in internal:
             continue
         if event_type == "page_view":
             day["views"] += 1
@@ -445,17 +448,24 @@ def get_daily_funnel(days: int = 14) -> list:
                 day["check_cta"].add(vid)
             if key in SAMPLE_CTA_EVENTS:
                 day["sample_cta"].add(vid)
+                day["tried_sample"].add(vid)
         elif event_type == "tc_check_attempted":
             day["attempts"] += 1
         elif event_type == "tc_check_demo_used":
             day["demos"] += 1
+            # Clicked a sample link OR ran the sample, same as the channel table.
+            day["tried_sample"].add(metadata.get("visitor") or "demo-" + created_at)
         elif event_type == "tc_check_email_rejected":
             day["email_junk"] += 1
         elif event_type == "tc_check_email_captured":
-            day["emails_captured"] += 1
+            if not is_self_sender(phone):
+                day["emails_captured"] += 1
         elif event_type == "tc_check":
             if metadata.get("source") == "email":
-                day["email_checks"] += 1
+                # Real senders only (2026-10-14): Phanel's own forwards and
+                # no-PDF emails were padding this column.
+                if _is_outside_email_check(metadata):
+                    day["email_checks"] += 1
             elif metadata.get("recognized"):
                 day["recognized"] += 1
 
@@ -463,7 +473,7 @@ def get_daily_funnel(days: int = 14) -> list:
     for d in sorted(by_day, reverse=True):
         day = by_day[d]
         for key in ("visitors", "mobile", "js_ok", "hero_cta", "hero_sample", "dropzone_seen", "stay_10s",
-                    "check_cta", "sample_cta", "dropzone_interact"):
+                    "check_cta", "sample_cta", "dropzone_interact", "tried_sample"):
             day[key] = len(day[key])
         result.append(day)
     return result
@@ -609,23 +619,6 @@ def get_engagement_by_source(days: int = 30) -> dict:
         "sources": sorted((_row(s, who, loads.get(s, 0)) for s, who in by_src.items()), key=order),
         "channels": sorted((_row(c, who, channel_loads.get(c, 0)) for c, who in by_channel.items()), key=order),
     }
-
-
-def get_archive_early_access(limit: int = 200) -> list:
-    """Sign-ups from /archive (contract archive early access), newest first."""
-    conn = sqlite3.connect(DB_PATH)
-    rows = conn.execute("""
-        SELECT metadata, created_at FROM events WHERE event_type = 'archive_early_access'
-        ORDER BY created_at DESC LIMIT ?
-    """, (limit,)).fetchall()
-    conn.close()
-    import json
-    out = []
-    for metadata_json, created_at in rows:
-        m = json.loads(metadata_json) if metadata_json else {}
-        out.append({"email": m.get("email", ""), "brokerage": m.get("brokerage", ""), "agents": m.get("agents", ""),
-                    "source": m.get("source", ""), "created_at": created_at})
-    return out
 
 
 def get_top_referrers(days: int = 30, limit: int = 15) -> list:
@@ -920,12 +913,17 @@ def get_recent_tc_check_email_senders(limit: int = 20) -> list:
         dropped = event_type == "tc_check_email_rejected"
         if not dropped and metadata.get("source") != "email":
             continue
+        is_self = is_self_sender(metadata.get("sender"))
         out.append({
             "sender": metadata.get("sender", "(not recorded)"),
             "known_sender": metadata.get("known_sender", False),
             "recognized": metadata.get("recognized"),
             "reason": metadata.get("reason") or "",
             "dropped": dropped,
+            "self": is_self,
+            # Hidden behind "show filtered" on /analytics (2026-10-14): junk/
+            # automated/own-intake drops, Phanel's own forwards, no-PDF emails.
+            "filtered": dropped or is_self or metadata.get("reason") == "no_pdf",
             "created_at": created_at,
         })
         if len(out) >= limit:
@@ -1112,74 +1110,6 @@ def get_brokerage_alert_delivery(days: int = 30) -> dict:
 init_analytics_tables()
 
 
-def get_visitor_roles() -> dict:
-    """Per-visitor journey for the "What brings you here?" experiment
-    (added 2026-10-06): visitor -> role -> saw drop box -> upload ->
-    recognized -> repeat, one row per answered role plus "No answer".
-    Everything joins on the ta_vid cookie. Counted from the first
-    role_shown on, so it only covers the experiment window; uploads only
-    carry ta_vid from the same day. "Real browser" = ran the page's JS
-    (js_ok), which most scanners/link-preview bots never do."""
-    import json
-    conn = sqlite3.connect(DB_PATH)
-    try:
-        first = conn.execute("""SELECT MIN(created_at) FROM events WHERE event_type = 'page_engagement'
-                                AND metadata LIKE '%"role_shown"%'""").fetchone()[0]
-        if not first:
-            return {"since": None}
-        rows = conn.execute("""SELECT event_type, metadata FROM events WHERE created_at >= ? AND event_type IN
-                               ('page_view', 'page_engagement', 'tc_check_attempted', 'tc_check_demo_used', 'tc_check')
-                               ORDER BY created_at""", (first,)).fetchall()
-    finally:
-        conn.close()
-    internal = _internal_visitor_ids()
-    visitors, real, shown, dismissed, dropzone, demoed, uploaded = set(), set(), set(), set(), set(), set(), set()
-    answer, recognized = {}, {}
-    for event_type, metadata_json in rows:
-        m = json.loads(metadata_json) if metadata_json else {}
-        v = m.get("visitor") or ""
-        if not v or v in internal:
-            continue
-        t = m.get("type", "")
-        if event_type == "page_view":
-            visitors.add(v)
-        elif event_type == "tc_check_attempted":
-            uploaded.add(v)
-        elif event_type == "tc_check_demo_used":
-            demoed.add(v)
-        elif event_type == "tc_check":
-            if m.get("source") != "email" and m.get("recognized"):
-                recognized[v] = recognized.get(v, 0) + 1
-        elif t == "js_ok":
-            real.add(v)
-        elif t == "dropzone_seen":
-            dropzone.add(v)
-        elif t == "role_shown":
-            shown.add(v)
-        elif t == "role_dismissed":
-            dismissed.add(v)
-        elif t.startswith("role_"):
-            answer[v] = t[5:]
-    # A visitor's page_view lands a few seconds before their own
-    # role_shown, so the very first one predates `first`.
-    visitors |= shown
-    real |= shown
-    labels = [("tc", "Transaction Coordinator"), ("agent", "Real Estate Agent"), ("broker", "Broker"),
-              ("investor", "Investor"), ("browsing", "Just checking it out"), (None, "No answer")]
-    total = len(answer)
-    roles = []
-    for key, label in labels:
-        who = {v for v, r in answer.items() if r == key} if key else real - set(answer)
-        roles.append({"key": key or "none", "label": label, "count": len(who),
-                      "pct": round(100 * len(who) / total) if total and key else None,
-                      "dropzone": len(who & dropzone), "demoed": len(who & demoed),
-                      "uploaded": len(who & uploaded),
-                      "recognized": sum(1 for v in who if recognized.get(v)),
-                      "repeat": sum(1 for v in who if recognized.get(v, 0) >= 2)})
-    return {"since": first[:10], "visitors": len(visitors), "real": len(real), "shown": len(shown),
-            "answered": total, "dismissed": len(dismissed - set(answer)), "roles": roles}
-
-
 def get_engagement_by_device(days: int = 7) -> list:
     """Sanity check that the engagement beacon fires on phones too (added
     2026-10-06): if mobile shows page views but ~0 of every JS event while
@@ -1210,13 +1140,16 @@ def get_engagement_by_device(days: int = 7) -> list:
     return [{k: (len(x) if isinstance(x, set) else x) for k, x in row.items()} for row in out.values()]
 
 
-def get_recent_email_send_failures(limit: int = 10) -> list:
-    """Outbound emails SendGrid refused (see integrations._record_send_failure)."""
+def get_recent_email_send_failures(limit: int = 10, days: int = 7) -> list:
+    """Outbound emails the provider (Resend, or SendGrid before 2026-10-07)
+    refused -- see integrations._record_send_failure. Last `days` only, so
+    the stale SendGrid failures from before the Resend move stop showing."""
     import json
+    cutoff = (datetime.utcnow() - timedelta(days=days)).isoformat()
     conn = sqlite3.connect(DB_PATH)
     try:
         rows = conn.execute("""SELECT metadata, created_at FROM events WHERE event_type = 'email_send_failed'
-                               ORDER BY created_at DESC LIMIT ?""", (limit,)).fetchall()
+                               AND created_at > ? ORDER BY created_at DESC LIMIT ?""", (cutoff, limit)).fetchall()
     finally:
         conn.close()
     out = []

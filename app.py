@@ -33,7 +33,7 @@ from amendment import fill_amendment_pdf
 from agent_profiles import get_agent_profile, save_agent_profile, find_by_email, get_emails_for_phones
 from subscriptions import can_generate_offer, increment_offer_count, activate_subscription, deactivate_subscription, get_user, create_user, FREE_OFFER_LIMIT, is_admin_phone, has_professional_access
 from analytics import _is_internal_traffic
-from analytics import track_event, get_conversion_metrics, get_revenue_metrics, get_recent_sms, get_recent_sms_failures, get_last_blocked_state, get_waitlist_signups, get_signups_by_source, get_signup_details, get_landing_visits_by_source, get_tc_check_summary, get_recent_tc_check_email_senders, get_tc_check_count_for_sender, get_tc_check_repeat_senders, get_tc_check_bulk_summary, get_tc_check_attempts_by_source, get_tc_check_attempts_by_page, get_brokerage_alert_delivery, get_daily_funnel, get_top_referrers, set_internal_visitor, get_visitor_roles, get_engagement_by_device, get_recent_email_send_failures, get_recent_visitors, get_archive_early_access, get_co_tool_usage
+from analytics import track_event, get_conversion_metrics, get_revenue_metrics, get_recent_sms, get_recent_sms_failures, get_last_blocked_state, get_waitlist_signups, get_signups_by_source, get_signup_details, get_landing_visits_by_source, get_tc_check_summary, get_recent_tc_check_email_senders, get_tc_check_count_for_sender, get_tc_check_repeat_senders, get_tc_check_bulk_summary, get_brokerage_alert_delivery, get_daily_funnel, get_top_referrers, set_internal_visitor, get_engagement_by_device, get_recent_email_send_failures, get_recent_visitors, get_co_tool_usage, get_headline
 from analytics import get_engagement_by_source, CHECK_CTA_EVENTS, SAMPLE_CTA_EVENTS, DROPZONE_INTERACT_EVENT
 from integrations import send_offer_email, fire_webhook, save_webhook, get_webhook, delete_webhook, send_to_docusign, send_plain_email, send_html_email
 from offers_db import record_offer, get_offers_for_phone, get_offer_by_filename, record_amendment, get_amendments_for_phone, record_thread_response, record_email_sent, record_docusign_sent
@@ -196,10 +196,6 @@ def require_api_auth():
 
 
 import re
-# "What brings you here?" self-ID card (added 2026-10-06, removed
-# 2026-10-09: shown to 14 real browsers, 0 answered). The card is gone;
-# these keys stay so the /analytics panel keeps showing its results.
-_VISITOR_ROLES = ("tc", "agent", "broker", "investor", "browsing")
 
 _BOT_UA_RE = re.compile(
     r"bot|crawl|spider|slurp|preview|facebookexternalhit|embedly|curl|wget|"
@@ -218,10 +214,14 @@ _MOBILE_UA_RE = re.compile(r"Mobi|Android|iPhone|iPad|iPod", re.I)
 # workflow_offer_sms and footer_* were tagged in the HTML but missing here,
 # so /v1/evt dropped them (found 2026-10-13 by tests/test_tracking.py, which
 # now fails on any data-evt not in this list).
+# role_shown / role_dismissed / role_<tc|agent|broker|investor|browsing>
+# ("What brings you here?" card, removed 2026-10-09, 0 of 14 answered) were
+# dropped from this list 2026-10-14: nothing on the site sends them anymore
+# and their /analytics panel is gone. Past rows stay in the events table.
 _ENGAGEMENT_TYPES = ("js_ok", "hero_cta", "hero_sample", "hero_card", "dropzone_seen", "stay_10s", "stay_60s",
-                     "role_shown", "role_dismissed", "brokers_audit_cta", "brokers_email_cta", "brokers_plan_cta", "records_brokers_cta", "guide_check_cta", "guide_brokers_cta", "path_self_cta", "path_walkthrough_cta", "tc_trust_link", "tc_own_file_cta", "path_brokerage_cta", "guide_card_cta", "support_email_cta", "pricing_audit_cta", "tc_copy_agent_msg", "state_toggle_tx", "state_toggle_co", "states_tx_check", "states_tx_hub", "states_co_check", "states_co_hub", "states_co_tool", "states_request", "workflow_offer_sms", "footer_instagram", "footer_linkedin",
+                     "brokers_audit_cta", "brokers_email_cta", "brokers_plan_cta", "records_brokers_cta", "guide_check_cta", "guide_brokers_cta", "path_self_cta", "path_walkthrough_cta", "tc_trust_link", "tc_own_file_cta", "path_brokerage_cta", "guide_card_cta", "support_email_cta", "pricing_audit_cta", "tc_copy_agent_msg", "state_toggle_tx", "state_toggle_co", "states_tx_check", "states_tx_hub", "states_co_check", "states_co_hub", "states_co_tool", "states_request", "workflow_offer_sms", "footer_instagram", "footer_linkedin",
                      # /tools/colorado-deadlines, 2026-10-13 (tool_check_cta is in CHECK_CTA_EVENTS)
-                     "tool_calc_run", "tool_ics", "tool_copy_text", "tool_embed_copy", "hub_tool_link") + tuple("role_" + r for r in _VISITOR_ROLES) \
+                     "tool_calc_run", "tool_ics", "tool_copy_text", "tool_embed_copy", "hub_tool_link") \
     + CHECK_CTA_EVENTS + SAMPLE_CTA_EVENTS + (DROPZONE_INTERACT_EVENT,)
 # Pages whose beacons /v1/evt accepts: the ones with their own
 # track_page_view() call, plus _BEACON_ONLY_PAGES below.
@@ -6329,144 +6329,55 @@ def internal_mode():
 
 @app.route("/analytics")
 def analytics_dashboard():
+    """One screen for one question (trimmed 2026-10-14 at Phanel's ask; it
+    had grown to ~11,000px of mostly-zero panels): did a real outside person
+    try TC Check, from which channel, and did anyone pay? Headline strip,
+    channel table, daily funnel, TC Check senders, revenue, CBS1 tool on top;
+    diagnostics collapsed at the bottom; problem panels (send failures, new
+    waitlist, brokerage alerts) appear only when they have something in them."""
     if not ANALYTICS_PASSWORD:
         abort(503)
     token = request.args.get("token", "")
     if not hmac.compare_digest(token, ANALYTICS_PASSWORD):
         abort(403)
 
-    metrics = get_conversion_metrics(days=30)
+    from datetime import datetime as _dt, timedelta as _td
+    headline = get_headline(days=7)
     revenue = get_revenue_metrics()
-    recent_sms = get_recent_sms(limit=20)
-    recent_failures = get_recent_sms_failures(limit=20)
-    waitlist_signups = get_waitlist_signups(limit=200)
-    signups_by_source = get_signups_by_source(days=30)
-    landing_visits_by_source = get_landing_visits_by_source(days=30)
+    metrics = get_conversion_metrics(days=30)
     daily_funnel = get_daily_funnel(days=14)
-    visitor_roles = get_visitor_roles()
-    engagement_by_device = get_engagement_by_device(days=7)
-    recent_visitors = get_recent_visitors(hours=48)
-    archive_ea_rows = "".join(
-        f"<tr><td style='padding:6px;'>{escape(r['created_at'][:16].replace('T',' '))}</td><td style='padding:6px;'>{escape(r['email'])}</td>"
-        f"<td style='padding:6px;'>{escape(r['brokerage'])}</td><td style='padding:6px;'>{escape(r['agents'])}</td><td style='padding:6px;'>{escape(r['source'])}</td></tr>"
-        for r in get_archive_early_access()
-    ) or "<tr><td colspan='5' style='padding:6px;color:#999;'>No sign-ups yet.</td></tr>"
-    top_referrers = get_top_referrers(days=30)
-    co_tool_rows = "".join(
-        f"<tr><td style='padding:6px;'>{escape(r['surface'])}</td><td style='padding:6px;'>{escape(r['host'])}</td>"
-        f"<td style='padding:6px;'>{r['runs']}</td><td style='padding:6px;'>{r['ics']}</td></tr>"
-        for r in get_co_tool_usage(days=30)
-    ) or "<tr><td colspan='4' style='padding:6px;color:#999;'>No runs yet.</td></tr>"
-    tc_check_attempts_by_source = get_tc_check_attempts_by_source(days=30)
-    tc_check_attempts_by_page = get_tc_check_attempts_by_page(days=30)
+    by_source = get_engagement_by_source(days=30)
     tc_check_summary = get_tc_check_summary(days=30)
-    recent_tc_email_senders = get_recent_tc_check_email_senders(limit=20)
-    tc_repeat_senders = get_tc_check_repeat_senders(within_days=14)
-    tc_bulk_summary = get_tc_check_bulk_summary(days=30)
-    brokerage_alert_delivery = get_brokerage_alert_delivery(days=30)
-
-    # Every 30-day metric above answers "how are we doing overall" but not
-    # "did anything happen since yesterday" -- that used to require manually
-    # eyeballing timestamps in the raw activity tables. Re-running the same
-    # days-scoped functions with days=1 gives a true trailing-24h window
-    # (not a calendar-day bucket) for free, since a days=1 cutoff is always
-    # a strict subset of the days=30 one -- no new query logic needed.
-    metrics_24h = get_conversion_metrics(days=1)
-    signups_by_source_24h = get_signups_by_source(days=1)
-    landing_visits_by_source_24h = get_landing_visits_by_source(days=1)
-    tc_check_attempts_by_source_24h = get_tc_check_attempts_by_source(days=1)
-    tc_check_attempts_by_page_24h = get_tc_check_attempts_by_page(days=1)
     tc_check_summary_24h = get_tc_check_summary(days=1)
-    tc_bulk_summary_24h = get_tc_check_bulk_summary(days=1)
-    brokerage_alert_delivery_24h = get_brokerage_alert_delivery(days=1)
+    tc_repeat_senders = get_tc_check_repeat_senders(within_days=14)
+    recent_tc_email_senders = get_recent_tc_check_email_senders(limit=60)
+    signups_by_source = get_signups_by_source(days=30)
 
-    def _merge_24h_counts(rows_30, rows_24, key_field):
-        """rows_24's keys are always a subset of rows_30's (see comment
-        above), so this only needs to look up rows_30's ordering and fill
-        in 0 for anything with no activity in the last 24h."""
-        by_key_24 = {r[key_field]: r["count"] for r in rows_24}
-        return [{**r, "count_24h": by_key_24.get(r[key_field], 0)} for r in rows_30]
-
-    signups_by_source_merged = _merge_24h_counts(signups_by_source, signups_by_source_24h, "source")
-    landing_visits_by_source_merged = _merge_24h_counts(landing_visits_by_source, landing_visits_by_source_24h, "source")
-    tc_check_attempts_by_source_merged = _merge_24h_counts(tc_check_attempts_by_source, tc_check_attempts_by_source_24h, "source")
-    tc_check_attempts_by_page_merged = _merge_24h_counts(tc_check_attempts_by_page, tc_check_attempts_by_page_24h, "page")
-    tc_issue_frequency_merged = _merge_24h_counts(tc_check_summary["issue_frequency"], tc_check_summary_24h["issue_frequency"], "key")
-
-    tc_email_sender_rows = ""
-    for entry in recent_tc_email_senders:
-        from datetime import datetime as _dt
-        dt = _dt.fromisoformat(entry['created_at'])
-        time_str = dt.strftime("%m/%d %H:%M")
-        known_str = "known" if entry['known_sender'] else "new"
-        recognized_str = "yes" if entry['recognized'] else "no"
-        if entry.get("dropped"):
-            result_str = f"<span style='color:#b45309;'>dropped, no reply ({escape(entry['reason'])})</span>"
-        else:
-            result_str = ("recognized" if entry['recognized'] else f"replied, not recognized ({escape(entry['reason'])})" if entry['reason'] else "replied, not recognized")
-        tc_email_sender_rows += (
-            f"<tr><td>{time_str}</td><td>{escape(entry['sender'])}</td>"
-            f"<td>{known_str}</td><td>{result_str}</td></tr>"
-        )
-
-    sms_rows = ""
-    for sms in recent_sms:
-        # Format timestamp
-        from datetime import datetime
-        dt = datetime.fromisoformat(sms['created_at'])
-        time_str = dt.strftime("%m/%d %H:%M")
-        sms_rows += f"<tr><td>{time_str}</td><td>{sms['phone']}</td><td>{sms['body'][:50]}</td></tr>"
-
-    failure_rows = ""
-    for fail in recent_failures:
-        from datetime import datetime
-        dt = datetime.fromisoformat(fail['created_at'])
-        time_str = dt.strftime("%m/%d %H:%M")
-        failure_rows += (
-            f"<tr><td>{time_str}</td><td>{fail['phone']}</td>"
-            f"<td>{fail['error'][:80]}</td><td>{fail['body']}</td></tr>"
-        )
-
-    waitlist_by_state = {}
-    for w in waitlist_signups:
-        waitlist_by_state[w["state"]] = waitlist_by_state.get(w["state"], 0) + 1
-    waitlist_summary_rows = "".join(
-        f"<tr><td>{state}</td><td>{count}</td></tr>"
-        for state, count in sorted(waitlist_by_state.items(), key=lambda kv: -kv[1])
-    ) or '<tr><td colspan="2" style="padding:10px;color:#666;">No waitlist signups yet.</td></tr>'
-    source_rows = "".join(
-        f"<tr><td>{s['source']}</td><td>{s['count']}</td><td>{s['count_24h']}</td></tr>" for s in signups_by_source_merged
-    ) or '<tr><td colspan="3" style="padding:10px;color:#666;">No signups yet.</td></tr>'
-    visit_rows = "".join(
-        f"<tr><td>{v['source']}</td><td>{v['count']}</td><td>{v['count_24h']}</td></tr>" for v in landing_visits_by_source_merged
-    ) or '<tr><td colspan="3" style="padding:10px;color:#666;">No tagged visits yet.</td></tr>'
-    daily_rows = "".join(
-        f"<tr><td>{d['date'][5:]}</td><td><strong>{d['js_ok']}</strong></td><td style='color:#999;'>{d['visitors']}</td><td>{d['mobile']}</td><td>{d['stay_10s']}</td><td>{d['check_cta']}</td>"
-        f"<td>{d['sample_cta']}</td><td>{d['dropzone_seen']}</td><td>{d['dropzone_interact']}</td><td>{d['attempts']}</td>"
-        f"<td>{d['demos']}</td><td>{d['recognized']}</td><td>{d['emails_captured']}</td><td>{d['email_checks']}</td><td>{d['email_junk']}</td></tr>"
-        for d in daily_funnel
-    )
-    role_rows = "".join(
-        f"<tr><td>{r['label']}</td><td>{r['count']}</td><td>{'' if r['pct'] is None else str(r['pct']) + '%'}</td>"
-        f"<td>{r['dropzone']}</td><td>{r['demoed']}</td><td>{r['uploaded']}</td><td>{r['recognized']}</td><td>{r['repeat']}</td></tr>"
-        for r in visitor_roles.get("roles", [])
-    )
-    if visitor_roles["since"]:
-        _target = sum(r["count"] for r in visitor_roles["roles"] if r["key"] in ("tc", "broker"))
-        role_summary = (
-            f"Since {visitor_roles['since']}: {visitor_roles['visitors']} visitors &rarr; {visitor_roles['real']} real browsers "
-            f"&rarr; card shown to {visitor_roles['shown']} &rarr; {visitor_roles['answered']} answered "
-            f"({visitor_roles['dismissed']} closed it). <strong>TC + Broker: {_target} of {visitor_roles['answered']} answers.</strong>"
-        )
-    else:
-        role_summary = "Card hasn't been shown to anyone yet."
     def _central(ts):
         try:
             from zoneinfo import ZoneInfo
-            from datetime import datetime as _utc_dt
-            return _utc_dt.fromisoformat(ts).replace(tzinfo=ZoneInfo("UTC")).astimezone(ZoneInfo("America/Chicago")).strftime("%m-%d %I:%M %p")
+            return _dt.fromisoformat(ts).replace(tzinfo=ZoneInfo("UTC")).astimezone(ZoneInfo("America/Chicago")).strftime("%m-%d %I:%M %p")
         except Exception:
             return ts[5:16]
+
+    def _short(ts):
+        return _dt.fromisoformat(ts).strftime("%m/%d %H:%M")
+
+    def _table(headers, rows, empty, ncols=None):
+        """Every table sits in its own horizontal scroller so a wide one
+        never widens the page on a phone."""
+        head = "".join(f"<th>{h}</th>" for h in headers)
+        body = rows or f"<tr><td colspan='{ncols or len(headers)}' class='empty'>{empty}</td></tr>"
+        return f"<div class='scroll'><table><tr>{head}</tr>{body}</table></div>"
+
+    # --- 2. Real humans by channel -------------------------------------
+    def _src_row(r):
+        return (f"<tr><td>{escape(r['key'])}</td><td class='dim'>{r['loads']}</td><td><strong>{r['real']}</strong></td>"
+                f"<td>{r['stayed']}</td><td>{r['checked']}</td><td>{r['sampled']}</td><td>{r['uploaded']}</td></tr>")
+    src_headers = ["Channel", "<span class='dim'>Page loads (incl. bots)</span>", "Real visitors", "Stayed 10s+",
+                   "Clicked &ldquo;Check a file&rdquo;", "Tried sample", "Uploaded"]
+    channel_table = _table(src_headers, "".join(_src_row(r) for r in by_source["channels"]), "No page views in the last 30 days.")
+    src_table = _table(["src"] + src_headers[1:], "".join(_src_row(r) for r in by_source["sources"]), "No page views in the last 30 days.")
 
     def _visitor_row(v):
         # js_ok only exists from 2026-10-06; any engagement beacon (drop box
@@ -6480,390 +6391,235 @@ def analytics_dashboard():
         engaged += ["sample (" + e.replace("_", " ") + ")" for e in sorted(v["events"] & set(SAMPLE_CTA_EVENTS))]
         engaged += [e.replace("_", " ") for e in sorted(v["events"]) if e.endswith("_cta")
                     and e not in CHECK_CTA_EVENTS and e not in SAMPLE_CTA_EVENTS]
-        engaged += [e[5:] for e in v["events"] if e.startswith("role_") and e not in ("role_shown", "role_dismissed")]
-        pages = ", ".join(f"{p}&times;{n}" if n > 1 else p for p, n in v["pages"].items()) or "(beacon only)"
-        style = "" if real else "color:#999;"
-        return (f"<tr style='{style}'><td style='padding:6px;white-space:nowrap;'>{_central(v['first'])}</td>"
-                f"<td style='padding:6px;'>{escape(pages)}</td>"
-                f"<td style='padding:6px;'>{escape(', '.join(v['referrers']))}</td>"
-                f"<td style='padding:6px;'>{escape(', '.join(v['sources']))}</td>"
-                f"<td style='padding:6px;'>{escape(', '.join(v['devices']))}</td>"
-                f"<td style='padding:6px;'>{'&#10003;' if real else '&mdash;'}</td>"
-                f"<td style='padding:6px;'>{escape(', '.join(engaged))}</td>"
-                f"<td style='padding:6px;font-size:11px;max-width:260px;word-break:break-all;'>{escape(v['ua'] or '(not logged)')}</td></tr>")
+        # Escape each page name, then join with a literal &times; -- escaping
+        # the joined string turned it into "&amp;times;" (shown as "&times;").
+        pages = ", ".join(f"{escape(p)}&times;{n}" if n > 1 else str(escape(p)) for p, n in v["pages"].items()) or "(beacon only)"
+        return (f"<tr{'' if real else ' class=dim'}><td>{_central(v['first'])}</td><td class='wrap'>{pages}</td>"
+                f"<td>{escape(', '.join(v['referrers']))}</td><td>{escape(', '.join(v['sources']))}</td>"
+                f"<td>{escape(', '.join(v['devices']))}</td><td>{'&#10003;' if real else '&mdash;'}</td>"
+                f"<td class='wrap'>{escape(', '.join(engaged))}</td>"
+                f"<td class='ua'>{escape(v['ua'] or '(not logged)')}</td></tr>")
+    visitor_headers = ["First seen", "Pages", "Referrer", "Source", "Device", "Real browser", "Did", "Browser (user agent)"]
 
-    recent_visitor_rows = "".join(_visitor_row(v) for v in recent_visitors) or \
-        "<tr><td colspan='8' style='padding:6px;color:#666;'>No visitors in the last 48 hours.</td></tr>"
-    recent_real = sum(1 for v in recent_visitors if v["events"] - {""})
-
-    # Per-channel humans (added 2026-10-13): landings by src count scanners
-    # and preview fetches; this counts browsers that ran the page.
-    by_source = get_engagement_by_source(days=30)
-    def _src_row(r):
-        return (f"<tr><td style='padding:6px;'>{escape(r['key'])}</td><td style='padding:6px;color:#999;'>{r['loads']}</td>"
-                f"<td style='padding:6px;'><strong>{r['real']}</strong></td><td style='padding:6px;'>{r['stayed']}</td>"
-                f"<td style='padding:6px;'>{r['checked']}</td><td style='padding:6px;'>{r['sampled']}</td>"
-                f"<td style='padding:6px;'>{r['uploaded']}</td></tr>")
-    channel_rows = "".join(_src_row(r) for r in by_source["channels"]) or \
-        "<tr><td colspan='7' style='padding:6px;color:#666;'>No page views in the last 30 days.</td></tr>"
-    src_engagement_rows = "".join(_src_row(r) for r in by_source["sources"]) or \
-        "<tr><td colspan='7' style='padding:6px;color:#666;'>No page views in the last 30 days.</td></tr>"
     # ?src_ua=ti_ lists every visitor whose src starts with that prefix over
     # 30 days, with user agent, so "people or mail scanners?" can be read
-    # straight off the UA (the 48h table above has rolled past most of them).
+    # straight off the UA (the 48h table has rolled past most of them).
     src_ua = re.sub(r"[^a-zA-Z0-9_-]", "", request.args.get("src_ua", ""))[:60]
+    src_ua_section = ""
     if src_ua:
         _ua_visitors = get_recent_visitors(hours=30 * 24, limit=300, source_prefix=src_ua)
         src_ua_section = (
-            f"<div class='metric'><h3>Visitors with src starting &ldquo;{escape(src_ua)}&rdquo; (30 days, Central time)</h3>"
-            f"<p style='color:#666;font-size:13px;'>{len(_ua_visitors)} visitors &middot; "
-            f"{sum(1 for v in _ua_visitors if v['events'] - {''})} ran the page in a real browser. Several firms opening in the same "
-            f"minute, no JavaScript, or a Linux/old-Chrome UA = mail scanner, not a person.</p><div style='overflow-x:auto;'>"
-            "<table><tr><th>First seen</th><th>Pages</th><th>Referrer</th><th>Source</th><th>Device</th><th>Real browser</th><th>Did</th><th>Browser (user agent)</th></tr>"
-            + ("".join(_visitor_row(v) for v in _ua_visitors) or "<tr><td colspan='8' style='padding:6px;color:#666;'>None.</td></tr>")
-            + "</table></div></div>")
-    else:
-        src_ua_section = ""
+            f"<section><h2>Visitors with src starting &ldquo;{escape(src_ua)}&rdquo; (30 days, Central time)</h2>"
+            f"<p class='note'>{len(_ua_visitors)} visitors &middot; {sum(1 for v in _ua_visitors if v['events'] - {''})} ran the page "
+            f"in a real browser. Several firms opening in the same minute, no JavaScript, or a Linux/old-Chrome UA = mail scanner, not a person.</p>"
+            + _table(visitor_headers, "".join(_visitor_row(v) for v in _ua_visitors), "None.") + "</section>")
 
+    # --- 3. Daily funnel --------------------------------------------------
+    daily_rows = "".join(
+        f"<tr><td>{d['date'][5:]}</td><td><strong>{d['js_ok']}</strong></td><td>{d['stay_10s']}</td><td>{d['check_cta']}</td>"
+        f"<td>{d['dropzone_interact']}</td><td>{d['tried_sample']}</td><td>{d['attempts']}</td>"
+        f"<td>{d['email_checks']}</td><td>{d['emails_captured']}</td></tr>"
+        for d in daily_funnel)
+
+    # --- 4. TC Check ------------------------------------------------------
+    def _sender_row(e):
+        if e["dropped"]:
+            result = f"<span class='warn'>dropped, no reply ({escape(e['reason'])})</span>"
+        elif e["recognized"]:
+            result = "recognized"
+        else:
+            result = "replied, not recognized" + (f" ({escape(e['reason'])})" if e["reason"] else "")
+        if e["self"]:
+            result += " &middot; <em>your own address</em>"
+        return (f"<tr><td>{_short(e['created_at'])}</td><td>{escape(e['sender'])}</td>"
+                f"<td>{'known' if e['known_sender'] else 'new'}</td><td>{result}</td></tr>")
+    real_senders = [e for e in recent_tc_email_senders if not e["filtered"]][:20]
+    filtered_senders = [e for e in recent_tc_email_senders if e["filtered"]]
+    sender_headers = ["Time (UTC)", "Sender", "Known?", "Result"]
+
+    # --- 5. Revenue ---------------------------------------------------------
+    signup_rows = "".join(f"<tr><td>{escape(s['source'])}</td><td>{s['count']}</td></tr>" for s in signups_by_source)
+
+    # --- 6. CBS1 tool -------------------------------------------------------
+    co_tool_rows = "".join(
+        f"<tr><td>{escape(r['surface'])}</td><td>{escape(r['host'])}</td><td>{r['runs']}</td><td>{r['ics']}</td></tr>"
+        for r in get_co_tool_usage(days=30))
+
+    # --- Only when there's something in them ----------------------------
+    alerts = []
+    sms_failures = get_recent_sms_failures(limit=20)
+    if sms_failures:
+        rows = "".join(f"<tr><td>{_short(f['created_at'])}</td><td>{escape(f['phone'] or '')}</td>"
+                       f"<td class='wrap'>{escape(f['error'][:80])}</td><td class='wrap'>{escape(f['body'])}</td></tr>" for f in sms_failures)
+        alerts.append("<section class='alert'><h2>Recent SMS Send Failures &#9888;</h2>"
+                      + _table(["Time (UTC)", "Phone", "Error", "Message"], rows, "") + "</section>")
+    email_failures = get_recent_email_send_failures(limit=10, days=7)
+    if email_failures:
+        rows = "".join(f"<tr><td>{f['time'][5:16].replace('T', ' ')}</td><td>{escape(f['to'])}</td><td class='wrap'>{escape(f['subject'])}</td>"
+                       f"<td class='wrap'>{escape(f['error'])}</td></tr>" for f in email_failures)
+        alerts.append("<section class='alert'><h2>Outbound Email Failures (7 days) &#9888;</h2>"
+                      "<p class='note'>Emails the provider refused (TC Check replies, reports, notifications).</p>"
+                      + _table(["Time (UTC)", "To", "Subject", "Error"], rows, "") + "</section>")
+    waitlist_signups = get_waitlist_signups(limit=200)
+    _wl_cutoff = (_dt.utcnow() - _td(days=30)).isoformat()
+    new_waitlist = [w for w in waitlist_signups if w["created_at"] > _wl_cutoff]
+    if new_waitlist:
+        by_state = {}
+        for w in new_waitlist:
+            by_state[w["state"]] = by_state.get(w["state"], 0) + 1
+        rows = "".join(f"<tr><td>{escape(st)}</td><td>{n}</td></tr>" for st, n in sorted(by_state.items(), key=lambda kv: -kv[1]))
+        alerts.append(f"<section><h2>Out-of-State Waitlist: {len(new_waitlist)} new in 30 days ({len(waitlist_signups)} total)</h2>"
+                      + _table(["State", "New (30 days)"], rows, "") + "</section>")
+    brokerage_alert_delivery = get_brokerage_alert_delivery(days=30)
+    if brokerage_alert_delivery["by_source"]:
+        rows = "".join(f"<tr><td>{escape(r['source'])}</td><td>{r['alerts']}</td><td>{r['sms_sent']}</td><td>{r['sms_eligible_no_phone']}</td></tr>"
+                       for r in brokerage_alert_delivery["by_source"])
+        alerts.append(f"<section><h2>Brokerage Alert Delivery (30 days)</h2><p class='note'>{brokerage_alert_delivery['brokerages_with_sms']} of "
+                      f"{brokerage_alert_delivery['brokerages_with_sms'] + brokerage_alert_delivery['brokerages_missing_phone']} linked brokerages have a TC phone on file. "
+                      "&ldquo;SMS-eligible, no phone&rdquo; would have texted -- add a phone at /admin/brokerages.</p>"
+                      + _table(["Source (?src=)", "Alerts sent", "SMS sent", "SMS-eligible, no phone"], rows, "") + "</section>")
+
+    # --- Collapsed diagnostics ---------------------------------------------
+    recent_visitors = get_recent_visitors(hours=48)
+    recent_real = sum(1 for v in recent_visitors if v["events"] - {""})
+    referrer_rows = "".join(f"<tr><td>{escape(r['referrer'])}</td><td>{r['count']}</td></tr>" for r in get_top_referrers(days=30))
     device_rows = "".join(
-        f"<tr><td>{d['device']}</td><td><strong>{d['js_ok']}</strong></td><td style='color:#999;'>{d['visitors']}</td><td>{d['stay_10s']}</td>"
-        f"<td>{d['dropzone_seen']}</td><td>{d['check_cta']}</td></tr>"
-        for d in engagement_by_device
-    )
-    send_failure_rows = "".join(
-        f"<tr><td>{f['time'][5:16].replace('T', ' ')}</td><td>{escape(f['to'])}</td><td>{escape(f['subject'])}</td><td>{escape(f['error'])}</td></tr>"
-        for f in get_recent_email_send_failures(limit=10)
-    ) or '<tr><td colspan="4" style="padding:10px;color:#666;">No failed sends recorded.</td></tr>'
-    referrer_rows = "".join(
-        f"<tr><td>{escape(r['referrer'])}</td><td>{r['count']}</td></tr>" for r in top_referrers
-    ) or '<tr><td colspan="2" style="padding:10px;color:#666;">No page views recorded yet.</td></tr>'
-    tc_attempt_rows = "".join(
-        f"<tr><td>{a['source']}</td><td>{a['count']}</td><td>{a['count_24h']}</td></tr>" for a in tc_check_attempts_by_source_merged
-    ) or '<tr><td colspan="3" style="padding:10px;color:#666;">No attempts yet.</td></tr>'
-    tc_attempt_page_rows = "".join(
-        f"<tr><td>{a['page']}</td><td>{a['count']}</td><td>{a['count_24h']}</td></tr>" for a in tc_check_attempts_by_page_merged
-    ) or '<tr><td colspan="3" style="padding:10px;color:#666;">No attempts yet.</td></tr>'
-    tc_issue_rows = "".join(
-        f"<tr><td>{i['label']}</td><td>{i['count']}</td><td>{i['pct_of_recognized']}%</td><td>{i['count_24h']}</td></tr>"
-        for i in tc_issue_frequency_merged
-    ) or '<tr><td colspan="4" style="padding:10px;color:#666;">No checks recognized yet.</td></tr>'
-    _alerts_24h_by_source = {r["source"]: r["alerts"] for r in brokerage_alert_delivery_24h["by_source"]}
-    brokerage_alert_rows = "".join(
-        f"<tr><td>{r['source']}</td><td>{r['alerts']}</td><td>{r['sms_sent']}</td>"
-        f"<td>{r['sms_eligible_no_phone']}</td><td>{_alerts_24h_by_source.get(r['source'], 0)}</td></tr>"
-        for r in brokerage_alert_delivery["by_source"]
-    ) or '<tr><td colspan="5" style="padding:10px;color:#666;">No brokerage-linked offers drafted yet.</td></tr>'
-    waitlist_rows = ""
-    for w in waitlist_signups[:20]:
-        from datetime import datetime
-        dt = datetime.fromisoformat(w['created_at'])
-        time_str = dt.strftime("%m/%d %H:%M")
-        waitlist_rows += f"<tr><td>{time_str}</td><td>{w['phone']}</td><td>{w['state']}</td></tr>"
+        f"<tr><td>{d['device']}</td><td><strong>{d['js_ok']}</strong></td><td class='dim'>{d['visitors']}</td><td>{d['stay_10s']}</td>"
+        f"<td>{d['dropzone_seen']}</td><td>{d['check_cta']}</td></tr>" for d in get_engagement_by_device(days=7))
+    _issues_24h = {i["key"]: i["count"] for i in tc_check_summary_24h["issue_frequency"]}
+    issue_rows = "".join(
+        f"<tr><td class='wrap'>{escape(i['label'])}</td><td>{i['count']}</td><td>{i['pct_of_recognized']}%</td><td>{_issues_24h.get(i['key'], 0)}</td></tr>"
+        for i in tc_check_summary["issue_frequency"])
+    sms_rows = "".join(f"<tr><td>{_short(m['created_at'])}</td><td>{escape(m['phone'] or '')}</td><td class='wrap'>{escape(m['body'][:50])}</td></tr>"
+                       for m in get_recent_sms(limit=20))
+    tc_bulk_summary = get_tc_check_bulk_summary(days=30)
+    landing_30 = get_landing_visits_by_source(days=30)
+    _landing_24 = {r["source"]: r["count"] for r in get_landing_visits_by_source(days=1)}
+    landing_rows = "".join(f"<tr><td>{escape(v['source'])}</td><td>{v['count']}</td><td>{_landing_24.get(v['source'], 0)}</td></tr>" for v in landing_30)
 
-    return f"""
-<!DOCTYPE html>
+    def _fold(title, body):
+        return f"<details class='fold'><summary>{title}</summary>{body}</details>"
+
+    collapsed = "".join([
+        _fold(f"Recent Visitors (48 hours, Central time) &middot; {len(recent_visitors)} visitors, {recent_real} real",
+              "<p class='note'>One row per browser cookie. Grey rows never ran the page's JavaScript &mdash; almost always link scanners "
+              "or preview bots (they don't keep cookies, so each hit is its own row). Your visits are excluded once /internal-mode is set on that device.</p>"
+              + _table(visitor_headers, "".join(_visitor_row(v) for v in recent_visitors), "No visitors in the last 48 hours.")),
+        _fold("Top Referrers (30 days)",
+              _table(["Referring site", "Page views"], referrer_rows, "No page views recorded yet.")
+              + "<p class='note'>&ldquo;(none)&rdquo; = typed URL, bookmark, or an app that strips the referrer (LinkedIn's mobile app does).</p>"),
+        _fold("Tracking Check: Phone vs Desktop (7 days)",
+              _table(["Device", "Real visitors", "<span class='dim'>Page loads (incl. bots)</span>", "Stayed 10s+", "Saw drop box",
+                      "Clicked &ldquo;Check a file&rdquo;"], device_rows, "")
+              + "<p class='note'>Phones with visitors but ~0 in every other column (while desktop isn't) = a mobile tracking bug, not behavior.</p>"),
+        _fold("TC Check: Top Issues (30 days)",
+              _table(["Issue", "Count", "% of recognized", "Last 24h"], issue_rows, "No checks recognized yet.")),
+        _fold("Recent SMS Activity", _table(["Time (UTC)", "Phone", "Message"], sms_rows, "No SMS yet.")
+              + "<p class='note'>Full logs: <a href='https://console.twilio.com/' target='_blank' rel='noopener'>console.twilio.com</a></p>"),
+        _fold(f"Bulk TC Check (30 days) &middot; {tc_bulk_summary['batches']} batch{'' if tc_bulk_summary['batches'] == 1 else 'es'}",
+              f"<p>{tc_bulk_summary['total_files']} files checked &middot; {tc_bulk_summary['with_issues']} of {tc_bulk_summary['recognized']} "
+              f"recognized files had at least one issue ({tc_bulk_summary['with_issues_pct']}%)<br>{tc_bulk_summary['free_batches']} free-tier batches "
+              f"(capped at {FREE_BULK_LIMIT} files) &middot; {tc_bulk_summary['brokerage_batches']} with a Brokerage join code (up to {MAX_BULK_FILES})</p>"),
+        _fold("Landing Visits by src (30 days, raw clicks)",
+              _table(["Source", "30 days", "Last 24h"], landing_rows, "No tagged visits yet.")
+              + "<p class='note'>Raw ?src= link opens, scanners included. The channel table above is the people count.</p>"),
+    ])
+
+    h = headline
+    return f"""<!DOCTYPE html>
 <html><head><title>TxtAnOffer Analytics</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-body{{font-family:system-ui;max-width:800px;margin:40px auto;padding:20px;}}
-.metric{{background:#f5f5f5;padding:20px;margin:10px 0;border-radius:8px;}}
-.metric h3{{margin:0 0 10px;color:#333;}}
-.metric .value{{font-size:32px;font-weight:bold;color:#A9772F;}}
-.metric .label{{color:#666;font-size:14px;}}
-.h24{{margin-top:6px;font-size:13px;color:#A9772F;font-weight:600;}}
+*{{box-sizing:border-box;}}
+body{{font-family:system-ui;max-width:920px;margin:0 auto;padding:16px;color:#222;}}
+h1{{font-size:22px;margin:8px 0 12px;}}
+h2{{font-size:17px;margin:0 0 8px;}}
+section{{background:#f5f5f5;padding:14px;margin:12px 0;border-radius:8px;min-width:0;}}
+section.alert{{background:#fdecea;}}
+.strip{{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}}
+.stat{{background:#f5f5f5;border-radius:8px;padding:12px;}}
+.stat .v{{font-size:30px;font-weight:700;color:#A9772F;line-height:1.1;}}
+.stat .k{{font-size:13px;color:#444;margin-top:4px;}}
+.stat .s{{font-size:12px;color:#888;margin-top:2px;}}
+.scroll{{overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%;}}
+table{{border-collapse:collapse;font-size:13px;width:100%;}}
+th{{background:#e9e9e9;text-align:left;font-weight:600;white-space:normal !important;min-width:56px;}}
+th,td{{padding:5px 8px;white-space:nowrap;vertical-align:top;}}
+tr+tr td{{border-top:1px solid #e4e4e4;}}
+td.wrap{{white-space:normal;min-width:140px;}}
+td.ua{{white-space:normal;font-size:11px;min-width:220px;word-break:break-all;}}
+.dim,.dim td{{color:#999;}}
+.empty{{color:#888;}}
+.warn{{color:#b45309;}}
+.note{{color:#666;font-size:12px;margin:8px 0 0;}}
+.line{{margin:6px 0;font-size:14px;}}
+details.fold{{background:#fafafa;border:1px solid #e4e4e4;border-radius:8px;padding:10px 12px;margin:8px 0;}}
+details.fold summary,details summary{{cursor:pointer;font-weight:600;font-size:14px;}}
+details.fold[open] summary{{margin-bottom:8px;}}
+@media (max-width:600px){{ .strip{{grid-template-columns:1fr 1fr;}} .stat .v{{font-size:24px;}} body{{padding:10px;}} }}
 </style></head><body>
 <h1>TxtAnOffer Analytics</h1>
-<h2>Last 30 Days</h2>
-<div class="metric">
-  <h3>Daily Funnel (last 14 days, UTC)</h3>
-  <div style="overflow-x:auto;">
-  <table style="width:100%;border-collapse:collapse;margin-top:10px;font-size:14px;">
-    <tr style="background:#eee;text-align:left;">
-      <th style="padding:6px;">Day</th>
-      <th style="padding:6px;">Real visitors</th>
-      <th style="padding:6px;color:#999;">Page loads (incl. bots)</th>
-      <th style="padding:6px;">Loads on phone</th>
-      <th style="padding:6px;">Stayed 10s+</th>
-      <th style="padding:6px;">Clicked &ldquo;Check a file&rdquo;</th>
-      <th style="padding:6px;">Clicked sample</th>
-      <th style="padding:6px;">Saw drop box</th>
-      <th style="padding:6px;">Used drop box</th>
-      <th style="padding:6px;">Widget attempts</th>
-      <th style="padding:6px;">Sample used</th>
-      <th style="padding:6px;">Recognized</th>
-      <th style="padding:6px;">Emails captured</th>
-      <th style="padding:6px;">Email checks</th>
-      <th style="padding:6px;">Junk filtered</th>
-    </tr>
-    {daily_rows}
-  </table>
-  </div>
-  <p class="label" style="margin-top:8px;"><strong>Real visitors</strong> = browsers that actually ran the page (from 2026-10-06; earlier days show 0) &mdash; this is the number to watch. <strong>Page loads (incl. bots)</strong> = every load of <code>/</code> or <code>/tc-check</code> not caught by the bot filter; link scanners and crawlers that pose as browsers land here and don&rsquo;t keep cookies, so each of their hits counts again. Stayed / clicked / saw drop box are unique browsers (tracked from 2026-10-03). Real visitors minus &ldquo;Stayed 10s+&rdquo; &asymp; bounced. <strong>Clicked &ldquo;Check a file&rdquo;</strong> = any check button or link on any page (nav, hero, second homepage button, /pricing, hubs, /trust, guides, state links, &ldquo;Check my own file&rdquo;); before 2026-10-14 only the homepage hero button and a few others were tagged, so earlier days undercount. <strong>Clicked sample</strong> = any sample-report button or link (was the hero sample button only). <strong>Saw drop box</strong> fires on page load on /tc-check, so it isn&rsquo;t interest; <strong>Used drop box</strong> (from 2026-10-14) = clicked/tapped the box, dragged a file over the page, or clicked into the email field. From 2026-10-14 visitors also include /pricing, /trust, /about, /faq, the TC hubs, /terms, /privacy, /trec-changes and /contact. &ldquo;Sample used&rdquo; counts every sample run (hero button or the one under the drop box). Widget attempts = real uploads, excluding the sample. Email checks exclude junk senders from 2026-10-02 on.</p>
-</div>
-<div class="metric">
-  <h3>What Brings You Here? (self-ID card)</h3>
-  <p style="color:#666;font-size:13px;">{role_summary}</p>
-  <table><tr><th>Role</th><th>Visitors</th><th>% of answers</th><th>Saw drop box</th><th>Tried sample</th><th>Uploaded</th><th>Recognized 20-19</th><th>Repeat (2+)</th></tr>{role_rows}</table>
-  <p class="label" style="margin-top:8px;">One row per browser (ta_vid cookie), counted from the first time the card was shown. &ldquo;No answer&rdquo; = real browsers that never answered (left before 4s, closed it, or ignored it). Repeat = 2+ recognized uploads from the same browser.</p>
-</div>
-<div class="metric">
-  <h3>Archive Early Access Sign-ups</h3>
-  <p style="color:#666;font-size:13px;">From /archive. Demand check for the drop/forward contract archive before building it.</p>
-  <table><tr><th>Time (UTC)</th><th>Email</th><th>Brokerage</th><th>Agents</th><th>Source</th></tr>{archive_ea_rows}</table>
-</div>
-<div class="metric">
-  <h3>Recent Visitors (48 hours, Central time)</h3>
-  <p style="color:#666;font-size:13px;">{len(recent_visitors)} visitors &middot; {recent_real} ran the page in a real browser. Grey rows never ran the page's JavaScript &mdash; almost always link scanners or preview bots.</p>
-  <div style="overflow-x:auto;">
-  <table><tr><th>First seen</th><th>Pages</th><th>Referrer</th><th>Source</th><th>Device</th><th>Real browser</th><th>Did</th><th>Browser (user agent)</th></tr>{recent_visitor_rows}</table>
-  </div>
-  <p class="label" style="margin-top:8px;">One row per browser cookie. Bots don't keep cookies, so each bot hit shows up as its own one-page row. Your own visits are excluded once you've opened /internal-mode on that device. User agent is logged from 2026-10-07; older rows say "(not logged)".</p>
-</div>
-<div class="metric">
-  <h3>Real Humans by Channel (30 days)</h3>
-  <table><tr><th>Channel</th><th style="color:#999;">Page loads (incl. bots)</th><th>Real visitors</th><th>Stayed 10s+</th><th>Clicked &ldquo;Check a file&rdquo;</th><th>Tried sample</th><th>Uploaded</th></tr>{channel_rows}</table>
-  <details style="margin-top:10px;"><summary style="cursor:pointer;">By src tag</summary>
-  <table><tr><th>src</th><th style="color:#999;">Page loads (incl. bots)</th><th>Real visitors</th><th>Stayed 10s+</th><th>Clicked &ldquo;Check a file&rdquo;</th><th>Tried sample</th><th>Uploaded</th></tr>{src_engagement_rows}</table>
-  </details>
-  <p class="label" style="margin-top:8px;">Unique browsers, each credited to the src of its first page view in the window (later visits without a tag keep the first tag via cookie). Real visitors = ran the page&rsquo;s JavaScript. Tried sample = clicked a sample link or ran the sample. Uploaded = a real file attempt on the web (email forwards aren&rsquo;t tied to a browser). Channel roll-up: li_/linkedin &rarr; LinkedIn, fb &rarr; Facebook, ig_ &rarr; Instagram, seo_ &rarr; Search, ti_/d1013_/co1012_/*_reach &rarr; Cold email, anything else &rarr; other. To see user agents for one tag, add <code>&amp;src_ua=ti_</code> (any prefix) to this page&rsquo;s URL.</p>
-</div>
-{src_ua_section}
-<div class="metric">
-  <h3>Tracking Check: Phone vs Desktop (7 days)</h3>
-  <table><tr><th>Device</th><th>Real visitors</th><th style="color:#999;">Page loads (incl. bots)</th><th>Stayed 10s+</th><th>Saw drop box</th><th>Clicked &ldquo;Check a file&rdquo;</th></tr>{device_rows}</table>
-  <p class="label" style="margin-top:8px;">If phones show visitors but ~0 in every other column while desktop doesn't, suspect a tracking bug on mobile rather than visitor behavior.</p>
-</div>
 
-<div class="metric">
-  <h3>CBS1 Deadline Calculator (30 days)</h3>
-  <table style="width:100%;border-collapse:collapse;margin-top:10px;">
-    <tr style="background:#eee;text-align:left;"><th style="padding:8px;">Where</th><th style="padding:8px;">Embedding site</th><th style="padding:8px;">Calculations</th><th style="padding:8px;">.ics downloads</th></tr>
-    {co_tool_rows}
-  </table>
-  <p class="label" style="margin-top:8px;">Counts, not people: the widget sets no cookie. One calculation is logged per page load. "page" = txtanoffer.com/tools/colorado-deadlines.</p>
+<div class="strip">
+  <div class="stat"><div class="v">{h['real_visitors']}</div><div class="k">Real visitors</div><div class="s">last 7 days</div></div>
+  <div class="stat"><div class="v">{h['clicked_check']}</div><div class="k">Clicked &ldquo;Check a file&rdquo;</div><div class="s">any CTA, 7 days</div></div>
+  <div class="stat"><div class="v">{h['outside_files']}</div><div class="k">Outside files tried</div><div class="s">{h['outside_web']} web &middot; {h['outside_email']} email, 7 days</div></div>
+  <div class="stat"><div class="v">${revenue['mrr']:,}</div><div class="k">MRR</div><div class="s">{revenue['active_subscribers']} paying</div></div>
 </div>
-<div class="metric">
-  <h3>Top Referrers (30 days)</h3>
-  <table style="width:100%;border-collapse:collapse;margin-top:10px;">
-    <tr style="background:#eee;text-align:left;">
-      <th style="padding:8px;">Referring site</th>
-      <th style="padding:8px;">Page views</th>
-    </tr>
-    {referrer_rows}
-  </table>
-  <p class="label" style="margin-top:8px;">"(none)" = typed URL, bookmark, or an app that strips the referrer (LinkedIn's mobile app does).</p>
-</div>
-<div class="metric">
-  <h3>Conversion Funnel</h3>
-  <div class="value">{metrics['overall_conversion_rate']}%</div>
-  <div class="label">Free → Paid Conversion Rate</div>
-  <p>{metrics['signups']} signups → {metrics['conversions']} paid</p>
-  <p class="h24">Last 24h: {metrics_24h['signups']} signups &rarr; {metrics_24h['conversions']} paid</p>
-</div>
-<div class="metric">
-  <h3>Signups by Source (30 days)</h3>
-  <table style="width:100%;border-collapse:collapse;margin-top:10px;">
-    <tr style="background:#eee;text-align:left;">
-      <th style="padding:8px;">Source</th>
-      <th style="padding:8px;">30 Days</th>
-      <th style="padding:8px;">Last 24h</th>
-    </tr>
-    {source_rows}
-  </table>
-  <p class="label" style="margin-top:8px;">Tag outreach links with <code>?src=name</code> (e.g. <code>txtanoffer.com/signup?src=direct_reach</code>) to attribute signups here.</p>
-</div>
-<div class="metric">
-  <h3>Landing Page Visits by Source (30 days)</h3>
-  <table style="width:100%;border-collapse:collapse;margin-top:10px;">
-    <tr style="background:#eee;text-align:left;">
-      <th style="padding:8px;">Source</th>
-      <th style="padding:8px;">30 Days</th>
-      <th style="padding:8px;">Last 24h</th>
-    </tr>
-    {visit_rows}
-  </table>
-  <p class="label" style="margin-top:8px;">Raw clicks on a <code>?src=</code> link, counted even if the visitor never signs up &mdash; tells you whether a channel is being opened at all vs. opened-but-not-converting.</p>
-</div>
-<div class="metric">
-  <h3>TC File Check &mdash; Widget Attempts by Source (30 days)</h3>
-  <table style="width:100%;border-collapse:collapse;margin-top:10px;">
-    <tr style="background:#eee;text-align:left;">
-      <th style="padding:8px;">Source</th>
-      <th style="padding:8px;">30 Days</th>
-      <th style="padding:8px;">Last 24h</th>
-    </tr>
-    {tc_attempt_rows}
-  </table>
-  <p class="label" style="margin-top:8px;">Every real submission to the file checker for that source, success or error &mdash; compare against the visit count above: a big gap means visitors aren't engaging the widget at all; attempts close to visits but low recognized/complete below means they're trying and something's failing.</p>
-</div>
-<div class="metric">
-  <h3>TC File Check &mdash; Widget Attempts by Page (30 days)</h3>
-  <table style="width:100%;border-collapse:collapse;margin-top:10px;">
-    <tr style="background:#eee;text-align:left;">
-      <th style="padding:8px;">Page</th>
-      <th style="padding:8px;">30 Days</th>
-      <th style="padding:8px;">Last 24h</th>
-    </tr>
-    {tc_attempt_page_rows}
-  </table>
-  <p class="label" style="margin-top:8px;">Same submissions as above, grouped by which UI was actually used &mdash; homepage widget vs the dedicated /tc-check page &mdash; instead of which channel drove the visit. "unknown" is anything tracked before 2026-09-11 or missing the tag.</p>
-</div>
-<div class="metric">
-  <h3>Trial Activation</h3>
-  <div class="value">{metrics['trial_activation_rate']}%</div>
-  <div class="label">Users who complete 3 free offers</div>
-  <p>{metrics['trial_completions']} / {metrics['signups']} users</p>
-  <p class="h24">Last 24h: {metrics_24h['trial_completions']} / {metrics_24h['signups']} users</p>
-</div>
-<div class="metric">
-  <h3>Paywall → Paid</h3>
-  <div class="value">{metrics['paywall_to_paid_rate']}%</div>
-  <div class="label">Users who pay after hitting limit</div>
-  <p>{metrics['conversions']} / {metrics['hit_paywall']} users</p>
-  <p class="h24">Last 24h: {metrics_24h['conversions']} / {metrics_24h['hit_paywall']} users</p>
-</div>
-<div class="metric">
-  <h3>Usage</h3>
-  <div class="value">{metrics['total_offers']}</div>
-  <div class="label">Total offers generated</div>
-  <p>{metrics['avg_offers_per_user']} offers per user average</p>
-  <p class="h24">Last 24h: {metrics_24h['total_offers']} offers generated</p>
-</div>
-<div class="metric">
-  <h3>TC File Check</h3>
-  <div class="value">{tc_check_summary['total']}</div>
-  <div class="label">Files checked across both channels (30 days)</div>
-  <p>{tc_check_summary['recognized']} recognized as a TREC 20-19 &middot; {tc_check_summary['complete']} came back complete ({tc_check_summary['completion_rate']}%)</p>
-  <p class="h24">Last 24h: {tc_check_summary_24h['total']} checked &middot; {tc_check_summary_24h['recognized']} recognized &middot; {tc_check_summary_24h['complete']} complete</p>
-</div>
-<div class="metric">
-  <h3>TC File Check &mdash; Web vs. Email</h3>
-  <div class="value">{tc_check_summary['web_count']} / {tc_check_summary['email_count']}</div>
-  <div class="label">Web uploads (/tc-check) vs. forwarded to tc@check.txtanoffer.com</div>
-  <p>{tc_check_summary['email_new_sender_pct']}% of email forwards came from a sender not already in agent_profiles &mdash; {tc_check_summary['email_known_sender']} of {tc_check_summary['email_count']} were known</p>
-  <p class="h24">Last 24h: {tc_check_summary_24h['web_count']} web / {tc_check_summary_24h['email_count']} email</p>
-</div>
-<div class="metric" style="grid-column:1/-1;">
-  <h3>Outbound Email Failures</h3>
-  <div class="label">Emails SendGrid refused to send (TC Check replies, reports, notifications). Empty = every send since 2026-10-07 was accepted by SendGrid.</div>
-  <table><tr><th>Time (UTC)</th><th>To</th><th>Subject</th><th>SendGrid error</th></tr>{send_failure_rows}</table>
-</div>
-<div class="metric" style="grid-column:1/-1;">
-  <h3>TC File Check &mdash; Recent Email Senders</h3>
-  <div class="label">Cross-reference against an outreach list's email addresses to attribute a forward to a specific campaign &mdash; raw event log has no other way to answer that.</div>
-  <table style="width:100%;border-collapse:collapse;margin-top:8px;">
-    <tr style="background:#f5f5f5;text-align:left;">
-      <th style="padding:8px;">Time</th>
-      <th style="padding:8px;">Sender</th>
-      <th style="padding:8px;">Known?</th>
-      <th style="padding:8px;">Result</th>
-    </tr>
-    {tc_email_sender_rows if tc_email_sender_rows else '<tr><td colspan="4" style="padding:8px;color:#999;">No email forwards yet.</td></tr>'}
-  </table>
-</div>
-<div class="metric">
-  <h3>TC File Check &rarr; Email Capture</h3>
-  <div class="value">{tc_check_summary['email_capture_rate']}%</div>
-  <div class="label">Of web uploads (/tc-check), gave an email (opt-in checkbox before upload, or to unlock the full report)</div>
-  <p>{tc_check_summary['emails_captured']} emails / {tc_check_summary['web_count']} web checks &mdash; since 2026-10-02 each browser gets {TC_FREE_FULL_REPORTS} free full reports before the email gate (was: preview-only from the first check, 2026-09-10)</p>
-  <p class="h24">Last 24h: {tc_check_summary_24h['emails_captured']} / {tc_check_summary_24h['web_count']}</p>
-</div>
-<div class="metric">
-  <h3>TC File Check &rarr; Repeat Checkers</h3>
-  <div class="value">{tc_repeat_senders['returned_within_window']} / 10</div>
-  <div class="label">Distinct emails that came back for a 2nd check within {tc_repeat_senders['window_days']} days (lifetime, not 30-day)</div>
-  <p>{tc_repeat_senders['distinct_senders']} distinct identified senders total &mdash; goal is 10+ before revisiting pricing</p>
-</div>
-<div class="metric">
-  <h3>TC File Check &mdash; Top Issues (30 days)</h3>
-  <table style="width:100%;border-collapse:collapse;margin-top:10px;">
-    <tr style="background:#eee;text-align:left;">
-      <th style="padding:8px;">Issue</th>
-      <th style="padding:8px;">Count</th>
-      <th style="padding:8px;">% of recognized files</th>
-      <th style="padding:8px;">Last 24h</th>
-    </tr>
-    {tc_issue_rows}
-  </table>
-  <p class="label" style="margin-top:8px;">Whatever's at the top of this list is both the next marketing hook ("audited N files, X% are missing...") and a candidate for a dedicated feature or reminder.</p>
-</div>
-<div class="metric">
-  <h3>Bulk TC File Check</h3>
-  <div class="value">{tc_bulk_summary['batches']}</div>
-  <div class="label">Batches submitted at /tc-check/bulk (30 days)</div>
-  <p>{tc_bulk_summary['total_files']} files checked total &middot; {tc_bulk_summary['with_issues']} of {tc_bulk_summary['recognized']} recognized files had at least one issue ({tc_bulk_summary['with_issues_pct']}%)</p>
-  <p>{tc_bulk_summary['free_batches']} free-tier batches (capped at {FREE_BULK_LIMIT} files) &middot; {tc_bulk_summary['brokerage_batches']} with a Brokerage join code (up to {MAX_BULK_FILES})</p>
-  <p class="h24">Last 24h: {tc_bulk_summary_24h['batches']} batches &middot; {tc_bulk_summary_24h['total_files']} files &middot; {tc_bulk_summary_24h['brokerage_batches']} brokerage-tier</p>
-</div>
-<div class="metric">
-  <h3>Brokerage Alert Delivery by Source (30 days)</h3>
-  <div class="value">{brokerage_alert_delivery['brokerages_with_sms']} / {brokerage_alert_delivery['brokerages_with_sms'] + brokerage_alert_delivery['brokerages_missing_phone']}</div>
-  <div class="label">Linked brokerages with a TC phone on file (getting SMS alerts, not just email)</div>
-  <table style="width:100%;border-collapse:collapse;margin-top:10px;">
-    <tr style="background:#eee;text-align:left;">
-      <th style="padding:8px;">Source (?src=)</th>
-      <th style="padding:8px;">Alerts Sent</th>
-      <th style="padding:8px;">SMS Sent</th>
-      <th style="padding:8px;">SMS-Eligible, No Phone</th>
-      <th style="padding:8px;">Last 24h</th>
-    </tr>
-    {brokerage_alert_rows}
-  </table>
-  <p class="label" style="margin-top:8px;">"Alerts Sent" fires every time a brokerage-linked agent drafts an offer (email always goes out). "SMS Sent" is the subset with a blocker AND a tc_phone on file. "SMS-Eligible, No Phone" is a blocker that would have texted if the brokerage had a phone on file -- add one at /admin/brokerages to convert those.</p>
-</div>
-<h2>Revenue</h2>
-<div class="metric">
-  <h3>Active Subscribers</h3>
-  <div class="value">{revenue['active_subscribers']}</div>
-  <div class="label">Paying customers</div>
-</div>
-<div class="metric">
-  <h3>MRR</h3>
-  <div class="value">${revenue['mrr']:,}</div>
-  <div class="label">Monthly Recurring Revenue</div>
-</div>
-<div class="metric">
-  <h3>ARR</h3>
-  <div class="value">${revenue['arr']:,}</div>
-  <div class="label">Annual Recurring Revenue</div>
-</div>
-<h2>Recent SMS Activity</h2>
-<table style="width:100%;border-collapse:collapse;">
-  <tr style="background:#f5f5f5;text-align:left;">
-    <th style="padding:10px;">Time</th>
-    <th style="padding:10px;">Phone</th>
-    <th style="padding:10px;">Message</th>
-  </tr>
-  {sms_rows}
-</table>
-<h2 style="color:{'#c0392b' if failure_rows else '#333'};">Recent Send Failures{' &#9888;' if failure_rows else ''}</h2>
-<table style="width:100%;border-collapse:collapse;">
-  <tr style="background:#f5f5f5;text-align:left;">
-    <th style="padding:10px;">Time</th>
-    <th style="padding:10px;">Phone</th>
-    <th style="padding:10px;">Error</th>
-    <th style="padding:10px;">Message</th>
-  </tr>
-  {failure_rows or '<tr><td colspan="4" style="padding:10px;color:#666;">None &mdash; outbound sends are working.</td></tr>'}
-</table>
-<h2>Out-of-State Waitlist ({len(waitlist_signups)} total)</h2>
-<table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
-  <tr style="background:#f5f5f5;text-align:left;">
-    <th style="padding:10px;">State</th>
-    <th style="padding:10px;">Signups</th>
-  </tr>
-  {waitlist_summary_rows}
-</table>
-<table style="width:100%;border-collapse:collapse;">
-  <tr style="background:#f5f5f5;text-align:left;">
-    <th style="padding:10px;">Time</th>
-    <th style="padding:10px;">Phone</th>
-    <th style="padding:10px;">State</th>
-  </tr>
-  {waitlist_rows or '<tr><td colspan="3" style="padding:10px;color:#666;">None yet.</td></tr>'}
-</table>
-<p style="color:#666;font-size:12px;margin-top:20px;">
-  Check Twilio console for full logs: <a href="https://console.twilio.com/" target="_blank">console.twilio.com</a>
-</p>
+<p class="note">Real = ran the page in a browser; excludes /internal-mode browsers. Outside files = web uploads from non-internal browsers + email forwards
+not from your own addresses or @txtanoffer.com (junk senders and no-PDF emails excluded). Sample runs never count.</p>
+
+<section>
+  <h2>Real Humans by Channel (30 days)</h2>
+  {channel_table}
+  <details style="margin-top:10px;"><summary>By src tag</summary>{src_table}</details>
+  <p class="note">Unique browsers, each credited to the src of its first page view in the window. Uploaded = a real web file attempt
+  (email forwards aren&rsquo;t tied to a browser). Channels: li_/linkedin &rarr; LinkedIn, fb &rarr; Facebook, ig_ &rarr; Instagram,
+  seo_ &rarr; Search, ti_/d1013_/co1012_/*_reach &rarr; Cold email. User agents for one tag: add <code>&amp;src_ua=ti_</code> to this URL.</p>
+</section>
+{src_ua_section}
+<section>
+  <h2>Daily Funnel (14 days, UTC)</h2>
+  {_table(["Day", "Real visitors", "Stayed 10s+", "Clicked &ldquo;Check a file&rdquo;", "Used drop box", "Tried sample",
+           "Uploaded (web)", "Email checks (real senders)", "Emails captured"], daily_rows, "")}
+  <details style="margin-top:8px;"><summary style="font-weight:400;font-size:12px;color:#666;">Column definitions</summary>
+  <p class="note">Unique browsers except the last three (counts). <strong>Real visitors</strong> ran the page&rsquo;s JavaScript (from 2026-10-06);
+  real visitors minus Stayed 10s+ &asymp; bounced. <strong>Clicked &ldquo;Check a file&rdquo;</strong> = any check button or link on any page
+  (before 2026-10-14 only a few were tagged, so earlier days undercount). <strong>Used drop box</strong> (from 2026-10-14) = clicked/tapped the
+  box, dragged a file over the page, or focused the email field. <strong>Tried sample</strong> = clicked a sample link or ran the sample.
+  <strong>Uploaded (web)</strong> = real file attempts, sample excluded. <strong>Email checks</strong> exclude junk, your own addresses and
+  no-PDF emails.</p></details>
+</section>
+
+<section>
+  <h2>TC Check: Recent Email Senders</h2>
+  {_table(sender_headers, "".join(_sender_row(e) for e in real_senders), "No forwards from outside senders yet.")}
+  <details style="margin-top:8px;"><summary style="font-weight:400;font-size:13px;">Show filtered ({len(filtered_senders)}: junk, automated, own intake, your own address, no PDF)</summary>
+  {_table(sender_headers, "".join(_sender_row(e) for e in filtered_senders), "Nothing filtered.")}
+  </details>
+  <p class="line"><strong>30 days:</strong> {tc_check_summary['total']} files checked ({tc_check_summary['web_count']} web / {tc_check_summary['email_count']} email)
+  &middot; {tc_check_summary['recognized']} recognized &middot; {tc_check_summary['complete']} complete</p>
+  <p class="line"><strong>Email capture:</strong> {tc_check_summary['emails_captured']} of {tc_check_summary['web_count']} web checks gave an email
+  ({tc_check_summary['email_capture_rate']}%); {TC_FREE_FULL_REPORTS} free full reports per browser before the ask</p>
+  <p class="line"><strong>Repeat checkers:</strong> {tc_repeat_senders['returned_within_window']} / 10 came back for a 2nd check within
+  {tc_repeat_senders['window_days']} days (lifetime; {tc_repeat_senders['distinct_senders']} distinct senders). 10+ = revisit pricing.</p>
+</section>
+
+<section>
+  <h2>Revenue</h2>
+  <p class="line"><strong>{revenue['active_subscribers']}</strong> active subscribers &middot; MRR <strong>${revenue['mrr']:,}</strong> &middot; ARR ${revenue['arr']:,}</p>
+  <p class="line">SMS signups (30 days): <strong>{metrics['signups']}</strong> (phones that generated an offer) &rarr; {metrics['conversions']} paid</p>
+  {('<details style="margin-top:6px;"><summary style="font-weight:400;font-size:13px;">Signups by source (30 days)</summary>' + _table(["Source", "Signups"], signup_rows, "") + '</details>') if signup_rows else ''}
+</section>
+
+<section>
+  <h2>CBS1 Deadline Calculator (30 days)</h2>
+  {_table(["Where", "Embedding site", "Calculations", ".ics downloads"], co_tool_rows, "No runs yet.")}
+  <p class="note">Counts, not people (the widget sets no cookie). &ldquo;page&rdquo; = txtanoffer.com/tools/colorado-deadlines; &ldquo;embed&rdquo; = the widget on another site.</p>
+</section>
+{"".join(alerts)}
+<h2 style="margin-top:20px;">Diagnostics</h2>
+{collapsed}
 </body></html>
 """
 
