@@ -350,6 +350,9 @@ _BEACON_ONLY_PAGES = {
     "pricing": "pricing_page", "tc_hub": "tc_hub_page", "tc_hub_colorado": "co_hub_page",
     "trust_center": "trust_page", "about": "about_page", "faq": "faq_page",
     "terms": "terms_page", "privacy": "privacy_page", "trec_changes": "trec_changes_page", "contact": "contact_page",
+    # /demo, 2026-10-14: ads point here, and without a page_view its ?src=
+    # never reached the /analytics channel tables.
+    "demo": "demo_page",
 }
 _TRACKED_PAGES.update(_BEACON_ONLY_PAGES.values())
 
@@ -3228,7 +3231,7 @@ DEMO_FORM = """
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Demo — TxtAnOffer</title>
-<meta name="description" content="Generate TREC purchase offers in 10 seconds via text or web. A filled TREC 20-19 from a text message.">
+<meta name="description" content="Text or type the offer terms and get a drafted TREC 20-19 (or Colorado CBS1) to review. You complete the rest before signing.">
 <link rel="icon" href="/static/favicon.ico?v=2" type="image/x-icon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -3515,22 +3518,22 @@ DEMO_FORM = """
 
   <div class="page">
     <div class="page-badge">Live Demo</div>
-    <h1>Get a purchase offer<br><span class="gradient">in 10 seconds.</span></h1>
-    <p class="page-sub">Preparing a purchase offer by hand takes time. TxtAnOffer drafts one in under 10 seconds.</p>
+    <h1>Text the terms,<br><span class="gradient">get a draft to review.</span></h1>
+    <p class="page-sub">TxtAnOffer drafts a TREC 20-19 (or Colorado CBS1) with the terms you send. You review it and complete the rest before signing.</p>
 
     <div class="workflow">
       <div class="wf-step"><div class="wf-icon">&#9993;</div><div class="wf-title">You type</div><div class="wf-desc">725k 3% 21day<br>123 Main St, Austin, TX</div></div>
       <div class="wf-arrow">&rarr;</div>
       <div class="wf-step"><div class="wf-icon">&#9881;</div><div class="wf-title">We parse</div><div class="wf-desc">Price, terms &amp;<br>address extracted</div></div>
       <div class="wf-arrow">&rarr;</div>
-      <div class="wf-step"><div class="wf-icon">&#9998;</div><div class="wf-title">Contract ready</div><div class="wf-desc">TREC 20-19 PDF<br>filled &amp; downloadable</div></div>
+      <div class="wf-step"><div class="wf-icon">&#9998;</div><div class="wf-title">Draft to review</div><div class="wf-desc">TREC 20-19 or CBS1<br>with your terms filled in</div></div>
     </div>
 
     <div class="card">
       <form method="POST" action="/demo">
         <label class="field-label">Offer details</label>
         <input type="text" name="offer_text" placeholder="725k 3% 21day 123 Main St, Austin, TX" value="{prefill}">
-        <button type="submit">Generate My Contract</button>
+        <button type="submit">Draft My Contract</button>
         <div class="hint">price &middot; down % &middot; closing days &middot; county (optional) &middot; address &middot; financing type &amp; inspection days (optional)</div>
         <div class="hint">You'll get a confirmation to review first &mdash; reply <code>YES</code> to generate the PDF, <code>NO</code> to cancel, or send corrections.</div>
         <div class="hint">Already sent one? Amend it: <code>AMEND 123 Main St price 730k</code> or <code>AMEND 123 Main St close +10</code></div>
@@ -3553,7 +3556,7 @@ DEMO_FORM = """
     </div>
 
     <div class="trust">
-      <div class="trust-item"><div class="trust-val">&lt;10s</div><div class="trust-label">Generation</div></div>
+      <div class="trust-item"><div class="trust-val">Draft</div><div class="trust-label">You review before signing</div></div>
       <div class="trust-item"><div class="trust-val">TREC</div><div class="trust-label">Official 20-19 form</div></div>
       <div class="trust-item"><div class="trust-val">HTTPS</div><div class="trust-label">Encrypted in transit</div></div>
     </div>
@@ -3568,8 +3571,45 @@ DEMO_FORM = """
 """
 
 
+# Per-browser key for /demo's pending draft and offer history. Until
+# 2026-10-14 every /demo visitor shared one pseudo-id for both, so two
+# people on the page at the same time shared one pending draft: B's YES
+# generated, and showed B, A's address and price, and "AMEND <address>"
+# could pull up another visitor's offer. Now each browser gets a random
+# token in an HttpOnly cookie and the key is "demo-web:<token>". The agent
+# profile (DEMO_PROFILE) and the PDF filler still get the plain pseudo-id,
+# so only the isolation changed. Drafts still expire after
+# drafts.DRAFT_TTL_MINUTES (30). The PDFs themselves were never guessable:
+# random filename suffix + HMAC-signed /offers and /review links.
+# reminders.py skips these offers via its phone NOT LIKE '%demo%' filter.
+_DEMO_COOKIE = "ta_demo"
+
+
+def _demo_visitor_key():
+    """Returns (key, token, is_new). A missing or malformed cookie gets a
+    fresh token, so a forged value can't name someone else's key unless it
+    is their exact 128-bit token."""
+    token = request.cookies.get(_DEMO_COOKIE, "")
+    is_new = not re.fullmatch(r"[0-9a-f]{32}", token)
+    if is_new:
+        token = uuid.uuid4().hex
+    return f"demo-web:{token}", token, is_new
+
+
 @app.route("/demo", methods=["GET", "POST"])
 def demo():
+    demo_key, token, is_new = _demo_visitor_key()
+    resp = make_response(_demo_page(demo_key))
+    if is_new:
+        # 24h = the PDF link lifetime, so AMEND works for as long as the
+        # offer's own links do. SameSite=Lax keeps another site from
+        # POSTing "YES" to /demo with this visitor's cookie attached.
+        resp.set_cookie(_DEMO_COOKIE, token, max_age=PDF_LINK_TTL, httponly=True,
+                        samesite="Lax", secure=request.is_secure)
+    return resp
+
+
+def _demo_page(demo_key):
     result_html = ""
     prefill = ""
     date_stamp = datetime.now().strftime("%m/%d/%Y")
@@ -3588,7 +3628,7 @@ def demo():
             if "error" in amend:
                 result_html = f'<div class="error">{amend["error"]}</div>'
             else:
-                offer = find_recent_offer("demo-web", amend["address"])
+                offer = find_recent_offer(demo_key, amend["address"])
                 if not offer:
                     result_html = f'<div class="error">No demo offer found matching "{amend["address"]}". Generate an offer for that address above first, then amend it.</div>'
                 else:
@@ -3602,7 +3642,7 @@ def demo():
                         result_html = f'<div class="error">Couldn\'t generate amendment: {e}</div>'
                     else:
                         filename = os.path.basename(pdf_path)
-                        record_amendment(offer["id"], "demo-web", amend["field"], amend["value"], filename)
+                        record_amendment(offer["id"], demo_key, amend["field"], amend["value"], filename)
                         pdf_url = sign_pdf_url(filename)
                         _pdf_expires = int(time.time()) + PDF_LINK_TTL
                         _pdf_sig = hmac.new(PDF_LINK_SECRET.encode(), f"{filename}:{_pdf_expires}".encode(), hashlib.sha256).hexdigest()[:16]
@@ -3624,7 +3664,7 @@ def demo():
             return DEMO_FORM.format(result_html=result_html, prefill=prefill, date_stamp=date_stamp)
 
         if offer_text.strip().upper() in ("YES", "Y", "CONFIRM", "CREATE"):
-            draft = get_draft("demo-web")
+            draft = get_draft(demo_key)
             if not draft:
                 result_html = '<div class="error">No pending offer to confirm. Enter offer details above first.</div>'
                 return DEMO_FORM.format(result_html=result_html, prefill=prefill, date_stamp=date_stamp)
@@ -3640,11 +3680,11 @@ def demo():
             except Exception as e:
                 result_html = f'<div class="error">Couldn\'t generate the PDF: {e}</div>'
                 return DEMO_FORM.format(result_html=result_html, prefill=prefill, date_stamp=date_stamp)
-            clear_draft("demo-web")
+            clear_draft(demo_key)
             parsed, error, warnings = draft, None, []
         elif offer_text.strip().upper() in ("NO", "CANCEL"):
-            if get_draft("demo-web"):
-                clear_draft("demo-web")
+            if get_draft(demo_key):
+                clear_draft(demo_key)
                 result_html = '<div class="result"><div class="result-stamp">Cancelled</div><p style="color:var(--text-dim);">Offer cancelled. Enter new details above anytime.</p></div>'
             else:
                 result_html = '<div class="error">Nothing pending to cancel.</div>'
@@ -3652,7 +3692,7 @@ def demo():
         else:
             parsed, error, warnings = build_offer_draft(offer_text, "demo-web")
             if not error:
-                save_draft("demo-web", parsed)
+                save_draft(demo_key, parsed)
                 if TX_UNVERIFIED_WARNING in warnings:
                     tx_html = format_tx_confirmation(parsed).replace("\n", "<br>")
                     result_html = f'<div class="result"><div class="result-stamp">Confirm Offer</div><div style="line-height:1.8;color:var(--text-muted);">{tx_html}</div></div>'
@@ -3661,7 +3701,7 @@ def demo():
                 result_html = f'<div class="result"><div class="result-stamp">Confirm Offer</div><div style="line-height:1.8;color:var(--text-muted);">{summary_html}</div></div>'
                 return DEMO_FORM.format(result_html=result_html, prefill=prefill, date_stamp=date_stamp)
 
-            existing_draft = get_draft("demo-web")
+            existing_draft = get_draft(demo_key)
             if existing_draft:
                 correction = parse_correction_sms(offer_text)
                 if correction:
@@ -3671,7 +3711,7 @@ def demo():
                         existing_draft["down_payment_amount"] = int(existing_draft["price"] * existing_draft["down_payment_pct"])
                         existing_draft["loan_amount"] = existing_draft["price"] - existing_draft["down_payment_amount"]
                         existing_draft["earnest_money"] = int(existing_draft["price"] * agent.get("default_earnest_pct", 0.01))
-                    save_draft("demo-web", existing_draft)
+                    save_draft(demo_key, existing_draft)
                     summary_html = format_offer_confirmation(existing_draft).replace("\n", "<br>")
                     result_html = f'<div class="result"><div class="result-stamp">Confirm Offer</div><div style="line-height:1.8;color:var(--text-muted);">{summary_html}</div></div>'
                 else:
@@ -3684,7 +3724,7 @@ def demo():
             result_html = f'<div class="error">{error}</div>'
         else:
             filename = os.path.basename(pdf_path)
-            record_offer("demo-web", parsed, filename)
+            record_offer(demo_key, parsed, filename)
             pdf_url = sign_pdf_url(filename)
             _pdf_expires = int(time.time()) + PDF_LINK_TTL
             _pdf_sig = hmac.new(PDF_LINK_SECRET.encode(), f"{filename}:{_pdf_expires}".encode(), hashlib.sha256).hexdigest()[:16]
@@ -3704,7 +3744,7 @@ def demo():
             parsed_json = _json.dumps(_parsed_safe)
 
             # Social share URLs
-            share_text = "Just generated a TREC 20-19 contract in 3 seconds by texting an address 🤯 TxtAnOffer turns '725k 3% 21day 123 Main St' into a filled PDF instantly."
+            share_text = "Drafted a TREC 20-19 by texting the terms. TxtAnOffer turns '725k 3% 21day 123 Main St' into a draft contract to review and finish before signing."
             share_url = "https://txtanoffer.com/demo"
             twitter_share = f"https://twitter.com/intent/tweet?text={share_text.replace(' ', '%20')}&url={share_url}"
             linkedin_share = f"https://www.linkedin.com/sharing/share-offsite/?url={share_url}"
@@ -3722,7 +3762,7 @@ def demo():
               <div class="pdf-preview">
                 <div class="pdf-preview-label">Contract preview</div>
                 <iframe src="/offers/{filename}?expires={_pdf_expires}&sig={_pdf_sig}#page=1&view=FitV" class="pdf-frame"></iframe>
-                <div class="pdf-mobile"><a href="{pdf_url}" target="_blank">Tap to view your completed TREC 20-19 &rarr;</a></div>
+                <div class="pdf-mobile"><a href="{pdf_url}" target="_blank">Tap to view your draft contract &rarr;</a></div>
               </div>
               <a href="/offers/{filename}?expires={_pdf_expires}&sig={_pdf_sig}" target="_blank" class="download-btn" download>&darr; Download PDF</a>
               <div class="integration-actions">
@@ -3803,7 +3843,7 @@ def demo():
                 fetch('/api/webhook', {{
                   method: 'POST',
                   headers: {{'Content-Type': 'application/json'}},
-                  body: JSON.stringify({{source_id: 'demo-web', url: url, filename: '{filename}', expires: '{_pdf_expires}', sig: '{_pdf_sig}'}})
+                  body: JSON.stringify({{source_id: '{demo_key}', url: url, filename: '{filename}', expires: '{_pdf_expires}', sig: '{_pdf_sig}'}})
                 }}).then(r => r.json()).then(d => {{
                   status.textContent = d.success ? 'Webhook saved! Future offers will POST here.' : ('Error: ' + (d.error || ''));
                   status.className = 'modal-status ' + (d.success ? 'success' : 'fail');
@@ -10942,13 +10982,13 @@ def offer_thread(filename):
 
     # Attribution card: Professional-plan feature. Only renders for a real,
     # filled-in agent profile on a Professional/Brokerage plan -- never for
-    # the anonymous demo (source_id "demo-web") or its placeholder values
+    # the anonymous demo (source_id "demo-web:<token>") or its placeholder values
     # ("Your Name Here" etc), which would look like a fake identity on a
     # page a real listing agent might open, and never for Starter, which
     # doesn't include agent branding.
     agent_card_html = ""
     sending_phone = offer.get("phone") or ""
-    if sending_phone and sending_phone != "demo-web" and has_professional_access(sending_phone):
+    if sending_phone and not sending_phone.startswith("demo-web") and has_professional_access(sending_phone):
         sending_agent = get_agent_profile(sending_phone)
         agent_name = (sending_agent.get("name") or "").strip()
         if agent_name:
