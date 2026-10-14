@@ -1474,6 +1474,10 @@ def index():
         <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>Results in seconds</span>
       </div>
       <p class="dz-trust-line"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span>Checked, then deleted. No AI reads your contract. <a href="/trust#contracts" data-evt="tc_trust_link">How we handle files &rarr;</a></span></p>
+      <!-- Independence line (2026-10-14): anger at Zillow owning dotloop and
+           Follow Up Boss was the strongest trust theme. Keep true: no
+           brokerage/MLS/portal ownership, no data sales (matches /trust#data). -->
+      <p class="dz-trust-line" style="margin-top:0.35rem;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><span>Independent. Not owned by Zillow, a brokerage or an MLS. We don&rsquo;t sell data.</span></p>
       <!-- Calendly (Phanel's, 2026-10-14). utm_content tells Calendly which
            placement a booking came from; data-evt counts the click here.
            Copy says "file check", never "review"/"advice" (see RULES.md). -->
