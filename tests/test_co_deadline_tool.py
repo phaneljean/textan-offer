@@ -95,6 +95,47 @@ class WeekendsAndHolidays(unittest.TestCase):
         self.assertIn("Falls on Thanksgiving. Banks may not move wires", _texts(c))
         self.assertEqual(p["effective"], "2026-11-28")
         self.assertIn("Falls on a Saturday. Confirm.", _texts(p))
+        # On "Will" the tool says it doesn't know whether §3.3.3 reaches them.
+        for row in (c, p):
+            self.assertIn("the form doesn’t say whether the extension reaches it. Not moved here.", _texts(row))
+        r = cdt.compute(date(2026, 10, 13), {"closing": "11/26/2026"}, "")
+        self.assertNotIn("reaches it", _texts(_row(r, "closing")))
+
+    def test_hand_calculated_schedule_mec_thu_oct_1_2026(self):
+        # txo-trec-qa 2026-10-13, checked by hand against a calendar.
+        E = {"record_title": "4", "off_record": "11", "assoc_docs": "10", "loan_terms": "14", "insp_obj": "21",
+             "credit": "56", "appraisal": "85", "dd_delivery": "9"}
+        want = {  # key: (written, extended on "Will")
+            "record_title": ("2026-10-05", "2026-10-06"),   # Cabrini Day
+            "off_record": ("2026-10-12", "2026-10-13"),     # Columbus Day
+            "assoc_docs": ("2026-10-11", "2026-10-13"),     # Sun -> Columbus Day -> Tue
+            "loan_terms": ("2026-10-15", "2026-10-15"),     # Thu, no move
+            "insp_obj": ("2026-10-22", "2026-10-22"),
+            "credit": ("2026-11-26", "2026-11-27"),         # Thanksgiving
+            "appraisal": ("2026-12-25", "2026-12-28"),      # Christmas (Fri) -> Mon
+            "dd_delivery": ("2026-10-10", "2026-10-13"),    # Sat -> Sun -> Columbus -> Tue
+        }
+        r = cdt.compute(date(2026, 10, 1), E, "will")
+        for k, (written, ext) in want.items():
+            self.assertEqual((_row(r, k)["date"], _row(r, k)["effective"]), (written, ext), k)
+
+    def test_observed_friday_is_named_as_uncertain(self):
+        # Sat 7/4/2026 -> observed Fri 7/3. C.R.S. 24-11-101 moves only a
+        # Sunday holiday; the CBS1 doesn't say whether the Friday counts.
+        r = cdt.compute(date(2026, 6, 20), {"spd": "13", "loan_app": "15"}, "will")
+        row = _row(r, "spd")
+        self.assertEqual((row["date"], row["effective"]), ("2026-07-03", "2026-07-06"))
+        self.assertIn("If it doesn’t, the deadline stays Fri, Jul 3, 2026.", _texts(row))
+        # A Sunday holiday's Monday is statutory in Colorado: no such note.
+        r = cdt.compute(date(2027, 6, 25), {"spd": "10"}, "will")   # Mon 7/5/2027, July 4th observed
+        self.assertEqual(_row(r, "spd")["effective"], "2027-07-06")
+        self.assertNotIn("Observed days", _texts(_row(r, "spd")))
+
+    def test_new_years_observed_across_the_year_boundary(self):
+        # Sat 1/1/2028 -> observed Fri 12/31/2027; holidays(2027) alone missed it.
+        self.assertEqual(co_audit.holiday_name(date(2027, 12, 31)), "New Year's Day (observed)")
+        self.assertIsNone(co_audit.holiday_name(date(2026, 12, 31)))
+        self.assertFalse(co_audit.is_business_day(date(2027, 12, 31)))
 
 
 class AfterClosingOrderAndNA(unittest.TestCase):
@@ -104,9 +145,24 @@ class AfterClosingOrderAndNA(unittest.TestCase):
         self.assertNotIn("After the Closing", _texts(_row(r, "possession")))   # possession may follow closing
 
     def test_extension_can_push_past_closing(self):
-        # Fri 11/20 closing; Sat 11/21 deadline extends to Mon 11/23.
+        # Fri 11/20 closing; Sat 11/21 deadline extends to Mon 11/23. Written
+        # AFTER closing, so it's red regardless of the extension.
         r = cdt.compute(date(2026, 10, 13), {"closing": "11/20/2026", "loan_avail": "11/21/2026"}, "will")
         self.assertIn("After the Closing Date", _texts(_row(r, "loan_avail")))
+
+    def test_extension_only_past_an_unmoved_closing_is_a_warning_not_red(self):
+        # txo-trec-qa 2026-10-13: MEC Thu 10/01 + 56 = Thanksgiving 11/26,
+        # same day as a Thanksgiving closing. "Will" moves the deadline to
+        # Fri 11/27 but the tool never moves the Closing Date, so the old
+        # red "After the Closing Date" was the tool's own artifact.
+        r = cdt.compute(date(2026, 10, 1), {"closing": "11/26/2026", "credit": "56"}, "will")
+        row = _row(r, "credit")
+        self.assertEqual(row["effective"], "2026-11-27")
+        self.assertNotIn("bad", [f["level"] for f in row["flags"]])
+        self.assertIn("Written on or before the Closing Date (Thu, Nov 26, 2026); the §3.3.3 extension puts it after.", _texts(row))
+        # Without "Will" nothing moves and nothing is flagged against closing.
+        row = _row(cdt.compute(date(2026, 10, 1), {"closing": "11/26/2026", "credit": "56"}, ""), "credit")
+        self.assertNotIn("Closing Date", _texts(row))
 
     def test_out_of_order_uses_written_dates(self):
         r = cdt.compute(date(2026, 9, 26), {"insp_obj": "10/05/2026", "insp_res": "10/03/2026"}, "will")
@@ -141,6 +197,44 @@ class AfterClosingOrderAndNA(unittest.TestCase):
                     # co_audit writes a straight apostrophe; the form prints a curly one.
                     self.assertEqual(co_audit.DEADLINES[key][2], label.replace("\u2019", "'"), key)
         self.assertEqual([r[1] for r in cdt.ROWS], list(range(2, 41)))
+
+    def test_labels_refs_and_notes_match_the_printed_cbs1(self):
+        # txo-trec-qa 2026-10-13: every label/§ reference appears in the
+        # §3.1 table text of the blank 2026 CBS1, and the notes quote it.
+        import fitz
+        pdf = os.path.join(os.path.dirname(__file__), "fixtures", "CBS1_blank_2026.pdf")
+        doc = fitz.open(pdf)
+        # Drop the left-margin line numbers (lines that are only digits).
+        raw = doc[2].get_text() + "\n" + doc[3].get_text()
+        text = re.sub(r"\s+", " ", " ".join(l for l in raw.split("\n") if not re.fullmatch(r"\s*\d{3}\s*", l)))
+        for key, item, ref, group, label in cdt.ROWS:
+            self.assertIn(f"{ref} {label}", text, key)
+            if group:
+                self.assertIn(group, text, key)
+        for quote in ("the Appraisal deadlines DO NOT apply to FHA insured or VA guaranteed loans",
+                      "If FHA or VA loan boxes are checked in § 4.5.3. (Loan Limitations)"):
+            self.assertIn(quote, text)
+            self.assertIn(quote, cdt.FHA_VA_NOTE)
+        self.assertIn("11:59 p.m., United States Mountain Time", text)
+        self.assertIn("11:59 p.m. United States Mountain Time", cdt.TIME_NOTE)
+
+    def test_third_party_row_is_unnumbered_on_the_form(self):
+        # Page 3 render: the Item No. cell of the Third Party Right to
+        # Purchase/Approve row is blank (7 then 9). Shown as "(8)".
+        self.assertEqual(cdt.item_label(8), "(8)")
+        self.assertEqual(cdt.item_label(9), "9")
+        r = cdt.compute(date(2026, 10, 13), {"third_party": "5"})
+        self.assertIn("(8). Third Party Right to Purchase/Approve Deadline", r["text"])
+        self.assertIn('<span class="cdc-n">(8)</span>', cdt.calc_markup())
+        self.assertIn("prints no item number", cdt.calc_markup())
+        self.assertIn("CBS1 item (8)", cdt.to_ics(r).replace("\r\n ", ""))
+
+    def test_page_copy_quotes_the_form_not_invented_text(self):
+        body = cdt.page_body()
+        self.assertNotIn("for use on or after January 1, 2026", body)
+        self.assertIn("adopted August 5, 2025 (mandatory use date January 1, 2026)", body)
+        self.assertNotIn("nothing saved", body + cdt.PAGE_DESCRIPTION)
+        self.assertNotIn("calendar day", body)
 
 
 class Ics(unittest.TestCase):

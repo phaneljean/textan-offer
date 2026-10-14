@@ -79,6 +79,18 @@ ROWS = [
     ("possession", 40, "§ 17", "Closing and Possession", "Possession Date"),
 ]
 ROW_KEYS = [r[0] for r in ROWS]
+# The 2026 CBS1 prints NO item number on the Third Party Right to
+# Purchase/Approve row: the Item No. cell is blank between 7 and 9
+# (verified on a 90 dpi render of page 3 of tests/fixtures/CBS1_blank_2026.pdf,
+# txo-trec-qa 2026-10-13). Kept as 8 internally (co_audit uses 8); shown as
+# "(8)" with a note so nobody cites an "item 8" the form doesn't print.
+UNNUMBERED = {8}
+UNNUMBERED_NOTE = ("The 2026 CBS1 prints no item number on the Third Party Right to Purchase/Approve Deadline row "
+                   "(it sits between items 7 and 9). It is shown here as (8).")
+
+
+def item_label(item: int) -> str:
+    return f"({item})" if item in UNNUMBERED else str(item)
 _BY_KEY = {r[0]: r for r in ROWS}
 # "Closing Date" and "Possession Date" are dates, not deadlines; §3.3.3
 # speaks of "any deadline", so the calculator never moves these two -- a
@@ -95,10 +107,16 @@ SOURCE_NOTE = ("Calculates dates from what you enter; confirm against the signed
                "Not legal advice. Not affiliated with the Colorado Real Estate Commission.")
 SEC_3_2 = ("§3.2: a deadline left blank or completed with \u201cN/A\u201d or \u201cDeleted\u201d is not applicable, "
            "and the provision containing it is deleted.")
-FHA_VA_NOTE = ("CBS1 note under §3.1: if the FHA or VA box is checked in §4.5.3, the Appraisal deadlines "
-               "(items 22-24) do not apply.")
-TIME_NOTE = ("Each deadline ends at 11:59 p.m. Mountain Time, unless the contract fills in item 1, Time of Day "
-             "Deadline, which then applies to the Objection, Resolution, Examination and Termination Deadlines (§3.3.1).")
+FHA_VA_NOTE = ("Note under the \u00a73.1 table (items 22-24): \u201cIf FHA or VA loan boxes are checked in \u00a7 4.5.3. "
+               "(Loan Limitations), the Appraisal deadlines DO NOT apply to FHA insured or VA guaranteed loans.\u201d")
+TIME_NOTE = ("\u00a73.3.1: a deadline ends at 11:59 p.m. United States Mountain Time. If item 1 (Time of Day Deadline) is "
+             "filled in, the Objection, Resolution, Examination and Termination Deadlines end at that time instead.")
+# §3.3.3 says "any deadline". §3.1 lists items 39-40 as the Closing Date and
+# Possession Date, and the form doesn't say whether the extension reaches
+# them (elsewhere it uses "on or before Closing Date" as a cut-off). So they
+# are never moved, and on "Will" the tool says it doesn't know.
+DATE_NOT_MOVED = ("\u00a73.3.3 extends \u201cany deadline\u201d; \u00a73.1 lists this as a date, and the form doesn\u2019t say "
+                  "whether the extension reaches it. Not moved here. Confirm with the other side and the closing company.")
 
 
 def fmt(d: date) -> str:
@@ -125,6 +143,19 @@ def _non_business_reason(d: date):
     if d.weekday() == 6:
         return "a Sunday"
     return co_audit.holiday_name(d)
+
+
+def _observed_friday(d: date) -> bool:
+    """A Friday that is only a holiday as the observed day for a Saturday
+    one (federal employee rule, 5 U.S.C. 6103(b)). Colorado's statute
+    (C.R.S. 24-11-101(2)) moves only a Sunday holiday to Monday, and the
+    CBS1 doesn't say whether an observed day is a "Holiday"."""
+    return d.weekday() == 4 and "(observed)" in (co_audit.holiday_name(d) or "")
+
+
+def _observed_note(d: date) -> str:
+    return (f" Observed days: the form doesn\u2019t say whether a Friday observed for a Saturday holiday counts as a "
+            f"Holiday. If it doesn\u2019t, the deadline stays {fmt(d)}.") if _observed_friday(d) else ""
 
 
 def _next_business_day(d: date) -> date:
@@ -166,12 +197,15 @@ def compute(mec: date, entries: dict, extend: str = "") -> dict:
                            f"Falls on {why}. Banks may not move wires on a holiday; confirm the closing company and lender can fund.")
                 else:
                     msg = f"Falls on {why}. Confirm."
+                if extend == "will":
+                    msg += " " + DATE_NOT_MOVED
                 row["flags"].append(_flag("warn", msg))
             elif why and extend == "will":
                 nd = _next_business_day(d)
                 row["effective"] = nd
                 row["flags"].append(_flag("warn", f"Falls on {why}. \u00a73.3.3 \u201cWill\u201d is checked, so it is extended to "
-                                                  f"{fmt(nd)}, the next day that isn\u2019t a Saturday, Sunday or Holiday. Confirm."))
+                                                  f"{fmt(nd)}, the next day that isn\u2019t a Saturday, Sunday or Holiday. Confirm."
+                                                  + _observed_note(d)))
             elif why:
                 box = ("\u00a73.3.3 \u201cWill Not\u201d is checked" if extend == "will_not"
                        else "Neither \u00a73.3.3 box is checked")
@@ -186,8 +220,15 @@ def compute(mec: date, entries: dict, extend: str = "") -> dict:
         for r in rows:
             if r["key"] in co_audit.NOT_BEFORE_CLOSING or not r["effective"]:
                 continue
-            if r["effective"] > closing:
+            if r["date"] > closing:
                 r["flags"].append(_flag("bad", f"After the Closing Date ({fmt(closing)})."))
+            elif r["effective"] > closing:
+                # Written on or before closing; only the §3.3.3 extension
+                # (which this tool doesn't apply to the Closing Date) puts
+                # it after. Not an error on the form's face.
+                r["flags"].append(_flag("warn", f"Written on or before the Closing Date ({fmt(closing)}); the \u00a73.3.3 "
+                                                "extension puts it after. The form doesn\u2019t say whether the Closing "
+                                                "Date moves too. Confirm."))
     poss = by_key["possession"]["effective"]
     if closing and poss and poss < closing:
         by_key["possession"]["flags"].append(_flag("warn", f"Before the Closing Date ({fmt(closing)}). Early possession usually needs a separate agreement."))
@@ -200,7 +241,7 @@ def compute(mec: date, entries: dict, extend: str = "") -> dict:
         dated = [by_key[k] for k in chain if k in by_key and by_key[k]["date"]]
         for a, b in zip(dated, dated[1:]):
             if b["date"] < a["date"]:
-                b["flags"].append(_flag("bad", f"Out of order: before {a['label']} (item {a['item']}, {fmt(a['date'])})."))
+                b["flags"].append(_flag("bad", f"Out of order: before {a['label']} (item {item_label(a['item'])}, {fmt(a['date'])})."))
 
     deleted = [r["item"] for r in rows if r["kind"] == "deleted"]
     notes = []
@@ -235,11 +276,11 @@ def to_text(result: dict) -> str:
             when = r["effective_display"] + (f" (MEC + {r['days']})" if r["kind"] == "days" else "")
             if r["effective"] != r["date"]:
                 when += f", extended from {r['date_display']}"
-        lines.append(f"{r['item']}. {r['label']}: {when}")
+        lines.append(f"{item_label(r['item'])}. {r['label']}: {when}")
         lines += [f"   ! {f['text']}" for f in r["flags"]]
     if result["deleted_items"]:
         lines += ["", "Blank, N/A or Deleted (\u00a73.2: the provision containing the deadline is deleted): items "
-                  + ", ".join(str(i) for i in result["deleted_items"])]
+                  + ", ".join(item_label(i) for i in result["deleted_items"])]
     lines += ["", SOURCE_NOTE, "Free CBS1 deadline calculator: https://txtanoffer.com/tools/colorado-deadlines"]
     return "\n".join(lines)
 
@@ -275,12 +316,12 @@ def to_ics(result: dict, now: datetime = None) -> str:
             continue
         d = date.fromisoformat(r["effective"])
         uid = hashlib.sha1(f"{result['mec']}|{r['item']}|{r['effective']}".encode()).hexdigest()[:20]
-        desc = [f"CBS1 \u00a73.1 item {r['item']} ({r['ref']}). MEC {result['mec_display']}."]
+        desc = [f"CBS1 \u00a73.1 item {item_label(r['item'])} ({r['ref']}). MEC {result['mec_display']}."]
         desc += [f["text"] for f in r["flags"]]
         desc += [TIME_NOTE, SOURCE_NOTE]
         lines += ["BEGIN:VEVENT", f"UID:{uid}@txtanoffer.com", f"DTSTAMP:{stamp}",
                   f"DTSTART;VALUE=DATE:{d:%Y%m%d}", f"DTEND;VALUE=DATE:{d + timedelta(days=1):%Y%m%d}",
-                  "SUMMARY:" + _ics_escape(f"{r['label']} (CBS1 item {r['item']})"),
+                  "SUMMARY:" + _ics_escape(f"{r['label']} (CBS1 item {item_label(r['item'])})"),
                   "DESCRIPTION:" + _ics_escape(" ".join(desc)), "TRANSP:TRANSPARENT", "END:VEVENT"]
     lines.append("END:VCALENDAR")
     return "\r\n".join(x for line in lines for x in _fold(line)) + "\r\n"
@@ -351,7 +392,7 @@ def calc_markup(surface: str = "page") -> str:
             if grp:
                 parts.append(f'<div class="cdc-g">{escape(grp)}</div>')
         parts.append(
-            f'<div class="cdc-r" data-key="{key}"><span class="cdc-n">{item}</span>'
+            f'<div class="cdc-r" data-key="{key}"><span class="cdc-n">{item_label(item)}</span>'
             f'<label class="cdc-lb" for="cdc_{key}">{escape(label)}<small>{escape(ref)}</small></label>'
             f'<input type="text" id="cdc_{key}" name="d_{key}" inputmode="text" autocomplete="off" placeholder="days or date">'
             f'<span class="cdc-o" id="cdco_{key}"></span><div class="cdc-f" id="cdcf_{key}"></div></div>')
@@ -378,6 +419,7 @@ def calc_markup(surface: str = "page") -> str:
     <p>{escape(SEC_3_2)}</p>
     <p>{escape(TIME_NOTE)}</p>
     <p>{escape(FHA_VA_NOTE)}</p>
+    <p>{escape(UNNUMBERED_NOTE)}</p>
     <p><b>{escape(SOURCE_NOTE)}</b></p>
   </div>
 </div>"""
@@ -451,7 +493,7 @@ EMBED_SNIPPET = ('<iframe src="https://txtanoffer.com/embed/colorado-deadlines" 
 PAGE_TITLE = "Colorado CBS1 Deadline Calculator (§3.1): Free, No Upload"
 PAGE_DESCRIPTION = ("Free Colorado CBS1 deadline calculator. Enter MEC and the §3.1 entries and get every deadline as a "
                     "date, with weekends, Colorado holidays (incl. Cabrini Day), deadlines after closing and out-of-order "
-                    "dates flagged. No upload, nothing saved.")
+                    "dates flagged. No upload; the dates you enter aren\u2019t saved.")
 
 PAGE_CSS = """<style>
 .tool-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:1.4rem;box-shadow:0 1px 3px rgba(15,31,47,.05);margin:1.25rem 0 1.5rem}
@@ -473,7 +515,7 @@ def page_body() -> str:
 <div class="container">
   <div class="page-header">
     <h1>Colorado CBS1 deadline calculator</h1>
-    <p>Enter MEC and what the contract says in each &sect;3.1 row. You get every deadline as a date, with weekends, federal and Colorado holidays, deadlines after closing and out-of-order dates flagged. No upload, nothing saved.</p>
+    <p>Enter MEC and what the contract says in each &sect;3.1 row. You get every deadline as a date, with weekends, federal and Colorado holidays, deadlines after closing and out-of-order dates flagged. No upload, and the dates you enter aren&rsquo;t saved.</p>
   </div>
 
   <div class="tool-card">{calc_markup("page")}</div>
@@ -486,10 +528,10 @@ def page_body() -> str:
   <div class="section">
     <h2>How the dates are counted</h2>
     <ul class="tool-rules">
-      <li><b>Days after MEC.</b> MEC is &ldquo;the date upon which both parties have signed this Contract&rdquo; (&sect;3.2). For a number of days, <q>the first day is excluded and the last day is included</q> (&sect;3.3.2), so MEC + 10 is the tenth calendar day after MEC. The form counts days, not business days.</li>
+      <li><b>Days after MEC.</b> MEC is &ldquo;the date upon which both parties have signed this Contract&rdquo; (&sect;3.2). For a number of days, <q>the first day is excluded and the last day is included</q> (&sect;3.3.2), so MEC + 10 is the tenth day after MEC. The form says &ldquo;day&rdquo; (&sect;3.3.1: the entire day ending at 11:59 p.m. Mountain Time), never &ldquo;business day&rdquo;.</li>
       <li><b>Weekends and holidays.</b> &sect;3.3.3 has two boxes: a deadline that falls on a Saturday, Sunday or federal or Colorado state holiday <q>Will</q> or <q>Will Not</q> be extended to the next day that isn&rsquo;t one. <q>Should neither box be checked, the deadline will not be extended.</q> The calculator moves a date only when you pick &ldquo;Will&rdquo;. Either way it flags the date so you can confirm it.</li>
-      <li><b>Holidays used:</b> the federal holidays (with the federal observed day when one falls on a weekend) plus Cabrini Day, Colorado&rsquo;s first Monday in October.</li>
-      <li><b>Closing Date and Possession Date</b> aren&rsquo;t moved. A weekend or holiday closing is flagged so you can confirm the closing company and lender.</li>
+      <li><b>Holidays used:</b> the federal holidays (Columbus Day included) plus Cabrini Day, Colorado&rsquo;s first Monday in October. A holiday on a Sunday is also counted on the Monday after (Colorado&rsquo;s holiday statute, C.R.S. 24-11-101, makes that Monday the holiday). A holiday on a Saturday is counted on the Friday before, the federal observed day. The form doesn&rsquo;t say whether that Friday counts, so a deadline moved off one says so. Days proclaimed by the Governor or the President aren&rsquo;t included.</li>
+      <li><b>Closing Date and Possession Date</b> aren&rsquo;t moved, even when &ldquo;Will&rdquo; is checked. &sect;3.3.3 extends &ldquo;any deadline&rdquo;, and &sect;3.1 lists these two as dates; the form doesn&rsquo;t say whether the extension reaches them. A weekend or holiday date is flagged so you can confirm it with the other side and the closing company.</li>
       <li><b>Blank, N/A or Deleted.</b> {escape(SEC_3_2)}</li>
     </ul>
   </div>
@@ -503,7 +545,7 @@ def page_body() -> str:
     </div>
   </div>
 
-  <div class="disclaimer-box"><strong>{escape(SOURCE_NOTE)}</strong> TxtAnOffer is an independent tool, not affiliated with or endorsed by the Colorado Real Estate Commission or the Colorado Division of Real Estate. Item numbers and labels follow the CBS1 &ldquo;for use on or after January 1, 2026&rdquo;.</div>
+  <div class="disclaimer-box"><strong>{escape(SOURCE_NOTE)}</strong> TxtAnOffer is an independent tool, not affiliated with or endorsed by the Colorado Real Estate Commission or the Colorado Division of Real Estate. Item numbers and labels follow the CBS1 adopted August 5, 2025 (mandatory use date January 1, 2026).</div>
 
   <p class="foot"><a href="/tc-hub/colorado">&larr; Colorado TC Hub</a> &middot; <a href="/?state=co">Home</a> &middot; <a href="/terms">Terms</a></p>
 </div>

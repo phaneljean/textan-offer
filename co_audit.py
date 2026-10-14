@@ -209,7 +209,10 @@ def holidays(year: int) -> dict:
 
 
 def holiday_name(d: date):
-    return holidays(d.year).get(d)
+    # Next year's table too: a Saturday Jan 1 is observed on Fri Dec 31 of
+    # the year before (e.g. 2027-12-31 for New Year's Day 2028), and
+    # holidays(2027) alone never sees it. Found by txo-trec-qa 2026-10-13.
+    return holidays(d.year).get(d) or (holidays(d.year + 1).get(d) if d.month == 12 else None)
 
 
 def is_business_day(d: date) -> bool:
