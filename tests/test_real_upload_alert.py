@@ -74,7 +74,10 @@ class Routes(unittest.TestCase):
         cls.app = app_module.app
         cls.app.config["TESTING"] = True
         # Report emails to the sender are out of scope here.
-        cls._p = [mock.patch("app.send_html_email"), mock.patch("app.check_and_increment", return_value=True)]
+        # app reads these env vars at import; if another test module imported
+        # app first (pytest runs files alphabetically), they're unset there.
+        cls._p = [mock.patch("app.send_html_email"), mock.patch("app.check_and_increment", return_value=True),
+                  mock.patch("app.TC_CHECK_EMAIL_TOKEN", "test-token"), mock.patch("app.ANALYTICS_PASSWORD", "test-internal")]
         for p in cls._p:
             p.start()
 

@@ -32,6 +32,7 @@ CHECK_CTA_EVENTS = (
     # Added 2026-10-13
     "nav_check_cta", "home_check_cta", "home_tryit_cta", "home_check_link", "footer_check_link",
     "pricing_check_cta", "hub_check_cta", "trust_check_link", "brokers_single_check_cta", "archive_check_link", "nav_check_link",
+    "tool_check_cta",  # /tools/colorado-deadlines, 2026-10-13
 )
 # Opening a sample report rather than running your own file. hero_sample is
 # the original; the rest were added 2026-10-13. The server-side
@@ -655,6 +656,26 @@ def get_top_referrers(days: int = 30, limit: int = 15) -> list:
         [{"referrer": ref, "count": count} for ref, count in counts.items()],
         key=lambda r: -r["count"]
     )[:limit]
+
+def get_co_tool_usage(days: int = 30) -> list:
+    """CBS1 deadline calculator (2026-10-13): runs and .ics downloads by
+    surface (page / embed) and embedding host. The events carry no visitor
+    id -- the widget sets no cookie -- so these are counts, not people;
+    Phanel's own runs are dropped by track_event's internal-traffic check."""
+    conn = sqlite3.connect(DB_PATH)
+    cutoff = (datetime.utcnow() - timedelta(days=days)).isoformat()
+    rows = conn.execute("SELECT event_type, metadata FROM events WHERE event_type IN ('tool_calc_run', 'tool_ics') "
+                        "AND created_at > ?", (cutoff,)).fetchall()
+    conn.close()
+    import json
+    out = {}
+    for etype, meta in rows:
+        m = json.loads(meta) if meta else {}
+        key = (m.get("surface") or "page", m.get("host") or "")
+        r = out.setdefault(key, {"surface": key[0], "host": key[1] or "(unknown)", "runs": 0, "ics": 0})
+        r["runs" if etype == "tool_calc_run" else "ics"] += 1
+    return sorted(out.values(), key=lambda r: -(r["runs"] + r["ics"]))
+
 
 TC_ISSUE_LABELS = {
     "unrecognized": "Not a recognized TREC 20-19 template",

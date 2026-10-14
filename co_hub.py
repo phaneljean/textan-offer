@@ -96,6 +96,7 @@ def body() -> str:
     <a href="#checklists">File-Review Checklists</a>
     <a href="#changes">2026 Changes</a>
     <a href="#checklist-download">Free Checklist</a>
+    <a href="/tools/colorado-deadlines" data-evt="hub_tool_link">Deadline Calculator</a>
   </div>
 
   <div class="section" id="forms">

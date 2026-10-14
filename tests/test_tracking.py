@@ -27,7 +27,8 @@ import app as app_module
 
 UA = {"User-Agent": "Mozilla/5.0 (Macintosh) test"}
 PAGES = ["/", "/tc-check", "/pricing", "/trust", "/about", "/faq", "/tc-hub", "/tc-hub/colorado",
-         "/guides/trec-20-19-checklist", "/brokers", "/terms", "/privacy", "/trec-changes", "/contact", "/archive", "/guides"]
+         "/guides/trec-20-19-checklist", "/brokers", "/terms", "/privacy", "/trec-changes", "/contact", "/archive", "/guides",
+         "/tools/colorado-deadlines"]
 
 
 def _vid(n):

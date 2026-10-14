@@ -33,7 +33,7 @@ from amendment import fill_amendment_pdf
 from agent_profiles import get_agent_profile, save_agent_profile, find_by_email, get_emails_for_phones
 from subscriptions import can_generate_offer, increment_offer_count, activate_subscription, deactivate_subscription, get_user, create_user, FREE_OFFER_LIMIT, is_admin_phone, has_professional_access
 from analytics import _is_internal_traffic
-from analytics import track_event, get_conversion_metrics, get_revenue_metrics, get_recent_sms, get_recent_sms_failures, get_last_blocked_state, get_waitlist_signups, get_signups_by_source, get_signup_details, get_landing_visits_by_source, get_tc_check_summary, get_recent_tc_check_email_senders, get_tc_check_count_for_sender, get_tc_check_repeat_senders, get_tc_check_bulk_summary, get_tc_check_attempts_by_source, get_tc_check_attempts_by_page, get_brokerage_alert_delivery, get_daily_funnel, get_top_referrers, set_internal_visitor, get_visitor_roles, get_engagement_by_device, get_recent_email_send_failures, get_recent_visitors, get_archive_early_access
+from analytics import track_event, get_conversion_metrics, get_revenue_metrics, get_recent_sms, get_recent_sms_failures, get_last_blocked_state, get_waitlist_signups, get_signups_by_source, get_signup_details, get_landing_visits_by_source, get_tc_check_summary, get_recent_tc_check_email_senders, get_tc_check_count_for_sender, get_tc_check_repeat_senders, get_tc_check_bulk_summary, get_tc_check_attempts_by_source, get_tc_check_attempts_by_page, get_brokerage_alert_delivery, get_daily_funnel, get_top_referrers, set_internal_visitor, get_visitor_roles, get_engagement_by_device, get_recent_email_send_failures, get_recent_visitors, get_archive_early_access, get_co_tool_usage
 from analytics import get_engagement_by_source, CHECK_CTA_EVENTS, SAMPLE_CTA_EVENTS, DROPZONE_INTERACT_EVENT
 from integrations import send_offer_email, fire_webhook, save_webhook, get_webhook, delete_webhook, send_to_docusign, send_plain_email, send_html_email
 from offers_db import record_offer, get_offers_for_phone, get_offer_by_filename, record_amendment, get_amendments_for_phone, record_thread_response, record_email_sent, record_docusign_sent
@@ -219,11 +219,13 @@ _MOBILE_UA_RE = re.compile(r"Mobi|Android|iPhone|iPad|iPod", re.I)
 # so /v1/evt dropped them (found 2026-10-13 by tests/test_tracking.py, which
 # now fails on any data-evt not in this list).
 _ENGAGEMENT_TYPES = ("js_ok", "hero_cta", "hero_sample", "hero_card", "dropzone_seen", "stay_10s", "stay_60s",
-                     "role_shown", "role_dismissed", "brokers_audit_cta", "brokers_email_cta", "brokers_plan_cta", "records_brokers_cta", "guide_check_cta", "guide_brokers_cta", "path_self_cta", "path_walkthrough_cta", "tc_trust_link", "tc_own_file_cta", "path_brokerage_cta", "guide_card_cta", "support_email_cta", "pricing_audit_cta", "tc_copy_agent_msg", "state_toggle_tx", "state_toggle_co", "states_tx_check", "states_tx_hub", "states_co_check", "states_co_hub", "states_request", "workflow_offer_sms", "footer_instagram", "footer_linkedin") + tuple("role_" + r for r in _VISITOR_ROLES) \
+                     "role_shown", "role_dismissed", "brokers_audit_cta", "brokers_email_cta", "brokers_plan_cta", "records_brokers_cta", "guide_check_cta", "guide_brokers_cta", "path_self_cta", "path_walkthrough_cta", "tc_trust_link", "tc_own_file_cta", "path_brokerage_cta", "guide_card_cta", "support_email_cta", "pricing_audit_cta", "tc_copy_agent_msg", "state_toggle_tx", "state_toggle_co", "states_tx_check", "states_tx_hub", "states_co_check", "states_co_hub", "states_co_tool", "states_request", "workflow_offer_sms", "footer_instagram", "footer_linkedin",
+                     # /tools/colorado-deadlines, 2026-10-13 (tool_check_cta is in CHECK_CTA_EVENTS)
+                     "tool_calc_run", "tool_ics", "tool_copy_text", "tool_embed_copy", "hub_tool_link") + tuple("role_" + r for r in _VISITOR_ROLES) \
     + CHECK_CTA_EVENTS + SAMPLE_CTA_EVENTS + (DROPZONE_INTERACT_EVENT,)
 # Pages whose beacons /v1/evt accepts: the ones with their own
 # track_page_view() call, plus _BEACON_ONLY_PAGES below.
-_TRACKED_PAGES = {"homepage", "tc_check_page", "brokers_page", "guide_page", "archive_page"}
+_TRACKED_PAGES = {"homepage", "tc_check_page", "brokers_page", "guide_page", "archive_page", "co_deadlines_page"}
 
 # Tiny, cookie-less-of-its-own beacon script appended to every page that
 # track_page_view() logs. Elements opt in with data-evt="<type>" for clicks;
@@ -358,6 +360,19 @@ def _track_beacon_only_pages(resp):
     if (page and request.method == "GET" and resp.status_code == 200 and resp.mimetype == "text/html"
             and not resp.direct_passthrough):
         track_page_view(resp, page)
+    return resp
+
+
+# The CBS1 calculator widget exists to be embedded on brokerage and TC
+# sites, so it explicitly allows any framing ancestor.
+_EMBEDDABLE_ENDPOINTS = {"co_deadlines_embed"}
+
+
+@app.after_request
+def _frame_headers(resp):
+    if request.endpoint in _EMBEDDABLE_ENDPOINTS:
+        resp.headers.pop("X-Frame-Options", None)
+        resp.headers["Content-Security-Policy"] = "frame-ancestors *"
     return resp
 
 
@@ -1748,7 +1763,7 @@ def index():
         <span class="state-badge live">Live</span>
         <h3>Colorado</h3>
         <p>CBS1 contract, plus the Amend/Extend, Counterproposal, Inspection Objection Notice and Exclusive Right-to-Buy &mdash; TC Check and text-to-offer drafts.</p>
-        <p class="state-links"><a href="/tc-check?state=co" data-evt="states_co_check">Check a CBS1</a> &middot; <a href="/tc-hub/colorado" data-evt="states_co_hub">Colorado TC Hub</a></p>
+        <p class="state-links"><a href="/tc-check?state=co" data-evt="states_co_check">Check a CBS1</a> &middot; <a href="/tc-hub/colorado" data-evt="states_co_hub">Colorado TC Hub</a> &middot; <a href="/tools/colorado-deadlines" data-evt="states_co_tool">Deadline calculator</a></p>
       </div>
       <div class="step-card state-card">
         <span class="state-badge soon">Coming soon</span>
@@ -6330,6 +6345,11 @@ def analytics_dashboard():
         for r in get_archive_early_access()
     ) or "<tr><td colspan='5' style='padding:6px;color:#999;'>No sign-ups yet.</td></tr>"
     top_referrers = get_top_referrers(days=30)
+    co_tool_rows = "".join(
+        f"<tr><td style='padding:6px;'>{escape(r['surface'])}</td><td style='padding:6px;'>{escape(r['host'])}</td>"
+        f"<td style='padding:6px;'>{r['runs']}</td><td style='padding:6px;'>{r['ics']}</td></tr>"
+        for r in get_co_tool_usage(days=30)
+    ) or "<tr><td colspan='4' style='padding:6px;color:#999;'>No runs yet.</td></tr>"
     tc_check_attempts_by_source = get_tc_check_attempts_by_source(days=30)
     tc_check_attempts_by_page = get_tc_check_attempts_by_page(days=30)
     tc_check_summary = get_tc_check_summary(days=30)
@@ -6606,6 +6626,14 @@ body{{font-family:system-ui;max-width:800px;margin:40px auto;padding:20px;}}
   <p class="label" style="margin-top:8px;">If phones show visitors but ~0 in every other column while desktop doesn't, suspect a tracking bug on mobile rather than visitor behavior.</p>
 </div>
 
+<div class="metric">
+  <h3>CBS1 Deadline Calculator (30 days)</h3>
+  <table style="width:100%;border-collapse:collapse;margin-top:10px;">
+    <tr style="background:#eee;text-align:left;"><th style="padding:8px;">Where</th><th style="padding:8px;">Embedding site</th><th style="padding:8px;">Calculations</th><th style="padding:8px;">.ics downloads</th></tr>
+    {co_tool_rows}
+  </table>
+  <p class="label" style="margin-top:8px;">Counts, not people: the widget sets no cookie. One calculation is logged per page load. "page" = txtanoffer.com/tools/colorado-deadlines.</p>
+</div>
 <div class="metric">
   <h3>Top Referrers (30 days)</h3>
   <table style="width:100%;border-collapse:collapse;margin-top:10px;">
@@ -8830,6 +8858,71 @@ def tc_hub_colorado():
         '<meta name="description" content="Free reference material for Colorado transaction coordinators: Colorado Real Estate Commission forms (CBS1, Amend/Extend, Counterproposal, Exclusive Right-to-Buy), deadline-table checklists and the 2026 changes including HB26-1426.">')
     head = head.replace('<a href="/tc-check" class="nav-cta" ', '<a href="/tc-check?state=co" class="nav-cta" ')
     return head + co_hub.body()
+
+
+# --- Free CBS1 deadline calculator (2026-10-13) ------------------------------
+# No upload: dates in, table out, nothing kept. See co_deadline_tool.py for
+# where each rule comes from on the CBS1. The embed route is the only page
+# on the site other sites may frame (_frame_headers below).
+
+def _co_tool_host(raw: str) -> str:
+    return re.sub(r"[^a-z0-9.-]", "", (raw or "").lower())[:60]
+
+
+@app.route("/tools/colorado-deadlines")
+def co_deadlines_tool():
+    import co_deadline_tool as cdt
+    shell = tc_hub()
+    head = shell[:shell.index('<div class="container">')]
+    head = head.replace("<title>Texas TC Hub — TxtAnOffer</title>", f"<title>{escape(cdt.PAGE_TITLE)} — TxtAnOffer</title>")
+    head = head.replace(
+        '<meta name="description" content="Free reference material for Texas transaction coordinators: TREC form guides, file-review checklists, and the most common mistakes found across real audited closing files.">',
+        f'<meta name="description" content="{escape(cdt.PAGE_DESCRIPTION)}">')
+    head = head.replace('<a href="/tc-check" class="nav-cta" ', '<a href="/tc-check?state=co" class="nav-cta" ')
+    head = head.replace("</head>", cdt.PAGE_CSS + "<style>" + cdt.CALC_CSS + "</style>\n</head>", 1)
+    resp = make_response(head + cdt.page_body())
+    track_page_view(resp, "co_deadlines_page")
+    return resp
+
+
+@app.route("/embed/colorado-deadlines")
+def co_deadlines_embed():
+    # No track_page_view: it sets the ta_vid cookie, and the widget promises
+    # none. Usage is counted by the anonymous tool_calc_run event instead.
+    import co_deadline_tool as cdt
+    return cdt.embed_page()
+
+
+@app.route("/v1/tools/co-deadlines")
+def co_deadlines_compute():
+    """JSON for the calculator. Stateless: the only write is one anonymous
+    tool_calc_run event per page load (log=1), with the surface and the
+    embedding site's host -- never the dates entered."""
+    import co_deadline_tool as cdt
+    result, error = cdt.from_args(request.args)
+    if error:
+        return jsonify({"error": error}), 400
+    if request.args.get("log") == "1":
+        surface = "embed" if request.args.get("surface") == "embed" else "page"
+        track_event("tool_calc_run", None, {"surface": surface, "host": _co_tool_host(request.args.get("host", "")),
+                                            "dated": result["dated"]})
+    resp = jsonify(result)
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
+
+
+@app.route("/tools/colorado-deadlines.ics")
+def co_deadlines_ics():
+    import co_deadline_tool as cdt
+    result, error = cdt.from_args(request.args)
+    if error:
+        return Response(error, status=400, mimetype="text/plain")
+    surface = "embed" if request.args.get("surface") == "embed" else "page"
+    track_event("tool_ics", None, {"surface": surface, "host": _co_tool_host(request.args.get("host", "")),
+                                   "dated": result["dated"]})
+    return Response(cdt.to_ics(result), mimetype="text/calendar",
+                    headers={"Content-Disposition": 'attachment; filename="cbs1-deadlines.ics"',
+                             "Cache-Control": "no-store"})
 
 
 @app.route("/trust")
@@ -12290,13 +12383,14 @@ def wins_page():
 # /offers, /transaction, /broker/dashboard, /admin, /analytics) are left out
 # on purpose and disallowed in robots.txt. /tc-check/compare is live (linked
 # from /tc-check) but kept out until anyone uses it; /playground is a 301.
+# /embed/colorado-deadlines is an iframe widget, not a page -- kept out too.
 _SITEMAP_PATHS = ["/", "/tc-check", "/brokers", "/pricing", "/trec-changes", "/tc-hub", "/tc-hub/colorado", "/trust",
                   "/tc-check/bulk", "/faq", "/about",
                   "/contact", "/privacy", "/terms", "/guides",
                   "/guides/trec-20-19-checklist", "/guides/trec-20-19-effective-date",
                   "/guides/broker-record-retention-texas", "/guides/40-11-loan-amount-mismatch",
                   "/guides/trec-20-19-initials", "/guides/trec-39-11-amendment-mismatch",
-                  "/guides/trec-deadline-calculator", "/archive"]
+                  "/guides/trec-deadline-calculator", "/archive", "/tools/colorado-deadlines"]
 
 
 @app.route("/favicon.ico")
