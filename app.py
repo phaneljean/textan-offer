@@ -363,8 +363,12 @@ def _track_beacon_only_pages(resp):
     return resp
 
 
-# The CBS1 calculator widget exists to be embedded on brokerage and TC
-# sites, so it explicitly allows any framing ancestor.
+# Who may put our pages in an <iframe>. Until 2026-10-13 the site sent no
+# framing headers at all, so any site could frame /login or /admin/crm
+# (clickjacking). Now: same-origin only (the review page frames its own
+# /offers PDF), except the CBS1 calculator widget, which exists to be
+# embedded on brokerage and TC sites. Both headers: X-Frame-Options for old
+# browsers, frame-ancestors because it overrides XFO where supported.
 _EMBEDDABLE_ENDPOINTS = {"co_deadlines_embed"}
 
 
@@ -373,6 +377,9 @@ def _frame_headers(resp):
     if request.endpoint in _EMBEDDABLE_ENDPOINTS:
         resp.headers.pop("X-Frame-Options", None)
         resp.headers["Content-Security-Policy"] = "frame-ancestors *"
+    else:
+        resp.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
+        resp.headers.setdefault("Content-Security-Policy", "frame-ancestors 'self'")
     return resp
 
 

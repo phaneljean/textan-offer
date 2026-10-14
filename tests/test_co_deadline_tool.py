@@ -203,7 +203,8 @@ class Routes(unittest.TestCase):
         for path in ("/", "/tools/colorado-deadlines", "/tc-check", "/tc-hub/colorado", "/v1/tools/co-deadlines?mec=2026-10-13"):
             res = self.c.get(path, headers=UA)
             with self.subTest(path=path):
-                self.assertNotIn("frame-ancestors *", res.headers.get("Content-Security-Policy", ""))
+                self.assertEqual(res.headers.get("X-Frame-Options"), "SAMEORIGIN")
+                self.assertEqual(res.headers.get("Content-Security-Policy"), "frame-ancestors 'self'")
 
     def test_sitemap_and_links(self):
         sm = self.c.get("/sitemap.xml").get_data(as_text=True)
