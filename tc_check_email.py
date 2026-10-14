@@ -404,6 +404,19 @@ _DISCLAIMER = ("TC Check flags blanks and mismatches on the fields it can verify
 MAILING_ADDRESS = ("TxtAnOffer · " + os.environ["TXO_MAILING_ADDRESS"].strip()
                    if os.environ.get("TXO_MAILING_ADDRESS", "").strip() else "")
 
+# Phanel's Calendly (2026-10-14). utm_content=report_email tells Calendly a
+# booking came from this reply; email has no JS, so /analytics can't count
+# these clicks. "Walk through / go over the findings", never "review your
+# contract" or "advice" (RULES.md: TC Check gives no legal advice).
+BOOKING_URL = ("https://calendly.com/pejeanbaptiste/15-min-file-check"
+               "?utm_source=txtanoffer&utm_content=report_email")
+
+
+def _booking_question(has_issues: bool) -> str:
+    # "These findings" reads oddly on a clean report.
+    return "Want to go over these findings?" if has_issues else "Want to walk through this report?"
+
+
 _DISCLAIMER_CO = ("TC Check flags blanks and mismatches on the fields it can verify. "
                   "It isn't legal advice and doesn't replace your review. "
                   "Not affiliated with the Colorado Real Estate Commission.")
@@ -488,6 +501,7 @@ def format_reply_body(result: dict, check_count: int = 0, archived: dict = None)
                  "or upload it at txtanoffer.com/tc-check.\n"
                  "3. Share this with your agent: just forward this email.\n\n")
     body += (_ARCHIVE_TEXT_CO if _is_co(result) else _ARCHIVE_TEXT) + "\n\n" + _UPSELL_TEXT + "\n\n"
+    body += f"{_booking_question(bool(issues))} Book a free 15-min call: {BOOKING_URL}\n\n"
     body += ("---\n"
              f"{_streak_note(check_count)}Check another file: tc@check.txtanoffer.com "
              "or txtanoffer.com/tc-check\n" + (_DISCLAIMER_CO if _is_co(result) else _DISCLAIMER)
@@ -617,6 +631,12 @@ def _upsell_html() -> str:
             f'<a href="{_UPSELL_URL}" style="display:inline-block;font-size:13px;font-weight:700;color:#0f1f2f;background:{_YELLOW};padding:10px 18px;border-radius:999px;text-decoration:none;font-family:{_FONT};">Get a free 20-file audit &rarr;</a></div>')
 
 
+def _booking_html(has_issues: bool) -> str:
+    return (f'<p style="margin:20px 0 0;font-size:13px;line-height:1.55;color:#2c3d4d;font-family:{_FONT};">'
+            f'{escape(_booking_question(has_issues))} '
+            f'<a href="{escape(BOOKING_URL)}" target="_blank" rel="noopener" style="color:{_GREEN};font-weight:600;">Book a free 15-min call &rarr;</a></p>')
+
+
 def _footer_html(check_count: int = 0, co: bool = False) -> str:
     streak = _streak_note(check_count)
     streak_html = f"{escape(streak)}<br>" if streak else ""
@@ -671,6 +691,7 @@ def format_reply_html(result: dict, check_count: int = 0, archived: dict = None)
         body += _next_steps_html()
     body += _archive_html(_is_co(result))
     body += _upsell_html()
+    body += _booking_html(bool(issues))
     body += _footer_html(check_count, _is_co(result))
     return _email_shell(heading, subheading, body, kicker="TC File Check report")
 

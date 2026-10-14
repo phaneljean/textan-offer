@@ -38,6 +38,11 @@ CHECK_CTA_EVENTS = (
 # the original; the rest were added 2026-10-13. The server-side
 # tc_check_demo_used event still counts actual sample runs.
 SAMPLE_CTA_EVENTS = ("hero_sample", "hero_card", "home_sample_btn", "tc_sample_btn", "hub_sample_cta")
+# "Book a free 15-min file check" (Calendly, 2026-10-14), one name per page.
+# The placement within a page is in the link's utm_content, which Calendly
+# shows on the booking; report emails carry no data-evt (no JS in email), so
+# their bookings only show up there (utm_content=report_email).
+BOOK_CALL_EVENTS = ("book_call_home", "book_call_tccheck", "book_call_brokers", "book_call_hub")
 # "Saw drop box" fires on load on /tc-check (the box is above the fold), so
 # it can't separate interest from arrival. This one needs a hand on it:
 # clicking/tapping the box, dragging a file over the page, or focusing the
@@ -134,10 +139,11 @@ def _self_visitor_ids(rows) -> set:
 
 
 def get_headline(days: int = 7) -> dict:
-    """The four numbers at the top of /analytics (2026-10-14): did a real
+    """The numbers at the top of /analytics (2026-10-14): did a real
     outside person try TC Check, and did anyone get that far at all.
     Unique browsers that ran the page's JS; unique browsers that clicked
-    any check CTA; files from outside people (web attempts from a
+    any check CTA; unique browsers that clicked a "book a call" link
+    (BOOK_CALL_EVENTS); files from outside people (web attempts from a
     non-internal browser + forwards from a non-self sender)."""
     import json
     cutoff = (datetime.utcnow() - timedelta(days=days)).isoformat()
@@ -149,7 +155,7 @@ def get_headline(days: int = 7) -> dict:
         conn.close()
     rows = [(t, json.loads(m) if m else {}) for t, m in raw]
     own = _self_visitor_ids(rows)
-    real, clicked = set(), set()
+    real, clicked, booked = set(), set(), set()
     web = email = 0
     for event_type, m in rows:
         v = m.get("visitor") or ""
@@ -158,12 +164,14 @@ def get_headline(days: int = 7) -> dict:
                 real.add(v)
                 if m.get("type") in CHECK_CTA_EVENTS:
                     clicked.add(v)
+                elif m.get("type") in BOOK_CALL_EVENTS:
+                    booked.add(v)
         elif event_type == "tc_check_attempted":
             if v not in own:
                 web += 1
         elif _is_outside_email_check(m):
             email += 1
-    return {"days": days, "real_visitors": len(real), "clicked_check": len(clicked),
+    return {"days": days, "real_visitors": len(real), "clicked_check": len(clicked), "clicked_book_call": len(booked),
             "outside_files": web + email, "outside_web": web, "outside_email": email}
 
 

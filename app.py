@@ -34,7 +34,7 @@ from agent_profiles import get_agent_profile, save_agent_profile, find_by_email,
 from subscriptions import can_generate_offer, increment_offer_count, activate_subscription, deactivate_subscription, get_user, create_user, FREE_OFFER_LIMIT, is_admin_phone, has_professional_access
 from analytics import _is_internal_traffic
 from analytics import track_event, get_conversion_metrics, get_revenue_metrics, get_recent_sms, get_recent_sms_failures, get_last_blocked_state, get_waitlist_signups, get_signups_by_source, get_signup_details, get_landing_visits_by_source, get_tc_check_summary, get_recent_tc_check_email_senders, get_tc_check_count_for_sender, get_tc_check_repeat_senders, get_tc_check_bulk_summary, get_brokerage_alert_delivery, get_daily_funnel, get_top_referrers, set_internal_visitor, get_engagement_by_device, get_recent_email_send_failures, get_recent_visitors, get_co_tool_usage, get_headline
-from analytics import get_engagement_by_source, CHECK_CTA_EVENTS, SAMPLE_CTA_EVENTS, DROPZONE_INTERACT_EVENT
+from analytics import get_engagement_by_source, CHECK_CTA_EVENTS, SAMPLE_CTA_EVENTS, BOOK_CALL_EVENTS, DROPZONE_INTERACT_EVENT
 from integrations import send_offer_email, fire_webhook, save_webhook, get_webhook, delete_webhook, send_to_docusign, send_plain_email, send_html_email
 from offers_db import record_offer, get_offers_for_phone, get_offer_by_filename, record_amendment, get_amendments_for_phone, record_thread_response, record_email_sent, record_docusign_sent
 from brokerages import extract_brokerage_prefix, link_user_to_brokerage, get_brokerage, get_brokerage_by_code, create_brokerage, list_brokerages, list_brokerage_agents, list_brokerage_records
@@ -220,9 +220,11 @@ _MOBILE_UA_RE = re.compile(r"Mobi|Android|iPhone|iPad|iPod", re.I)
 # and their /analytics panel is gone. Past rows stay in the events table.
 _ENGAGEMENT_TYPES = ("js_ok", "hero_cta", "hero_sample", "hero_card", "dropzone_seen", "stay_10s", "stay_60s",
                      "brokers_audit_cta", "brokers_email_cta", "brokers_plan_cta", "records_brokers_cta", "guide_check_cta", "guide_brokers_cta", "path_self_cta", "path_walkthrough_cta", "tc_trust_link", "tc_own_file_cta", "path_brokerage_cta", "guide_card_cta", "support_email_cta", "pricing_audit_cta", "tc_copy_agent_msg", "state_toggle_tx", "state_toggle_co", "states_tx_check", "states_tx_hub", "states_co_check", "states_co_hub", "states_co_tool", "states_request", "workflow_offer_sms", "footer_instagram", "footer_linkedin",
+                     # path_walkthrough_cta / brokers_email_cta were the mailto
+                     # "call" buttons until 2026-10-14; kept so old rows still parse.
                      # /tools/colorado-deadlines, 2026-10-13 (tool_check_cta is in CHECK_CTA_EVENTS)
                      "tool_calc_run", "tool_ics", "tool_copy_text", "tool_embed_copy", "hub_tool_link") \
-    + CHECK_CTA_EVENTS + SAMPLE_CTA_EVENTS + (DROPZONE_INTERACT_EVENT,)
+    + CHECK_CTA_EVENTS + SAMPLE_CTA_EVENTS + BOOK_CALL_EVENTS + (DROPZONE_INTERACT_EVENT,)
 # Pages whose beacons /v1/evt accepts: the ones with their own
 # track_page_view() call, plus _BEACON_ONLY_PAGES below.
 _TRACKED_PAGES = {"homepage", "tc_check_page", "brokers_page", "guide_page", "archive_page", "co_deadlines_page"}
@@ -964,6 +966,8 @@ def index():
     .dz-trust-line { display: flex; justify-content: center; align-items: baseline; gap: 0.4rem; margin: 0; font-size: 0.85rem; color: var(--text-muted); text-align: center; line-height: 1.5; }
     .dz-trust-line svg { color: var(--accent); flex-shrink: 0; position: relative; top: 2px; }
     .dz-trust-line a { color: var(--accent); font-weight: 600; text-decoration: underline; text-underline-offset: 2px; white-space: nowrap; }
+    .dz-book-line { margin: 0.35rem 0 0; font-size: 0.85rem; color: var(--text-muted); text-align: center; line-height: 1.5; }
+    .dz-book-line a { color: var(--accent); font-weight: 600; text-decoration: underline; text-underline-offset: 2px; white-space: nowrap; }
     .demo-check-btn { display: block; width: 100%; margin-top: 1.1rem; padding: 0.8rem 1rem; background: #fff;
       border: 1px solid #d9dee3; border-radius: 12px; font: inherit; font-size: 0.9rem; font-weight: 600;
       color: var(--text); cursor: pointer; text-align: center; transition: var(--transition); }
@@ -1470,6 +1474,10 @@ def index():
         <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>Results in seconds</span>
       </div>
       <p class="dz-trust-line"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span>Checked, then deleted. No AI reads your contract. <a href="/trust#contracts" data-evt="tc_trust_link">How we handle files &rarr;</a></span></p>
+      <!-- Calendly (Phanel's, 2026-10-14). utm_content tells Calendly which
+           placement a booking came from; data-evt counts the click here.
+           Copy says "file check", never "review"/"advice" (see RULES.md). -->
+      <p class="dz-book-line">Prefer to walk through it together? <a href="https://calendly.com/pejeanbaptiste/15-min-file-check?utm_source=txtanoffer&amp;utm_content=home_dropzone" target="_blank" rel="noopener" data-evt="book_call_home">Book a free 15-min file check &rarr;</a></p>
       <div class="status" id="homeStatus"></div>
       <div class="result" id="homeResult"></div>
       <button type="button" class="demo-check-btn" id="homeDemoBtn" data-evt="home_sample_btn">No PDF handy? Run a sample check &rarr;</button>
@@ -1526,10 +1534,10 @@ def index():
       </div>
       <div class="step-card path-card">
         <div class="path-kicker">Talk to us</div>
-        <h3>Schedule a walkthrough call</h3>
-        <p>A short call to walk through what TC Check catches, using your own files or the sample.</p>
-        <ul><li>15 minutes, by phone or video</li><li>Direct answers, no call center</li><li>No sales pitch</li></ul>
-        <a class="path-btn outline" href="mailto:support@txtanoffer.com?subject=Schedule%20a%20walkthrough%20call" data-evt="path_walkthrough_cta">Schedule a call</a>
+        <h3>Walk through a file together</h3>
+        <p>A free 15-minute call to walk through the report on one of your files, or on the sample.</p>
+        <ul><li>15 minutes on Google Meet</li><li>Forward the file to tc@check before the call</li><li>No sales pitch</li></ul>
+        <a class="path-btn outline" href="https://calendly.com/pejeanbaptiste/15-min-file-check?utm_source=txtanoffer&amp;utm_content=home_path_card" target="_blank" rel="noopener" data-evt="book_call_home">Book a free 15-min file check</a>
       </div>
       <div class="step-card path-card">
         <div class="path-kicker">For your whole brokerage</div>
@@ -4618,6 +4626,7 @@ __STATE_SWITCH_JS__
      after the check, and TC Check is rule code with no model/LLM dependency. -->
 <p class="dz-trust-line"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span>Checked, then deleted. No AI reads your contract. <a href="/trust#contracts" data-evt="tc_trust_link">How we handle files &rarr;</a></span></p>
 <p class="dz-forward-line">Or forward it to <a href="mailto:tc@check.txtanoffer.com">tc@check.txtanoffer.com</a> and the report comes back by email.</p>
+<p class="dz-forward-line">Prefer to walk through it together? <a href="https://calendly.com/pejeanbaptiste/15-min-file-check?utm_source=txtanoffer&amp;utm_content=tc_check" target="_blank" rel="noopener" data-evt="book_call_tccheck">Book a free 15-min file check &rarr;</a></p>
 <div>
 <div class="addendum-toggle" id="addendumToggle"><span data-state="tx">+ Also have the 40-11, 41-3 or 39-11? Add up to 3 to cross-check them against the contract, too.</span><span data-state="co">+ Also have the buyer&rsquo;s Exclusive Right-to-Buy, an Amend/Extend, Counterproposal, Inspection Objection Notice or Source of Water Addendum? Add up to 3 to check them against the CBS1.</span></div>
 <div class="addendum-row" id="addendumRow" hidden>
@@ -6576,7 +6585,7 @@ h1{{font-size:22px;margin:8px 0 12px;}}
 h2{{font-size:17px;margin:0 0 8px;}}
 section{{background:#f5f5f5;padding:14px;margin:12px 0;border-radius:8px;min-width:0;}}
 section.alert{{background:#fdecea;}}
-.strip{{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}}
+.strip{{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;}}
 .stat{{background:#f5f5f5;border-radius:8px;padding:12px;}}
 .stat .v{{font-size:30px;font-weight:700;color:#A9772F;line-height:1.1;}}
 .stat .k{{font-size:13px;color:#444;margin-top:4px;}}
@@ -6596,13 +6605,14 @@ td.ua{{white-space:normal;font-size:11px;min-width:220px;word-break:break-all;}}
 details.fold{{background:#fafafa;border:1px solid #e4e4e4;border-radius:8px;padding:10px 12px;margin:8px 0;}}
 details.fold summary,details summary{{cursor:pointer;font-weight:600;font-size:14px;}}
 details.fold[open] summary{{margin-bottom:8px;}}
-@media (max-width:600px){{ .strip{{grid-template-columns:1fr 1fr;}} .stat .v{{font-size:24px;}} body{{padding:10px;}} }}
+@media (max-width:600px){{ .strip{{grid-template-columns:1fr 1fr;}} .strip .stat:last-child{{grid-column:span 2;}} .stat .v{{font-size:24px;}} body{{padding:10px;}} }}
 </style></head><body>
 <h1>TxtAnOffer Analytics</h1>
 
 <div class="strip">
   <div class="stat"><div class="v">{h['real_visitors']}</div><div class="k">Real visitors</div><div class="s">last 7 days</div></div>
   <div class="stat"><div class="v">{h['clicked_check']}</div><div class="k">Clicked &ldquo;Check a file&rdquo;</div><div class="s">any CTA, 7 days</div></div>
+  <div class="stat"><div class="v">{h['clicked_book_call']}</div><div class="k">Clicked book a call</div><div class="s">Calendly link, 7 days</div></div>
   <div class="stat"><div class="v">{h['outside_files']}</div><div class="k">Outside files tried</div><div class="s">{h['outside_web']} web &middot; {h['outside_email']} email, 7 days</div></div>
   <div class="stat"><div class="v">${revenue['mrr']:,}</div><div class="k">MRR</div><div class="s">{revenue['active_subscribers']} paying</div></div>
 </div>
@@ -8605,7 +8615,7 @@ def tc_hub():
     <strong>This page is educational information only -- it is not legal advice and is not a substitute for advice from a licensed Texas real estate attorney or your managing broker.</strong> TxtAnOffer is an independent, third-party tool and is NOT affiliated with, endorsed by, or partnered with the Texas Real Estate Commission (TREC). "TREC" and the form numbers referenced above are designations of the Texas Real Estate Commission. Checklists reflect what TC Check verifies on a file; they are not a complete substitute for your own professional judgment or your broker's review requirements. See our <a href="/terms" style="color:var(--text);text-decoration:underline;">Terms of Service</a> for the full disclaimer.
   </div>
 
-  <p class="foot">Questions? Email <a href="mailto:support@txtanoffer.com">support@txtanoffer.com</a>.<br><a href="/">&larr; Back to home</a> &middot; <a href="/trec-changes">2026 Changes</a> &middot; <a href="/faq">FAQ</a> &middot; <a href="/terms">Terms</a></p>
+  <p class="foot">Questions? Email <a href="mailto:support@txtanoffer.com">support@txtanoffer.com</a>, or <a href="https://calendly.com/pejeanbaptiste/15-min-file-check?utm_source=txtanoffer&amp;utm_content=tc_hub" target="_blank" rel="noopener" data-evt="book_call_hub">book a free 15-min file check</a>.<br><a href="/">&larr; Back to home</a> &middot; <a href="/trec-changes">2026 Changes</a> &middot; <a href="/faq">FAQ</a> &middot; <a href="/terms">Terms</a></p>
 </div>
 
 <script>
@@ -10073,7 +10083,7 @@ def brokers():
     </ol>
     <div class="btn-row">
       <a class="btn" href="/tc-check/bulk?src=brokers_page" data-evt="brokers_audit_cta">Start the free audit &rarr;</a>
-      <a class="btn-outline" href="mailto:support@txtanoffer.com?subject=Brokerage%20backlog%20audit" data-evt="brokers_email_cta">Walk me through it</a>
+      <a class="btn-outline" href="https://calendly.com/pejeanbaptiste/15-min-file-check?utm_source=txtanoffer&amp;utm_content=brokers_audit" target="_blank" rel="noopener" data-evt="book_call_brokers">Book a free 15-min file check</a>
     </div>
     <p class="fine">Want to check just one file first? <a href="/tc-check" style="text-decoration:underline;" data-evt="brokers_single_check_cta">Try a single file</a>. TC Check flags what's missing or inconsistent; it isn't legal advice and doesn't replace your own review.</p>
   </div>

@@ -147,7 +147,7 @@ def body() -> str:
     <strong>This page is educational information only -- it is not legal advice and is not a substitute for advice from a licensed Colorado real estate attorney or your employing broker.</strong> TxtAnOffer is an independent, third-party tool and is NOT affiliated with, endorsed by, or partnered with the Colorado Real Estate Commission or the Colorado Division of Real Estate. Form numbers referenced above are the Commission's designations. Checklists reflect what TC Check verifies on a file; they are not a complete substitute for your own professional judgment or your broker's review requirements. See our <a href="/terms" style="color:var(--text);text-decoration:underline;">Terms of Service</a> for the full disclaimer.
   </div>
 
-  <p class="foot">Questions? Email <a href="mailto:support@txtanoffer.com">support@txtanoffer.com</a>.<br><a href="/?state=co">&larr; Back to home</a> &middot; <a href="/tc-hub">Texas TC Hub</a> &middot; <a href="/faq">FAQ</a> &middot; <a href="/terms">Terms</a></p>
+  <p class="foot">Questions? Email <a href="mailto:support@txtanoffer.com">support@txtanoffer.com</a>, or <a href="https://calendly.com/pejeanbaptiste/15-min-file-check?utm_source=txtanoffer&amp;utm_content=co_hub" target="_blank" rel="noopener" data-evt="book_call_hub">book a free 15-min file check</a>.<br><a href="/?state=co">&larr; Back to home</a> &middot; <a href="/tc-hub">Texas TC Hub</a> &middot; <a href="/faq">FAQ</a> &middot; <a href="/terms">Terms</a></p>
 </div>
 
 <script>
