@@ -37,7 +37,7 @@ CHECK_CTA_EVENTS = (
 # Opening a sample report rather than running your own file. hero_sample is
 # the original; the rest were added 2026-10-13. The server-side
 # tc_check_demo_used event still counts actual sample runs.
-SAMPLE_CTA_EVENTS = ("hero_sample", "hero_card", "home_sample_btn", "tc_sample_btn", "hub_sample_cta")
+SAMPLE_CTA_EVENTS = ("hero_sample", "hero_card", "home_sample_btn", "tc_sample_btn", "hub_sample_cta", "guide_sample_cta")
 # "Book a free 15-min file check" (Calendly, 2026-10-14), one name per page.
 # The placement within a page is in the link's utm_content, which Calendly
 # shows on the booking; report emails carry no data-evt (no JS in email), so

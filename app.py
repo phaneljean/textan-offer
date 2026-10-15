@@ -223,7 +223,8 @@ _ENGAGEMENT_TYPES = ("js_ok", "hero_cta", "hero_sample", "hero_card", "dropzone_
                      # path_walkthrough_cta / brokers_email_cta were the mailto
                      # "call" buttons until 2026-10-14; kept so old rows still parse.
                      # /tools/colorado-deadlines, 2026-10-13 (tool_check_cta is in CHECK_CTA_EVENTS)
-                     "tool_calc_run", "tool_ics", "tool_copy_text", "tool_embed_copy", "hub_tool_link") \
+                     "tool_calc_run", "tool_ics", "tool_copy_text", "tool_embed_copy", "hub_tool_link",
+                     "guide_trec_official") \
     + CHECK_CTA_EVENTS + SAMPLE_CTA_EVENTS + BOOK_CALL_EVENTS + (DROPZONE_INTERACT_EVENT,)
 # Pages whose beacons /v1/evt accepts: the ones with their own
 # track_page_view() call, plus _BEACON_ONLY_PAGES below.
@@ -8930,6 +8931,8 @@ _GUIDES = {
         "h1": "TREC 20-19 checklist: what to check before you send the file to title",
         "lede": "Title problems like these usually aren't legal puzzles. They're blanks and mismatches that were easy to fix before the file left your desk. Here's the order to check them in.",
         "body": """
+<p class="note"><strong>Need the blank form?</strong> Get the current TREC 20-19 from the Commission itself: <a href="https://www.trec.texas.gov/forms/one-four-family-residential-contract-resale" target="_blank" rel="noopener" data-evt="guide_trec_official">official TREC 20-19 page &rarr;</a> TxtAnOffer doesn't host or modify the form. <strong>Already filled one in?</strong> <a href="/tc-check?demo=1&amp;src=seo_trec-20-19-checklist" data-evt="guide_sample_cta">See a sample report</a> first, or check your own file with the button at the end of this page.</p>
+
 <h2>1. Property and parties (Sections 1 and 2A)</h2>
 <ul>
   <li><strong>Property address, city and county (Section 2A).</strong> Don't skip County; title needs it to open the file.</li>
