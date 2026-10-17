@@ -4134,6 +4134,7 @@ def tc_check():
             "issue_keys": issue_keys,
             "sender": (client["email"] or "").strip().lower(),
             "gated": not gate_cleared,
+            "source": request.cookies.get("ta_src") or "direct",
             "source_page": source_page,
             "visitor": request.cookies.get("ta_vid", ""),
         })
@@ -9201,6 +9202,71 @@ _GUIDES = {
 </script>
 """,
     },
+    "transaction-coordinator-software-texas": {
+        "title": "Transaction Coordinator Software for Texas: Where a Free TREC File Check Fits",
+        "description": "What TC platforms do, what a pre-file check on a TREC 20-19 does, and why you might run both. Listed pricing for three TC platforms, with the date checked.",
+        "kicker": "For transaction coordinators",
+        "h1": "Transaction coordinator software for Texas, and where a free TREC contract check fits",
+        "lede": "A blank option period, a 3B loan amount that doesn't match the 40-11, a missing set of initials on page 6. None of those is a task-tracking problem. Here's how TC platforms and a contract check split the work, and what a free file check adds.",
+        "body": """
+<p class="note"><strong>Read this first:</strong> TxtAnOffer makes TC Check, the free tool described below, so treat this page as written by an interested party. Competitor details come from each company's own website, checked on October 17, 2026, and are listed with sources at the end. Prices and plans change; check their sites for current pricing.</p>
+<p><a href="/tc-check?src=seo_transaction-coordinator-software-texas_top" data-evt="guide_check_cta">Have a filled TREC 20-19? Check it free now &rarr;</a></p>
+
+<h2>Two different jobs: running the file vs. checking the contract</h2>
+<p>Most transaction coordinator software is built to run the file. It builds the task list, tracks the dates, stores documents, sends the reminder emails and gives agents and clients a portal. Some platforms also advertise contract reading or compliance features; check each vendor's own description of what those cover. Checking whether the contract itself was filled in completely and consistently before it goes to title is its own job.</p>
+<p>That second job is where files get kicked back. On a TREC 20-19, the usual causes are boring:</p>
+<ul>
+  <li><strong>Blanks.</strong> County in Paragraph 2A. Escrow agent in 5A. The option period days in 5B when an option fee is entered in 5A. No box checked in 7B. The Effective Date on page 10.</li>
+  <li><strong>Numbers that don't agree.</strong> Paragraph 3C on the form reads "Sales Price (Sum of A and B)", so the cash portion in 3A plus the financing in 3B has to equal it.</li>
+  <li><strong>Documents that don't agree.</strong> Here's a made-up example (not a real file): on a 123 Main St contract, 3B reads $320,000 but the attached 40-11 shows a $304,000 loan. Someone has to find out which one is right. Other examples: the Third Party Financing Addendum box checked in 3B and Paragraph 22 but no 40-11 in the file, or a 39-11 amendment that changes the Sales Price when nobody has checked whether 3B and the loan amount changed with it.</li>
+  <li><strong>Missing initials.</strong> The 20-19 has an initials line at the bottom of pages 1 through 9 of 12. One party's slot empty on page 6 is easy to miss when you scroll.</li>
+</ul>
+
+<h2>What three TC platforms say they do</h2>
+<p>These are workflow platforms; two of them also describe AI that reads your contracts. Here's what each one says about itself, and what it charges as listed on October 17, 2026. All three price differently, so the table is a snapshot, not a ranking.</p>
+<table style="width:100%;border-collapse:collapse;font-size:0.9rem;margin-bottom:1.2rem;">
+<thead><tr style="text-align:left;border-bottom:2px solid rgba(15,31,47,0.15);"><th style="padding:0.5rem 0.6rem 0.5rem 0;">Tool</th><th style="padding:0.5rem 0.6rem;">How it describes itself</th><th style="padding:0.5rem 0;">Pricing as listed Oct 17, 2026</th></tr></thead>
+<tbody>
+<tr style="border-bottom:1px solid rgba(15,31,47,0.08);vertical-align:top;"><td style="padding:0.6rem 0.6rem 0.6rem 0;"><strong>DocJacket</strong></td><td style="padding:0.6rem;">"Real estate transaction management software," "Built for Transaction Coordinators." "AI prepares the Key Dates, tasks, documents, and messages. You approve." Intake forms, client and agent portals; its Brokerage plan lists compliance and agent submission workflows.</td><td style="padding:0.6rem 0;">Free plan: $0, 2 active transactions. Pro: $29/mo early-customer pricing for 2 coordinator seats, extra seats $29/mo each (page says standard pricing will be $49/mo). Brokerage: starts at $99/mo for up to 25 new transaction files a month, priced by new files opened per month.</td></tr>
+<tr style="border-bottom:1px solid rgba(15,31,47,0.08);vertical-align:top;"><td style="padding:0.6rem 0.6rem 0.6rem 0;"><strong>ListedKit</strong></td><td style="padding:0.6rem;">"AI Transaction Management for Real Estate Teams." Its assistant reads contracts and emails, builds timelines, tracks deadlines and, per its pricing page, monitors compliance. Says it reads "any state's purchase agreement."</td><td style="padding:0.6rem 0;">$14.99 per credit, no subscription, first one free. One credit covers one contract setup (a buyer deal is 1 credit; listing to close is 2). Packs bring it down to $11.00 per credit at 50.</td></tr>
+<tr style="vertical-align:top;"><td style="padding:0.6rem 0.6rem 0.6rem 0;"><strong>Open To Close</strong></td><td style="padding:0.6rem;">"A fully customizable transaction management platform for Real Estate professionals." Task management, email templates, document tracking, deadlines, agent and client portals.</td><td style="padding:0.6rem 0;">Grow $99/mo, Pro $199/mo, Scale $399/mo; each plan includes 1 user, extra users $69/mo; 30-day free trial.</td></tr>
+</tbody></table>
+<p>Other platforms exist too (tcDocs, SkySlope, Dotloop, Paperless Pipeline, AFrame, Nekst and more); we haven't listed their details because we haven't verified them. Check each vendor's own site before you decide.</p>
+
+<h2>What a pre-file contract check is</h2>
+<p>TC Check is a different kind of tool. You give it a filled-in, fillable TREC PDF and it reads the form fields and tells you what is blank, mismatched or conflicting, citing the paragraph. It runs fixed rules, and no AI reads your contract. It is free: the first 3 reports need no signup, and after that the full itemized report asks for an email. Web uploads are checked and then deleted.</p>
+<p>It checks, for example:</p>
+<ul>
+  <li><strong>TREC 20-19:</strong> blank property address, city, county, escrow agent, earnest money and title company fields (Paragraphs 2A, 5A, 6A); Paragraph 3 price math (3A + 3B against the 3C Sales Price); a blank Effective Date on page 10; a 9A closing date that isn't a real date or falls before the Effective Date; an option fee entered in 5A with the 5B option period days blank; 7B Seller's Disclosure with no box checked; "check one box only" conflicts in 6C, 6E(2), 7B, 7D and 10A; a 12B(1) or 12B(2) broker contribution checked with no amount, or with both the $ and % boxes; the page-12 option fee and earnest money receipts against the 5A amounts; the "Address of Property" header on pages 2 through 12; Paragraph 21 notice email addresses that aren't valid email addresses; and one set of initials for each buyer and seller named in Paragraph 1, on pages 1 through 9.</li>
+  <li><strong>TREC 40-11, 41-3 and 39-11:</strong> attach any of these (up to 3 extra files, 4 PDFs in total) and it cross-checks them against the contract. It compares 3B to the 40-11 loan amount, checks the addendum boxes in 3B and Paragraph 22, flags a 39-11 that changes the Sales Price so you can confirm 3B and the 40-11 changed with it, and checks a 41-3's own blanks.</li>
+  <li><strong>Colorado CBS1</strong>, plus the Amend/Extend, Counterproposal, Inspection Objection Notice, Source of Water Addendum and Exclusive Right-to-Buy, if you coordinate files there.</li>
+</ul>
+<p><a href="/tc-check?src=seo_transaction-coordinator-software-texas_body" data-evt="guide_check_cta">Run a filled TREC 20-19 through TC Check &rarr;</a> Or forward the contract email, with the 40-11, 41-3 or 39-11 attached to the same email, to <a href="mailto:tc@check.txtanoffer.com">tc@check.txtanoffer.com</a> and the report comes back by email. Want to see output first? <a href="/tc-check?demo=1&amp;src=seo_transaction-coordinator-software-texas_demo" data-evt="guide_sample_cta">Open the sample report on 123 Main St.</a></p>
+
+<h2>What TC Check does not do</h2>
+<ul>
+  <li><strong>It is not a TC platform.</strong> No task lists, no deadline tracking for your pipeline, no reminders, no client portal, no document storage for your active files. For dates there's a separate <a href="/guides/trec-deadline-calculator">TREC deadline calculator</a>.</li>
+  <li><strong>It needs a fillable PDF.</strong> A scanned or flattened contract, or one from a tool that renamed the form fields, may come back unreadable or unrecognized. Those don't use up a free report.</li>
+  <li><strong>It checks the forms listed above.</strong> A TREC form it doesn't have rules for isn't checked, and it says so. It does not read Special Provisions in Paragraph 11 for meaning. It only flags wording that matches a keyword pattern for business terms (dollar amounts, credits, repairs and the like) as something to review. It doesn't check signatures.</li>
+  <li><strong>It flags; it doesn't decide.</strong> A clean report means none of its rules fired. It doesn't mean the contract is complete, complies with TREC rules, will close, or is legally sufficient. It is not legal advice. It can't tell you whether the deal terms are right, only whether the specific items listed above are filled in and agree with each other.</li>
+  <li><strong>It is not affiliated with TREC.</strong> It doesn't host or change the TREC forms. Get the current forms from <a href="https://www.trec.texas.gov/forms" target="_blank" rel="noopener">TREC's forms page</a>.</li>
+</ul>
+
+<h2>How to use both</h2>
+<ol>
+  <li>When the executed contract and addenda land, run them through TC Check before you key anything into the platform. Send the agent the blanks and mismatches while they're still easy to fix.</li>
+  <li>Then load the file into whatever you use to run it: DocJacket, ListedKit, Open To Close, or your own spreadsheet.</li>
+  <li>Send the file to title.</li>
+</ol>
+<p>Why this order: any tool that reads the contract works from what's on the page. If the county is blank or 3B is wrong, getting it corrected first means your timeline starts from the corrected contract.</p>
+
+<h2>Who owns TC Check</h2>
+<p>Not owned by Zillow, a brokerage or an MLS. We don't sell data. It's built by one person, who answers the email.</p>
+
+<h2>Sources and dates</h2>
+<p class="note">Competitor details are from each company's own site, checked October 17, 2026: <a href="https://www.docjacket.com/" rel="nofollow noopener" target="_blank">docjacket.com</a> and <a href="https://www.docjacket.com/pricing" rel="nofollow noopener" target="_blank">its pricing page</a>; <a href="https://www.listedkit.com/" rel="nofollow noopener" target="_blank">listedkit.com</a> and <a href="https://www.listedkit.com/pricing" rel="nofollow noopener" target="_blank">its pricing page</a>; <a href="https://www.opentoclose.com/" rel="nofollow noopener" target="_blank">opentoclose.com</a> and <a href="https://www.opentoclose.com/v2/pricing" rel="nofollow noopener" target="_blank">its pricing page</a>. Prices are as listed on that date; check their sites for current pricing. Spot an error? Email us and we'll fix it.</p>
+""",
+    },
 }
 
 
@@ -12210,7 +12276,7 @@ _SITEMAP_PATHS = ["/", "/tc-check", "/brokers", "/pricing", "/trec-changes", "/t
                   "/guides/trec-20-19-checklist", "/guides/trec-20-19-effective-date",
                   "/guides/broker-record-retention-texas", "/guides/40-11-loan-amount-mismatch",
                   "/guides/trec-20-19-initials", "/guides/trec-39-11-amendment-mismatch",
-                  "/guides/trec-deadline-calculator", "/archive", "/tools/colorado-deadlines"]
+                  "/guides/trec-deadline-calculator", "/guides/transaction-coordinator-software-texas", "/archive", "/tools/colorado-deadlines"]
 
 
 @app.route("/favicon.ico")
