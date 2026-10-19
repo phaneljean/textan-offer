@@ -138,6 +138,142 @@ def _self_visitor_ids(rows) -> set:
     return ids
 
 
+# --- Email security scanners (2026-10-19) -----------------------------------
+# Mail gateways (Microsoft Defender, Proofpoint, Mimecast, VirusTotal...)
+# open every link in a message the moment it's delivered, often in a real
+# headless Chrome that runs the page's JS. On 10-19, 15 title cold emails went
+# out 4:52-4:58 PM CT and ti_*/co_ti_* visits hit /tc-check 4:54-4:59 across
+# nearly every recipient at once, "Real browser" and "saw drop box" (it's above
+# the fold, so it fires on load) -- "Cold email: 22 real visitors", most of
+# them scanners. These rules only ever reclassify a browser that did nothing
+# past loading the page and seeing the drop box (_did_more_than_look): one
+# click, upload, sample, booking, 10s stay or second page and it counts as a
+# person no matter what its user agent or referrer says.
+
+# Current stable major versions. NEEDS BUMPING as browsers release (Chrome
+# and Edge every ~4 weeks, Firefox every ~4 weeks): if these go stale, real
+# visitors on the newest release start reading as scanners. Checked
+# 2026-10-19 at chromiumdash.appspot.com (Chrome 155), edgeupdates.microsoft.com
+# (Edge 152) and product-details.mozilla.org (Firefox 158). Note: Chrome 147,
+# 148 and 154 seen on 10-19 are real, recent versions -- not fakes.
+CURRENT_STABLE_MAJOR = {"chrome": 155, "edge": 152, "firefox": 158}
+# How far past stable a version may be before it's treated as made up. Beta /
+# Dev / Canary run 1-2 ahead; 3 leaves room for a few weeks of stale constants.
+FUTURE_VERSION_SLACK = 3
+# Fetchers that identify themselves. Not added to app.py's _BOT_UA_RE on
+# purpose: their page_view is still logged, so a cold email's "it was
+# delivered" signal survives. They never run JS, so they were never counted
+# as real; this just labels them.
+_SCANNER_UA_RE = re.compile(r"appengine-google|virustotal|barracuda|mimecast|proofpoint|safelinks|scanner", re.I)
+# Referrer hosts (as stored by track_page_view: hostname, "www." stripped) of
+# link-rewriting/link-protection services. Matched on the host or any parent
+# domain, so *.safelinks.protection.outlook.com and protect-us.mimecast.com count.
+SCANNER_REFERRER_DOMAINS = (
+    "edgepilot.com",                       # link.edgepilot.com, seen 10-19
+    "safelinks.protection.outlook.com",    # Microsoft Defender Safe Links
+    "urldefense.com", "urldefense.proofpoint.com", "proofpoint.com",
+    "mimecast.com",
+    "cudasvc.com", "barracuda.com",        # Barracuda (linkprotect.cudasvc.com)
+    "secure-web.cisco.com", "iphmx.com",   # Cisco Secure Email
+    "clicktime.symantec.com", "messagelabs.com",
+    "protection.sophos.com", "trendmicro.com", "fortinet.net", "fortiguard.com",
+    "emailprotection.link", "linkscan.io", "virustotal.com",
+)
+# Burst rule: this many distinct browsers on one cold-email campaign inside
+# this window, none doing more than look, is a gateway opening the message.
+BURST_MIN_BROWSERS = 3
+BURST_WINDOW = timedelta(minutes=5)
+# Beacons that only prove the page loaded in something that runs JS.
+_LOOK_ONLY_EVENTS = {"", "js_ok", "dropzone_seen"}
+
+
+def _did_more_than_look(p: dict) -> bool:
+    """Any sign of a hand on the page. These browsers are never scanners."""
+    return bool(p["acted"] or (p["events"] - _LOOK_ONLY_EVENTS) or len(p["pages"]) > 1)
+
+
+def scanner_ua_reason(ua: str) -> str:
+    """Why this user agent can't be a person's browser, or "".
+    - a self-identified fetcher (AppEngine-Google / virustotalcloud...)
+    - a Chrome/Edge/Firefox major more than FUTURE_VERSION_SLACK past stable
+    - legacy "Edge/12-18" (EdgeHTML, retired 2021, always shipped with
+      Chrome/39-70) next to a modern Chrome -- a known scanner fingerprint,
+      e.g. "Chrome/125.0 ... Edge/12.246"."""
+    ua = ua or ""
+    if _SCANNER_UA_RE.search(ua):
+        return "scanner user agent"
+    chrome = re.search(r"Chrome/(\d+)", ua)
+    legacy_edge = re.search(r"\bEdge/(\d+)", ua)
+    if legacy_edge and chrome and int(legacy_edge.group(1)) < 79 and int(chrome.group(1)) >= 80:
+        return "fake Edge/" + legacy_edge.group(1) + " + Chrome/" + chrome.group(1)
+    for name, pattern in (("chrome", r"Chrome/(\d+)"), ("edge", r"\bEdg/(\d+)"), ("firefox", r"Firefox/(\d+)")):
+        m = re.search(pattern, ua)
+        if m and int(m.group(1)) > CURRENT_STABLE_MAJOR[name] + FUTURE_VERSION_SLACK:
+            return f"{name.capitalize()} {m.group(1)} doesn't exist yet"
+    return ""
+
+
+def scanner_referrer_reason(host: str) -> str:
+    """The referrer host if it's a link-protection service, else ""."""
+    host = (host or "").lower().strip(".")
+    for d in SCANNER_REFERRER_DOMAINS:
+        if host == d or host.endswith("." + d):
+            return "via " + host
+    return ""
+
+
+def _campaign_of(src: str) -> str:
+    """ti_keydfw -> ti, co_ti_elevated -> co_ti, d1013_spyglass -> d1013:
+    the tag minus its recipient part, so one send to many firms groups."""
+    return src.rsplit("_", 1)[0] if "_" in src else src
+
+
+def find_scanners(rows, exclude: set = frozenset()) -> dict:
+    """{visitor: reason} for browsers that look like email security scanners.
+    rows: (event_type, metadata dict, created_at) for the window, any event
+    types; page_view rows are required to classify a browser at all (a
+    beacon-only browser has no UA/referrer/source to judge). exclude:
+    Phanel's own browsers, which mustn't help form a burst either."""
+    prof = {}
+    for event_type, m, created_at in rows:
+        v = m.get("visitor") or ""
+        if not v or v in exclude:
+            continue
+        p = prof.setdefault(v, {"first": None, "src": None, "ua": "", "referrers": set(), "pages": set(),
+                                "events": set(), "acted": False})
+        if event_type == "page_view":
+            if p["first"] is None or created_at < p["first"]:
+                p["first"], p["src"] = created_at, m.get("source") or "direct"
+            p["ua"] = p["ua"] or m.get("ua") or ""
+            p["referrers"].add(m.get("referrer") or "")
+            p["pages"].add(m.get("page") or "?")
+        elif event_type == "page_engagement":
+            p["events"].add(m.get("type") or "")
+        elif event_type in ("tc_check_attempted", "tc_check_demo_used", "tc_check"):
+            p["acted"] = True
+    looked = {v: p for v, p in prof.items() if p["first"] and not _did_more_than_look(p)}
+
+    out = {}
+    for v, p in looked.items():
+        reason = scanner_ua_reason(p["ua"]) or next(filter(None, map(scanner_referrer_reason, sorted(p["referrers"]))), "")
+        if reason:
+            out[v] = reason
+    # Burst: cold-email tags only. A LinkedIn/Facebook post can genuinely send
+    # three people in five minutes; a cold email goes to one person per tag.
+    groups = {}
+    for v, p in looked.items():
+        if _channel_for_source(p["src"]) == "Cold email":
+            groups.setdefault(_campaign_of(p["src"].lower()), []).append((datetime.fromisoformat(p["first"]), v))
+    for campaign, hits in groups.items():
+        hits.sort()
+        for i, (start, _) in enumerate(hits):
+            window = [v for t, v in hits[i:] if t - start <= BURST_WINDOW]
+            if len(window) >= BURST_MIN_BROWSERS:
+                for v in window:
+                    out.setdefault(v, f"burst: {len(window)} browsers on {campaign}_* within {BURST_WINDOW.seconds // 60} min")
+    return out
+
+
 def get_headline(days: int = 7) -> dict:
     """The numbers at the top of /analytics (2026-10-14): did a real
     outside person try TC Check, and did anyone get that far at all.
@@ -149,18 +285,22 @@ def get_headline(days: int = 7) -> dict:
     cutoff = (datetime.utcnow() - timedelta(days=days)).isoformat()
     conn = sqlite3.connect(DB_PATH)
     try:
-        raw = conn.execute("""SELECT event_type, metadata FROM events WHERE created_at > ? AND event_type IN
-                              ('page_engagement', 'tc_check_attempted', 'tc_check')""", (cutoff,)).fetchall()
+        raw = conn.execute("""SELECT event_type, metadata, created_at FROM events WHERE created_at > ? AND event_type IN
+                              ('page_view', 'page_engagement', 'tc_check_attempted', 'tc_check_demo_used', 'tc_check')
+                              ORDER BY created_at""", (cutoff,)).fetchall()
     finally:
         conn.close()
-    rows = [(t, json.loads(m) if m else {}) for t, m in raw]
+    timed = [(t, json.loads(m) if m else {}, c) for t, m, c in raw]
+    rows = [(t, m) for t, m, _ in timed]
     own = _self_visitor_ids(rows)
+    # Email security scanners aren't visitors (2026-10-19, see find_scanners).
+    scanners = find_scanners(timed, exclude=own)
     real, clicked, booked = set(), set(), set()
     web = email = 0
     for event_type, m in rows:
         v = m.get("visitor") or ""
         if event_type == "page_engagement":
-            if v and v not in own:
+            if v and v not in own and v not in scanners:
                 real.add(v)
                 if m.get("type") in CHECK_CTA_EVENTS:
                     clicked.add(v)
@@ -169,7 +309,7 @@ def get_headline(days: int = 7) -> dict:
         elif event_type == "tc_check_attempted":
             if v not in own:
                 web += 1
-        elif _is_outside_email_check(m):
+        elif event_type == "tc_check" and _is_outside_email_check(m):
             email += 1
     return {"days": days, "real_visitors": len(real), "clicked_check": len(clicked), "clicked_book_call": len(booked),
             "outside_files": web + email, "outside_web": web, "outside_email": email}
@@ -434,6 +574,8 @@ def get_daily_funnel(days: int = 14) -> list:
     # Phanel's browsers, including one that ran a web check under his own
     # email before /internal-mode was set on it (2026-10-14).
     internal = _self_visitor_ids([(t, m) for t, m, _, _ in rows])
+    # "Real visitors" (js_ok) leaves out email scanners (2026-10-19).
+    scanners = find_scanners([(t, m, c) for t, m, c, _ in rows], exclude=internal)
     for event_type, metadata, created_at, phone in rows:
         day = by_day.get(created_at[:10])
         if day is None:
@@ -449,7 +591,9 @@ def get_daily_funnel(days: int = 14) -> list:
         elif event_type == "page_engagement":
             key = metadata.get("type")
             vid = metadata.get("visitor") or ""
-            if key in ("js_ok", "hero_cta", "hero_sample", "dropzone_seen", "stay_10s", "dropzone_interact"):
+            if key in ("js_ok", "dropzone_seen") and vid in scanners:
+                pass
+            elif key in ("js_ok", "hero_cta", "hero_sample", "dropzone_seen", "stay_10s", "dropzone_interact"):
                 day[key].add(vid)
             # Unique browsers that clicked ANY check / sample CTA that day.
             if key in CHECK_CTA_EVENTS:
@@ -503,7 +647,7 @@ def get_recent_visitors(hours: int = 48, limit: int = 150, source_prefix: str = 
     cutoff = (datetime.utcnow() - timedelta(hours=hours)).isoformat()
     cursor.execute("""
         SELECT event_type, metadata, created_at FROM events
-        WHERE created_at > ? AND event_type IN ('page_view', 'page_engagement')
+        WHERE created_at > ? AND event_type IN ('page_view', 'page_engagement', 'tc_check_attempted', 'tc_check_demo_used')
         ORDER BY created_at
     """, (cutoff,))
     rows = cursor.fetchall()
@@ -511,14 +655,19 @@ def get_recent_visitors(hours: int = 48, limit: int = 150, source_prefix: str = 
 
     import json
     internal = _internal_visitor_ids()
+    timed = [(t, json.loads(m) if m else {}, c) for t, m, c in rows]
+    # Labeled, not hidden (2026-10-19): a scanner hit on a cold-email tag
+    # still shows the email was delivered.
+    scanners = find_scanners(timed, exclude=internal)
     visitors = {}
-    for event_type, metadata_json, created_at in rows:
-        metadata = json.loads(metadata_json) if metadata_json else {}
+    for event_type, metadata, created_at in timed:
         vid = metadata.get("visitor") or ""
-        if not vid or vid in internal:
+        # Uploads/sample runs only feed find_scanners above, as before.
+        if not vid or vid in internal or event_type not in ("page_view", "page_engagement"):
             continue
         v = visitors.setdefault(vid, {"visitor": vid, "first": created_at, "last": created_at, "pages": {},
-                                      "referrers": set(), "sources": set(), "devices": set(), "ua": "", "events": set()})
+                                      "referrers": set(), "sources": set(), "devices": set(), "ua": "", "events": set(),
+                                      "scanner": scanners.get(vid, "")})
         v["last"] = created_at
         if event_type == "page_view":
             page = metadata.get("page") or "?"
@@ -555,7 +704,8 @@ def _channel_for_source(src: str) -> str:
         return "Instagram"
     if s.startswith("seo_"):
         return "Search (guides)"
-    if (s.startswith(("ti_", "title_reach", "tc_check_reach", "zillow_broker_reach", "direct_reach", "apollo"))
+    # co_ti_* = the Colorado title batch (title_reach_tx_co_2026-10-19.md).
+    if (s.startswith(("ti_", "co_ti_", "title_reach", "tc_check_reach", "zillow_broker_reach", "direct_reach", "apollo"))
             or re.match(r"(d|co)\d{4}_", s)):
         return "Cold email"
     return "other"
@@ -573,16 +723,19 @@ def get_engagement_by_source(days: int = 30) -> dict:
     cutoff = (datetime.utcnow() - timedelta(days=days)).isoformat()
     conn = sqlite3.connect(DB_PATH)
     try:
-        rows = conn.execute("""SELECT event_type, metadata FROM events WHERE created_at > ? AND event_type IN
+        raw = conn.execute("""SELECT event_type, metadata, created_at FROM events WHERE created_at > ? AND event_type IN
                                ('page_view', 'page_engagement', 'tc_check_attempted', 'tc_check_demo_used')
                                ORDER BY created_at""", (cutoff,)).fetchall()
     finally:
         conn.close()
     internal = _internal_visitor_ids()
+    timed = [(t, json.loads(m) if m else {}, c) for t, m, c in raw]
+    # Scanners are left out of "real" and counted on their own (2026-10-19):
+    # on a cold-email tag a scanner hit still says the email was delivered.
+    scanners = find_scanners(timed, exclude=internal)
     src_of, loads = {}, {}
     real, stayed, checked, sampled, uploaded = set(), set(), set(), set(), set()
-    for event_type, metadata_json in rows:
-        m = json.loads(metadata_json) if metadata_json else {}
+    for event_type, m, _ in timed:
         v = m.get("visitor") or ""
         if v in internal:
             continue
@@ -601,7 +754,8 @@ def get_engagement_by_source(days: int = 30) -> dict:
         else:
             t = m.get("type") or ""
             # Any beacon proves the page's JS ran (js_ok only exists from 10-06).
-            real.add(v)
+            if v not in scanners:
+                real.add(v)
             if t == "stay_10s":
                 stayed.add(v)
             if t in CHECK_CTA_EVENTS:
@@ -611,8 +765,10 @@ def get_engagement_by_source(days: int = 30) -> dict:
 
     def _row(key, who, page_loads):
         return {"key": key, "loads": page_loads, "real": len(who & real), "stayed": len(who & stayed),
-                "checked": len(who & checked), "sampled": len(who & sampled), "uploaded": len(who & uploaded)}
+                "checked": len(who & checked), "sampled": len(who & sampled), "uploaded": len(who & uploaded),
+                "scanners": len(who & scanned)}
 
+    scanned = set(scanners)
     by_src, by_channel, channel_loads = {}, {}, {}
     for v, src in src_of.items():
         by_src.setdefault(src, set()).add(v)
@@ -1126,17 +1282,20 @@ def get_engagement_by_device(days: int = 7) -> list:
     cutoff = (datetime.utcnow() - timedelta(days=days)).isoformat()
     conn = sqlite3.connect(DB_PATH)
     try:
-        rows = conn.execute("""SELECT event_type, metadata FROM events WHERE created_at > ?
-                               AND event_type IN ('page_view', 'page_engagement')""", (cutoff,)).fetchall()
+        raw = conn.execute("""SELECT event_type, metadata, created_at FROM events WHERE created_at > ?
+                               AND event_type IN ('page_view', 'page_engagement', 'tc_check_attempted', 'tc_check_demo_used')""",
+                           (cutoff,)).fetchall()
     finally:
         conn.close()
     internal = _internal_visitor_ids()
+    timed = [(t, json.loads(m) if m else {}, c) for t, m, c in raw]
+    scanners = find_scanners(timed, exclude=internal)
+    rows = [(t, m) for t, m, _ in timed if t in ('page_view', 'page_engagement')]
     keys = ("js_ok", "stay_10s", "dropzone_seen", "hero_cta", "dropzone_interact")
     out = {d: {"device": d, "visitors": set(), "check_cta": set(), **{k: set() for k in keys}} for d in ("desktop", "mobile")}
-    for event_type, metadata_json in rows:
-        m = json.loads(metadata_json) if metadata_json else {}
+    for event_type, m in rows:
         v, d = m.get("visitor") or "", out.get(m.get("device"))
-        if not v or v in internal or d is None:
+        if not v or v in internal or v in scanners or d is None:
             continue
         if event_type == "page_view":
             d["visitors"].add(v)

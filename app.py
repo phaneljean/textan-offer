@@ -6428,16 +6428,26 @@ def analytics_dashboard():
     # --- 2. Real humans by channel -------------------------------------
     def _src_row(r):
         return (f"<tr><td>{escape(r['key'])}</td><td class='dim'>{r['loads']}</td><td><strong>{r['real']}</strong></td>"
-                f"<td>{r['stayed']}</td><td>{r['checked']}</td><td>{r['sampled']}</td><td>{r['uploaded']}</td></tr>")
+                f"<td>{r['stayed']}</td><td>{r['checked']}</td><td>{r['sampled']}</td><td>{r['uploaded']}</td>"
+                f"<td class='dim'>{r['scanners']}</td></tr>")
+    # Last column (2026-10-19): email security scanners, not in "Real
+    # visitors". On a cold-email tag it means the message reached a mail
+    # server that opened the link -- delivered, not read.
     src_headers = ["Channel", "<span class='dim'>Page loads (incl. bots)</span>", "Real visitors", "Stayed 10s+",
-                   "Clicked &ldquo;Check a file&rdquo;", "Tried sample", "Uploaded"]
+                   "Clicked &ldquo;Check a file&rdquo;", "Tried sample", "Uploaded",
+                   "<span class='dim'>Delivered (scanner hits)</span>"]
     channel_table = _table(src_headers, "".join(_src_row(r) for r in by_source["channels"]), "No page views in the last 30 days.")
     src_table = _table(["src"] + src_headers[1:], "".join(_src_row(r) for r in by_source["sources"]), "No page views in the last 30 days.")
 
     def _visitor_row(v):
         # js_ok only exists from 2026-10-06; any engagement beacon (drop box
         # seen, 10s stay...) also proves the page's JS ran, so older rows count.
-        real = bool(v["events"] - {""})
+        # Email security scanners (analytics.find_scanners, 2026-10-19) run JS
+        # too; they're labeled rather than hidden, since on a cold-email tag
+        # they show the message was delivered.
+        real = bool(v["events"] - {""}) and not v["scanner"]
+        real_cell = (f"scanner <span class='dim'>({escape(v['scanner'])})</span>" if v["scanner"]
+                     else '&#10003;' if real else '&mdash;')
         engaged = [label for key, label in (("stay_10s", "10s+"), ("stay_60s", "60s+"), ("dropzone_seen", "saw drop box"),
                                             ("dropzone_interact", "used drop box"))
                    if key in v["events"]]
@@ -6451,7 +6461,7 @@ def analytics_dashboard():
         pages = ", ".join(f"{escape(p)}&times;{n}" if n > 1 else str(escape(p)) for p, n in v["pages"].items()) or "(beacon only)"
         return (f"<tr{'' if real else ' class=dim'}><td>{_central(v['first'])}</td><td class='wrap'>{pages}</td>"
                 f"<td>{escape(', '.join(v['referrers']))}</td><td>{escape(', '.join(v['sources']))}</td>"
-                f"<td>{escape(', '.join(v['devices']))}</td><td>{'&#10003;' if real else '&mdash;'}</td>"
+                f"<td>{escape(', '.join(v['devices']))}</td><td>{real_cell}</td>"
                 f"<td class='wrap'>{escape(', '.join(engaged))}</td>"
                 f"<td class='ua'>{escape(v['ua'] or '(not logged)')}</td></tr>")
     visitor_headers = ["First seen", "Pages", "Referrer", "Source", "Device", "Real browser", "Did", "Browser (user agent)"]
@@ -6465,8 +6475,8 @@ def analytics_dashboard():
         _ua_visitors = get_recent_visitors(hours=30 * 24, limit=300, source_prefix=src_ua)
         src_ua_section = (
             f"<section><h2>Visitors with src starting &ldquo;{escape(src_ua)}&rdquo; (30 days, Central time)</h2>"
-            f"<p class='note'>{len(_ua_visitors)} visitors &middot; {sum(1 for v in _ua_visitors if v['events'] - {''})} ran the page "
-            f"in a real browser. Several firms opening in the same minute, no JavaScript, or a Linux/old-Chrome UA = mail scanner, not a person.</p>"
+            f"<p class='note'>{len(_ua_visitors)} visitors &middot; {sum(1 for v in _ua_visitors if v['events'] - {''} and not v['scanner'])} ran the page "
+            f"in a real browser, {sum(1 for v in _ua_visitors if v['scanner'])} marked scanner. Several firms opening in the same minute, no JavaScript, or a Linux/old-Chrome UA = mail scanner, not a person.</p>"
             + _table(visitor_headers, "".join(_visitor_row(v) for v in _ua_visitors), "None.") + "</section>")
 
     # --- 3. Daily funnel --------------------------------------------------
@@ -6536,7 +6546,7 @@ def analytics_dashboard():
 
     # --- Collapsed diagnostics ---------------------------------------------
     recent_visitors = get_recent_visitors(hours=48)
-    recent_real = sum(1 for v in recent_visitors if v["events"] - {""})
+    recent_real = sum(1 for v in recent_visitors if v["events"] - {""} and not v["scanner"])
     referrer_rows = "".join(f"<tr><td>{escape(r['referrer'])}</td><td>{r['count']}</td></tr>" for r in get_top_referrers(days=30))
     device_rows = "".join(
         f"<tr><td>{d['device']}</td><td><strong>{d['js_ok']}</strong></td><td class='dim'>{d['visitors']}</td><td>{d['stay_10s']}</td>"
@@ -6631,7 +6641,10 @@ not from your own addresses or @txtanoffer.com (junk senders and no-PDF emails e
   <details style="margin-top:10px;"><summary>By src tag</summary>{src_table}</details>
   <p class="note">Unique browsers, each credited to the src of its first page view in the window. Uploaded = a real web file attempt
   (email forwards aren&rsquo;t tied to a browser). Channels: li_/linkedin &rarr; LinkedIn, fb &rarr; Facebook, ig_ &rarr; Instagram,
-  seo_ &rarr; Search, ti_/d1013_/co1012_/*_reach &rarr; Cold email. User agents for one tag: add <code>&amp;src_ua=ti_</code> to this URL.</p>
+  seo_ &rarr; Search, ti_/co_ti_/d1013_/co1012_/*_reach &rarr; Cold email. User agents for one tag: add <code>&amp;src_ua=ti_</code> to this URL.
+  <strong>Delivered (scanner hits)</strong> (from 2026-10-19) = email security scanners, never in Real visitors: a made-up browser version,
+  a link-protection referrer (Safe Links, Proofpoint, Mimecast, EdgePilot...), or 3+ browsers on one cold-email campaign within 5 minutes.
+  Only browsers that did nothing past seeing the drop box can be marked; any click, upload, sample, 10s stay or second page counts as a person.</p>
 </section>
 {src_ua_section}
 <section>
