@@ -75,8 +75,9 @@ class TwoStatePages(unittest.TestCase):
 
     def test_sms_disclosure_kept(self):
         html = self.get("/?state=co")
-        self.assertIn("By texting, you agree to receive SMS replies about your offers. Reply STOP to opt out, HELP for help. "
-                      "Msg &amp; data rates may apply.", html)
+        # Copy updated 2026-10-23 (trec-qa Phase A, SMS nurture tips disclosed).
+        self.assertIn("By texting, you agree to receive SMS replies and reminders about your offers, plus up to 2 tips "
+                      "on the free trial. Reply STOP to opt out, HELP for help. Msg &amp; data rates may apply.", html)
 
 
 class ColoradoSample(unittest.TestCase):

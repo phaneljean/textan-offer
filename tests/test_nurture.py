@@ -56,7 +56,7 @@ class _Base(unittest.TestCase):
     def setUp(self):
         self.assertEqual(nurture.DB_PATH, subscriptions.DB_PATH)
         with _db() as c:
-            for t in ("users", "offers", "events", "sms_nurture", "sms_opt_outs"):
+            for t in ("users", "offers", "events", "sms_nurture", "sms_opt_outs", "sms_consents"):
                 c.execute(f"DELETE FROM {t}")
         self.sent = []
 
@@ -90,8 +90,8 @@ class OfferSteps(_Base):
         _user(count=1); _offer(at=T0)
         self.assertEqual(self.run_at(T0 + timedelta(hours=23)), [])
         self.assertEqual(self.run_at(T0 + timedelta(hours=24, minutes=5)), [(PHONE, "offer1")])
-        self.assertIn("Text DASHBOARD", self.sent[0][1])
-        self.assertIn("Text PROFILE to save your earnest % and option fee", self.sent[0][1])
+        self.assertIn("saved for 30 days. Text DASHBOARD", self.sent[0][1])
+        self.assertIn("Text PROFILE to set your earnest % and option fee", self.sent[0][1])
         self.assertEqual(self.run_at(T0 + timedelta(hours=25)), [])
         self.assertEqual(len(self.sent), 1)
 
@@ -198,6 +198,96 @@ class Skips(_Base):
         self.assertEqual(self._due_offer1(), [])
         nurture.record_opt_keyword(PHONE, "START")
         self.assertEqual(len(self.run_at(T0 + timedelta(hours=26))), 1)
+
+
+class OptOutPhrases(_Base):
+    def test_free_text_opt_outs(self):
+        for body in ("OPT OUT", "optout", "Opt-out please", "STOP TEXTING", "stop texting me", "Stop texting me!",
+                     "UNSUBSCRIBE ME", "unsubscribe", "STOP ALL", "dont text me", "Don\u2019t text me anymore"):
+            with self.subTest(body=body):
+                self.assertTrue(nurture.is_opt_out_text(body))
+
+    def test_offer_texts_never_match(self):
+        for body in ("725k 3% 21day 123 Main St, Austin, TX", "425k 3.5% 30day FHA 10 day option 123 Main St, Austin, TX",
+                     "stop by 123 Main St", "make it 820k", "close in 25 days", "YES", "DASHBOARD", "PROFILE",
+                     "what is this stop sign doing on my lawn here"):
+            with self.subTest(body=body):
+                self.assertFalse(nurture.is_opt_out_text(body))
+
+    def test_phrase_via_webhook_records_opt_out_and_sends_no_reply(self):
+        client = app_module.app.test_client()
+        with mock.patch("app.twilio_send_sms") as tw:
+            client.post("/sms", data={"From": PHONE, "Body": "Stop texting me"})
+            tw.assert_not_called()
+        _user(count=1); _offer(at=T0)
+        self.assertEqual(self.run_at(T0 + timedelta(hours=24, minutes=5)), [])
+
+    def test_cancel_still_cancels_a_draft(self):
+        with mock.patch("app.twilio_send_sms") as tw:
+            app_module.app.test_client().post("/sms", data={"From": "+15125550177", "Body": "CANCEL"})
+        self.assertIn("Nothing pending to cancel.", tw.call_args[0][1])
+
+
+class TipExamplesParse(_Base):
+    """The offer2 examples are things we tell agents to text, so run them
+    through the real /sms flow: FHA + 10 days, or the tip is wrong."""
+
+    def _draft_for(self, phone, body):
+        from drafts import get_draft
+        with mock.patch("app.twilio_send_sms") as tw:
+            app_module.app.test_client().post("/sms", data={"From": phone, "Body": body})
+        return get_draft(phone), tw.call_args[0][1]
+
+    def test_texas_example(self):
+        body = nurture.message_for("offer2").split("ex: ")[1].split(". Text HELP")[0]
+        self.assertEqual(body, "425k 3.5% 30day FHA 10 day option 123 Main St, Austin, TX")
+        draft, reply = self._draft_for("+15125550181", body)
+        self.assertEqual((draft["financing_type"], draft["inspection_days"], draft["price"]), ("fha", 10, 425000))
+        self.assertIn("Financing: FHA", reply)
+        self.assertIn("Option period: 10 days", reply)
+
+    def test_colorado_example(self):
+        body = nurture.message_for("offer2", True).split("ex: ")[1].split(". Text HELP")[0]
+        self.assertEqual(body, "425k 3.5% 30day FHA 10 day inspection 123 Main St, Denver, CO")
+        draft, reply = self._draft_for("+13035550182", body)
+        self.assertEqual((draft.get("state"), draft["financing_type"], draft["inspection_days"]), ("CO", "fha", 10))
+        self.assertIn("FHA", reply)
+        self.assertIn("inspection objection 10 days", reply)
+
+
+class SignupConsent(_Base):
+    def _signup(self, phone, checked):
+        data = {"phone": phone, "name": "Test", "email": "t@example.com"}
+        if checked:
+            data["sms_consent"] = "on"
+        with mock.patch("app.twilio_send_sms", return_value=True) as tw:
+            r = app_module.app.test_client().post("/signup", data=data)
+        self.assertEqual(r.status_code, 200)
+        return tw
+
+    def test_unchecked_box_sends_no_welcome_text(self):
+        self._signup("+15125550191", False).assert_not_called()
+        with _db() as c:
+            self.assertEqual(c.execute("SELECT COUNT(*) FROM sms_consents").fetchone(), (0,))
+
+    def test_checked_box_sends_welcome_and_stores_consent(self):
+        tw = self._signup("+15125550192", True)
+        tw.assert_called_once()
+        self.assertIn("Msg freq varies. Msg & data rates may apply. Reply HELP for help, STOP to opt out.", tw.call_args[0][1])
+        with _db() as c:
+            row = c.execute("SELECT phone, label_text FROM sms_consents").fetchone()
+        self.assertEqual(row, ("+15125550192", app_module.SMS_CONSENT_LABEL))
+
+    def test_privacy_quotes_the_live_label_word_for_word(self):
+        client = app_module.app.test_client()
+        signup = client.get("/signup").get_data(as_text=True)
+        privacy = client.get("/privacy").get_data(as_text=True)
+        self.assertIn(f"(Optional) {app_module.SMS_CONSENT_LABEL} <a", signup)
+        self.assertIn(f'that says "{app_module.SMS_CONSENT_LABEL}" OR (2)', privacy)
+
+    def test_help_text_has_support_contact(self):
+        self.assertTrue(app_module.SMS_HELP_TEXT.endswith(
+            "Support: support@txtanoffer.com. Msg freq varies. Msg & data rates may apply. Reply STOP to unsubscribe."))
 
 
 class QuietHours(_Base):

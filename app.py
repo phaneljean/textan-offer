@@ -1642,7 +1642,7 @@ def index():
         <p>Your agents text the terms in and get back a structured offer in seconds &mdash; the starting point everything else builds on, and the first record in your brokerage's archive.</p>
         <p style="margin-top:0.6rem;">For example: <strong data-state="tx">725k 3% 21day 123 Main St, Austin, TX</strong><strong data-state="co">500k 20% 30day 123 Main St, Denver, CO</strong></p>
         <p style="margin-top:0.6rem;font-weight:600;">Text <a href="sms:+18338970333" data-evt="workflow_offer_sms" style="color:var(--accent-dark);text-decoration:underline;">(833) 897-0333</a></p>
-        <p style="font-size:0.72rem;color:var(--text-dim);margin-top:0.35rem;">By texting, you agree to receive SMS replies about your offers. Reply STOP to opt out, HELP for help. Msg &amp; data rates may apply. <a href="/privacy" style="color:inherit;text-decoration:underline;">Privacy</a> &middot; <a href="/terms" style="color:inherit;text-decoration:underline;">Terms</a></p>
+        <p style="font-size:0.72rem;color:var(--text-dim);margin-top:0.35rem;">By texting, you agree to receive SMS replies and reminders about your offers, plus up to 2 tips on the free trial. Reply STOP to opt out, HELP for help. Msg &amp; data rates may apply. <a href="/privacy" style="color:inherit;text-decoration:underline;">Privacy</a> &middot; <a href="/terms" style="color:inherit;text-decoration:underline;">Terms</a></p>
       </div>
       <div class="step-card">
         <div class="step-num">2</div>
@@ -2957,7 +2957,7 @@ SMS_HELP_TEXT = (
     "Examples:\n"
     "AMEND 123 Main St price 730k\n"
     "AMEND 123 Main St close +10\n\n"
-    "Reply STOP to unsubscribe."
+    "Support: support@txtanoffer.com. Msg freq varies. Msg & data rates may apply. Reply STOP to unsubscribe."
 )
 
 
@@ -2993,11 +2993,12 @@ def sms_reply():
     track_event("sms_received", agent_phone, {"body": incoming_msg})
     # Recorded for nurture.py, which must never text someone who opted out.
     # Twilio itself answers STOP/START (and blocks our sends after a STOP),
-    # so don't also run the word through the offer parser. CANCEL is a
-    # Twilio opt-out word too but still cancels a pending draft below.
+    # so don't also run the word through the offer parser; a free-text
+    # "stop texting me" gets no reply either. CANCEL is a Twilio opt-out
+    # word too but still cancels a pending draft below.
     nurture.record_opt_keyword(agent_phone, incoming_msg, _form.get("OptOutType", ""))
     _word = incoming_msg.strip().upper()
-    if _word in (nurture.OPT_OUT_WORDS - {"CANCEL"}) or _word in nurture.OPT_IN_WORDS:
+    if (_word != "CANCEL" and nurture.is_opt_out_text(incoming_msg)) or _word in nurture.OPT_IN_WORDS:
         return "", 200
     run_cleanup_if_due(OUTPUT_DIR)
     run_reminders_if_due(twilio_send_sms)
@@ -3593,7 +3594,7 @@ DEMO_FORM = """
     </div>
 
     <div class="foot">
-      By texting or using this service, you consent to receive SMS responses. Reply STOP to opt out anytime. Msg &amp; data rates may apply.
+      By texting or using this service, you consent to receive SMS replies, offer reminders and up to 2 free-trial tips. Reply STOP to opt out anytime. Msg &amp; data rates may apply.
       <br><a href="/pricing">View Pricing</a> &middot; <a href="/terms">Terms</a> &middot; <a href="/privacy">Privacy</a>
     </div>
   </div>
@@ -7113,6 +7114,15 @@ def broker_archive_zip(join_code):
                     headers={"Content-Disposition": f'attachment; filename="{safe_name}-records.zip"'})
 
 
+# /signup's SMS checkbox label. /privacy's "Opt-in Method" quotes it word for
+# word (toll-free reviewers compare the two; tests.test_nurture checks it).
+SMS_CONSENT_LABEL = (
+    "I agree to receive automated SMS messages from TxtAnOffer at +1 (833) 897-0333 about my offer drafts and account, "
+    "including deadline reminders and up to 2 tips during the free trial. No marketing texts. Message frequency varies. "
+    "Reply STOP to opt out, HELP for help. Msg &amp; data rates may apply. Consent is not a condition of purchase or service."
+)
+
+
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
     success_msg = ""
@@ -7157,10 +7167,16 @@ def signup():
                     track_event("signup", phone, {"name": name, "email": email, "source": src or "direct"})
                 except Exception:
                     pass
-                sms_sent = twilio_send_sms(phone,
-                    "Welcome to TxtAnOffer! Text your offer: 725k 3% 21day 123 Main St. "
-                    "Msg & data rates may apply. Reply STOP to opt out."
-                )
+                # The SMS box is "(Optional)", so it has to mean something: no
+                # box, no welcome text (trec-qa 10-23 found it was never read).
+                # The exact label shown is stored with the consent.
+                sms_sent = False
+                if request.form.get("sms_consent"):
+                    nurture.record_sms_consent(phone, SMS_CONSENT_LABEL, request.remote_addr)
+                    sms_sent = twilio_send_sms(phone,
+                        "Welcome to TxtAnOffer! Text your offer: 725k 3% 21day 123 Main St. "
+                        "Msg freq varies. Msg & data rates may apply. Reply HELP for help, STOP to opt out."
+                    )
                 profile_url = sign_dashboard_url(phone, request.host_url.rstrip("/")).replace("/dashboard?", "/profile?")
                 intro_line = "Check your texts for a welcome message." if sms_sent else "Tap below to set up your profile now."
                 success_msg = (
@@ -7262,7 +7278,7 @@ def signup():
         <input type="text" name="brokerage_code" placeholder="Given to you by your managing broker" style="text-transform:uppercase;">
         <div class="consent-row">
           <input type="checkbox" id="sms-consent" name="sms_consent">
-          <label for="sms-consent">(Optional) I agree to receive automated transactional SMS messages from TxtAnOffer at +1 (833) 897-0333 about my offer drafts. Message frequency varies based on usage. Reply STOP to opt out, HELP for help. Msg &amp; data rates may apply. Consent is not a condition of purchase or service. <a href="/privacy">Privacy Policy</a> &amp; <a href="/terms">Terms</a></label>
+          <label for="sms-consent">(Optional) {SMS_CONSENT_LABEL} <a href="/privacy">Privacy Policy</a> &amp; <a href="/terms">Terms</a></label>
         </div>
         <button type="submit">Sign up for SMS</button>
       </form>
@@ -7791,7 +7807,7 @@ def privacy():
 <div class="container">
   <div class="page-header">
     <h1>Privacy Policy</h1>
-    <span class="updated">Last Updated: July 14, 2026</span>
+    <span class="updated">Last Updated: October 23, 2026</span>
   </div>
 
   <div class="legal-card">
@@ -7824,14 +7840,20 @@ def privacy():
     <h2 id="sms-messaging">3. SMS Messaging</h2>
     <p><strong>Program Name:</strong> TxtAnOffer</p>
     <p><strong>Phone Number:</strong> +1 (833) 897-0333</p>
-    <p><strong>Opt-in Method:</strong> Users opt in by (1) entering their phone number and checking an unchecked checkbox on www.txtanoffer.com/signup that says "By checking this box, I agree to receive automated transactional SMS messages from TxtAnOffer at +1 (833) 897-0333 about my offer drafts. Message frequency varies based on usage. Reply STOP to opt out, HELP for help. Msg &amp; data rates may apply. Consent is not a condition of purchase." OR (2) by texting offer details directly to +1 (833) 897-0333 after seeing opt-in disclosure on our website.</p>
-    <p><strong>Consent:</strong> By texting our service number +1 (833) 897-0333 or submitting your phone number via our website, you consent to receive SMS messages from TxtAnOffer related to your offer requests and account.</p>
-    <p><strong>Message frequency:</strong> Message frequency varies based on your usage. You will receive one response per offer submitted, plus occasional account notifications (typically 1-5 messages per month), including a one-time reminder a few days before the closing date of an offer you generated.</p>
+    <p><strong>Opt-in Method:</strong> Users opt in by (1) entering their phone number and checking an unchecked checkbox on www.txtanoffer.com/signup that says "I agree to receive automated SMS messages from TxtAnOffer at +1 (833) 897-0333 about my offer drafts and account, including deadline reminders and up to 2 tips during the free trial. No marketing texts. Message frequency varies. Reply STOP to opt out, HELP for help. Msg &amp; data rates may apply. Consent is not a condition of purchase or service." OR (2) by texting offer details directly to +1 (833) 897-0333 after seeing the SMS disclosure on our website.</p>
+    <p><strong>Consent:</strong> By texting our service number +1 (833) 897-0333 or checking the SMS box on our signup page, you consent to receive SMS messages from TxtAnOffer about your offer requests and account, including the reminders and tips listed under Message frequency.</p>
+    <p><strong>Message frequency:</strong> Message frequency varies based on your usage. You get a reply to each text you send us. We also text you without you texting first, only in these cases:</p>
+    <ul>
+      <li>A one-time reminder a few days before the closing date of an offer you generated.</li>
+      <li>After a listing agent responds through your offer link: a text saying they accepted or declined, and, if accepted, reminders before key contract deadlines (in Texas, the option period end and the earnest money and option fee due date; in Colorado, key &sect;3.1 deadlines).</li>
+      <li>On the free trial: up to 2 tips on using the service, about a day after your first and second offers. Each is sent once, between 9am and 8pm Central (noon on Sundays).</li>
+      <li>If your brokerage lists you as its transaction coordinator: a text when one of its agents drafts an offer.</li>
+    </ul>
     <p><strong>Opt-out:</strong> Reply STOP to any message to unsubscribe from SMS. Reply START to re-subscribe. You can continue using the web interface after opting out of SMS.</p>
-    <p><strong>Help:</strong> Reply HELP for support information, or contact support@txtanoffer.com or +1 (833) 897-0333.</p>
+    <p><strong>Help:</strong> Reply HELP for support information, or contact support@txtanoffer.com.</p>
     <p><strong>Rates:</strong> Message and data rates may apply depending on your carrier plan.</p>
     <p><strong>Carriers:</strong> Compatible with all major US carriers. Carriers are not liable for delayed or undelivered messages.</p>
-    <p>This is a transactional service tied to offers you generate -- most messages are user-initiated, plus the closing-date reminder described above. We do not send marketing or promotional messages.</p>
+    <p>These texts are about offers you generate and your account. Tips explain how to use the service and never advertise a plan or a price. We do not send marketing or promotional messages.</p>
 
     <h2>4. Data Sharing</h2>
     <p>We do not sell, rent, or trade your personal information. We share data only with:</p>
@@ -7855,7 +7877,8 @@ def privacy():
       <li>TC Check bulk uploads: we keep your email, the number of files, and each file&rsquo;s original filename, whether it was recognized, its issue count and up to 10 issue messages, with no set expiry. Anyone with the batch results link can view them.</li>
       <li>Account data: retained while your account is active and for 90 days after cancellation</li>
       <li>Billing records: retained as required by applicable tax and accounting laws</li>
-      <li>SMS logs: retained for 90 days for support and debugging purposes</li>
+      <li>SMS logs: kept for support and debugging purposes, deleted after about 90 days</li>
+      <li>SMS opt-outs and a record of which follow-up tips we sent: kept with no set expiry, so we never text you after you reply STOP and never send the same tip twice.</li>
     </ul>
     <p><strong>Note for licensees:</strong> In Texas, TREC Rule &sect;535.2 requires brokers to independently retain offers, contracts, and related addenda for at least 4 years from closing or termination. Our 30-day PDF retention does not satisfy that requirement. The Brokerage plan's contract archive can hold the executed contracts your brokerage forwards or uploads, plus the drafts generated here. It helps with that requirement, but it is not a guarantee of compliance &mdash; you remain responsible for keeping complete transaction records under your own state's rules.</p>
 
@@ -8038,7 +8061,7 @@ def faq():
 
   <div class="faq-item">
     <h2>Do you store my texts or offers?</h2>
-    <p>On the free trial, generated PDFs are stored for download and deleted after 30 days. On the Agent plan they're kept 5 years in your dashboard. On the Brokerage plan, every offer and amendment your agents draft here, plus any executed contracts your brokerage forwards or uploads, is kept for 5 years in a searchable archive the broker can export. SMS logs are retained for 90 days for support and debugging. We do not sell or share your data. See our <a href="/privacy" style="color:var(--accent-dark);">Privacy Policy</a> for the full breakdown.</p>
+    <p>On the free trial, generated PDFs are stored for download and deleted after 30 days. On the Agent plan they're kept 5 years in your dashboard. On the Brokerage plan, every offer and amendment your agents draft here, plus any executed contracts your brokerage forwards or uploads, is kept for 5 years in a searchable archive the broker can export. SMS logs are kept for support and debugging and deleted after about 90 days. We do not sell your data. We share it only with the service providers listed in our Privacy Policy, such as Twilio to deliver texts. See our <a href="/privacy" style="color:var(--accent-dark);">Privacy Policy</a> for the full breakdown.</p>
     <p><strong>Important:</strong> TREC Rule &sect;535.2 requires brokers to independently retain records of offers, contracts, and related addenda for at least 4 years from closing or termination of the transaction. Our 30-day free-trial retention does not satisfy that requirement. On the Brokerage plan, the <a href="/archive" style="color:var(--accent-dark);">contract archive</a> holds the executed contracts your brokerage forwards or uploads, kept 5 years, plus the drafts generated here. It helps with that rule, but it isn&rsquo;t a guarantee of compliance &mdash; you remain responsible for keeping complete transaction records.</p>
   </div>
 
@@ -8049,7 +8072,7 @@ def faq():
 
   <div class="faq-item">
     <h2>Will I get reminded before an offer's closing date?</h2>
-    <p>Yes &mdash; TxtAnOffer sends a one-time text a few days before the closing date of an offer you generated, so it doesn't slip past you. This is the one message we send without you texting first; reply STOP anytime to opt out of all messages, including this one.</p>
+    <p>Yes &mdash; TxtAnOffer sends a one-time text a few days before the closing date of an offer you generated, so it doesn't slip past you. It's one of the few texts we send without you texting first. The others are deadline reminders and a notice after a listing agent responds to your offer link, and, on the free trial, up to 2 tips on using the service. Reply STOP anytime to opt out of all messages.</p>
   </div>
 
   <div class="faq-item">

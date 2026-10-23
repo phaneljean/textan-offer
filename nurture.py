@@ -60,6 +60,22 @@ STOP_LINE = "Reply STOP to opt out."
 OPT_OUT_WORDS = {"STOP", "STOPALL", "UNSUBSCRIBE", "CANCEL", "END", "QUIT", "OPTOUT", "REVOKE"}
 OPT_IN_WORDS = {"START", "UNSTOP"}
 
+# Consent can be revoked "by any reasonable means" (FCC 2024 rule), so short
+# free-text replies like "stop texting me" or "opt out" count too -- for our
+# own records, Twilio only acts on the exact keywords. Six words max and no
+# digits keeps offer texts ("725k ... 123 Main St") from ever matching.
+_OPT_OUT_PHRASE = re.compile(r"\b(STOP|UNSUBSCRIBE|OPT ?OUT|DON'?T TEXT|DO NOT TEXT)\b")
+
+
+def is_opt_out_text(body: str) -> bool:
+    text = re.sub(r"[^A-Z' ]", " ", (body or "").upper().replace("\u2019", "'"))
+    text = " ".join(text.split())
+    if text in OPT_OUT_WORDS:
+        return True
+    if re.search(r"\d", body or "") or not text or len(text.split()) > 6:
+        return False
+    return bool(_OPT_OUT_PHRASE.search(text))
+
 # US NANP mobile/landline shape only. Demo/landing source ids ("landing-demo",
 # demo keys) and anything foreign are not textable here.
 _US_PHONE = re.compile(r"^\+1[2-9]\d{2}[2-9]\d{6}$")
@@ -108,6 +124,25 @@ def init_nurture_tables():
             opted_out_at TEXT NOT NULL
         )
     """)
+    # /signup SMS checkbox: who checked it, when, from where, and the exact
+    # label they saw.
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS sms_consents (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            phone TEXT NOT NULL,
+            consented_at TEXT NOT NULL,
+            label_text TEXT NOT NULL,
+            ip TEXT
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+
+def record_sms_consent(phone: str, label_text: str, ip: str = None):
+    conn = sqlite3.connect(DB_PATH)
+    conn.execute("INSERT INTO sms_consents (phone, consented_at, label_text, ip) VALUES (?, ?, ?, ?)",
+                 (phone, datetime.utcnow().isoformat(), label_text, ip))
     conn.commit()
     conn.close()
 
@@ -119,7 +154,7 @@ def record_opt_keyword(phone: str, body: str, opt_out_type: str = "") -> str:
     word = (body or "").strip().upper()
     kind = (opt_out_type or "").strip().upper()
     if kind not in ("STOP", "START"):
-        kind = "STOP" if word in OPT_OUT_WORDS else "START" if word in OPT_IN_WORDS else ""
+        kind = "STOP" if is_opt_out_text(word) else "START" if word in OPT_IN_WORDS else ""
     if not kind or not phone:
         return kind
     conn = sqlite3.connect(DB_PATH)
@@ -161,7 +196,7 @@ def is_opted_out(phone: str) -> bool:
             word = (json.loads(meta or "{}").get("body") or "").strip().upper()
         except ValueError:
             continue
-        if word in OPT_OUT_WORDS:
+        if is_opt_out_text(word):
             return True
         if word in OPT_IN_WORDS:
             return False
@@ -262,14 +297,16 @@ def message_for(step: str, is_co: bool = False) -> str:
     # Plain GSM-7 only (see app.py format_offer_confirmation): no em dashes
     # or curly quotes, which would flip the text to UCS-2 and triple the cost.
     if step == "offer1":
+        # "30 days": every offer1 recipient is on the free trial, where
+        # cleanup.py deletes PDFs after PDF_RETENTION_DAYS.
         defaults = "your earnest %" if is_co else "your earnest % and option fee"
-        return ("TxtAnOffer: your draft is saved. Text DASHBOARD anytime to see your drafts. "
-                f"Text PROFILE to save {defaults} once, and every new draft fills in your way. "
-                + STOP_LINE)
+        return ("TxtAnOffer: your draft is saved for 30 days. Text DASHBOARD to see your drafts. "
+                f"Text PROFILE to set {defaults} once, and new drafts use them. " + STOP_LINE)
     if step == "offer2":
         left = FREE_OFFER_LIMIT - 2
-        example = ("725k 3% 21day FHA 10 day inspection 123 Main St, Denver, CO" if is_co
-                   else "725k 3% 21day FHA 10 day option 123 Main St, Austin, TX")
+        # 3.5% down: FHA's minimum. tests.test_nurture runs both through /sms.
+        example = ("425k 3.5% 30day FHA 10 day inspection 123 Main St, Denver, CO" if is_co
+                   else "425k 3.5% 30day FHA 10 day option 123 Main St, Austin, TX")
         return (f"TxtAnOffer: {left} free offer{'s' if left != 1 else ''} left. Tip: put the loan type and "
                 f"{'inspection' if is_co else 'option'} days in the same text, ex: {example}. "
                 "Text HELP for all commands. " + STOP_LINE)
