@@ -49,11 +49,13 @@ class BookingLinkPlacements(unittest.TestCase):
                 self.assertIn(f'data-evt="{evt}"', tag)
 
     def test_homepage(self):
+        # The simplified homepage (2026-10-23, Phanel-approved mockup) has no
+        # booking link; /tc-check, /brokers and the hubs keep theirs. The
+        # book_call_home name stays in BOOK_CALL_EVENTS for past rows.
         for path in ("/", "/?state=co"):
-            self._assert_links(path, ["home_dropzone", "home_path_card"], "book_call_home")
-            self.assertIn("Prefer to walk through it together?", self.html[path])
+            self._assert_links(path, [], "book_call_home")
             self.assertNotIn("Schedule a call", self.html[path])
-            self.assertNotIn("Schedule%20a%20walkthrough", self.html[path])
+        self.assertIn("book_call_home", app_module.BOOK_CALL_EVENTS)
 
     def test_tc_check_both_states(self):
         for path in ("/tc-check", "/tc-check?state=co"):

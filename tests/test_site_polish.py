@@ -47,21 +47,23 @@ class HeroCardMatchesSample(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.html = _unescape(app_module.app.test_client().get("/", headers=UA).get_data(as_text=True))
-        m = re.search(r'id="heroReportCard".*?<div class="hx-caption">', cls.html, re.S)
+        m = re.search(r'id="heroReportCard".*?<!-- /heroReportCard -->', cls.html, re.S)
         cls.card = m.group(0)
 
     def _state_block(self, state):
-        return re.search(r'<div data-state="%s">(.*?)</ul>' % state, self.card, re.S).group(1)
+        return re.search(r'<div class="card-b" data-state="%s">(.*?)(?=<div class="card-b"|<!-- /heroReportCard -->)' % state,
+                         self.card, re.S).group(1)
 
     def test_tx_counts_and_findings(self):
         shown, must, review = _counts(TX_SAMPLE)
         block = self._state_block("tx")
         self.assertIn(f"{must} must fix", block)
         self.assertIn(f"{review} to review", block)
-        self.assertIn(f"+ {len(shown) - 3} more in the full sample report", self.card)
         # Each finding on the card is a verbatim leading part of a real message
         real = [_clean(i["message"]).replace("\u2019", "'") for i in shown]
-        for text in re.findall(r'<div class="hx-it"><b>[^<]*</b><span>([^<]*)</span>', block):
+        texts = re.findall(r'<div class="finding">.*?<b>[^<]*</b><span>([^<]*)</span>', block)
+        self.assertEqual(len(texts), 3)
+        for text in texts:
             self.assertTrue(any(r.startswith(text) for r in real), text)
 
     def test_co_counts_and_findings(self):
@@ -70,14 +72,16 @@ class HeroCardMatchesSample(unittest.TestCase):
         self.assertIn(f"{must} must fix", block)
         self.assertIn(f"{review} to review", block)
         real = [_clean(i["message"]).replace("\u2019", "'") for i in shown]
-        texts = re.findall(r'<div class="hx-it"><b>[^<]*</b><span>([^<]*)</span>', block)
+        texts = re.findall(r'<div class="finding">.*?<b>[^<]*</b><span>([^<]*)</span>', block)
         self.assertEqual(len(texts), 3)
         for text in texts:
             self.assertTrue(any(r.startswith(text) for r in real), text)
 
     def test_hero_keeps_tracking_hooks(self):
-        for hook in ('id="heroSampleBtn"', 'data-evt="hero_sample"', 'data-evt="hero_cta"', 'href="#check"',
-                     'data-evt="state_toggle_tx"', 'data-evt="state_toggle_co"'):
+        # Simplified homepage (2026-10-23): no in-page drop box, so the hero
+        # buttons go to /tc-check; the state links are plain /?state= links.
+        for hook in ('data-evt="hero_sample"', 'data-evt="hero_cta"', 'href="/tc-check?demo=1"',
+                     'href="/?state=co" data-evt="state_toggle_co"', 'href="/?state=tx" data-evt="state_toggle_tx"'):
             self.assertIn(hook, self.html)
         self.assertNotIn("home-hero.jpg", self.html)
 
@@ -98,9 +102,15 @@ class NavCta(unittest.TestCase):
 
 
 class ResultNextSteps(unittest.TestCase):
+    # "/" dropped its drop box 2026-10-23; it's checked for the old upsell
+    # claims only. The result next steps live on /tc-check.
     def test_no_false_upsell_claims_and_own_file_cta_present(self):
         c = app_module.app.test_client()
-        for path in ("/", "/tc-check"):
+        home = c.get("/", headers=UA).get_data(as_text=True)
+        for gone in ("never blank to begin with", "can never disagree", "nothing left for a check like this to catch",
+                     "until every required TREC field", "buildUpsellCta(", "buildIndividualUpgradeCard("):
+            self.assertNotIn(gone, home, gone)
+        for path in ("/tc-check",):
             html = c.get(path, headers=UA).get_data(as_text=True)
             for gone in ("never blank to begin with", "can never disagree", "nothing left for a check like this to catch",
                          "until every required TREC field", "buildUpsellCta(", "buildIndividualUpgradeCard("):
@@ -157,7 +167,7 @@ class UnreadableFile(unittest.TestCase):
         self.assertFalse(real["gated"])
 
     def test_pages_word_it_honestly_and_by_state(self):
-        for path in ("/", "/tc-check"):
+        for path in ("/tc-check",):  # the only page with a drop box since 2026-10-23
             html = self.client.get(path, headers=UA).get_data(as_text=True)
             self.assertIn("We couldn&rsquo;t read the form fields in this file.", html, path)
             self.assertIn("stateMode() === 'co' ? 'CBS1' : 'TREC 20-19'", html, path)

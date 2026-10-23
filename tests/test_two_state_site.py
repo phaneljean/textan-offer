@@ -40,8 +40,13 @@ class TwoStatePages(unittest.TestCase):
             html = self.get(path)
             self.assertIn('data-state="tx"', html, path)
             self.assertIn('data-state="co"', html, path)
-            self.assertIn('data-set-state="co"', html, path)
             self.assertIn('data-evt="state_toggle_co"', html, path)
+            # The homepage switches state with plain /?state= links since
+            # 2026-10-23; /tc-check keeps the in-page toggle.
+            if path == "/tc-check":
+                self.assertIn('data-set-state="co"', html, path)
+            else:
+                self.assertIn('href="/?state=co" data-evt="state_toggle_co"', html)
             self.assertNotIn("__STATE_", html, path)
             self.assertNotIn("__TX_PRESSED__", html, path)
             # track_page_view still finds a bare <body> to tag
@@ -51,7 +56,7 @@ class TwoStatePages(unittest.TestCase):
         for path in ("/", "/tc-check"):
             html = self.get(path)
             self.assertEqual(html_class(html), "state-tx", path)
-            self.assertIn('data-set-state="tx" aria-pressed="true"', html)
+        self.assertIn('data-set-state="tx" aria-pressed="true"', self.get("/tc-check"))
 
     def test_state_param_cookie_and_src_pick_colorado(self):
         for path in ("/?state=co", "/tc-check?state=co", "/?src=co1012_test", "/?src=li_co_flyer"):
@@ -71,13 +76,16 @@ class TwoStatePages(unittest.TestCase):
         html = self.get("/")
         self.assertNotIn('id="colorado"', html)
         self.assertNotIn("sl-hero-states", html)
-        self.assertIn("Catch what title kicks back <em>before you send the file.</em>", html)
+        self.assertIn("<h1>Catch it before<br>title does.</h1>", html)
 
     def test_sms_disclosure_kept(self):
         html = self.get("/?state=co")
-        # Copy updated 2026-10-23 (trec-qa Phase A, SMS nurture tips disclosed).
-        self.assertIn("By texting, you agree to receive SMS replies and reminders about your offers, plus up to 2 tips "
-                      "on the free trial. Reply STOP to opt out, HELP for help. Msg &amp; data rates may apply.", html)
+        # Copy updated 2026-10-23 (trec-qa Phase A, SMS nurture tips disclosed;
+        # "Msg frequency varies." added the same day, Phanel-approved).
+        expected = ("By texting, you agree to receive SMS replies and reminders about your offers, plus up to 2 tips "
+                    "on the free trial. Reply STOP to opt out, HELP for help. Msg frequency varies. Msg &amp; data rates may apply.")
+        self.assertIn(expected, html)
+        self.assertIn(expected, self.get("/brokers"))
 
 
 class ColoradoSample(unittest.TestCase):

@@ -78,7 +78,7 @@ class SampleStripMatchesSample(unittest.TestCase):
                 self.assertEqual(tag, "MUST FIX" if cls == "b" else "REVIEW")
 
     def test_strip_rows_match_homepage_card(self):
-        card = re.search(r'id="heroReportCard".*?<div class="hx-caption">', _get("/"), re.S).group(0)
+        card = re.search(r'id="heroReportCard".*?<!-- /heroReportCard -->', _get("/"), re.S).group(0)
         for key, cls, tag, msg in first_screen.SAMPLE_ROWS["tx"] + first_screen.SAMPLE_ROWS["co"]:
             self.assertIn("<span>" + msg + "</span>", card, msg)
 
@@ -135,31 +135,46 @@ class TcCheckFirstScreen(unittest.TestCase):
 
 
 class HomepageFirstScreen(unittest.TestCase):
+    """The simplified homepage (2026-10-23) keeps the hero's analytics hooks
+    on its new buttons: the sample button now opens /tc-check?demo=1 (which
+    runs the sample there) instead of running it in place."""
+
     @classmethod
     def setUpClass(cls):
         cls.html = _get("/")
 
     def test_copy_and_hooks(self):
         self.assertNotIn("__FS_", self.html)
-        for key in ("home_eyebrow", "home_sub_tx", "home_sample_btn", "home_broker_line"):
-            self.assertIn(COPY[key], self.html, key)
-        for hook in ('id="homeDropZone"', 'id="heroSampleBtn" data-evt="hero_sample"', 'id="heroReportCard"',
-                     'data-evt="hero_card"', 'data-evt="hero_cta"', 'id="homeDemoBtn" data-evt="home_sample_btn"'):
+        self.assertNotIn("__HOME_", self.html)
+        for hook in ('href="/tc-check" data-evt="hero_cta"', 'href="/tc-check?demo=1" data-evt="hero_sample"',
+                     'href="/tc-check?state=co" data-evt="hero_cta"', 'href="/tc-check?demo=1&amp;state=co" data-evt="hero_sample"',
+                     'id="heroReportCard"', 'href="/tc-check#what-it-checks" data-evt="home_check_link"'):
             self.assertIn(hook, self.html)
+        for evt in ("hero_cta", "home_check_link"):
+            self.assertIn(evt, app_module.CHECK_CTA_EVENTS)
+        self.assertIn("hero_sample", app_module.SAMPLE_CTA_EVENTS)
         # Title line is /tc-check only.
         self.assertNotIn('id="titleLine"', _get("/?src=ti_keydfw"))
 
-    def test_broker_line_is_texas_only_and_goes_to_bulk(self):
-        m = re.search(r'<a class="sl-broker-line"([^>]*)>', self.html)
+    def test_broker_section_is_texas_only_and_goes_to_bulk(self):
+        m = re.search(r'<section class="brokers"([^>]*)>(.*?)</section>', self.html, re.S)
         self.assertIn('data-state="tx"', m.group(1))
-        self.assertIn('href="/tc-check/bulk"', m.group(1))
-        self.assertIn('data-evt="hero_broker_cta"', m.group(1))
+        self.assertIn('href="/tc-check/bulk" data-evt="hero_broker_cta"', m.group(2))
 
-    def test_texas_subhead_only_on_texas(self):
-        self.assertIn('<p data-state="tx">' + COPY["home_sub_tx"] + "</p>", self.html)
+    def test_subhead_per_state(self):
+        self.assertIn('<p class="sub" data-state="tx">Drop a filled TREC 20-19.', self.html)
+        self.assertIn('<p class="sub" data-state="co">Drop a filled CBS1', self.html)
 
     def test_eyebrow_above_h1(self):
-        self.assertLess(self.html.find('class="sl-eyebrow"'), self.html.find("<h1>Catch what title"))
+        self.assertLess(self.html.find('<div class="eyebrow">TC Check</div>'), self.html.find("<h1>Catch it before"))
+
+    def test_what_it_checks_anchor_on_tc_check(self):
+        # The homepage link lands on a wrapper holding both states' lists.
+        html = _get("/tc-check")
+        self.assertEqual(html.count('id="what-it-checks"'), 1)
+        anchor = html.find('id="what-it-checks"')
+        self.assertLess(anchor, html.find("What this checks &middot; Texas TREC 20-19"))
+        self.assertLess(anchor, html.find('id="colorado"'))
 
 
 if __name__ == "__main__":

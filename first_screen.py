@@ -17,15 +17,9 @@ wording change from review is a one-line edit here. app.py's templates use
 import re
 
 COPY = {
-    # --- homepage hero -------------------------------------------------------
-    "home_eyebrow": "For Texas &amp; Colorado transaction coordinators and managing brokers",
-    # Texas only (trec-qa): Effective Date blank, initials and 3A+3B=3C are
-    # all live tc_audit rules. The Colorado subhead is unchanged in app.py.
-    "home_sub_tx": "Drop a filled TREC 20-19. In seconds you see the blank Effective Date, the missing initial, the price that doesn&rsquo;t add up, before title sends it back.",
-    "home_sample_btn": "See a sample report (no file needed) &rarr;",
-    # Texas only: /tc-check/bulk's copy is TREC-only. "Up to 20" is
-    # FREE_BULK_LIMIT (tc_bulk.py); not "last 20" -- they pick the files.
-    "home_broker_line": "Managing broker? Check up to 20 of your agents&rsquo; closed contracts free&nbsp;&rarr;",
+    # The homepage hero keys (home_eyebrow, home_sub_tx, home_sample_btn,
+    # home_broker_line) went with the 2026-10-23 homepage simplification;
+    # its copy is in app.py's index(). SAMPLE_ROWS below still feeds its card.
 
     # --- /tc-check -----------------------------------------------------------
     "tc_eyebrow": "TC File Check",

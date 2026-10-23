@@ -596,1622 +596,407 @@ STATE_SWITCH_JS = """<script>
 
 @app.route("/")
 def index():
+    # Simplified 2026-10-23 (ad-creative mockup, Phanel-approved, copy passed
+    # by txo-trec-qa): five sections and a footer, one idea each. What left
+    # the page has a home elsewhere: the drop box and the full "what it
+    # checks" list are on /tc-check (#what-it-checks), the archive steps and
+    # the offer-to-closing workflow on /brokers, the trust detail on /trust.
+    # Colorado is the same page with the data-state="co" blocks shown (hero
+    # copy, scrap and sample card from the previous homepage); the bulk
+    # broker section is Texas-only, like /tc-check/bulk itself.
     html = """
 <!DOCTYPE html>
 <html lang="en" class="__STATE_CLASS__">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TxtAnOffer — Catch What Title Kicks Back</title>
+  <title>TxtAnOffer — Catch it before title does.</title>
   <meta name="description" content="For transaction coordinators and managing brokers in Texas and Colorado: drop a filled TREC 20-19 or CBS1 and see what's missing or inconsistent before title kicks it back. TxtAnOffer also drafts new offers by text message.">
-  <meta property="og:title" content="TxtAnOffer — Catch What Title Kicks Back">
-  <meta property="og:description" content="Drop a filled TREC 20-19 or Colorado CBS1 and see what's missing or inconsistent before title kicks it back &mdash; blank dates, missing initials, mismatched checkboxes.">
+  <meta property="og:title" content="TxtAnOffer — Catch it before title does.">
+  <meta property="og:description" content="Drop a filled TREC 20-19 or Colorado CBS1 and see what's blank, missing or doesn't add up before title kicks it back.">
   <meta property="og:url" content="https://txtanoffer.com/">
   <meta property="og:type" content="website">
   <meta name="twitter:card" content="summary">
-  <meta name="twitter:title" content="TxtAnOffer — Catch What Title Kicks Back">
-  <meta name="twitter:description" content="Drop a filled TREC 20-19 or Colorado CBS1 and see what's missing or inconsistent before title kicks it back &mdash; blank dates, missing initials, mismatched checkboxes.">
+  <meta name="twitter:title" content="TxtAnOffer — Catch it before title does.">
+  <meta name="twitter:description" content="Drop a filled TREC 20-19 or Colorado CBS1 and see what's blank, missing or doesn't add up before title kicks it back.">
   <link rel="icon" href="/static/favicon.ico?v=2" type="image/x-icon">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Caveat:wght@700&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Caveat:wght@700&display=swap" rel="stylesheet"></noscript>
+  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
   <style>
-    :root {
-      --bg: #F5F5F7;
-      --card-dark: #0f1f2f;
-      --card-dark-2: #152a3a;
-      --card-dark-3: #112333;
-      --bg-card: #fff;
-      --border: rgba(15,31,47,0.08);
-      --border-hover: rgba(11,93,82,0.35);
-      --text: #0f1f2f;
-      --text-muted: #5a6b7a;
-      --text-dim: #5f707f; /* was #8a9aa9 (2.9:1 on white, failed WCAG AA) */
-      --accent: #0b5d52;
-      --accent-light: #16806e;
-      --accent-tint: #eef5f3;
-      --accent-glow: rgba(11,93,82,0.18);
-      --radius: 1.25rem;
-      --radius-sm: 0.85rem;
-      --transition: all 0.2s ease;
-    }
+  /* One accent: brand green #0b5d52. Red appears only inside product findings. */
+  :root{
+    --green:#0b5d52; --green-deep:#0a3f3a; --ink:#1d1d1f; --mute:#6e6e73;
+    --gray:#f5f5f7; --line:#e3e3e6; --red:#c62828; --amber:#9a6200;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-font-smoothing:antialiased;scroll-behavior:smooth}
+  html.state-tx [data-state="co"],html.state-co [data-state="tx"]{display:none !important}
+  body{font-family:Inter,-apple-system,system-ui,sans-serif;color:var(--ink);background:#fff;line-height:1.4}
+  a{color:inherit;text-decoration:none}
 
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    html { scroll-behavior: smooth; }
-    body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background:
-        radial-gradient(ellipse 90% 500px at 50% -80px, rgba(15,31,47,0.05) 0%, transparent 55%),
-        radial-gradient(ellipse 50% 350px at 85% 100px, rgba(16,185,129,0.05) 0%, transparent 50%),
-        var(--bg);
-      color: var(--text);
-      line-height: 1.5;
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
-      position: relative;
-      overflow-x: hidden;
-    }
-    /* Ambient hero orb -- attached to body (not .hero) so the glow bleeds to the
-       real page edges instead of stopping at .main's 840px content width. */
-    body::before {
-      content: '';
-      position: absolute;
-      width: 400px; height: 400px;
-      background: linear-gradient(135deg, rgba(15,31,47,0.10), rgba(15,31,47,0.05));
-      border-radius: 50%;
-      filter: blur(80px);
-      top: -120px; right: 0;
-      pointer-events: none; z-index: 0;
-    }
-    a { color: inherit; text-decoration: none; }
+  /* ---------- nav: 4 links + one action ---------- */
+  /* "html nav.nav" / ".nav .act .nav-cta": NAV_CTA_CSS (injected after this
+     <style>) restyles every .nav-cta; these win on specificity. */
+  html nav.nav{position:sticky;top:0;z-index:10;height:52px;display:flex;align-items:center;justify-content:space-between;
+       padding:0 max(22px,calc((100% - 1024px)/2));background:rgba(255,255,255,.86);
+       -webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);
+       border-bottom:1px solid rgba(0,0,0,.06)}
+  .nav img{height:19px;width:auto;display:block}
+  .nav ul{display:flex;gap:34px;list-style:none;font-size:13px;color:#424245}
+  .nav ul .m-only{display:none}
+  .nav .act{display:flex;align-items:center;gap:22px;font-size:13px}
+  .nav .act .login{color:#424245}
+  .nav .act .nav-cta{background:var(--green);color:#fff;font-weight:600;padding:7px 15px;border-radius:980px;font-size:13px;margin:0;white-space:nowrap}
+  .burger{display:none;width:18px;height:12px;background:none;border:none;border-top:1.5px solid #424245;border-bottom:1.5px solid #424245;position:relative;cursor:pointer;padding:0}
+  .burger:after{content:"";position:absolute;left:0;right:0;top:4px;border-top:1.5px solid #424245}
 
-    /* Nav */
-    .nav {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 1rem 2rem;
-      position: sticky;
-      top: 0;
-      background: rgba(255,255,255,0.85);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border-bottom: 1px solid var(--border);
-      z-index: 100;
-    }
-    .nav-left {
-      display: flex;
-      align-items: center;
-      gap: 0.6rem;
-      font-weight: 700;
-      font-size: 1.1rem;
-      letter-spacing: -0.02em;
-    }
-    .nav-logo {
-      width: 34px; height: 34px;
-      border-radius: 22%;
-      overflow: hidden;
-      background: var(--card-dark);
-    }
-    .nav-logo img {
-      width: 100%; height: 100%;
-      object-fit: contain;
-    }
-    .nav-links {
-      display: flex;
-      gap: 1.4rem;
-      font-size: 0.85rem;
-      font-weight: 500;
-      color: var(--text-muted);
-      flex-wrap: nowrap;
-      white-space: nowrap;
-    }
-    .nav-links a { transition: var(--transition); }
-    .nav-links a:hover { color: var(--text); }
-    .nav-cta {
-      background: #0a3f3a;
-      color: #fff;
-      padding: 0.55rem 1.35rem;
-      border-radius: 9999px;
-      font-size: 0.875rem;
-      font-weight: 600;
-      border: 1px solid #0a3f3a;
-      cursor: pointer;
-      transition: var(--transition);
-      display: inline-block;
-      text-decoration: none;
-    }
-    .nav-cta:hover { background: var(--accent); border-color: var(--accent); }
-    .nav-toggle { display: none; flex-direction: column; justify-content: center; gap: 5px; width: 34px; height: 34px; background: none; border: none; cursor: pointer; padding: 0; }
-    .nav-toggle span { display: block; width: 100%; height: 2px; background: var(--text); border-radius: 2px; }
+  /* ---------- shared type scale (3 sizes only) ---------- */
+  section{padding:110px 22px 0;text-align:center;overflow:hidden}
+  .eyebrow{font-size:19px;font-weight:600;color:var(--green);margin-bottom:10px}
+  h1{font-size:80px;line-height:1.04;letter-spacing:-.035em;font-weight:800}
+  h2{font-size:56px;line-height:1.07;letter-spacing:-.03em;font-weight:800}
+  .sub{font-size:24px;line-height:1.35;color:var(--mute);font-weight:500;max-width:680px;margin:18px auto 0}
+  .ctas{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:30px}
+  .btn{display:inline-block;font-size:17px;font-weight:600;padding:13px 26px;border-radius:980px;border:1.5px solid var(--green)}
+  .btn.solid{background:var(--green);color:#fff}
+  .btn.ghost{color:var(--green)}
+  .link{font-size:19px;color:var(--green);font-weight:600}
+  .link:after{content:" \\203A"}
+  .fine{font-size:13px;color:var(--mute);margin-top:18px}
 
-    /* Hero (2026-10-13, from ad-creative's hero mockup): the product itself
-       instead of a stock photo -- a Paragraph 3 / §4.1 scrap from the sample
-       contract with the mistake circled, and the TC Check report that caught
-       it. Every number and finding on the card is copied from the live
-       output of tc_audit / co_audit on static/sample_trec_20-19.pdf and
-       static/sample_cbs1.pdf (the same files "See a sample report" runs);
-       if either sample or the rules change, re-run both and update the card
-       -- tests/test_site_polish.py fails when the counts drift. */
-    .sl-hero { position: relative; z-index: 1; overflow: hidden; background-color: #0a3f3a; color: #fff;
-      background-image: radial-gradient(900px 500px at 85% 40%, rgba(11,93,82,.95), rgba(10,63,58,0) 70%),
-        linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
-      background-size: auto, 32px 32px, 32px 32px; }
-    .sl-hero-in { max-width: 1180px; margin: 0 auto; padding: 48px 1.5rem 56px; display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1.05fr); gap: 56px; align-items: center; }
-    .sl-hero-panel { display: flex; flex-direction: column; min-width: 0; }
-    .sl-hero-panel h1 { font-family: 'Inter', -apple-system, sans-serif; font-weight: 800; font-size: 3.5rem; line-height: 1.04; letter-spacing: -0.035em; color: #fff; margin: 0; max-width: 560px; }
-    .sl-hero-panel h1 em { font-style: normal; color: #f5c242; }
-    /* Texas | Colorado switch. Both states' copy is server-rendered (crawlers
-       see both); the class on <html> -- set server-side from ?state=, the
-       ta_state cookie or a co* src tag, see _site_state() -- hides the
-       inactive one, so there's no flash of the wrong state before JS runs.
-       !important because some swapped cards carry an inline display. */
-    html.state-tx [data-state="co"], html.state-co [data-state="tx"] { display: none !important; }
-    .state-switch { display: inline-flex; gap: 0.2rem; padding: 0.22rem; margin: 0 0 1.1rem; border-radius: 999px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.22); width: fit-content; max-width: 100%; }
-    .state-switch button { appearance: none; -webkit-appearance: none; border: 0; background: transparent; color: rgba(255,255,255,0.88); font: inherit; font-size: 0.88rem; font-weight: 700; line-height: 1.2; padding: 0.42rem 0.95rem; border-radius: 999px; cursor: pointer; display: inline-flex; align-items: baseline; gap: 0.4rem; white-space: nowrap; transition: background 0.15s ease, color 0.15s ease; }
-    .state-switch button small { font-size: 0.68rem; font-weight: 600; letter-spacing: 0.03em; opacity: 0.75; }
-    .state-switch button:hover { color: #fff; background: rgba(255,255,255,0.1); }
-    .state-switch button[aria-pressed="true"] { background: #f5c242; color: #0a3f3a; }
-    .state-switch button[aria-pressed="true"] small { opacity: 0.85; }
-    .state-switch button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
-    /* Light variant, on the white check card */
-    .state-switch.light { background: #eef1f3; border-color: rgba(15,31,47,0.08); margin: 0 auto 1rem; }
-    .state-switch.light button { color: var(--text-muted); }
-    .state-switch.light button:hover { color: var(--text); background: rgba(15,31,47,0.05); }
-    .state-switch.light button[aria-pressed="true"] { background: #0b5d52; color: #fff; }
-    .state-switch.light button:focus-visible { outline-color: #0b5d52; }
-    .state-switch-row { display: flex; justify-content: center; }
-    .sl-hero-panel p { margin: 1.35rem 0 0; color: rgba(255,255,255,0.86); font-size: 1.15rem; line-height: 1.55; max-width: 470px; }
-    .sl-cta { display: inline-flex; align-items: center; gap: 10px; margin-top: 1.75rem; background: #f5c242; color: #0f1f2f; font-weight: 700; font-size: 1.05rem; padding: 1.05rem 1.6rem; border-radius: 10px; text-decoration: none; width: fit-content; box-shadow: 0 10px 30px -10px rgba(245,194,66,.6); transition: background 0.18s ease; }
-    .sl-cta svg { width: 18px; height: 18px; }
-    .sl-cta:hover { background: #ffd25e; }
-    .sl-hero-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.9rem 1.6rem; margin-top: 2rem; }
-    .sl-hero-actions .sl-cta { margin-top: 0; }
-    .sl-cta-secondary { background: none; border: 0; padding: 0.5rem 0; font: inherit; font-size: 1rem; font-weight: 600; color: #fff; text-decoration: underline; text-underline-offset: 5px; text-decoration-color: rgba(255,255,255,0.45); cursor: pointer; }
-    .sl-cta-secondary:hover { text-decoration-color: #fff; }
-    .sl-cta-secondary:disabled { opacity: 0.75; cursor: default; }
-    .sl-hero-phone { display: none; margin-top: 1rem; font-size: 0.875rem; line-height: 1.5; color: rgba(255,255,255,0.85); }
-    .sl-hero-phone a { color: #f5c242; font-weight: 600; }
-    @media (max-width: 900px), (hover: none) { .sl-hero-phone { display: block; } }
-    /* First screen (2026-10-23, first_screen.py): who it's for above the H1,
-       and the brokerage bulk check -- D3's buyer -- under the buttons. */
-    .sl-eyebrow { font-size: 0.8rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; line-height: 1.45; color: #f5c242; margin: 0 0 0.8rem; max-width: 520px; }
-    .sl-broker-line { margin-top: 1.1rem; width: fit-content; font-size: 0.95rem; font-weight: 600; color: #fff; text-decoration: underline; text-underline-offset: 5px; text-decoration-color: rgba(255,255,255,0.45); }
-    .sl-broker-line:hover { text-decoration-color: #fff; }
-    .sl-hero-note { display: flex; flex-wrap: wrap; gap: 0.6rem 1.4rem; margin-top: 1.6rem; font-size: 0.875rem; color: rgba(255,255,255,0.78); }
-    .sl-hero-note span { display: inline-flex; align-items: center; gap: 7px; }
-    .sl-hero-note svg { width: 16px; height: 16px; color: #f5c242; flex-shrink: 0; }
-    /* Visual: contract scrap + report card */
-    .hx-visual { position: relative; min-height: 730px; }
-    .hx-paper { position: absolute; left: 0; top: 0; width: 390px; z-index: 1; background: #fdfcf8; color: #222; border-radius: 4px; padding: 22px 24px 44px;
-      transform: rotate(-4deg); box-shadow: 0 30px 60px -20px rgba(0,0,0,.55); font-family: 'Times New Roman', Georgia, serif; font-size: 13.5px; line-height: 1.5; }
-    .hx-paper .ph { font-family: 'Inter', sans-serif; font-size: 10px; letter-spacing: .06em; color: #757575; text-transform: uppercase; margin-bottom: 10px; display: flex; justify-content: space-between; gap: 8px; }
-    .hx-paper .row { display: flex; justify-content: space-between; gap: 12px; padding: 3px 0; border-bottom: 1px dotted #bbb; }
-    .hx-paper .row span:last-child { font-family: 'Courier New', monospace; font-weight: 700; color: #1a3fa6; white-space: nowrap; }
-    .hx-paper .circ { position: relative; }
-    .hx-paper .circ svg { position: absolute; left: -14px; top: -10px; width: calc(100% + 28px); height: calc(100% + 20px); overflow: visible; }
-    .hx-paper .scrawl { font-family: 'Caveat', cursive; color: #dc2626; font-size: 24px; position: absolute; right: 16px; bottom: 6px; transform: rotate(-6deg); }
-    .hx-card { position: absolute; right: 0; top: 212px; width: 420px; z-index: 2; background: #fff; color: #0f1f2f; border-radius: 16px; overflow: hidden; cursor: pointer; text-align: left;
-      box-shadow: 0 40px 80px -24px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.06); }
-    .hx-card:focus-visible { outline: 3px solid #f5c242; outline-offset: 3px; }
-    .hx-card-head { background: #0a3f3a; display: flex; justify-content: space-between; align-items: center; padding: 12px 18px; }
-    .hx-card-head img { height: 16px; width: auto; display: block; }
-    .hx-card-head .k { font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #f5c242; }
-    .hx-card-bar { height: 3px; background: #f5c242; }
-    .hx-card-body { padding: 16px 18px 6px; }
-    .hx-addr { font-size: 19px; font-weight: 800; letter-spacing: -.02em; }
-    .hx-sub { font-size: 12px; color: #5b6b78; margin-top: 2px; }
-    .hx-banner { margin-top: 12px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 3px; }
-    .hx-banner b { font-size: 13px; color: #991b1b; }
-    .hx-counts { font-size: 12px; font-weight: 700; white-space: nowrap; }
-    .hx-counts .m { color: #dc2626; margin-right: 8px; } .hx-counts .r { color: #b45309; }
-    .hx-list { list-style: none; margin: 6px 0 0; padding: 0; }
-    .hx-list li { display: flex; gap: 10px; align-items: flex-start; padding: 11px 0; border-bottom: 1px solid #eef0f2; }
-    .hx-list li:last-child { border-bottom: 0; }
-    /* Findings "fill in" one at a time, like a real check. Visible by
-       default; JS adds .hx-anim (hidden) and then .hx-go once the card is
-       on screen, so on a phone -- where the card is below the fold -- the
-       reveal plays when it's actually seen, and with no JS nothing hides. */
-    .hx-card.hx-anim .hx-list li { opacity: 0; transform: translateY(8px); }
-    .hx-card.hx-anim.hx-go .hx-list li { animation: hxIn .45s ease forwards; }
-    .hx-list li:nth-child(1) { animation-delay: .25s; } .hx-list li:nth-child(2) { animation-delay: .55s; } .hx-list li:nth-child(3) { animation-delay: .85s; }
-    @keyframes hxIn { to { opacity: 1; transform: none; } }
-    @media (prefers-reduced-motion: reduce) { .hx-card.hx-anim .hx-list li { animation: none; opacity: 1; transform: none; } }
-    .hx-tag { flex-shrink: 0; font-size: 10px; font-weight: 800; letter-spacing: .05em; padding: 4px 8px; border-radius: 999px; margin-top: 1px; min-width: 66px; text-align: center; }
-    .hx-tag.b { background: rgba(239,68,68,.12); color: #dc2626; } .hx-tag.w { background: rgba(245,158,11,.14); color: #b45309; }
-    .hx-it b { display: block; font-size: 13.5px; font-weight: 700; }
-    .hx-it span { display: block; font-size: 12.5px; color: #5b6b78; line-height: 1.45; margin-top: 1px; }
-    .hx-more { font-size: 12.5px; font-weight: 600; color: #0b5d52; padding: 10px 18px 12px; border-top: 1px solid #eef0f2; }
-    .hx-caption { background: #f6f8f9; border-top: 1px solid #eef0f2; padding: 9px 18px; font-size: 11px; color: #5f707f; line-height: 1.4; }
-    html.state-co .hx-card { top: 252px; } html.state-co .hx-visual { min-height: 790px; }
-    @media (max-width: 1080px) and (min-width: 901px) {
-      .hx-paper { width: 340px; } .hx-card { width: 380px; }
-    }
-    @media (max-width: 900px) {
-      .sl-hero-in { grid-template-columns: 1fr; gap: 34px; padding: 34px 20px 44px; }
-      .sl-hero-panel h1 { font-size: 2.35rem; line-height: 1.06; }
-      .sl-hero-panel p { font-size: 1.03rem; margin-top: 1rem; }
-      .sl-hero-actions { margin-top: 1.5rem; gap: 0.9rem 1.25rem; }
-      .sl-hero-actions .sl-cta { width: 100%; justify-content: center; }
-      .sl-hero-note { font-size: 0.82rem; gap: 0.5rem 1rem; margin-top: 1.1rem; }
-      .hx-visual, html.state-co .hx-visual { min-height: 0; display: flex; flex-direction: column; align-items: stretch; }
-      .hx-paper { position: relative; width: 92%; font-size: 12.5px; padding: 14px 16px 26px; transform: rotate(-2.5deg); margin-left: 2px; padding-bottom: 40px; }
-      .hx-paper .hide-sm { display: none; }
-      .hx-paper .scrawl { font-size: 21px; right: 10px; bottom: 6px; }
-      .hx-card, html.state-co .hx-card { position: relative; top: -2px; width: 100%; }
-      /* Phone first screen (2026-10-23): the report card was ~860px down, so
-         a phone visitor saw a claim with no proof. At 390x700 (an in-app
-         browser) the eyebrow, H1, both buttons and the card's first MUST FIX
-         now fit: the panel's children join the hero's flex column so the
-         card (compact: 2 findings) comes right after the buttons, ahead of
-         the paper scrap, the broker line, trust notes and the forward line. */
-      .sl-hero-in { display: flex; flex-direction: column; align-items: stretch; gap: 0; padding-top: 18px; }
-      .sl-hero-panel { display: contents; }
-      .sl-hero-panel .state-switch { align-self: flex-start; margin-bottom: 0.75rem; }
-      .sl-eyebrow { font-size: 0.72rem; margin-bottom: 0.5rem; }
-      .sl-hero-panel h1 { font-size: 2.05rem; line-height: 1.03; }
-      .sl-hero-panel p { font-size: 0.93rem; line-height: 1.5; margin-top: 0.65rem; }
-      .sl-hero-actions { margin-top: 0.95rem; gap: 0.55rem; }
-      .sl-hero-actions .sl-cta { padding: 0.85rem 1.2rem; }
-      .sl-cta-secondary { width: 100%; text-align: center; padding: 0.75rem 1rem; border: 1.5px solid rgba(255,255,255,0.55); border-radius: 10px; text-decoration: none; }
-      .hx-visual { order: 1; margin-top: 0.9rem; }
-      .sl-broker-line, .sl-hero-note, .sl-hero-phone { order: 2; }
-      .sl-broker-line { margin-top: 1.4rem; }
-      .hx-card, html.state-co .hx-card { order: -1; top: 0; }
-      .hx-paper { margin-top: 1.4rem; }
-      .hx-card-head { padding: 7px 14px; }
-      .hx-card-body { padding: 8px 14px 4px; }
-      .hx-addr { font-size: 15px; }
-      .hx-sub { display: none; }
-      .hx-banner { margin-top: 6px; padding: 6px 10px; gap: 1px; }
-      .hx-list li { padding: 8px 0; }
-    }
-    /* Calm still-life rows (image on cream + plain headline + outlined button) */
-    .sl-row { display: grid; grid-template-columns: 1fr 1fr; gap: 2.5rem; align-items: center; margin: 0 0 2.25rem; text-align: left; }
-    .sl-row.reverse .sl-media { order: 2; }
-    .sl-media { background: #fff6dc; aspect-ratio: 16 / 11; overflow: hidden; }
-    .sl-media img { width: 100%; height: 100%; object-fit: cover; display: block; }
-    .sl-copy .steps-kicker { text-align: left; }
-    .sl-copy h2 { font-size: 1.7rem; font-weight: 500; letter-spacing: -0.01em; line-height: 1.25; margin: 0 0 0.75rem; color: var(--text); }
-    .sl-copy p { color: var(--text-muted); line-height: 1.6; margin: 0 0 1.5rem; font-size: 0.98rem; }
-    .sl-outline { display: inline-block; border: 2px solid #0a3f3a; color: #0a3f3a; font-weight: 700; font-size: 0.92rem; padding: 0.75rem 1.4rem; border-radius: 4px; text-decoration: none; transition: background 0.18s ease, color 0.18s ease; }
-    .sl-outline:hover { background: #0a3f3a; color: #fff; }
-    @media (max-width: 760px) {
-      .sl-row { grid-template-columns: 1fr; gap: 1.25rem; }
-      .sl-row.reverse .sl-media { order: 0; }
-    }
+  /* ---------- 1. hero: product as the visual ---------- */
+  .hero{padding-top:84px}
+  .stage{position:relative;max-width:1000px;height:480px;margin:64px auto 0}
+  .paper{position:absolute;left:0;top:40px;width:460px;background:#fffdf8;border-radius:6px;padding:22px 26px 30px;
+         box-shadow:0 30px 60px -20px rgba(0,0,0,.18);transform:rotate(-3deg);text-align:left;font-family:Georgia,serif;font-size:15px;color:#333}
+  .paper .ph{display:flex;justify-content:space-between;font:600 10px Inter,sans-serif;letter-spacing:.08em;color:#888;text-transform:uppercase;margin-bottom:14px}
+  .paper .row{display:flex;justify-content:space-between;border-bottom:1px dotted #bbb;padding:7px 0;position:relative}
+  .paper .row b{font-family:"Courier New",monospace;color:#1f3c88;font-weight:700}
+  .paper .circ svg{position:absolute;right:-14px;top:-8px;width:160px;height:46px}
+  .scrawl{font:italic 700 24px "Bradley Hand","Segoe Print",cursive;color:var(--red);text-align:right;margin-top:8px;transform:rotate(-4deg)}
+  .card{position:absolute;right:0;top:0;width:520px;background:#fff;border-radius:22px;text-align:left;overflow:hidden;
+        box-shadow:0 40px 80px -24px rgba(10,63,58,.35),0 0 0 1px rgba(0,0,0,.04)}
+  .card-h{background:var(--green-deep);display:flex;justify-content:space-between;align-items:center;padding:16px 22px}
+  .card-h img{height:17px;width:auto}
+  .card-h span{font-size:11px;font-weight:700;letter-spacing:.1em;color:#cfe3df}
+  .card-b{padding:20px 22px 8px}
+  .addr{font-size:21px;font-weight:700;letter-spacing:-.01em}
+  .addr-sub{font-size:13px;color:var(--mute);margin-top:2px}
+  .banner{background:#fdecec;border-radius:12px;padding:11px 14px;margin:14px 0 4px;font-size:14px;color:var(--red);font-weight:600}
+  .banner small{display:block;font-size:12.5px;margin-top:2px;font-weight:600}
+  .finding{display:flex;gap:12px;padding:13px 0;border-bottom:1px solid var(--line)}
+  .finding:last-child{border-bottom:none}
+  .tag{flex:none;font-size:10.5px;font-weight:800;letter-spacing:.04em;padding:4px 8px;border-radius:6px;height:fit-content}
+  .tag.b{background:#fdecec;color:var(--red)}
+  .tag.w{background:#fff4dc;color:var(--amber)}
+  .finding b{display:block;font-size:15px}
+  .finding span{font-size:13px;color:var(--mute);line-height:1.4}
 
-    .nw { white-space: nowrap; }
+  /* ---------- 2. what it catches: 2x2 tiles ---------- */
+  .catches{background:var(--gray);padding-bottom:110px;margin-top:110px}
+  .tiles{display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:1024px;margin:56px auto 0}
+  .tile{background:#fff;border-radius:28px;padding:56px 30px 50px;min-height:330px;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .tile .big{font-size:50px;font-weight:800;letter-spacing:-.03em;line-height:1.1;position:relative;display:inline-block}
+  .tile .mono{font-family:"SF Mono",Menlo,monospace;font-weight:600;font-size:34px;letter-spacing:-.01em}
+  .tile p{font-size:19px;color:var(--mute);font-weight:500;margin-top:18px}
+  .tile .tag{margin-bottom:22px;font-size:12px;padding:5px 10px}
+  .ring{position:absolute;inset:-14px -22px;width:calc(100% + 44px);height:calc(100% + 28px);overflow:visible}
+  .blank{display:inline-block;width:150px;border-bottom:3px solid var(--ink);margin-left:8px;position:relative;top:-6px}
+  .neq{color:var(--red)}
+  .tile .big.eff{font-size:40px}
 
-    /* Main column */
-    .main { max-width: 840px; margin: 0 auto; padding: 0 2rem; position: relative; z-index: 1; }
-    .section { padding-top: 4.5rem; }
+  /* ---------- 3. text an offer: dark, phone ---------- */
+  .text{background:var(--green-deep);color:#fff;padding-bottom:0}
+  .text .eyebrow{color:#9fd4c9}
+  .text .sub{color:#b9d3ce}
+  .text .btn.solid{background:#fff;color:var(--green-deep);border-color:#fff}
+  .text .btn.ghost{color:#fff;border-color:rgba(255,255,255,.55)}
+  .text .fine{color:#8fb1aa;max-width:560px;margin-left:auto;margin-right:auto}
+  .text .fine a{text-decoration:underline}
+  /* Real photo (Unsplash License; credits in the ad-creative work folder,
+     2026-10-23_homepage_simplify/PHOTO_CREDITS.txt): hand + phone cut out
+     and baked onto the exact section green (#0a3f3a). The SMS screen is
+     live HTML laid over the photo's blank screen; coordinates are % of the
+     978x1309 image. */
+  .shot{position:relative;width:500px;max-width:100%;margin:56px auto 0;aspect-ratio:978/1309}
+  .scene{position:absolute;inset:0;background:url(/static/hand_phone.jpg) center/100% 100% no-repeat}
+  .screen{position:absolute;left:37.12%;top:2.75%;width:50.51%;height:82.2%;transform:rotate(.6deg);
+          background:#fff;border-radius:10.5% / 4.8%;overflow:hidden;container-type:inline-size;
+          text-align:left;color:var(--ink)}
+  .scr-in{padding:15cqw 4.6cqw 0}
+  .island{position:absolute;top:0;left:50%;transform:translateX(-50%);width:53%;height:3.7%;background:#0d0d0d;
+          border-radius:0 0 7cqw 7cqw}
+  .who{text-align:center;font-size:4.3cqw;color:var(--mute);margin-bottom:5.5cqw;padding-bottom:4cqw;border-bottom:1px solid #eee}
+  .who b{display:block;color:var(--ink);font-size:4.8cqw}
+  .bub{max-width:84%;padding:3.4cqw 4.6cqw;border-radius:6.5cqw;font-size:5.3cqw;line-height:1.35;margin-bottom:3.4cqw}
+  .me{margin-left:auto;background:var(--green);color:#fff;border-bottom-right-radius:2cqw}
+  .them{background:#e9e9eb;border-bottom-left-radius:2cqw}
+  .them u{color:var(--green);text-decoration:none;font-weight:600}
 
-    /* Hero */
-    .hero { padding-top: 3.25rem; padding-bottom: 1rem; }
-    .icon-circle {
-      width: 52px; height: 52px; border-radius: 999px;
-      background: var(--accent-tint); border: 1px solid rgba(11,93,82,0.18);
-      display: flex; align-items: center; justify-content: center;
-      margin-bottom: 1.5rem; color: var(--card-dark);
-    }
-    .hero .check-title {
-      font-size: 2.1rem;
-      font-weight: 800;
-      line-height: 1.1;
-      letter-spacing: -0.025em;
-      max-width: 620px;
-    }
-    .hero h1 {
-      font-size: 3rem;
-      font-weight: 800;
-      line-height: 1.02;
-      letter-spacing: -0.03em;
-      max-width: 620px;
-    }
-    .hero-sub {
-      margin-top: 1.1rem;
-      font-size: 1.1rem;
-      color: var(--text-muted);
-      line-height: 1.6;
-      max-width: 540px;
-    }
+  /* ---------- 4. brokers: one oversized number ---------- */
+  .brokers{padding-bottom:110px}
+  .num{font-size:220px;font-weight:800;letter-spacing:-.06em;line-height:.9;color:var(--green);margin-bottom:10px}
 
-    /* Input Card (real, functional) */
-    .input-card {
-      margin-top: 2rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
-      max-width: 540px;
-    }
-    .input-label {
-      font-size: 0.7rem;
-      font-weight: 700;
-      color: var(--text-dim);
-      text-transform: uppercase;
-      letter-spacing: 0.07em;
-    }
-    .input-row { display: flex; gap: 0.5rem; }
-    .input-row input {
-      flex: 1;
-      background: #F5F7F6;
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      box-shadow: 0 1px 3px rgba(15,31,47,0.03);
-      padding: 0.8rem 1rem;
-      color: var(--text);
-      font-size: 0.95rem;
-      font-family: inherit;
-      outline: none;
-      transition: var(--transition);
-    }
-    .input-row input:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(11,93,82,0.12);
-      background: #fff;
-    }
-    .input-row input::placeholder { color: #a8b4bd; }
-    .input-btn {
-      background: var(--accent);
-      color: #fff;
-      border: 1px solid var(--accent);
-      border-radius: var(--radius-sm);
-      box-shadow: 0 4px 14px rgba(15,31,47,0.16);
-      padding: 0.8rem 1.5rem;
-      font-weight: 600;
-      font-size: 0.9rem;
-      font-family: inherit;
-      cursor: pointer;
-      transition: var(--transition);
-      white-space: nowrap;
-    }
-    .input-btn:hover { background: var(--accent-light); border-color: var(--accent-light); }
-    .input-hint { font-size: 0.75rem; color: var(--text-dim); }
-    .hero-phone {
-      margin-top: 0.85rem;
-      padding-top: 0.85rem;
-      border-top: 1px solid var(--border);
-      font-size: 0.8rem;
-      color: var(--text-muted);
-    }
-    .hero-phone a { color: #0a3a33; font-weight: 600; text-decoration: none; }
-    .hero-phone a:hover { text-decoration: underline; }
+  /* ---------- 5. trust ---------- */
+  .trust{background:var(--gray);padding-bottom:110px}
+  .facts{display:flex;justify-content:center;gap:56px;margin-top:44px;font-size:17px;font-weight:600;flex-wrap:wrap}
+  .facts span{display:flex;align-items:center;gap:8px}
+  .facts i{width:22px;height:22px;border-radius:50%;background:var(--green);color:#fff;font-style:normal;font-size:12px;display:grid;place-items:center}
 
-    /* Workflow strip -- Draft / Verify / Close */
-    .workflow-strip { display: flex; align-items: center; gap: 0.6rem; margin-top: 1.5rem;
-      font-size: 0.8rem; font-weight: 700; color: var(--text-muted); flex-wrap: wrap; }
-    .workflow-step { display: flex; align-items: center; gap: 0.5rem; }
-    .workflow-num { width: 22px; height: 22px; border-radius: 999px; background: var(--accent-tint);
-      color: var(--text); display: flex; align-items: center; justify-content: center;
-      font-size: 0.68rem; flex-shrink: 0; }
-    .workflow-arrow { color: var(--text-dim); }
+  /* ---------- footer: everything moved off the page lives here ---------- */
+  footer{background:var(--gray);border-top:1px solid var(--line);padding:22px max(22px,calc((100% - 1024px)/2)) 30px;font-size:12px;color:var(--mute)}
+  footer .legal{line-height:1.6;padding-bottom:16px;border-bottom:1px solid var(--line)}
+  .cols{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;padding:18px 0;border-bottom:1px solid var(--line)}
+  .cols b{display:block;color:var(--ink);font-weight:600;margin-bottom:8px}
+  .cols a{display:block;margin-bottom:6px}
+  .copy{padding-top:14px}
 
-    /* TC-check upload widget (primary hero CTA) */
-    .drop-zone { border: 1.5px dashed #d9dee3; border-radius: 16px; background: #fff;
-      padding: 2.75rem 1.5rem 2.5rem; text-align: center; cursor: pointer;
-      transition: border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease; }
-    .drop-zone:hover { border-color: var(--border-hover); background: #fbfdfc; }
-    .drop-zone.drag { border-style: solid; border-color: var(--accent); background: var(--accent-tint); box-shadow: 0 0 0 4px var(--accent-glow); }
-    /* Children would otherwise fire dragleave on the zone as the cursor crosses them (flicker) */
-    .drop-zone.drag * { pointer-events: none; }
-    .dz-icon { width: 56px; height: 56px; margin: 0 auto 1.1rem; border-radius: 14px; background: #f5c242;
-      display: flex; align-items: center; justify-content: center; color: #0a3f3a; transition: background 0.18s ease, color 0.18s ease; }
-    .drop-zone:hover .dz-icon, .drop-zone.drag .dz-icon { background: #0b5d52; color: #f5c242; }
-    .drop-zone .dz-title { font-weight: 600; font-size: 1rem; color: var(--text); margin-bottom: 0.35rem; }
-    .drop-zone .dz-sub { color: var(--text-muted); font-size: 0.85rem; }
-    .drop-zone .dz-sub u { text-decoration-color: rgba(11,93,82,0.35); text-underline-offset: 3px; color: var(--accent); }
-    .drop-zone .dz-touch { display: none; }
-    @media (hover: none) { .drop-zone .dz-mouse { display: none; } .drop-zone .dz-touch { display: inline; } }
-    .drop-zone .dz-meta { color: var(--text-dim); font-size: 0.75rem; margin-top: 0.85rem; }
-    .dz-trust { display: flex; justify-content: center; flex-wrap: wrap; gap: 0.4rem 1.25rem; margin-top: 0.9rem;
-      font-size: 0.8rem; color: var(--text-muted); }
-    .dz-trust span { display: inline-flex; align-items: center; gap: 0.35rem; }
-    .dz-trust svg { color: var(--accent); flex-shrink: 0; }
-    .dz-trust-line { display: flex; justify-content: center; align-items: baseline; gap: 0.4rem; margin: 0; font-size: 0.85rem; color: var(--text-muted); text-align: center; line-height: 1.5; }
-    .dz-trust-line svg { color: var(--accent); flex-shrink: 0; position: relative; top: 2px; }
-    .dz-trust-line a { color: var(--accent); font-weight: 600; text-decoration: underline; text-underline-offset: 2px; white-space: nowrap; }
-    .dz-book-line { margin: 0.35rem 0 0; font-size: 0.85rem; color: var(--text-muted); text-align: center; line-height: 1.5; }
-    .dz-book-line a { color: var(--accent); font-weight: 600; text-decoration: underline; text-underline-offset: 2px; white-space: nowrap; }
-    .demo-check-btn { display: block; width: 100%; margin-top: 1.1rem; padding: 0.8rem 1rem; background: #fff;
-      border: 1px solid #d9dee3; border-radius: 12px; font: inherit; font-size: 0.9rem; font-weight: 600;
-      color: var(--text); cursor: pointer; text-align: center; transition: var(--transition); }
-    .demo-check-btn:hover { border-color: var(--accent); color: var(--accent); box-shadow: 0 4px 14px var(--accent-glow); }
-    #homeResult { scroll-margin-top: 90px; }
-    .demo-check-hint { text-align: center; font-size: 0.78rem; color: var(--text-dim); margin-top: 0.4rem; }
-
-    .demo-check-btn:disabled { opacity: 0.6; cursor: default; }
-    .demo-banner { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.02em; color: var(--text-dim);
-      text-transform: uppercase; margin-bottom: 0.5rem; }
-    .privacy-note { display: flex; align-items: center; gap: 0.45rem; margin-top: 0.9rem; font-size: 0.78rem; color: var(--text-dim); }
-    .privacy-note svg { flex-shrink: 0; }
-    .or-divider { display: flex; align-items: center; gap: 0.75rem; margin: 0.15rem 0; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-dim); }
-    .or-divider::before, .or-divider::after { content: ""; flex: 1; height: 1px; background: var(--border); }
-    .email-forward-note { display: block; line-height: 1.6; font-size: 0.82rem; color: var(--text-muted); background: var(--accent-tint); border-radius: var(--radius-sm); padding: 0.8rem 1rem; }
-    .email-forward-note svg { vertical-align: -3px; margin-right: 0.5rem; color: var(--accent); }
-    .email-forward-note a { white-space: nowrap; }
-    .email-forward-note a { color: var(--accent); font-weight: 700; text-decoration: underline; text-underline-offset: 2px; }
-    .email-optin { margin-top: 0.85rem; display: flex; flex-direction: column; gap: 0.5rem; }
-    .email-optin-check { display: flex; align-items: center; gap: 0.5rem; font-size: 0.82rem; color: var(--text-muted); cursor: pointer; }
-    .email-optin-check input { width: auto; accent-color: var(--accent); }
-    .email-optin-input { padding: 0.6rem 0.85rem; border: 1px solid rgba(15,31,47,0.16); border-radius: var(--radius-sm); font-family: inherit; font-size: 0.85rem; background: #fff; color: var(--text); }
-    .email-optin-input:focus { outline: none; border-color: var(--accent); }
-    .email-optin-confirm { font-size: 0.78rem; color: #047857; display: none; }
-    .email-optin-confirm.show { display: block; }
-    input[type=file] { display: none; }
-    .status { margin-top: 1rem; font-size: 0.85rem; color: var(--text-muted); display: none; }
-    .status.show { display: block; }
-    .result { margin-top: 1.25rem; display: none; }
-    .result.show { display: block; }
-    .result-banner { border-radius: var(--radius-sm); padding: 0.85rem 1.1rem; font-weight: 700; margin-bottom: 0.85rem; font-size: 0.9rem; }
-    .result-banner.complete { background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.25); color: #047857; }
-    .result-banner.incomplete { background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); color: #dc2626; }
-    .issue-list { list-style: none; margin-bottom: 0.6rem; }
-    .issue-item { display: flex; gap: 0.6rem; padding: 0.5rem 0; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
-    .issue-item:last-child { border-bottom: none; }
-    .issue-tag { flex-shrink: 0; font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
-      padding: 0.12rem 0.45rem; border-radius: 9999px; height: fit-content; }
-    .issue-tag.blocker { background: rgba(239,68,68,0.12); color: #dc2626; }
-    .issue-tag.warning { background: rgba(245,158,11,0.12); color: #b45309; }
-    .rep-counts { margin-top: 4px; font-size: 0.8rem; font-weight: 700; }
-    .rep-counts .must { color: #dc2626; margin-right: 10px; }
-    .rep-counts .review { color: #b45309; }
-    .result-more { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem; }
-    .result-more a { color: var(--text); font-weight: 600; text-decoration: underline; }
-    .unreadable-box { padding: 1.05rem 1.2rem; background: #f3f5f7; border: 1px solid #dde2e7; border-radius: var(--radius-sm); font-size: 0.88rem; color: var(--text-muted); line-height: 1.55; }
-    .unreadable-box p + p { margin-top: 0.5rem; }
-    .unreadable-box .unreadable-title { font-weight: 700; color: var(--text); font-size: 0.93rem; }
-    .unreadable-box .unreadable-note { font-size: 0.8rem; }
-    .own-file-cta { margin-top: 1rem; padding: 1.05rem 1.2rem; background: var(--accent-tint); border: 1px solid var(--border); border-radius: var(--radius-sm); }
-    .own-file-lead { font-size: 0.88rem; color: var(--text); line-height: 1.55; margin: 0; }
-    .own-file-lead a { color: var(--accent); font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
-    .own-file-btn { margin-top: 0.8rem; background: #f5c242; color: #0f1f2f; border: none; padding: 0.72rem 1.35rem; border-radius: 10px; font: inherit; font-size: 0.9rem; font-weight: 700; cursor: pointer; }
-    .own-file-btn:hover { background: #ffd25e; }
-    .agent-alt { margin: 0.7rem 0 0; font-size: 0.8rem; color: var(--text-muted); }
-    .agent-alt a { color: var(--text-muted); text-decoration: underline; text-underline-offset: 2px; }
-    .individual-upsell { margin-top: 1.25rem; padding: 1.1rem 1.25rem; background: var(--accent-tint); border: 1px solid var(--border); border-radius: var(--radius-sm); }
-    .individual-upsell-lead { font-size: 0.85rem; color: var(--text); margin: 0 0 0.85rem; line-height: 1.5; }
-    .individual-upsell-btn { background: var(--accent); color: #fff; border: none; padding: 0.7rem 1.25rem; border-radius: 9999px; font: inherit; font-size: 0.85rem; font-weight: 700; cursor: pointer; }
-    .individual-upsell-btn:hover { opacity: 0.9; }
-    .individual-upsell-alt { margin-top: 0.65rem; font-size: 0.78rem; color: var(--text-muted); }
-    .individual-upsell-alt a { color: var(--accent); font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
-
-    /* Secondary CTA (SMS draft) -- demoted below the primary check widget */
-    .secondary-cta { margin-top: 1.75rem; padding-top: 1.5rem; border-top: 1px solid var(--border); max-width: 540px; }
-    .secondary-cta-label { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem; }
-
-    /* Stats -- glass card floating over the hero glow */
-    .stats {
-      display: flex; gap: 2.25rem; margin-top: 1.75rem; flex-wrap: wrap;
-      background: rgba(255,255,255,0.65);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      border: 1px solid rgba(15,31,47,0.06);
-      border-radius: 1.25rem;
-      box-shadow: 0 1px 2px rgba(15,31,47,0.03), 0 8px 32px rgba(15,31,47,0.05);
-      padding: 1.1rem 1.4rem;
-      width: fit-content;
-      max-width: 100%;
-    }
-    .stat-num { font-size: 1.4rem; font-weight: 800; color: var(--text); line-height: 1; }
-    @media (min-width: 601px) {
-      .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.5rem; width: 100%; max-width: 540px; box-sizing: border-box; }
-    }
-    /* Center the upload column so it lines up with the centered sections below it. */
-    #check { max-width: 620px; margin-left: auto; margin-right: auto; }
-    /* No one-word last lines on headings. */
-    h1, h2, h3 { text-wrap: balance; }
-    /* 7 workflow cards: center the last row instead of stranding card 7 on the left. */
-    @media (min-width: 701px) {
-      #workflow .steps-grid { display: flex; flex-wrap: wrap; justify-content: center; }
-      #workflow .step-card { flex: 0 1 calc((100% - 2.5rem) / 3); }
-    }
-    .stat-label { font-size: 0.82rem; color: var(--text-dim); margin-top: 0.25rem; font-weight: 500; line-height: 1.4; }
-
-    /* Dark card wrap (dashboard/results preview) -- layered ambient shadow */
-    .dark-card-wrap {
-      margin-top: 2.75rem;
-      position: relative;
-      border-radius: 2.25rem;
-      background: var(--card-dark);
-      padding: 10px;
-      border: 1px solid rgba(255,255,255,0.08);
-      box-shadow: 0 2px 8px rgba(15,31,47,0.10), 0 12px 40px rgba(15,31,47,0.14);
-      overflow: hidden;
-    }
-    .dark-card-inner {
-      position: relative;
-      border-radius: 1.75rem;
-      background: linear-gradient(180deg, var(--card-dark-2) 0%, var(--card-dark-3) 50%, var(--card-dark) 100%);
-      padding: 1.5rem;
-      overflow: hidden;
-    }
-    .notch {
-      position: absolute; top: 0; left: 50%; transform: translateX(-50%);
-      width: 88px; height: 20px;
-      background: var(--card-dark);
-      border-radius: 0 0 12px 12px;
-      z-index: 1;
-    }
-    .sms-bubble {
-      display: inline-flex; align-items: center; gap: 8px;
-      border-radius: 999px; background: #fff; color: var(--text);
-      padding: 0.6rem 1rem; font-size: 0.85rem; font-weight: 500;
-      margin: 0.5rem auto 0; max-width: 100%;
-    }
-    .flow-arrow { text-align: center; color: rgba(255,255,255,0.35); font-size: 1.1rem; padding: 0.35rem 0; }
-    .demo-wrap { max-width: 420px; margin: 0.5rem auto 0; position: relative; z-index: 1; }
-
-    .demo-loading{display:none;color:var(--accent-light);font-size:0.85rem;padding:0.5rem 0;text-align:center;}
-    .demo-error{display:none;color:#fca5a5;font-size:0.85rem;padding:0.5rem 0;text-align:center;}
-    .white-card {
-      background: #fff; border-radius: 1.1rem; padding: 1rem;
-      border: 1px solid rgba(15,31,47,0.08);
-    }
-    .demo-result { display: block; }
-    .demo-result.show { animation: cardPop 0.5s cubic-bezier(0.16,1,0.3,1) both; }
-    @keyframes cardPop { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-    .demo-result .res-row {
-      display: flex; justify-content: space-between; align-items: center;
-      padding: 0.6rem 0.8rem; border-radius: 0.7rem;
-      background: #fff; border: 1px solid rgba(15,31,47,0.06);
-      box-shadow: 0 1px 2px rgba(15,31,47,0.05), 0 6px 16px -6px rgba(15,31,47,0.18);
-      transition: opacity 0.35s ease, transform 0.35s cubic-bezier(0.16,1,0.3,1);
-    }
-    .demo-result .res-row + .res-row { margin-top: 0.5rem; }
-    .demo-result .res-row .k { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-dim); }
-    .demo-result .res-row .v { font-size: 0.85rem; font-weight: 600; color: var(--text); }
-    .pdf-card {
-      display: flex; align-items: center; gap: 0.75rem;
-      margin-top: 0.7rem; padding: 0.85rem; border-radius: 1rem;
-      background: #fff; border: 1px solid rgba(15,31,47,0.06);
-      box-shadow: 0 2px 4px rgba(15,31,47,0.06), 0 10px 26px -8px rgba(15,31,47,0.22);
-      text-decoration: none;
-      transition: opacity 0.35s ease, transform 0.35s cubic-bezier(0.16,1,0.3,1), box-shadow 0.2s ease;
-    }
-    .pdf-card:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(15,31,47,0.08), 0 16px 34px -8px rgba(15,31,47,0.28); }
-    .pdf-icon {
-      width: 40px; height: 40px; border-radius: 0.7rem; flex-shrink: 0;
-      background: var(--accent-tint); display: flex; align-items: center; justify-content: center;
-    }
-    .pdf-meta { min-width: 0; }
-    .pdf-title { font-size: 0.83rem; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .pdf-sub { font-size: 0.72rem; color: var(--text-dim); margin-top: 0.1rem; }
-
-    /* Illustrative demo animation (typing + staggered reveal) */
-    .sms-cursor { display: inline-block; width: 2px; height: 1em; margin-left: 2px; vertical-align: -2px; background: currentColor; opacity: 0; }
-    .sms-cursor.blink { animation: smsCursorBlink 0.9s steps(1) infinite; }
-    @keyframes smsCursorBlink { 50% { opacity: 0; } 0%, 100% { opacity: 1; } }
-    .res-row .v, #pdf-flow-arrow, #res-pdf { transition: opacity 0.35s ease, transform 0.35s cubic-bezier(0.16,1,0.3,1); }
-    .res-row .v { display: inline-block; }
-    @media (prefers-reduced-motion: reduce) {
-      .sms-cursor.blink { animation: none; opacity: 0; }
-    }
-
-    /* Steps */
-    .steps { max-width: 1000px; margin: 0 auto; padding: 4.5rem 2rem; border-top: 1px solid var(--border); }
-    .steps-header { text-align: center; margin-bottom: 3rem; }
-    .state-card { display: flex; flex-direction: column; }
-    .state-badge { align-self: flex-start; font-size: 0.68rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; border-radius: 999px; padding: 0.25rem 0.65rem; margin-bottom: 0.7rem; }
-    .state-badge.live { background: #E7F3F1; color: #0a3f3a; }
-    .state-badge.soon { background: #fff3cf; color: #8a5a00; }
-    .state-links { margin-top: auto; padding-top: 0.75rem; font-size: 0.85rem; font-weight: 600; }
-    .state-links a { color: var(--accent-dark); text-decoration: underline; text-underline-offset: 2px; }
-    .steps-kicker { font-size: 0.7rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase;
-      letter-spacing: 0.07em; margin-bottom: 0.6rem; }
-    .steps-header h2 { font-size: 2rem; font-weight: 800; margin: 0 0 0.5rem; letter-spacing: -0.02em; line-height: 1.15; }
-    .steps-header p { color: var(--text-muted); font-size: 1rem; }
-    .steps-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; }
-    @media (min-width: 961px) {
-      #how .steps-grid { grid-template-columns: repeat(4, 1fr); }
-    }
-    @media (min-width: 701px) {
-      #records .steps-grid { grid-template-columns: repeat(2, 1fr); max-width: 760px; margin: 0 auto; }
-      #why .steps-grid { grid-template-columns: repeat(2, 1fr); max-width: 760px; margin: 0 auto; }
-      #colorado .steps-grid { grid-template-columns: repeat(2, 1fr); max-width: 760px; margin: 0 auto; }
-    }
-    .why-icon { width: 44px; height: 44px; color: var(--text); display: block; margin: 0 0 0.9rem; }
-    .step-card {
-      background: #fff;
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 1.75rem;
-      transition: transform 0.25s cubic-bezier(0.16,1,0.3,1), box-shadow 0.25s ease, border-color 0.25s ease;
-    }
-    .step-card:hover {
-      border-color: var(--border-hover);
-      transform: translateY(-4px);
-      box-shadow: 0 4px 8px rgba(15,31,47,0.05), 0 16px 32px -8px rgba(15,31,47,0.14);
-    }
-    .step-num {
-      width: 38px; height: 38px;
-      background: var(--accent-tint);
-      color: #0a3a33;
-      border-radius: var(--radius-sm);
-      display: flex; align-items: center; justify-content: center;
-      font-weight: 700;
-      font-size: 0.85rem;
-      margin-bottom: 1.1rem;
-    }
-    .step-card h3 { font-size: 1.05rem; font-weight: 700; margin: 0 0 0.5rem; letter-spacing: -0.01em; }
-    /* "3 ways to get started" + guide cards + support block (2026-10-07) */
-    /* White cards, 2026-10-13: three solid-yellow blocks competed with each
-       other and with the yellow primary buttons. Yellow now marks the main
-       action only -- the self-serve card's top edge and its button. */
-    .path-card { display: flex; flex-direction: column; background: #fff; }
-    .path-card.primary { border-top: 4px solid #f5c242; }
-    .step-card.path-card p, .step-card.path-card li { color: var(--text-muted); }
-    .path-card .path-kicker { font-size: 0.7rem; font-weight: 700; color: #0a3f3a; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 0.5rem; }
-    .path-card ul { list-style: none; margin: 0.9rem 0 1.25rem; padding: 0; }
-    .path-card li { font-size: 0.85rem; color: var(--text-muted); padding: 0.3rem 0 0.3rem 1.3rem; position: relative; }
-    .path-card li::before { content: "\\2713"; position: absolute; left: 0; color: #0a3f3a; font-weight: 700; }
-    .path-btn { margin-top: auto; display: block; text-align: center; padding: 0.7rem 1rem; border-radius: 9999px; font-weight: 600; font-size: 0.9rem; text-decoration: none; transition: var(--transition); }
-    .path-btn.solid { background: #f5c242; color: #0f1f2f; font-weight: 700; }
-    .path-btn.solid:hover { background: #ffd25e; }
-    .path-btn.outline { border: 1.5px solid #0a3f3a; color: #0a3f3a; background: #fff; }
-    .path-btn.outline:hover { background: #0a3f3a; color: #fff; }
-    a.guide-card { display: flex; flex-direction: column; text-decoration: none; color: inherit; }
-    a.guide-card .guide-tag { font-size: 0.7rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 0.6rem; }
-    a.guide-card .guide-more { margin-top: auto; padding-top: 1rem; font-size: 0.85rem; font-weight: 600; color: var(--accent); }
-    .support-box { max-width: 760px; margin: 0 auto; background: #fff; border: 1px solid var(--border); border-radius: var(--radius); padding: 2rem; display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
-    .support-box h3 { font-size: 0.95rem; font-weight: 700; margin: 0 0 0.35rem; }
-    .support-box p { font-size: 0.85rem; color: var(--text-muted); margin: 0 0 0.5rem; }
-    .support-box a { font-size: 0.85rem; font-weight: 600; color: var(--accent); }
-    @media (max-width: 700px) { .support-box { grid-template-columns: 1fr; padding: 1.5rem; } }
-    .step-card p { font-size: 0.87rem; color: var(--text-muted); line-height: 1.55; margin: 0; }
-    .step-caption { font-size: 0.75rem; color: var(--text-dim); margin-top: 0.5rem; }
-
-    .tc-checklist { list-style: none; margin: 0 auto; padding: 0; max-width: 640px; text-align: left; }
-    .tc-checklist li {
-      display: flex; align-items: flex-start; gap: 0.65rem;
-      padding: 0.65rem 0; border-bottom: 1px solid var(--border);
-      font-size: 0.88rem; color: var(--text-muted); line-height: 1.5;
-    }
-    .tc-checklist li:last-child { border-bottom: none; }
-    .tc-checklist .tc-check {
-      flex: 0 0 auto; width: 1.1rem; color: var(--accent-dark); font-weight: 800; line-height: 1.5;
-    }
-    .tc-checklist strong { color: var(--text); font-weight: 700; }
-
-    /* Dashboard preview (Connected Apps + review-screen mockup) */
-    .dash-grid { display: grid; grid-template-columns: 1fr; gap: 0.85rem; padding: 0.5rem; }
-    @media (min-width: 700px) { .dash-grid { grid-template-columns: 260px 1fr; } }
-    .dash-panel { background: #fff; border-radius: 1.1rem; padding: 1.1rem; }
-    .dash-panel-label {
-      font-size: 0.68rem; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase;
-      color: var(--text-dim); display: flex; align-items: center; justify-content: space-between;
-    }
-    .integration-row { display: flex; align-items: center; gap: 0.65rem; padding: 0.6rem 0; }
-    .integration-row:not(:last-of-type) { border-bottom: 1px solid var(--border); }
-    .integration-icon {
-      width: 28px; height: 28px; border-radius: 8px; background: var(--accent-tint);
-      display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 700; color: var(--card-dark); flex-shrink: 0;
-    }
-    .integration-name { font-size: 0.82rem; font-weight: 500; color: var(--text); }
-    .integration-note { font-size: 0.75rem; color: var(--text-dim); line-height: 1.5; margin-top: 0.75rem; }
-    .chrome-bar {
-      display: flex; align-items: center; gap: 6px;
-      padding-bottom: 0.85rem; margin-bottom: 0.9rem; border-bottom: 1px solid var(--border);
-    }
-    .chrome-dot { width: 9px; height: 9px; border-radius: 999px; background: #e2e6e5; }
-    .chrome-title { font-size: 0.72rem; color: var(--text-dim); font-weight: 500; margin-left: 0.4rem; }
-    .review-address { font-size: 1rem; font-weight: 700; }
-    .review-sub { font-size: 0.72rem; color: var(--text-dim); margin-top: 0.1rem; }
-    .review-stats { display: flex; gap: 0.6rem; margin: 0.85rem 0; flex-wrap: wrap; }
-    .review-stat { background: rgba(15,31,47,0.04); border-radius: 0.7rem; padding: 0.5rem 0.75rem; flex: 1; min-width: 100px; }
-    .review-stat .k { font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim); }
-    .review-stat .v { font-size: 0.85rem; font-weight: 700; margin-top: 0.1rem; }
-    .review-warning {
-      background: rgba(15,31,47,0.04); border: 1px solid var(--border); color: var(--text-muted);
-      border-radius: 0.7rem; padding: 0.65rem 0.85rem; font-size: 0.78rem; line-height: 1.45; margin-bottom: 0.85rem;
-    }
-    .review-actions { display: flex; gap: 0.6rem; flex-wrap: wrap; }
-    .review-btn {
-      flex: 1; min-width: 140px; text-align: center; padding: 0.65rem; border-radius: 999px;
-      font-size: 0.8rem; font-weight: 600;
-    }
-    .review-btn.primary { background: var(--card-dark); color: #fff; }
-    .review-btn.ghost { background: rgba(15,31,47,0.05); color: var(--text-muted); }
-    .review-caption { font-size: 0.72rem; color: var(--text-dim); margin-top: 0.75rem; text-align: center; }
-
-    /* Footer */
-    .footer { border-top: 1px solid var(--border); padding: 3rem 2rem; text-align: center; }
-    .footer-links { display: flex; justify-content: center; gap: 1.5rem; margin-bottom: 1rem; flex-wrap: wrap; }
-    .footer-links a { color: var(--text-dim); font-size: 0.85rem; font-weight: 500; transition: var(--transition); }
-    .footer-links a:hover { color: var(--text); }
-    .trust-badges { display: flex; justify-content: center; align-items: center; gap: 1.5rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
-    .trust-badge { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.76rem; font-weight: 600; color: var(--text-dim); }
-    .footer-copy { color: var(--text-dim); font-size: 0.8rem; }
-    .footer-social { display: flex; justify-content: center; gap: 1rem; margin-bottom: 1rem; }
-    .footer-social a { display: inline-flex; align-items: center; gap: 0.4rem; color: var(--text-dim); font-size: 0.85rem; font-weight: 500; transition: var(--transition); }
-    .footer-social a:hover { color: var(--text); }
-    .footer-social svg { width: 18px; height: 18px; }
-
-    @media (max-width: 700px) {
-      /* The ambient orbs/gradient are fixed-px sized, tuned to read as a subtle
-         accent against a wide desktop viewport -- at mobile widths those same
-         pixel sizes cover most of the screen and read as a dominant wash
-         instead, so scale everything down here. */
-      body {
-        background:
-          radial-gradient(ellipse 90% 260px at 50% -60px, rgba(15,31,47,0.05) 0%, transparent 55%),
-          var(--bg);
-      }
-      body::before { width: 200px; height: 200px; top: -60px; right: 0; filter: blur(50px); }
-      .main { padding: 0 1.25rem; }
-      /* One 20px gutter at phone width. .steps kept its 32px desktop gutter, and
-         inside .main that stacked on .main's own padding (~52px per side), so
-         section cards were far narrower than the upload card above them. */
-      .steps { padding: 3.5rem 1.25rem; }
-      .main .steps { padding-left: 0; padding-right: 0; }
-      .steps-header { margin-bottom: 2rem; }
-      .steps-header h2 { font-size: 1.65rem; }
-      .hero .check-title { font-size: 1.85rem; }
-      .hero h1 { font-size: 2.25rem; }
-      .steps-grid { grid-template-columns: 1fr; }
-      .nav-toggle { display: flex; }
-      .nav-links {
-        display: none; position: absolute; top: 100%; left: 0; right: 0;
-        flex-direction: column; gap: 0; padding: 0.5rem 1.25rem 1.25rem;
-        background: #fff; border-bottom: 1px solid rgba(15,31,47,0.08);
-        white-space: normal;
-      }
-      .nav-links.open { display: flex; }
-      .nav-links a { padding: 0.75rem 0; border-bottom: 1px solid rgba(15,31,47,0.08); }
-      .nav-links a:last-child { border-bottom: none; }
-      .stats { gap: 1.5rem; }
-    }
-    .nav-cta { white-space: nowrap; }
-    @media (min-width: 701px) and (max-width: 960px) {
-      .nav-toggle { display: flex; }
-      .nav-links {
-        display: none; position: absolute; top: 100%; left: 0; right: 0;
-        flex-direction: column; gap: 0; padding: 0.5rem 2rem 1.25rem;
-        background: #fff; border-bottom: 1px solid rgba(15,31,47,0.08);
-      }
-      .nav-links.open { display: flex; }
-      .nav-links a { padding: 0.75rem 0; border-bottom: 1px solid rgba(15,31,47,0.08); }
-      .nav-links a:last-child { border-bottom: none; }
-    }
-    @media (max-width: 960px) {
-      .nav-cta { margin-left: auto; margin-right: 0.75rem; }
-    }
-    @media (max-width: 480px) {
-      .nav-cta { display: none; }
-      .hero h1 { font-size: 1.9rem; }
-      .input-row { flex-direction: column; }
-      .input-btn { width: 100%; }
-      .nav { padding: 1rem; }
-    }
+  /* ---------- mobile (734px break) ---------- */
+  @media (max-width:734px){
+    .nav ul,.nav .login{display:none}
+    /* The burger opens the same 4 links (plus Log in) as a drop-down. */
+    .nav ul.open{display:flex;flex-direction:column;gap:0;position:absolute;top:52px;left:0;right:0;background:#fff;
+                 border-bottom:1px solid var(--line);padding:6px 22px 12px;font-size:16px;text-align:left}
+    .nav ul.open li a{display:block;padding:11px 0}
+    .nav ul.open .m-only{display:block}
+    .burger{display:block}
+    section{padding-top:72px}
+    .hero{padding-top:52px}
+    .eyebrow{font-size:17px}
+    h1{font-size:46px}
+    h2{font-size:36px}
+    .sub{font-size:19px}
+    .btn{font-size:16px;padding:12px 22px}
+    .stage{height:auto;margin-top:44px}
+    .paper{position:relative;width:88%;top:0;font-size:13px;padding:16px 18px 20px}
+    .paper .circ svg{width:130px;right:-12px}
+    .paper .ph span:last-child{display:none}
+    .tile .big.eff{font-size:30px}
+    .card{position:relative;width:100%;margin-top:-34px}
+    .catches{margin-top:72px;padding-bottom:72px}
+    .tiles{grid-template-columns:1fr;margin-top:40px}
+    .tile{min-height:250px;padding:44px 20px 40px}
+    .tile .big{font-size:40px}
+    .tile .mono{font-size:26px}
+    .tile p{font-size:17px}
+    .blank{width:100px}
+    /* mobile: hand spans the full viewport width so the screen stays readable */
+    .shot{width:100vw;max-width:none;margin:40px 0 0 calc(50% - 50vw)}
+    .bub{font-size:6cqw}
+    .brokers,.trust{padding-bottom:72px}
+    .num{font-size:150px}
+    .facts{flex-direction:column;align-items:center;gap:16px}
+    .cols{grid-template-columns:1fr 1fr}
+  }
   </style>
 </head>
 <body>
 
-  <nav class="nav">
-    <a href="/" class="nav-left">
-      <img src="/static/logo-wordmark.png?v=2" alt="TxtAnOffer" style="height:26px;width:auto;display:block;">
-    </a>
-    <div class="nav-links" id="navLinks">
-      <a href="#how">How it works</a>
-      <a href="/brokers">For Brokers</a>
-      <a href="#workflow">Workflow</a>
-      <a href="/pricing">Pricing</a>
-      <a href="/faq">FAQ</a>
-      <a href="/tc-hub">TC Hub</a>
-      <a href="/login">Log In</a>
-    </div>
-    <a href="/tc-check" class="nav-cta" data-evt="nav_check_cta">Check a file free</a>
-    <button class="nav-toggle" id="navToggle" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
-  </nav>
-  <script>
-  (function(){
-    var t=document.getElementById('navToggle'), l=document.getElementById('navLinks');
-    if(!t||!l) return;
-    t.addEventListener('click', function(){
-      var open = l.classList.toggle('open');
-      t.setAttribute('aria-expanded', open ? 'true' : 'false');
-    });
-    l.querySelectorAll('a').forEach(function(a){
-      a.addEventListener('click', function(){ l.classList.remove('open'); t.setAttribute('aria-expanded','false'); });
-    });
-  })();
-  </script>
-  __STATE_SWITCH_JS__
-
-  <section class="sl-hero">
-   <div class="sl-hero-in">
-    <div class="sl-hero-panel">
-      <div class="state-switch" role="group" aria-label="Which state's contract">
-        <button type="button" data-set-state="tx" aria-pressed="__TX_PRESSED__" data-evt="state_toggle_tx">Texas <small>TREC 20-19</small></button>
-        <button type="button" data-set-state="co" aria-pressed="__CO_PRESSED__" data-evt="state_toggle_co">Colorado <small>CBS1</small></button>
-      </div>
-      <!-- Eyebrow, Texas subhead, sample-button label and broker line: copy in first_screen.py (COPY) -->
-      <div class="sl-eyebrow">__FS_HOME_EYEBROW__</div>
-      <h1>Catch what title kicks back <em>before you send the file.</em></h1>
-      <p data-state="tx">__FS_HOME_SUB_TX__</p>
-      <p data-state="co">Drop a filled CBS1 and see what title would kick back in seconds &mdash; &sect;3.1 deadlines left blank that delete a contingency, &sect;4.1 price math that doesn&rsquo;t add up, deadlines that land after closing.</p>
-      <div class="sl-hero-actions">
-        <a class="sl-cta" href="#check" data-evt="hero_cta">Check a file free <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a>
-        <button type="button" class="sl-cta-secondary" id="heroSampleBtn" data-evt="hero_sample">__FS_HOME_SAMPLE_BTN__</button>
-      </div>
-      <a class="sl-broker-line" data-state="tx" href="/tc-check/bulk" data-evt="hero_broker_cta">__FS_HOME_BROKER_LINE__</a>
-      <div class="sl-hero-note">
-        <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>3 free reports, no signup</span>
-        <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>Checked, then deleted &mdash; no copy kept</span>
-      </div>
-      <div class="sl-hero-phone">On your phone? Forward the contract email to <a href="mailto:tc@check.txtanoffer.com">tc@check.txtanoffer.com</a> &mdash; the report comes back by email.</div>
-    </div>
-
-    <!-- Illustration only. Scrap values are the sample files' own fields;
-         card findings/counts are the sample report's display_issues,
-         verbatim or a verbatim leading clause (see the CSS comment above). -->
-    <div class="hx-visual">
-      <div class="hx-paper" data-state="tx" aria-hidden="true">
-        <div class="ph"><span><span class="hide-sm">Contract concerning </span>123 Main St</span><span>Page 1 of 12</span></div>
-        <p><b>3. SALES PRICE:</b></p>
-        <div class="row"><span>A. Cash portion of Sales Price</span><span>$85,000</span></div>
-        <div class="row"><span>B. Sum of all financing</span><span>$340,000</span></div>
-        <div class="row circ"><span>C. Sales Price (Sum of A and B)</span><span>$435,000</span>
-          <svg viewBox="0 0 340 40" preserveAspectRatio="none"><path d="M215 6 C 260 -2, 335 2, 336 20 C 337 36, 270 41, 228 38 C 196 36, 190 22, 205 12" fill="none" stroke="#dc2626" stroke-width="3" stroke-linecap="round"/></svg></div>
-        <div class="scrawl">= $425,000?</div>
-      </div>
-      <div class="hx-paper" data-state="co" aria-hidden="true">
-        <div class="ph"><span>CBS1 &middot; 123 Main St, Denver</span><span>&sect;4.1</span></div>
-        <p><b>4.1 Price and Terms</b></p>
-        <div class="row"><span>Earnest Money</span><span>$10,000</span></div>
-        <div class="row"><span>New Loan</span><span>$400,000</span></div>
-        <div class="row"><span>Cash at Closing</span><span>$80,000</span></div>
-        <div class="row circ"><span>Purchase Price</span><span>$500,000</span>
-          <svg viewBox="0 0 340 40" preserveAspectRatio="none"><path d="M215 6 C 260 -2, 335 2, 336 20 C 337 36, 270 41, 228 38 C 196 36, 190 22, 205 12" fill="none" stroke="#dc2626" stroke-width="3" stroke-linecap="round"/></svg></div>
-        <div class="scrawl">= $490,000?</div>
-      </div>
-
-      <div class="hx-card" id="heroReportCard" role="button" tabindex="0" aria-label="Illustration of a TC Check report on the sample contract. Open the full sample report." data-evt="hero_card">
-        <div class="hx-card-head"><img src="/static/logo-wordmark-white.png?v=1" alt=""><span class="k">TC Check report</span></div>
-        <div class="hx-card-bar"></div>
-        <div class="hx-card-body">
-          <div data-state="tx">
-            <div class="hx-addr">123 Main St, Austin, TX 78704</div>
-            <div class="hx-sub">Austin &middot; Travis County &middot; sample TREC 20-19</div>
-            <div class="hx-banner"><b>Not ready &mdash; fix before this goes to title</b><span class="hx-counts"><span class="m">12 must fix</span><span class="r">4 to review</span></span></div>
-            <ul class="hx-list">
-              <li><span class="hx-tag b">MUST FIX</span><div class="hx-it"><b>Price doesn&rsquo;t add up</b><span>Paragraph 3: Cash portion (3A) $85,000 + financing (3B) $340,000 = $425,000, but the Sales Price (3C) says $435,000</span></div></li>
-              <li><span class="hx-tag b">MUST FIX</span><div class="hx-it"><b>Impossible closing date</b><span>Paragraph 9A: Closing date &ldquo;November 31&rdquo; is not a real date</span></div></li>
-              <li><span class="hx-tag w">REVIEW</span><div class="hx-it"><b>Notices will bounce</b><span>Buyer&rsquo;s notice email (Paragraph 21) &ldquo;john.doe@gmailcom&rdquo; is not a valid email address</span></div></li>
-            </ul>
-          </div>
-          <div data-state="co">
-            <div class="hx-addr">123 Main St</div>
-            <div class="hx-sub">Denver &middot; Denver County &middot; sample CBS1</div>
-            <div class="hx-banner"><b>Not ready &mdash; fix before this goes to title</b><span class="hx-counts"><span class="m">1 must fix</span><span class="r">2 to review</span></span></div>
-            <ul class="hx-list">
-              <li><span class="hx-tag b">MUST FIX</span><div class="hx-it"><b>Price doesn&rsquo;t add up</b><span>&sect;4.1: Earnest Money + loan + Cash at Closing add up to $490,000, not the $500,000 Purchase Price</span></div></li>
-              <li><span class="hx-tag w">REVIEW</span><div class="hx-it"><b>Loan contingency deleted</b><span>&sect;3.1 item 15: New Loan Availability Deadline is N/A with a New Loan in &sect;4.1</span></div></li>
-              <li><span class="hx-tag w">REVIEW</span><div class="hx-it"><b>Holiday closing</b><span>&sect;3.1 item 39: Closing Date (11/11/2026) is Veterans Day</span></div></li>
-            </ul>
-          </div>
-        </div>
-        <div class="hx-more" data-state="tx">+ 13 more in the full sample report &rarr;</div>
-        <div class="hx-more" data-state="co">See the full sample report &rarr;</div>
-        <div class="hx-caption">Illustration: real findings from TC Check&rsquo;s sample contract, which has planted mistakes. Not a client file.</div>
-      </div>
-    </div>
-   </div>
-  </section>
-
-  <div class="main">
-  <section class="hero section" id="check">
-    <h2 class="check-title"><span data-state="tx">Drop a TREC <span class="nw">20-19.</span></span><span data-state="co">Drop a <span class="nw">CBS1.</span></span> See exactly what&rsquo;s missing.</h2>
-    <p style="font-size:0.85rem;color:var(--accent-dark);font-weight:600;margin-top:0.6rem;">Built to help TCs catch what's missing &mdash; not to replace what you do.</p>
-
-    <div class="input-card">
-      <div class="state-switch-row"><div class="state-switch light" role="group" aria-label="Which state's contract">
-        <button type="button" data-set-state="tx" aria-pressed="__TX_PRESSED__" data-evt="state_toggle_tx">Texas <small>TREC 20-19</small></button>
-        <button type="button" data-set-state="co" aria-pressed="__CO_PRESSED__" data-evt="state_toggle_co">Colorado <small>CBS1</small></button>
-      </div></div>
-      <div class="input-label">Try it now &mdash; first 3 reports need nothing, then just an email</div>
-      <div class="drop-zone" id="homeDropZone">
-        <div class="dz-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 13v8"/><path d="m8 17 4-4 4 4"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg></div>
-        <div class="dz-title"><span class="dz-mouse">Drop your contract PDF here</span><span class="dz-touch">Choose your contract PDF</span></div>
-        <div class="dz-sub"><span class="dz-mouse">or <u>click to browse</u></span><span class="dz-touch"><u>Tap to browse files</u></span></div>
-        <div class="dz-meta"><span data-state="tx">PDF only &middot; TREC 20-19, with or without the 40-11 addendum</span><span data-state="co">PDF only &middot; a fillable CBS1 (2026)</span> &middot; not scanned or flattened &middot; flags likely issues, not legal advice</div>
-      </div>
-      <input type="file" id="homeFileInput" accept="application/pdf">
-      <div class="dz-trust">
-        <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>3 free reports, no signup</span>
-        <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>Results in seconds</span>
-      </div>
-      <p class="dz-trust-line"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span>Checked, then deleted. No AI reads your contract. <a href="/trust#contracts" data-evt="tc_trust_link">How we handle files &rarr;</a></span></p>
-      <!-- Independence line (2026-10-14): anger at Zillow owning dotloop and
-           Follow Up Boss was the strongest trust theme. Keep true: no
-           brokerage/MLS/portal ownership, no data sales (matches /trust#data). -->
-      <p class="dz-trust-line" style="margin-top:0.35rem;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><span>Independent. Not owned by Zillow, a brokerage or an MLS. We don&rsquo;t sell data.</span></p>
-      <!-- Calendly (Phanel's, 2026-10-14). utm_content tells Calendly which
-           placement a booking came from; data-evt counts the click here.
-           Copy says "file check", never "review"/"advice" (see RULES.md). -->
-      <p class="dz-book-line">Prefer to walk through it together? <a href="https://calendly.com/pejeanbaptiste/15-min-file-check?utm_source=txtanoffer&amp;utm_content=home_dropzone" target="_blank" rel="noopener" data-evt="book_call_home">Book a free 15-min file check &rarr;</a></p>
-      <div class="status" id="homeStatus"></div>
-      <div class="result" id="homeResult"></div>
-      <button type="button" class="demo-check-btn" id="homeDemoBtn" data-evt="home_sample_btn">No PDF handy? Run a sample check &rarr;</button>
-      <div class="demo-check-hint"><span data-state="tx">See a real report on a sample TREC contract in 2 seconds.</span><span data-state="co">See a real report on a sample CBS1 in 2 seconds.</span></div>
-      <div class="email-optin">
-        <label class="email-optin-check"><input type="checkbox" id="homeEmailOptinCheckbox" checked> Email me this report + future checks for this address</label>
-        <input type="email" id="homeEmailOptinInput" class="email-optin-input" placeholder="you@example.com" autocomplete="email">
-        <div class="email-optin-confirm" id="homeEmailOptinConfirm"></div>
-      </div>
-      <div class="or-divider">or</div>
-      <div class="email-forward-note"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 6 10-6"/></svg>Already have it in your inbox? Forward it to <a href="mailto:tc@check.txtanoffer.com">tc@check.txtanoffer.com</a></div>
-      <div class="privacy-note"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Takes a minute now &mdash; saves you a callback from title tonight.</div>
-    </div>
-
-    <div class="stats" style="margin:2.25rem 0 0;">
-      <div><div class="stat-num">__TC_STAT1_NUM__</div><div class="stat-label">__TC_STAT1_LABEL__</div></div>
-      <div><div class="stat-num">__TC_STAT2_NUM__</div><div class="stat-label">__TC_STAT2_LABEL__</div></div>
-      <div><div class="stat-num">__TC_STAT3_NUM__</div><div class="stat-label">__TC_STAT3_LABEL__</div></div>
-    </div>
-  </section>
-
-  <section class="steps" id="why" style="border-top:none;padding-top:2.5rem;padding-bottom:0.5rem;">
-    <div class="steps-header" style="margin-bottom:1.75rem;">
-      <h2>Why choose TxtAnOffer?</h2>
-    </div>
-    <div class="steps-grid">
-      <div class="step-card">
-        <svg class="why-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="15" cy="9" r="5"/><path d="M8 20v12h14v11"/><path d="M11 17c0-2 2-3 4-3s3 1 4 3l3 5h5"/><path d="M14 26h8"/><path d="M5 18v18h10"/><path d="M10 36v6"/><path d="M6 42h8"/><path d="M24 28h20"/><path d="M36 28v15"/><path d="M30 24h7l3-9"/><path d="M39 33h2M39 38h2"/></svg>
-        <h3>Committed to getting every form right</h3>
-        <p data-state="tx">Every check is mapped field-by-field to TREC&rsquo;s published 20-19, 40-11, 41-3 and 39-11 forms, and re-verified each time TREC revises them. You can count on the same careful check on every file, so the blank Effective Date or missing initial gets caught before title sees it.</p>
-        <p data-state="co">Every check is mapped field-by-field to the Colorado Real Estate Commission&rsquo;s 2026 CBS1, the version mandatory since January 1, 2026. You can count on the same careful check on every file, so a blank loan or inspection deadline gets caught before it quietly deletes a contingency.</p>
-      </div>
-      <div class="step-card">
-        <svg class="why-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m11 17 2 2a1 1 0 1 0 3-3"/><path d="m14 14 2.5 2.5a1 1 0 1 0 3-3l-3.88-3.88a3 3 0 0 0-4.24 0l-.88.88a1 1 0 1 1-3-3l2.81-2.81a5.79 5.79 0 0 1 7.06-.87l.47.28a2 2 0 0 0 1.42.25L21 4"/><path d="m21 3 1 11h-2"/><path d="M3 3 2 14l6.5 6.5a1 1 0 1 0 3-3"/><path d="M3 4h8"/></svg>
-        <h3>Your files stay yours</h3>
-        <p>A contract you check is read for the report, then deleted. No copy is kept. The only files we keep are the ones your brokerage chooses to archive, and those are kept for 5 years. If you email us, you hear back from the person who built it, not a ticket queue.</p>
-      </div>
-    </div>
-  </section>
-
-  <section class="steps" id="start" style="border-top:none;padding-top:2.5rem;padding-bottom:2.5rem;">
-    <div class="steps-header" style="margin-bottom:1.75rem;">
-      <div class="steps-kicker">Pick what fits</div>
-      <h2>3 ways to get started</h2>
-      <p>Check one file on your own, get a walkthrough, or set it up for your whole brokerage.</p>
-    </div>
-    <div class="steps-grid">
-      <div class="step-card path-card primary">
-        <div class="path-kicker">Do it yourself</div>
-        <h3>Check a file now</h3>
-        <p><span data-state="tx">Drop one filled TREC 20-19</span><span data-state="co">Drop one filled CBS1</span> and see what title would kick back.</p>
-        <ul><li>3 free reports, no signup</li><li>Results in seconds</li><li>The file isn&rsquo;t kept</li></ul>
-        <a class="path-btn solid" href="/tc-check" data-evt="path_self_cta">Check a file free</a>
-      </div>
-      <div class="step-card path-card">
-        <div class="path-kicker">Talk to us</div>
-        <h3>Walk through a file together</h3>
-        <p>A free 15-minute call to walk through the report on one of your files, or on the sample.</p>
-        <ul><li>15 minutes on Google Meet</li><li>Forward the file to tc@check before the call</li><li>No sales pitch</li></ul>
-        <a class="path-btn outline" href="https://calendly.com/pejeanbaptiste/15-min-file-check?utm_source=txtanoffer&amp;utm_content=home_path_card" target="_blank" rel="noopener" data-evt="book_call_home">Book a free 15-min file check</a>
-      </div>
-      <div class="step-card path-card">
-        <div class="path-kicker">For your whole brokerage</div>
-        <h3>Set up your roster</h3>
-        <p>Every agent&rsquo;s offer checked before it goes out, and records kept for you.</p>
-        <ul><li>Start with a free audit of 20 closed files</li><li>5-year archive, searchable by address</li><li>Agents join with one text</li></ul>
-        <a class="path-btn outline" href="/brokers" data-evt="path_brokerage_cta">Brokerage option</a>
-      </div>
-    </div>
-  </section>
-
-  <section class="steps" id="brokers" style="border-top:none;padding-top:1rem;padding-bottom:2.5rem;">
-    <div class="sl-row">
-      <div class="sl-media"><img src="/static/home-desk.jpg" alt="A transaction coordinator working calmly from a home office" style="object-position:62% center;" loading="lazy"></div>
-      <div class="sl-copy">
-        <div class="steps-kicker">For TCs &mdash; in-house, independent, or running a roster</div>
-        <h2>A second set of eyes, so you can actually log off.</h2>
-        <p>You already catch nearly everything by hand. This is for the one blank that slips past even a careful TC &mdash; because it's your name on the file, whether that's one brokerage or six.</p>
-        <a class="sl-outline" href="#check" data-evt="home_check_cta">Check a file free</a>
-      </div>
-    </div>
-    <ul class="tc-checklist">
-      <li data-state="tx"><span class="tc-check">&check;</span><span><strong>Effective Date left blank</strong> &mdash; the date every other deadline counts from.</span></li>
-      <li data-state="tx"><span class="tc-check">&check;</span><span><strong>Missing buyer or seller initials</strong> &mdash; easy to miss page-by-page, hard to fix once closed.</span></li>
-      <li data-state="tx"><span class="tc-check">&check;</span><span><strong>40-11 addendum mismatches</strong> &mdash; loan amount or financing checkbox disagreeing with the contract.</span></li>
-      <li data-state="tx"><span class="tc-check">&check;</span><span><strong>41-3 loan assumption gaps</strong> &mdash; addendum listed but not attached, blank rate or fee caps, assumed balance not matching 3B.</span></li>
-      <li data-state="tx"><span class="tc-check">&check;</span><span><strong>39-11 amendment mismatches</strong> &mdash; sales price or property address disagreeing with the original contract.</span></li>
-      <li data-state="co"><span class="tc-check">&check;</span><span><strong>A blank or N/A deadline</strong> &mdash; under &sect;3.2 it deletes that contingency: loan, appraisal, inspection or title objection.</span></li>
-      <li data-state="co"><span class="tc-check">&check;</span><span><strong>&sect;4.1 price math</strong> &mdash; Earnest Money + loan + Cash at Closing not adding up to the Purchase Price.</span></li>
-      <li data-state="co"><span class="tc-check">&check;</span><span><strong>Deadlines out of order or after closing</strong> &mdash; an objection date before its delivery date, or any deadline past the Closing Date.</span></li>
-      <li data-state="co"><span class="tc-check">&check;</span><span><strong>Closing on a weekend or holiday</strong> &mdash; a Saturday, Sunday, or federal or Colorado holiday, when wires may not move.</span></li>
-      <li data-state="co"><span class="tc-check">&check;</span><span><strong>Check-one conflicts</strong> &mdash; both boxes checked where only one applies, or two payers on one &sect;15 fee.</span></li>
-      <li><span class="tc-check">&check;</span><span><strong>Your whole closed-file backlog</strong> &mdash; free sample checks up to 20 files at once; a Brokerage join code raises that to 200, no extra charge. <a href="/tc-check/bulk" style="color:var(--accent-dark);text-decoration:underline;">Bulk check &rarr;</a></span></li>
-      <li><span class="tc-check">&check;</span><span><strong>A text the moment it happens</strong> &mdash; on the Brokerage plan, a real blocker on any agent's file texts you directly, before it ever reaches title.</span></li>
-    </ul>
-    <div class="secondary-cta" style="margin:1.75rem auto 0;padding-top:1.75rem;max-width:560px;text-align:center;">
-      <div class="secondary-cta-label">Running a brokerage or TC team? Get a text the moment any agent's file has a real blocker &mdash; not just an email you have to open.</div>
-      <a href="/pricing#brokerage" class="input-btn" style="display:inline-block;text-decoration:none;">See Brokerage pricing &rarr;</a>
-      <div style="margin-top:0.85rem;"><a href="/brokers" style="font-size:0.85rem;color:var(--text-muted);text-decoration:underline;text-underline-offset:2px;">Managing broker? Audit your last 20 closed files free &rarr;</a></div>
-    </div>
-  </section>
-
-  <section class="steps" id="records" style="border-top:none;padding-top:1rem;padding-bottom:2.5rem;">
-    <div class="steps-header" style="margin-bottom:1.75rem;">
-      <div class="steps-kicker">For managing brokers &mdash; Brokerage plan</div>
-      <h2>Every offer your agents text in, archived for 5 years.</h2>
-      <p data-state="tx">TREC asks you to keep transaction records for 4 years from closing (22 TAC &sect;535.2). Here's how files land in your archive &mdash; your agents don't do anything extra.</p>
-      <p data-state="co">Here's how files land in your archive &mdash; your agents don't do anything extra.</p>
-    </div>
-    <div class="steps-grid">
-      <div class="step-card">
-        <div class="step-num">1</div>
-        <h3>Agents join your roster</h3>
-        <p>Each agent texts your brokerage's join code before their first offer, or enters it at signup. One time, no per-agent setup.</p>
-      </div>
-      <div class="step-card">
-        <div class="step-num">2</div>
-        <h3>They text the offer</h3>
-        <p>The <span data-state="tx">TREC 20-19</span><span data-state="co">CBS1</span> comes back in seconds, gets checked for blanks and mismatches, and a copy goes to your TC by email.</p>
-      </div>
-      <div class="step-card" data-state="tx">
-        <div class="step-num">3</div>
-        <h3>Changes are filed with it</h3>
-        <p>When an agent texts a price or closing-date change (<code>AMEND 123 Main St price 730k</code>), it becomes a 39-11 amendment, archived under the same address.</p>
-      </div>
-      <div class="step-card">
-        <div class="step-num"><span data-state="tx">4</span><span data-state="co">3</span></div>
-        <h3>Find it in seconds</h3>
-        <p>Search by address from your brokerage dashboard, open any PDF, or download the whole archive as a ZIP &mdash; anytime, even if you cancel. <a href="/broker/login" style="color:var(--accent-dark);text-decoration:underline;">Brokerage sign-in &rarr;</a></p>
-      </div>
-    </div>
-    <p style="text-align:center;font-size:0.8rem;color:var(--text-dim);max-width:620px;margin:1.5rem auto 0;">Executed contracts too: forward them to tc@check.txtanoffer.com from your brokerage email, or drop them into your archive &mdash; each one is checked and kept 5 years. <a href="/archive" style="color:var(--accent-dark);text-decoration:underline;">How the contract archive works &rarr;</a></p>
-    <div style="text-align:center;margin-top:1.25rem;"><a class="sl-outline" href="/brokers" data-evt="records_brokers_cta">See it for your brokerage &rarr;</a></div>
-  </section>
-
-  <section class="steps" id="workflow" style="border-top:none;padding-top:1rem;padding-bottom:2.5rem;">
-    <div class="steps-header" style="margin-bottom:1.75rem;">
-      <div class="steps-kicker">The full picture</div>
-      <h2 data-state="tx">From offer to closing, in one place.</h2>
-      <h2 data-state="co">From a text to a checked contract, in one place.</h2>
-      <p>TC File Check is the part most people try first. It's one stage of a longer workflow that runs underneath it, start to finish.</p>
-    </div>
-    <div class="steps-grid">
-      <div class="step-card">
-        <div class="step-num">1</div>
-        <h3>Offer</h3>
-        <p>Your agents text the terms in and get back a structured offer in seconds &mdash; the starting point everything else builds on, and the first record in your brokerage's archive.</p>
-        <p style="margin-top:0.6rem;">For example: <strong data-state="tx">725k 3% 21day 123 Main St, Austin, TX</strong><strong data-state="co">500k 20% 30day 123 Main St, Denver, CO</strong></p>
-        <p style="margin-top:0.6rem;font-weight:600;">Text <a href="sms:+18338970333" data-evt="workflow_offer_sms" style="color:var(--accent-dark);text-decoration:underline;">(833) 897-0333</a></p>
-        <p style="font-size:0.72rem;color:var(--text-dim);margin-top:0.35rem;">By texting, you agree to receive SMS replies and reminders about your offers, plus up to 2 tips on the free trial. Reply STOP to opt out, HELP for help. Msg &amp; data rates may apply. <a href="/privacy" style="color:inherit;text-decoration:underline;">Privacy</a> &middot; <a href="/terms" style="color:inherit;text-decoration:underline;">Terms</a></p>
-      </div>
-      <div class="step-card">
-        <div class="step-num">2</div>
-        <h3 data-state="tx">TREC Documents</h3>
-        <p data-state="tx">The required forms are generated straight from the transaction: 20-19, 39-11, 40-11, IABS, 61-0, 36-10.</p>
-        <h3 data-state="co">Contract</h3>
-        <p data-state="co">A filled CBS1 is generated straight from the text, with a standard &sect;3.1 deadline schedule on business days for you to review and adjust.</p>
-      </div>
-      <div class="step-card">
-        <div class="step-num">3</div>
-        <h3>Compliance &mdash; TC Check</h3>
-        <p data-state="tx">Checked for completeness, cross-document consistency, and version-to-version comparison &mdash; before it moves forward.</p>
-        <p data-state="co">Checked for blank deadlines, &sect;4.1 price math and dates out of order &mdash; before it moves forward.</p>
-      </div>
-      <div class="step-card">
-        <div class="step-num">4</div>
-        <h3>Review before it goes out</h3>
-        <p>Every draft opens on a review page that lists what&rsquo;s still blank. Emailing it to the listing agent stays locked until the required fields are filled.</p>
-      </div>
-      <div class="step-card">
-        <div class="step-num">5</div>
-        <h3>Communication</h3>
-        <p>SMS confirmations, email notifications, and a listing-agent accept/decline thread, built in from the first text.</p>
-      </div>
-      <div class="step-card">
-        <div class="step-num">6</div>
-        <h3>Transaction workspace</h3>
-        <p data-state="tx">Once accepted, a stage timeline and task checklist track the deal &mdash; option period, earnest money, title, financing, inspections, amendments, final walkthrough &mdash; alongside accept/decline status and dashboard visibility.</p>
-        <p data-state="co">Once accepted, a stage timeline and task checklist track the deal, with due dates taken from the contract&rsquo;s own &sect;3.1 deadlines &mdash; title, disclosures, financing, appraisal, inspections &mdash; plus a reminder text the day before the key ones.</p>
-      </div>
-      <div class="step-card">
-        <div class="step-num">7</div>
-        <h3>Closing</h3>
-        <p>Within 5 days of closing, a Closing Checklist pulls it together in one screen: documents complete, signature status, open tasks, and every key date.</p>
-      </div>
-    </div>
-    <div data-state="tx" style="text-align:center;font-size:0.8rem;font-weight:600;color:var(--accent-dark);margin-top:1.75rem;">Offer &rarr; Documents &rarr; Compliance &rarr; Review &rarr; Communication &rarr; Transaction &rarr; Closing</div>
-    <div data-state="co" style="text-align:center;font-size:0.8rem;font-weight:600;color:var(--accent-dark);margin-top:1.75rem;">Offer &rarr; Contract &rarr; Compliance &rarr; Review &rarr; Communication &rarr; Transaction &rarr; Closing</div>
-  </section>
+<nav class="nav">
+  <a href="/"><img src="/static/logo-wordmark.png?v=2" alt="TxtAnOffer"></a>
+  <ul id="navLinks">
+    <li><a href="/tc-check" data-evt="nav_check_link">TC Check</a></li>
+    <li><a href="#text">Text an offer</a></li>
+    <li><a href="/brokers">Brokers</a></li>
+    <li><a href="/pricing">Pricing</a></li>
+    <li class="m-only"><a href="/login">Log in</a></li>
+  </ul>
+  <div class="act">
+    <a class="login" href="/login">Log in</a>
+    <a href="/tc-check" class="nav-cta" data-evt="nav_check_cta">Check a file</a>
+    <button type="button" class="burger" id="navToggle" aria-label="Menu" aria-expanded="false" aria-controls="navLinks"></button>
   </div>
-
-  <section class="steps" id="how">
-    <div class="steps-header">
-      <h2 style="max-width:620px;margin:0 auto;">Forward it, or drop it here. Get back exactly what's missing.</h2>
-    </div>
-    <ul class="tc-checklist" style="max-width:560px;margin:1.5rem auto 0;">
-      <li data-state="tx"><span class="tc-check">&check;</span><span>Forward the TREC 20-19 to <strong>tc@check.txtanoffer.com</strong>, or upload it above &mdash; attach the 40-11, 41-3 or 39-11 to the same email, or add them on the <a href="/tc-check" data-evt="home_check_link">full check page</a>.</span></li>
-      <li data-state="co"><span class="tc-check">&check;</span><span>Forward the CBS1 to <strong>tc@check.txtanoffer.com</strong>, or upload it above &mdash; attach the buyer&rsquo;s Exclusive Right-to-Buy, an Amend/Extend, Counterproposal, Inspection Objection Notice or Source of Water Addendum to the same email, or add them on the <a href="/tc-check?state=co" data-evt="home_check_link">full check page</a>.</span></li>
-      <li><span class="tc-check">&check;</span><span>We re-read the actual filled-in PDF against <span data-state="tx">TREC's current form</span><span data-state="co">the 2026 CBS1</span> &mdash; not a guess based on file size or page count.</span></li>
-      <li data-state="tx"><span class="tc-check">&check;</span><span>Get an itemized report back in under a minute: what's blank, what's missing an initial, what disagrees with the addendum.</span></li>
-      <li data-state="co"><span class="tc-check">&check;</span><span>Get an itemized report back in under a minute: which deadlines are blank, whether the price math adds up, which dates land after closing.</span></li>
-    </ul>
-    <div class="secondary-cta" style="margin:1.75rem auto 0;padding-top:1.75rem;max-width:540px;text-align:center;">
-      <div class="secondary-cta-label">Free. No login. Checked, then deleted &mdash; no copy kept.</div>
-      <a href="/tc-check" class="input-btn" style="display:inline-block;text-decoration:none;" data-evt="home_tryit_cta">Try TC File Check &rarr;</a>
-    </div>
-  </section>
-
-  <section class="steps" id="guides" data-state="tx">
-    <div class="steps-header">
-      <div class="steps-kicker">Free guides</div>
-      <h2>Guides for Texas TCs and brokers</h2>
-      <p>Plain-language answers to the questions that hold up closings.</p>
-    </div>
-    <div class="steps-grid">
-      <a class="step-card guide-card" href="/guides/trec-20-19-checklist" data-evt="guide_card_cta">
-        <div class="guide-tag">For TCs</div>
-        <h3>TREC 20-19 checklist before you send the file to title</h3>
-        <p>The blanks and mismatches to check, in order.</p>
-        <span class="guide-more">Read the guide &rarr;</span>
-      </a>
-      <a class="step-card guide-card" href="/guides/40-11-loan-amount-mismatch" data-evt="guide_card_cta">
-        <div class="guide-tag">For TCs</div>
-        <h3>40-11 loan amount doesn&rsquo;t match the contract</h3>
-        <p>Section 3B vs. the addendum, and the checkbox mistakes that go with it.</p>
-        <span class="guide-more">Read the guide &rarr;</span>
-      </a>
-      <a class="step-card guide-card" href="/guides/broker-record-retention-texas" data-evt="guide_card_cta">
-        <div class="guide-tag">For brokers</div>
-        <h3>How long Texas brokers must keep transaction records</h3>
-        <p>The 4-year TREC rule and a practical way to keep up with it.</p>
-        <span class="guide-more">Read the guide &rarr;</span>
-      </a>
-    </div>
-    <p style="text-align:center;margin-top:1.5rem;font-size:0.9rem;"><a href="/guides/trec-deadline-calculator" style="color:var(--accent);font-weight:600;" data-evt="guide_card_cta">Free TREC deadline calculator &rarr;</a> &nbsp;&middot;&nbsp; <a href="/guides" style="color:var(--accent);font-weight:600;">See all guides &rarr;</a></p>
-  </section>
-
-  <section class="steps" id="trust">
-    <div class="steps-header">
-      <h2>Built so nothing slips through.</h2>
-      <p>The anxiety isn't "I wish this were faster" &mdash; it's "did I miss a checkbox," re-checked from your phone after dinner. Here's how we handle that, so you can actually log off.</p>
-    </div>
-    <div class="steps-grid">
-      <div class="step-card">
-        <div class="step-num">&check;</div>
-        <h3>Every field checked, not just assumed</h3>
-        <p>We re-read the actual filled-in PDF itself &mdash; not a guess based on file size or page count &mdash; and flag exactly which required field, checkbox, or dollar amount is missing or inconsistent. The same check, run the same way, on every file.</p>
-      </div>
-      <div class="step-card">
-        <div class="step-num">&check;</div>
-        <h3>Checked against the current form</h3>
-        <p data-state="tx">Every check is mapped field-by-field against TREC's actual published 20-19 form and re-verified when TREC revises it. <a href="/trec-changes" style="color:var(--text);text-decoration:underline;">See what changed &rarr;</a> &middot; <a href="/tc-hub" style="color:var(--text);text-decoration:underline;">Free TC Hub &rarr;</a></p>
-        <p data-state="co">Every check is mapped field-by-field against the Colorado Real Estate Commission&rsquo;s published 2026 CBS1, and each field was checked against where it sits on the printed form. <a href="/tc-check#colorado" style="color:var(--text);text-decoration:underline;" data-evt="home_check_link">See what it checks &rarr;</a></p>
-      </div>
-      <div class="step-card">
-        <div class="step-num">&check;</div>
-        <h3>Files you check aren&rsquo;t kept</h3>
-        <p>A contract you upload or forward to TC Check is processed for the report, then discarded. If you get the report by email, its subject line includes the property address, and for bulk checks we keep each file&rsquo;s name and issue count, viewable at your batch link. The one exception is on purpose: on the Brokerage plan, contracts your brokerage forwards or uploads to its archive, and offers your agents text in, are kept for your records &mdash; <a href="#records" style="color:var(--accent-dark);text-decoration:underline;">see how that works</a>.</p>
-      </div>
-    </div>
-  </section>
-
-  <section class="steps" id="support">
-    <div class="steps-header" style="margin-bottom:1.75rem;">
-      <h2>Questions? A real person answers.</h2>
-      <p>Built by Phanel Jean-Baptiste, for TCs and brokers. You&rsquo;ll hear back from the person who built it, not a ticket queue.</p>
-    </div>
-    <div class="support-box">
-      <div>
-        <h3>Help yourself</h3>
-        <p>Common questions about TC Check, storage, and the forms it reads.</p>
-        <a href="/faq">Read the FAQ &rarr;</a>
-      </div>
-      <div>
-        <h3>Email</h3>
-        <p>Questions, feedback, or a walkthrough request.</p>
-        <a href="mailto:support@txtanoffer.com" data-evt="support_email_cta">support@txtanoffer.com</a>
-      </div>
-      <div>
-        <h3>Forward a file</h3>
-        <p>Send a filled <span data-state="tx">TREC 20-19</span><span data-state="co">CBS1</span> from your inbox and get the report back by email.</p>
-        <a href="mailto:tc@check.txtanoffer.com">tc@check.txtanoffer.com</a>
-      </div>
-    </div>
-  </section>
-
-  <section class="steps" id="states" style="border-top:none;padding-top:1rem;padding-bottom:2.5rem;">
-    <div class="steps-header" style="margin-bottom:1.75rem;">
-      <div class="steps-kicker">State by state</div>
-      <h2>Where TxtAnOffer works</h2>
-      <p>Built one state at a time, on each state&rsquo;s own commission-approved contract forms.</p>
-    </div>
-    <div class="steps-grid">
-      <div class="step-card state-card">
-        <span class="state-badge live">Live</span>
-        <h3>Texas</h3>
-        <p>TREC 20-19 contract, plus the 39-11 amendment and 40-11 / 41-3 addenda &mdash; TC Check and text-to-offer drafts.</p>
-        <p class="state-links"><a href="/tc-check?state=tx" data-evt="states_tx_check">Check a TREC 20-19</a> &middot; <a href="/tc-hub" data-evt="states_tx_hub">Texas TC Hub</a></p>
-      </div>
-      <div class="step-card state-card">
-        <span class="state-badge live">Live</span>
-        <h3>Colorado</h3>
-        <p>CBS1 contract, plus the Amend/Extend, Counterproposal, Inspection Objection Notice and Exclusive Right-to-Buy &mdash; TC Check and text-to-offer drafts.</p>
-        <p class="state-links"><a href="/tc-check?state=co" data-evt="states_co_check">Check a CBS1</a> &middot; <a href="/tc-hub/colorado" data-evt="states_co_hub">Colorado TC Hub</a> &middot; <a href="/tools/colorado-deadlines" data-evt="states_co_tool">Deadline calculator</a></p>
-      </div>
-      <div class="step-card state-card">
-        <span class="state-badge soon">Coming soon</span>
-        <h3>Wisconsin &amp; Utah</h3>
-        <p>Next on the list: Wisconsin&rsquo;s WB-11 Residential Offer to Purchase and Utah&rsquo;s Real Estate Purchase Contract (REPC) &mdash; both state-approved forms. No date yet.</p>
-        <p class="state-links">Your state next? <a href="mailto:support@txtanoffer.com?subject=Add%20my%20state" data-evt="states_request">Tell us which contract your agents use</a></p>
-      </div>
-    </div>
-  </section>
-
-  <footer class="footer">
-    <div class="trust-badges">
-      <span class="trust-badge">Checked, then deleted</span>
-      <span class="trust-badge">Made for Texas TREC &amp; Colorado CBS1 forms</span>
-      <span class="trust-badge">Billing by Stripe</span>
-    </div>
-    <div class="footer-links">
-      <a href="/about">About</a>
-      <a href="/faq">FAQ</a>
-      <a href="/contact">Contact</a>
-      <a href="/terms">Terms of Service</a>
-      <a href="/privacy">Privacy Policy</a>
-      <a href="/trust">Trust Center</a>
-      <a href="/privacy#sms-messaging">SMS Terms</a>
-      <a href="/pricing">Pricing</a>
-      <a href="/demo#commands">Text Commands</a>
-      <a href="/tc-check" data-evt="footer_check_link">TC File Check</a>
-      <a href="/broker/login">Brokerage Sign-In</a>
-      <a href="/guides">Guides</a>
-      <a href="mailto:support@txtanoffer.com">Support</a>
-    </div>
-    <div class="footer-social">
-      <a href="https://www.instagram.com/txtanoffer/" target="_blank" rel="noopener" aria-label="TxtAnOffer on Instagram" data-evt="footer_instagram"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="2.5" width="19" height="19" rx="5"/><circle cx="12" cy="12" r="4.2"/><circle cx="17.4" cy="6.6" r="0.6" fill="currentColor"/></svg>Instagram</a>
-      <a href="https://www.linkedin.com/company/143677963/" target="_blank" rel="noopener" aria-label="Follow TxtAnOffer on LinkedIn" data-evt="footer_linkedin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="2.5" width="19" height="19" rx="3"/><path d="M7.5 10.5v6"/><circle cx="7.5" cy="7.5" r="0.6" fill="currentColor"/><path d="M11.5 16.5v-6"/><path d="M11.5 13.2c0-1.6 1-2.7 2.5-2.7s2.5 1 2.5 2.7v3.3"/></svg>Follow on LinkedIn</a>
-    </div>
-    <div class="footer-copy">
-      &copy; 2026 TxtAnOffer &middot; Serving Texas &amp; Colorado &middot; Not affiliated with TREC or the Colorado Real Estate Commission
-    </div>
-  </footer>
-
+</nav>
 <script>
 (function(){
-  var dropZone = document.getElementById('homeDropZone'),
-      fileInput = document.getElementById('homeFileInput'),
-      statusEl = document.getElementById('homeStatus'),
-      resultEl = document.getElementById('homeResult'),
-      emailOptinCheckbox = document.getElementById('homeEmailOptinCheckbox'),
-      emailOptinInput = document.getElementById('homeEmailOptinInput'),
-      emailOptinConfirm = document.getElementById('homeEmailOptinConfirm'),
-      demoBtn = document.getElementById('homeDemoBtn');
-  if(!dropZone) return;
-  function stateMode(){ return window.taState ? window.taState() : 'tx'; }
-
-  try{ var savedEmail = localStorage.getItem('tc_email_hint'); if(savedEmail) emailOptinInput.value = savedEmail; }catch(e){}
-
-  function optinEmail(){
-    var v = emailOptinInput.value.trim();
-    if(!emailOptinCheckbox.checked || !v) return '';
-    try{ localStorage.setItem('tc_email_hint', v); }catch(e){}
-    return v;
-  }
-
-  dropZone.addEventListener('click', function(){ fileInput.click(); });
-  dropZone.addEventListener('dragover', function(e){ e.preventDefault(); dropZone.classList.add('drag'); });
-  dropZone.addEventListener('dragleave', function(){ dropZone.classList.remove('drag'); });
-  dropZone.addEventListener('drop', function(e){
-    e.preventDefault();
-    dropZone.classList.remove('drag');
-    if(e.dataTransfer.files.length) uploadFile(e.dataTransfer.files[0]);
+  var t=document.getElementById('navToggle'), l=document.getElementById('navLinks');
+  if(!t||!l) return;
+  t.addEventListener('click', function(){
+    var open = l.classList.toggle('open');
+    t.setAttribute('aria-expanded', open ? 'true' : 'false');
   });
-  fileInput.addEventListener('change', function(){
-    if(fileInput.files.length) uploadFile(fileInput.files[0]);
+  l.querySelectorAll('a').forEach(function(a){
+    a.addEventListener('click', function(){ l.classList.remove('open'); t.setAttribute('aria-expanded','false'); });
   });
-
-  if(demoBtn){
-    var demoLabel = demoBtn.textContent;
-    demoBtn.addEventListener('click', function(){
-      demoBtn.disabled = true;
-      demoBtn.textContent = 'Checking the sample\u2026';
-      // The sample follows the Texas | Colorado switch: a TREC 20-19, or a
-      // CBS1 at 123 Main St, Denver with 3 planted issues (static/sample_cbs1.pdf).
-      var sample = stateMode() === 'co'
-        ? {url: '/static/sample_cbs1.pdf?v=2026-10-12', name: 'sample_cbs1.pdf'}
-        : {url: '/static/sample_trec_20-19.pdf?v=2026-10-09', name: 'sample_trec_20-19.pdf'};
-      fetch(sample.url)
-        .then(function(r){ return r.blob(); })
-        .then(function(blob){
-          uploadFile(new File([blob], sample.name, {type:'application/pdf'}), true);
-        })
-        .catch(function(){ demoDone(false); });
-    });
-  }
-  // Hero "See a sample report" runs the same sample check as the button
-  // under the drop zone, so phone visitors (who rarely have a TREC PDF on
-  // the phone) get a real report without scrolling two screens down first.
-  var heroSampleBtn = document.getElementById('heroSampleBtn');
-  if(heroSampleBtn && demoBtn){
-    var heroSampleLabel = heroSampleBtn.textContent;
-    heroSampleBtn.addEventListener('click', function(){
-      if(demoBtn.disabled) return;
-      heroSampleBtn.disabled = true;
-      heroSampleBtn.textContent = 'Checking the sample\u2026';
-      demoBtn.click();
-    });
-    // The hero's illustrated report card is the same sample, so clicking it
-    // runs the real check and scrolls to the real report.
-    var heroCard = document.getElementById('heroReportCard');
-    if(heroCard && 'IntersectionObserver' in window && !(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)){
-      heroCard.classList.add('hx-anim');
-      var go = function(){ heroCard.classList.add('hx-go'); };
-      new IntersectionObserver(function(es, o){ es.forEach(function(x){ if(x.isIntersecting){ go(); o.disconnect(); } }); }, {threshold: 0.35}).observe(heroCard);
-    }
-    if(heroCard){
-      heroCard.addEventListener('click', function(){ heroSampleBtn.click(); });
-      heroCard.addEventListener('keydown', function(e){
-        if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); heroSampleBtn.click(); }
-      });
-    }
-  }
-  // The result renders ABOVE this button (right under the drop zone), so
-  // without this the click looked like a no-op: the button snapped back to
-  // its label instantly and scroll anchoring kept the new result off-screen.
-  function demoDone(ok){
-    if(!demoBtn) return;
-    demoBtn.textContent = ok ? '\u2713 Done \u2014 results above' : 'Couldn\u2019t load the sample. Try again \u2192';
-    setTimeout(function(){ demoBtn.textContent = demoLabel; demoBtn.disabled = false; }, ok ? 3500 : 2500);
-    if(heroSampleBtn){ heroSampleBtn.textContent = heroSampleLabel; heroSampleBtn.disabled = false; }
-  }
-  function revealResult(){
-    var r = resultEl.getBoundingClientRect();
-    if(r.top < 70 || r.top > window.innerHeight * 0.6){
-      resultEl.scrollIntoView({behavior:'smooth', block:'start'});
-    }
-  }
-
-  // Same perceived-progress pattern as /tc-check -- one real round trip,
-  // staged labels just so the wait doesn't feel dead.
-  var STATUS_STEPS_BY_STATE = {
-    tx: ['Scanning TREC 20-19...', 'Checking mandatory fields...', 'Checking initials & consistency...'],
-    co: ['Scanning CBS1...', 'Checking \u00a73.1 deadlines...', 'Checking \u00a74.1 price math...']
-  };
-  var statusTimers = [];
-
-  var fileCarried = false;
-
-  // The click-through to /tc-check for "see the full checklist" used to
-  // land on a blank form for a real (non-demo) file -- nothing carries it
-  // across a normal navigation, since the file is never sent to our
-  // servers a second time. Stashing it as a data URL in sessionStorage
-  // (this browser's own storage, read back once on /tc-check and then
-  // cleared -- see that page's script) lets the click-through replay the
-  // same file without ever storing it server-side. Best-effort: any
-  // failure (quota, unsupported) just falls back to today's blank form.
-  function stashFileForCarry(file){
-    fileCarried = false;
-    if(!file || !window.sessionStorage || !window.FileReader) return;
-    try{
-      var reader = new FileReader();
-      reader.onload = function(){
-        try{
-          sessionStorage.setItem('tc_carry_file', JSON.stringify({
-            name: file.name, type: file.type, dataUrl: reader.result
-          }));
-          fileCarried = true;
-        }catch(e){ fileCarried = false; }
-      };
-      reader.onerror = function(){ fileCarried = false; };
-      reader.readAsDataURL(file);
-    }catch(e){ fileCarried = false; }
-  }
-
-  function uploadFile(file, isDemo){
-    resultEl.classList.remove('show');
-    emailOptinConfirm.classList.remove('show');
-    statusTimers.forEach(clearTimeout);
-    var STATUS_STEPS = STATUS_STEPS_BY_STATE[stateMode()];
-    statusTimers = STATUS_STEPS.map(function(label, i){
-      return setTimeout(function(){ statusEl.textContent = label; }, i * 450);
-    });
-    statusEl.textContent = STATUS_STEPS[0];
-    statusEl.classList.add('show');
-    if(!isDemo) stashFileForCarry(file);
-
-    var email = isDemo ? '' : optinEmail();
-    var formData = new FormData();
-    formData.append('file', file);
-    formData.append('source_page', 'homepage');
-    formData.append('state_mode', stateMode());
-    if(email) formData.append('email', email);
-    if(isDemo) formData.append('is_demo', '1');
-
-    fetch('/v1/tc/check', { method: 'POST', body: formData })
-      .then(function(r){ return r.json(); })
-      .then(function(data){
-        statusTimers.forEach(clearTimeout);
-        statusEl.classList.remove('show');
-        if(data.error){ renderError(data.error); if(isDemo) demoDone(false); revealResult(); return; }
-        renderResult(data, isDemo);
-        if(isDemo) demoDone(true);
-        revealResult();
-        if(email){
-          emailOptinConfirm.textContent = 'Sent to ' + email;
-          emailOptinConfirm.classList.add('show');
-        }
-      })
-      .catch(function(){
-        statusTimers.forEach(clearTimeout);
-        statusEl.classList.remove('show');
-        renderError('Something went wrong checking that file. Try again.');
-        if(isDemo) demoDone(false);
-        revealResult();
-      });
-  }
-
-  function renderError(msg){
-    resultEl.innerHTML = '<div class="result-banner incomplete">' + escapeHtml(msg) + '</div>';
-    resultEl.classList.add('show');
-  }
-
-  // Homepage widget shows a short preview -- the full checklist, email gate,
-  // copy/download buttons live on /tc-check itself. Built from
-  // display_issues (per-page initials folded into one line, each with its
-  // consequence tag), the same list and counts the full report shows.
-  // Preview pick (2026-10-13): on the sample the first four raw lines were
-  // all initials, hiding the price math and "November 31" behind "+13
-  // more". Now: findings with the most concrete downstream consequence
-  // first, then other must-fix, then to-review, initials last -- one per
-  // tag, so four lines show four different problems.
-  var PREVIEW_FIRST = ["PRICE DOESN'T ADD UP", 'IMPOSSIBLE CLOSING DATE', 'NOTICES WILL BOUNCE'];
-  var INITIALS_TAGS = {'PAGES NOT INITIALED': 1, 'WRONG PARTY INITIALED': 1};
-  function previewRank(i){
-    var p = PREVIEW_FIRST.indexOf(i.tag);
-    if(p >= 0) return p;
-    if(INITIALS_TAGS[i.tag]) return 30;
-    return i.severity === 'blocker' ? 10 : 20;
-  }
-  function pickPreview(list){
-    var seen = {}, out = [];
-    list.map(function(i, n){ return {i: i, r: previewRank(i) * 100 + n}; })
-      .sort(function(a, b){ return a.r - b.r; })
-      .forEach(function(x){ if(out.length < 4 && !seen[x.i.tag]){ seen[x.i.tag] = 1; out.push(x.i); } });
-    return out;
-  }
-
-  function renderResult(data, isDemo){
-    // Unreadable file: neutral note, no red banner or count -- same wording
-    // as /tc-check's buildUnreadable().
-    if(!data.recognized){
-      var f = stateMode() === 'co' ? 'CBS1' : 'TREC 20-19';
-      resultEl.innerHTML = '<div class="unreadable-box">'
-        + '<p class="unreadable-title">We couldn&rsquo;t read the form fields in this file.</p>'
-        + '<p>It may be scanned, or flattened when it was signed or exported, or it may not be a ' + f + '. That isn&rsquo;t a finding about your contract: TC Check needs a fillable ' + f + ' PDF (addenda are checked alongside it).</p>'
-        + '<p>Try an unsigned copy exported from your forms software.</p>'
-        + (data.free_report_not_used ? '<p class="unreadable-note">This check didn&rsquo;t use one of your free reports.</p>' : '')
-        + '</div>';
-      resultEl.classList.add('show');
-      return;
-    }
-    var display = data.display_issues || [];
-    var issues = display.length ? display : (data.issues || []);
-    var totalIssues = display.length || (typeof data.issue_count === 'number' ? data.issue_count : issues.length);
-    var html = '';
-    if(isDemo){
-      html += '<div class="demo-banner">Demo result &mdash; a sample contract with planted mistakes, not your file.</div>';
-    }
-    if(data.complete){
-      html += '<div class="result-banner complete">All checked fields are filled in.</div>';
-    } else if(display.length){
-      // Same headline and counts as the /tc-check report.
-      var nb = display.filter(function(i){ return i.severity === 'blocker'; }).length, nw = display.length - nb;
-      html += '<div class="result-banner incomplete">' + (nb ? 'Not ready &mdash; fix before this goes to title' : nw + ' item' + (nw === 1 ? '' : 's') + ' to review')
-        + '<div class="rep-counts">' + (nb ? '<span class="must">' + nb + ' must fix</span>' : '') + (nw ? '<span class="review">' + nw + ' to review</span>' : '') + '</div></div>';
-    } else {
-      // Gated preview: only counts come back, not the itemized list.
-      var blockerCount = typeof data.blocker_count === 'number' ? data.blocker_count : 0;
-      var bannerText = blockerCount > 0
-        ? blockerCount + ' title-blocking error' + (blockerCount === 1 ? '' : 's') + ' found'
-        : totalIssues + ' issue' + (totalIssues === 1 ? '' : 's') + ' found';
-      html += '<div class="result-banner incomplete">' + bannerText + '</div>';
-    }
-    var shown = display.length ? pickPreview(display) : (data.gated ? issues : issues.slice(0, 4));
-    if(shown.length){
-      html += '<ul class="issue-list">';
-      shown.forEach(function(issue){
-        html += '<li class="issue-item"><span class="issue-tag ' + issue.severity + '">' + escapeHtml(issue.tag || issue.severity) + '</span><span>' + escapeHtml(issue.message) + '</span></li>';
-      });
-      html += '</ul>';
-    }
-    // Demo replays the fixed static sample; a real file replays from the
-    // sessionStorage stash above when it succeeded, otherwise this falls
-    // back to a plain link (today's "start over" behavior).
-    var tcCheckHref = isDemo ? '/tc-check?demo=1' + (stateMode() === 'co' ? '&state=co' : '') : (fileCarried ? '/tc-check?carry=1' : '/tc-check');
-    if(totalIssues > shown.length){
-      var linkText = data.gated ? 'enter your email to see exactly which pages and lines' : 'see the full checklist';
-      html += '<div class="result-more">+' + (totalIssues - shown.length) + ' more &mdash; <a href="' + tcCheckHref + '">' + linkText + ' &rarr;</a></div>';
-    } else if(issues.length){
-      html += '<div class="result-more"><a href="' + tcCheckHref + '">Copy or download this checklist &rarr;</a></div>';
-    }
-    // Next step (2026-10-13): the visitor's own file, not the agent SMS
-    // pitch that used to sit here (buildIndividualUpgradeCard) -- TCs don't
-    // write offers, and it claimed drafting by text leaves nothing for a
-    // check to catch, which wasn't true. Same CTAs as /tc-check; the agent
-    // offer is one small link.
-    var form = data.state === 'CO' ? 'CBS1' : 'TREC 20-19';
-    if(isDemo){
-      html += '<div class="own-file-cta"><p class="own-file-lead"><strong>That was our sample. Now run one of yours.</strong> Drop a filled ' + form + ' above, or forward it to <a href="mailto:tc@check.txtanoffer.com">tc@check.txtanoffer.com</a>. It&rsquo;s checked, then deleted, unless your brokerage archives it.</p>'
-        + '<button type="button" class="own-file-btn" id="homeOwnFileBtn" data-evt="tc_own_file_cta">Check my own file &rarr;</button>'
-        + AGENT_ALT + '</div>';
-    } else if(!data.gated){
-      html += '<div class="own-file-cta"><p class="own-file-lead"><strong>Next file?</strong> Forward it to <a href="mailto:tc@check.txtanoffer.com">tc@check.txtanoffer.com</a> straight from your inbox and the report comes back by email.</p>' + AGENT_ALT + '</div>';
-    }
-    resultEl.innerHTML = html;
-    resultEl.classList.add('show');
-    var ownBtn = document.getElementById('homeOwnFileBtn');
-    if(ownBtn) ownBtn.addEventListener('click', function(){
-      dropZone.scrollIntoView({behavior:'smooth', block:'center'});
-      fileInput.click();
-    });
-  }
-  var AGENT_ALT = '<p class="agent-alt">Agent writing the offer? <a href="/demo">Draft the next one by text &rarr;</a></p>';
-
-  function escapeHtml(s){
-    var div = document.createElement('div');
-    div.textContent = s;
-    return div.innerHTML;
-  }
 })();
 </script>
+
+<!-- 1. HERO: one idea, the product doing it -->
+<section class="hero">
+  <div class="eyebrow">TC Check</div>
+  <h1>Catch it before<br>title does.</h1>
+  <p class="sub" data-state="tx">Drop a filled TREC 20-19. TC Check flags what&rsquo;s blank, missing or doesn&rsquo;t add up.</p>
+  <p class="sub" data-state="co">Drop a filled CBS1 and see what title would kick back in seconds &mdash; &sect;3.1 deadlines left blank that delete a contingency, &sect;4.1 price math that doesn&rsquo;t add up, deadlines that land after closing.</p>
+  <div class="ctas" data-state="tx">
+    <a class="btn solid" href="/tc-check" data-evt="hero_cta">Check a file free</a>
+    <a class="btn ghost" href="/tc-check?demo=1" data-evt="hero_sample">See a sample report</a>
+  </div>
+  <div class="ctas" data-state="co">
+    <a class="btn solid" href="/tc-check?state=co" data-evt="hero_cta">Check a file free</a>
+    <a class="btn ghost" href="/tc-check?demo=1&amp;state=co" data-evt="hero_sample">See a sample report</a>
+  </div>
+  <p class="fine" data-state="tx">3 free reports, no signup &middot; Texas TREC 20-19 &middot; <a href="/?state=co" data-evt="state_toggle_co" style="text-decoration:underline">Colorado CBS1</a></p>
+  <p class="fine" data-state="co">3 free reports, no signup &middot; Colorado CBS1 &middot; <a href="/?state=tx" data-evt="state_toggle_tx" style="text-decoration:underline">Texas TREC 20-19</a></p>
+
+  <!-- Illustration only. Scrap values are the sample files' own fields;
+       card counts and findings are the sample report's display_issues,
+       with the full message text from first_screen.SAMPLE_ROWS
+       (tests/test_site_polish.py and test_first_screen.py check both). -->
+  <div class="stage" aria-hidden="true">
+    <div class="paper" data-state="tx">
+      <div class="ph"><span>Contract concerning 123 Main St</span><span>Page 1 of 12</span></div>
+      <p style="font-weight:700;margin-bottom:6px">3. SALES PRICE:</p>
+      <div class="row"><span>A. Cash portion</span><b>$85,000</b></div>
+      <div class="row"><span>B. Sum of all financing</span><b>$340,000</b></div>
+      <div class="row circ"><span>C. Sales Price</span><b>$435,000</b>
+        <svg viewBox="0 0 160 46" preserveAspectRatio="none"><path d="M40 8 C 90 -2, 156 4, 156 22 C 156 40, 90 46, 50 42 C 14 38, 6 22, 30 12" fill="none" stroke="#c62828" stroke-width="3" stroke-linecap="round"/></svg></div>
+      <div class="scrawl">= $425,000?</div>
+    </div>
+    <div class="paper" data-state="co">
+      <div class="ph"><span>CBS1 &middot; 123 Main St, Denver</span><span>&sect;4.1</span></div>
+      <p style="font-weight:700;margin-bottom:6px">4.1 Price and Terms</p>
+      <div class="row"><span>Earnest Money</span><b>$10,000</b></div>
+      <div class="row"><span>New Loan</span><b>$400,000</b></div>
+      <div class="row"><span>Cash at Closing</span><b>$80,000</b></div>
+      <div class="row circ"><span>Purchase Price</span><b>$500,000</b>
+        <svg viewBox="0 0 160 46" preserveAspectRatio="none"><path d="M40 8 C 90 -2, 156 4, 156 22 C 156 40, 90 46, 50 42 C 14 38, 6 22, 30 12" fill="none" stroke="#c62828" stroke-width="3" stroke-linecap="round"/></svg></div>
+      <div class="scrawl">= $490,000?</div>
+    </div>
+    <div class="card" id="heroReportCard">
+      <div class="card-h"><img src="/static/logo-wordmark-white.png?v=1" alt=""><span>TC CHECK REPORT</span></div>
+      <div class="card-b" data-state="tx">
+        <div class="addr">123 Main St, Austin, TX 78704</div>
+        <div class="addr-sub">Sample TREC 20-19 with planted mistakes</div>
+        <div class="banner">Not ready &mdash; fix before this goes to title<small>12 must fix &middot; 4 to review</small></div>
+        __HOME_FINDINGS_TX__
+      </div>
+      <div class="card-b" data-state="co">
+        <div class="addr">123 Main St, Denver, CO</div>
+        <div class="addr-sub">Sample CBS1 with planted mistakes</div>
+        <div class="banner">Not ready &mdash; fix before this goes to title<small>1 must fix &middot; 2 to review</small></div>
+        __HOME_FINDINGS_CO__
+      </div>
+    </div><!-- /heroReportCard -->
+  </div>
+</section>
+
+<!-- 2. WHAT IT CATCHES: one finding per tile, huge type -->
+<section class="catches">
+  <h2>What it flags<br>before title sees it.</h2>
+  <p class="sub">Four of the things TC Check flags.</p>
+  <div class="tiles">
+    <div class="tile">
+      <span class="tag b">MUST FIX</span>
+      <div class="big">3A + 3B <span class="neq">&ne;</span> 3C</div>
+      <p>A sales price that doesn&rsquo;t add up.</p>
+    </div>
+    <div class="tile">
+      <span class="tag b">MUST FIX</span>
+      <div class="big">November 31
+        <svg class="ring" viewBox="0 0 300 80" preserveAspectRatio="none" aria-hidden="true"><path d="M60 6 C 180 -4, 296 6, 294 40 C 292 74, 160 80, 80 74 C 10 68, 0 30, 40 14" fill="none" stroke="#c62828" stroke-width="3" stroke-linecap="round"/></svg>
+      </div>
+      <p>A closing date that doesn&rsquo;t exist.</p>
+    </div>
+    <div class="tile">
+      <span class="tag b">MUST FIX</span>
+      <div class="big eff">Effective Date<span class="blank"></span></div>
+      <p>The date the contract&rsquo;s deadlines count from, left blank.</p>
+    </div>
+    <div class="tile">
+      <span class="tag w">REVIEW</span>
+      <div class="mono">john.doe@gmail<span class="neq">com</span></div>
+      <p>A notice email that would bounce.</p>
+    </div>
+  </div>
+  <div class="ctas"><a class="link" href="/tc-check#what-it-checks" data-evt="home_check_link">See everything it checks</a></div>
+</section>
+
+<!-- 3. TEXT AN OFFER: the namesake product, one phone -->
+<section class="text" id="text">
+  <div class="eyebrow">Text an offer</div>
+  <h2>Text the terms.<br>Get a draft back.</h2>
+  <p class="sub">Price, down payment, closing days, address. Confirm with YES and a TREC 20-19 draft comes back to review before anyone signs.</p>
+  <div class="ctas">
+    <a class="btn solid" href="sms:+18338970333" data-evt="workflow_offer_sms">Text (833) 897-0333</a>
+    <a class="btn ghost" href="/pricing">See pricing</a>
+  </div>
+  <p class="fine">By texting, you agree to receive SMS replies and reminders about your offers, plus up to 2 tips on the free trial. Reply STOP to opt out, HELP for help. Msg frequency varies. Msg &amp; data rates may apply. <a href="/privacy">Privacy</a> &middot; <a href="/terms">Terms</a></p>
+  <div class="shot" role="img" aria-label="A hand holding a phone showing a text to TxtAnOffer and the reply that the TREC draft is ready">
+    <div class="scene">
+      <div class="screen">
+        <div class="island"></div>
+        <div class="scr-in">
+        <div class="who"><b>TxtAnOffer</b>(833) 897-0333</div>
+        <div class="bub me">725k 3% 21day 123 Main St, Austin, TX</div>
+        <div class="bub them">Your TREC draft for 123 Main St, Austin, TX is ready.<br><br>Review and email it: <u>txtanoffer.com/&hellip;</u><br><br>Draft only: review every page before signing.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 4. BROKERS: one number. Texas only: /tc-check/bulk checks TREC 20-19s. -->
+<section class="brokers" data-state="tx">
+  <div class="num">20</div>
+  <h2>Closed files.<br>Checked free.</h2>
+  <p class="sub">Managing broker? Zip up to 20 of your agents&rsquo; closed contracts and get one free report by email.</p>
+  <div class="ctas">
+    <a class="btn solid" href="/tc-check/bulk" data-evt="hero_broker_cta">Check 20 files free</a>
+    <a class="btn ghost" href="/brokers" data-evt="path_brokerage_cta">For brokerages</a>
+  </div>
+</section>
+
+<!-- 5. TRUST: one promise -->
+<section class="trust">
+  <h2>Checked.<br>Then deleted.</h2>
+  <p class="sub">A file you check is read for the report, then deleted. We keep short issue codes, not the file (bulk checks also keep file names). The exception: contracts sent to a Brokerage-plan archive, kept 5 years.</p>
+  <div class="facts">
+    <span><i>&#10003;</i>Built on the published TREC and Colorado forms</span>
+    <span><i>&#10003;</i>Flags issues, not legal advice</span>
+    <span><i>&#10003;</i>A real person answers</span>
+  </div>
+  <div class="ctas"><a class="link" href="/trust">Visit the Trust Center</a></div>
+</section>
+
+<footer>
+  <div class="legal">TC Check flags likely issues on a filled form. It is not legal advice and does not replace your own review. TxtAnOffer is not affiliated with the Texas Real Estate Commission (TREC) or the Colorado Real Estate Commission. Built by Phanel Jean-Baptiste, a software builder, not a licensed agent or broker. Examples use sample contracts with planted mistakes, not client files.</div>
+  <div class="cols">
+    <div><b>Check</b><a href="/tc-check" data-evt="footer_check_link">TC Check</a><a href="/tc-check/bulk">Bulk check</a><a href="/tc-hub">TC Hub</a><a href="/tc-hub/colorado">Colorado TC Hub</a></div>
+    <div><b>Learn</b><a href="/guides">Guides</a><a href="/tools/colorado-deadlines" data-evt="states_co_tool">Deadline calculator</a><a href="/faq">FAQ</a><a href="/about">About</a></div>
+    <div><b>Brokerages</b><a href="/brokers">For brokers</a><a href="/pricing">Pricing</a><a href="/login">Brokerage sign-in</a></div>
+    <div><b>Trust</b><a href="/trust">Trust Center</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="mailto:support@txtanoffer.com">support@txtanoffer.com</a></div>
+  </div>
+  <div class="copy">&copy; 2026 TxtAnOffer &middot; Serving Texas &amp; Colorado</div>
+</footer>
+
 </body>
 </html>
 """
-    # Carry ?src=name (e.g. from a Direct Reach email) through the nav "Check a
-    # file free" CTA to /tc-check, so a click through this exact nav
-    # button still attributes correctly even though it lands on the
-    # homepage first -- see get_landing_visits_by_source() on /analytics.
+    html = (html.replace("__HOME_FINDINGS_TX__", _home_findings("tx"))
+                .replace("__HOME_FINDINGS_CO__", _home_findings("co")))
+    # Carry ?src=name (e.g. from a Direct Reach email) onto every /tc-check
+    # link on the page, so a click through to TC Check still attributes
+    # correctly even though it lands on the homepage first -- see
+    # get_landing_visits_by_source() on /analytics. /tc-check also reads
+    # its own ?src= for the title-company and November 31 first screens
+    # (first_screen.source_variant), which the ta_src cookie can't do.
     import re as _re
     src = _re.sub(r"[^a-zA-Z0-9_-]", "", request.args.get("src", ""))[:60]
     if src:
-        html = html.replace(
-            '<a href="/tc-check" class="nav-cta" data-evt="nav_check_cta">Check a file free</a>',
-            f'<a href="/tc-check?src={src}" class="nav-cta" data-evt="nav_check_cta">Check a file free</a>',
-            1,
-        )
-    # Real TC File Check production numbers, not marketing copy -- swapped
-    # in here instead of hardcoded so the homepage never goes stale, and
-    # never a "fabricated" stat because a sample too small to be honest
-    # (see MIN_SAMPLE) falls back to plain, factual generic copy instead.
-    MIN_SAMPLE = 5
-    tc_stats = get_tc_check_summary(days=30)
-    if PUBLIC_TC_STATS_ENABLED and tc_stats["recognized"] >= MIN_SAMPLE:
-        pct_incomplete = round(100 - tc_stats["completion_rate"], 1)
-        top_issue = tc_stats["issue_frequency"][0] if tc_stats["issue_frequency"] else None
-        stat1_num, stat1_label = str(tc_stats["recognized"]), "TREC 20-19 files scanned by TC File Check (last 30 days)"
-        stat2_num, stat2_label = f"{pct_incomplete:g}%", "arrived with at least one blank required field"
-        if top_issue:
-            stat3_num, stat3_label = f"{top_issue['pct_of_recognized']:g}%", f"Top issue: {top_issue['label']}"
-        else:
-            stat3_num, stat3_label = f"{pct_incomplete:g}%", "had at least one issue TC File Check catches automatically"
-    else:
-        stat1_num, stat1_label = "Free", f"First {TC_FREE_FULL_REPORTS} reports need nothing, then just an email"
-        stat2_num, stat2_label = "Seconds", ('<span data-state="tx">to scan a full TREC 20-19 + 40-11 addendum</span>'
-                                             '<span data-state="co">to scan a full CBS1</span>')
-        stat3_num, stat3_label = "0", "checked PDFs kept after your report"
-    for token, value in (
-        ("__TC_STAT1_NUM__", stat1_num), ("__TC_STAT1_LABEL__", stat1_label),
-        ("__TC_STAT2_NUM__", stat2_num), ("__TC_STAT2_LABEL__", stat2_label),
-        ("__TC_STAT3_NUM__", stat3_num), ("__TC_STAT3_LABEL__", stat3_label),
-    ):
-        html = html.replace(token, value)
-    html = first_screen.fill_tokens(html)
+        def _carry(m):
+            query, frag = m.group(1) or "", m.group(2) or ""
+            query = "?src=" + src + ("&amp;" + query[1:] if query else "")
+            return f'href="/tc-check{query}{frag}"'
+        html = _re.sub(r'href="/tc-check(\?[^"#]*)?(#[^"]*)?"', _carry, html)
     site_state = _site_state()
-    html = _apply_site_state(html.replace("__STATE_SWITCH_JS__", STATE_SWITCH_JS), site_state)
+    html = _apply_site_state(html, site_state)
 
     resp = make_response(html)
     _remember_site_state(resp, site_state)
     # First-touch attribution cookie: the query-param rewrite above only
-    # survives if the visitor clicks the nav "Check a file free" in this exact page
-    # load. Cold-outreach signups routinely happen on a later visit (a
+    # survives if the visitor clicks through in this exact page load.
+    # Cold-outreach signups routinely happen on a later visit (a
     # different page, a different day) with no ?src on that later click,
     # which silently misattributes real Direct Reach conversions as
     # "direct". A 30-day first-touch cookie, read as a fallback in
@@ -2228,6 +1013,27 @@ def index():
         track_event("landing_visit", None, {"source": src})
     track_page_view(resp, "homepage")
     return resp
+
+
+# Bold one-line titles for the homepage sample card; the line under each is
+# the finding's full message from first_screen.SAMPLE_ROWS (the same text
+# /tc-check's sample strip shows, kept honest by tests/test_first_screen.py).
+_HOME_FINDING_TITLES = {
+    ("tx", "price"): "Price doesn&rsquo;t add up",
+    ("tx", "november31"): "Impossible closing date",
+    ("tx", "email"): "Notices will bounce",
+    ("co", "price"): "Price doesn&rsquo;t add up",
+    ("co", "loan"): "Loan contingency deleted",
+    ("co", "holiday"): "Holiday closing",
+}
+
+
+def _home_findings(state):
+    return "".join(
+        f'<div class="finding"><span class="tag {cls}">{tag}</span><div><b>{_HOME_FINDING_TITLES[(state, key)]}</b>'
+        f'<span>{msg}</span></div></div>'
+        for key, cls, tag, msg in first_screen.SAMPLE_ROWS[state]
+    )
 
 
 # --- address validation --------------------------------------------------
@@ -3632,7 +2438,7 @@ DEMO_FORM = """
     </div>
 
     <div class="foot">
-      By texting or using this service, you consent to receive SMS replies, offer reminders and up to 2 free-trial tips. Reply STOP to opt out anytime. Msg &amp; data rates may apply.
+      By texting or using this service, you consent to receive SMS replies, offer reminders and up to 2 free-trial tips. Reply STOP to opt out anytime. Msg frequency varies. Msg &amp; data rates may apply.
       <br><a href="/pricing">View Pricing</a> &middot; <a href="/terms">Terms</a> &middot; <a href="/privacy">Privacy</a>
     </div>
   </div>
@@ -4720,6 +3526,9 @@ __STATE_SWITCH_JS__
      and true of the code: a web upload goes to a temp file that's deleted
      after the check, and TC Check is rule code with no model/LLM dependency. -->
 <p class="dz-trust-line"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span>Checked, then deleted. No AI reads your contract. <a href="/trust#contracts" data-evt="tc_trust_link">How we handle files &rarr;</a></span></p>
+<!-- Independence line, moved from the homepage drop box 2026-10-23. Keep
+     true: no brokerage/MLS/portal ownership, no data sales (matches /trust#data). -->
+<p class="dz-trust-line" style="margin-top:0.35rem;"><span>Independent. Not owned by Zillow, a brokerage or an MLS. We don&rsquo;t sell data.</span></p>
 <p class="dz-forward-line">Or forward it to <a href="mailto:tc@check.txtanoffer.com">tc@check.txtanoffer.com</a> and the report comes back by email.</p>
 <p class="dz-forward-line">Prefer to walk through it together? <a href="https://calendly.com/pejeanbaptiste/15-min-file-check?utm_source=txtanoffer&amp;utm_content=tc_check" target="_blank" rel="noopener" data-evt="book_call_tccheck">Book a free 15-min file check &rarr;</a></p>
 <div>
@@ -4739,6 +3548,9 @@ __STATE_SWITCH_JS__
 <div class="status" id="status"></div>
 <div class="result" id="result"></div>
 </div>
+<!-- #what-it-checks: the homepage's "See everything it checks" link lands here (2026-10-23).
+     On a wrapper around both cards so the anchor works in either state. -->
+<div id="what-it-checks">
 <div class="scope-card" data-state="tx">
 <h3>What this checks &middot; Texas TREC 20-19</h3>
 <div class="scope-grid">
@@ -4795,6 +3607,7 @@ __STATE_SWITCH_JS__
 </ul>
 </div>
 <p class="scope-footnote">Checked against the Colorado Real Estate Commission&rsquo;s published CBS1 (mandatory since January 1, 2026), field by field. Flags likely issues; not legal advice. Not affiliated with the Colorado Real Estate Commission.</p>
+</div>
 </div>
 </div>
 <script>
@@ -7218,8 +6031,8 @@ def broker_archive_zip(join_code):
 # word (toll-free reviewers compare the two; tests.test_nurture checks it).
 SMS_CONSENT_LABEL = (
     "I agree to receive automated SMS messages from TxtAnOffer at +1 (833) 897-0333 about my offer drafts and account, "
-    "including deadline reminders and up to 2 tips during the free trial. No marketing texts. Message frequency varies. "
-    "Reply STOP to opt out, HELP for help. Msg &amp; data rates may apply. Consent is not a condition of purchase or service."
+    "including deadline reminders and up to 2 tips during the free trial. No marketing texts. "
+    "Reply STOP to opt out, HELP for help. Msg frequency varies. Msg &amp; data rates may apply. Consent is not a condition of purchase or service."
 )
 
 
@@ -7949,7 +6762,7 @@ def privacy():
     <h2 id="sms-messaging">3. SMS Messaging</h2>
     <p><strong>Program Name:</strong> TxtAnOffer</p>
     <p><strong>Phone Number:</strong> +1 (833) 897-0333</p>
-    <p><strong>Opt-in Method:</strong> Users opt in by (1) entering their phone number and checking an unchecked checkbox on www.txtanoffer.com/signup that says "I agree to receive automated SMS messages from TxtAnOffer at +1 (833) 897-0333 about my offer drafts and account, including deadline reminders and up to 2 tips during the free trial. No marketing texts. Message frequency varies. Reply STOP to opt out, HELP for help. Msg &amp; data rates may apply. Consent is not a condition of purchase or service." OR (2) by texting offer details directly to +1 (833) 897-0333 after seeing the SMS disclosure on our website.</p>
+    <p><strong>Opt-in Method:</strong> Users opt in by (1) entering their phone number and checking an unchecked checkbox on www.txtanoffer.com/signup that says "I agree to receive automated SMS messages from TxtAnOffer at +1 (833) 897-0333 about my offer drafts and account, including deadline reminders and up to 2 tips during the free trial. No marketing texts. Reply STOP to opt out, HELP for help. Msg frequency varies. Msg &amp; data rates may apply. Consent is not a condition of purchase or service." OR (2) by texting offer details directly to +1 (833) 897-0333 after seeing the SMS disclosure on our website.</p>
     <p><strong>Consent:</strong> By texting our service number +1 (833) 897-0333 or checking the SMS box on our signup page, you consent to receive SMS messages from TxtAnOffer about your offer requests and account, including the reminders and tips listed under Message frequency.</p>
     <p><strong>Message frequency:</strong> Message frequency varies based on your usage. You get a reply to each text you send us. We also text you without you texting first, only in these cases:</p>
     <ul>
@@ -10251,6 +9064,9 @@ def brokers():
   }
   .plan ul {margin:0 0 1.25rem 1.2rem;color:var(--text-muted);font-size:0.92rem;}
   .plan li {margin-bottom:0.4rem;}
+  .flow {margin:0 0 1rem 1.2rem;color:var(--text-muted);font-size:0.95rem;}
+  .flow li {margin-bottom:0.6rem;}
+  .flow strong {color:var(--text);}
   .price {font-size:1.6rem;font-weight:800;color:var(--text);letter-spacing:-0.02em;}
   .price span {font-size:0.9rem;font-weight:500;color:var(--text-muted);}
   .foot {text-align:center;margin-top:3rem;font-size:0.8rem;color:var(--text-dim);}
@@ -10339,9 +9155,35 @@ def brokers():
       <li>Contract archive: forward or drop executed contracts &mdash; checked and kept 5 years, searchable by address</li>
       <li>Roster &amp; compliance dashboard, Transaction Workspace and Closing Checklist</li>
       <li>Agents join with one text &mdash; no per-agent setup</li>
+      <li>A text the moment it happens: a real blocker on any agent&rsquo;s file texts you directly, before it ever reaches title</li>
     </ul>
     <a class="btn" href="/pricing#brokerage" data-evt="brokers_plan_cta">See the Brokerage plan</a>
   </div>
+
+  <!-- Moved here from the homepage 2026-10-23 (homepage simplification):
+       the archive steps and the offer-to-closing workflow, Texas copy. -->
+  <h2>Every offer your agents text in, archived for 5 years.</h2>
+  <p>TREC asks you to keep transaction records for 4 years from closing (22 TAC &sect;535.2). Here's how files land in your archive &mdash; your agents don't do anything extra.</p>
+  <ol class="flow">
+    <li><strong>Agents join your roster</strong> &mdash; each agent texts your brokerage's join code before their first offer, or enters it at signup. One time, no per-agent setup.</li>
+    <li><strong>They text the offer</strong> &mdash; the TREC 20-19 comes back in seconds, gets checked for blanks and mismatches, and a copy goes to your TC by email.</li>
+    <li><strong>Changes are filed with it</strong> &mdash; when an agent texts a price or closing-date change (<code>AMEND 123 Main St price 730k</code>), it becomes a 39-11 amendment, archived under the same address.</li>
+    <li><strong>Find it in seconds</strong> &mdash; search by address from your brokerage dashboard, open any PDF, or download the whole archive as a ZIP &mdash; anytime, even if you cancel. <a href="/broker/login" style="color:var(--accent-dark);text-decoration:underline;">Brokerage sign-in &rarr;</a></li>
+  </ol>
+  <p class="fine">Executed contracts too: forward them to tc@check.txtanoffer.com from your brokerage email, or drop them into your archive &mdash; each one is checked and kept 5 years. <a href="/archive" style="text-decoration:underline;">How the contract archive works &rarr;</a></p>
+
+  <h2>From offer to closing, in one place.</h2>
+  <p>TC File Check is the part most people try first. It's one stage of a longer workflow that runs underneath it, start to finish.</p>
+  <ol class="flow">
+    <li><strong>Offer</strong> &mdash; your agents text the terms in and get back a structured offer in seconds &mdash; the starting point everything else builds on, and the first record in your brokerage's archive. For example: <strong>725k 3% 21day 123 Main St, Austin, TX</strong>. Text <a href="sms:+18338970333" data-evt="workflow_offer_sms" style="color:var(--accent-dark);text-decoration:underline;">(833) 897-0333</a>.
+      <span class="fine" style="display:block;margin-top:0.35rem;">By texting, you agree to receive SMS replies and reminders about your offers, plus up to 2 tips on the free trial. Reply STOP to opt out, HELP for help. Msg frequency varies. Msg &amp; data rates may apply. <a href="/privacy" style="color:inherit;text-decoration:underline;">Privacy</a> &middot; <a href="/terms" style="color:inherit;text-decoration:underline;">Terms</a></span></li>
+    <li><strong>TREC Documents</strong> &mdash; the required forms are generated straight from the transaction: 20-19, 39-11, 40-11, IABS, 61-0, 36-10.</li>
+    <li><strong>Compliance &mdash; TC Check</strong> &mdash; checked for completeness, cross-document consistency, and version-to-version comparison &mdash; before it moves forward.</li>
+    <li><strong>Review before it goes out</strong> &mdash; every draft opens on a review page that lists what&rsquo;s still blank. Emailing it to the listing agent stays locked until the required fields are filled.</li>
+    <li><strong>Communication</strong> &mdash; SMS confirmations, email notifications, and a listing-agent accept/decline thread, built in from the first text.</li>
+    <li><strong>Transaction workspace</strong> &mdash; once accepted, a stage timeline and task checklist track the deal &mdash; option period, earnest money, title, financing, inspections, amendments, final walkthrough &mdash; alongside accept/decline status and dashboard visibility.</li>
+    <li><strong>Closing</strong> &mdash; within 5 days of closing, a Closing Checklist pulls it together in one screen: documents complete, signature status, open tasks, and every key date.</li>
+  </ol>
 
   <h2>Who's behind this</h2>
   <p>Built by Phanel Jean-Baptiste, for Texas TCs and brokers. Phanel is a software builder, not a licensed agent. TxtAnOffer is not affiliated with or endorsed by TREC. Questions go straight to me at <a href="mailto:support@txtanoffer.com" style="color:var(--accent-dark);text-decoration:underline;">support@txtanoffer.com</a>. <a href="/about" style="color:var(--accent-dark);text-decoration:underline;">The full story &rarr;</a></p>
