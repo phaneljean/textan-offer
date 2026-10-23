@@ -1514,7 +1514,7 @@ def index():
         <div class="dz-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 13v8"/><path d="m8 17 4-4 4 4"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg></div>
         <div class="dz-title"><span class="dz-mouse">Drop your contract PDF here</span><span class="dz-touch">Choose your contract PDF</span></div>
         <div class="dz-sub"><span class="dz-mouse">or <u>click to browse</u></span><span class="dz-touch"><u>Tap to browse files</u></span></div>
-        <div class="dz-meta"><span data-state="tx">PDF only &middot; TREC 20-19, with or without the 40-11 addendum</span><span data-state="co">PDF only &middot; a fillable CBS1 (2026)</span></div>
+        <div class="dz-meta"><span data-state="tx">PDF only &middot; TREC 20-19, with or without the 40-11 addendum</span><span data-state="co">PDF only &middot; a fillable CBS1 (2026)</span> &middot; not scanned or flattened &middot; flags likely issues, not legal advice</div>
       </div>
       <input type="file" id="homeFileInput" accept="application/pdf">
       <div class="dz-trust">
@@ -4709,7 +4709,7 @@ __STATE_SWITCH_JS__
 <div class="dz-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 13v8"/><path d="m8 17 4-4 4 4"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg></div>
 <div class="dz-title"><span class="dz-mouse">Drop your contract PDF here</span><span class="dz-touch">Choose your contract PDF</span></div>
 <div class="dz-sub"><span class="dz-mouse">or <u>click to browse</u></span><span class="dz-touch"><u>Tap to browse files</u></span></div>
-<div class="dz-meta"><span data-state="tx">Fillable TREC 20-19 PDF</span><span data-state="co">Fillable CBS1 (2026) PDF</span> &middot; not scanned or flattened files</div>
+<div class="dz-meta"><span data-state="tx">Fillable TREC 20-19 PDF</span><span data-state="co">Fillable CBS1 (2026) PDF</span> &middot; not scanned or flattened files &middot; flags likely issues, not legal advice</div>
 </div>
 <input type="file" id="fileInput" accept="application/pdf">
 <div class="dz-trust">
@@ -9416,6 +9416,17 @@ _GUIDES = {
 }
 
 
+# Button text per guide: the specific check the article explains. Guides not
+# listed keep the generic "Check a file free".
+_GUIDE_CTA_TEXT = {
+    "trec-20-19-initials": "Check a contract for missing initials",
+    "trec-20-19-effective-date": "Check a contract for a blank Effective Date",
+    "40-11-loan-amount-mismatch": "Cross-check your 20-19 against its 40-11",
+    "trec-39-11-amendment-mismatch": "Check an amendment against its contract",
+    "trec-20-19-checklist": "Run this checklist on your file",
+}
+
+
 def _guide_page(slug, g, body_html):
     cta_brokers = g["kicker"] == "For managing brokers"
     cta = (
@@ -9423,7 +9434,7 @@ def _guide_page(slug, g, body_html):
   <a class="btn" href="/brokers?src=seo_""" + slug + """" data-evt="guide_brokers_cta">Free 20-file audit &rarr;</a></div>"""
         if cta_brokers else
         """<div class="cta"><strong>Check a file in seconds.</strong> Drop a filled TREC 20-19 and get back exactly which of these are blank or mismatched. Your first 3 reports need no signup, and the file isn't kept.
-  <a class="btn" href="/tc-check?src=seo_""" + slug + """" data-evt="guide_check_cta">Check a file free &rarr;</a></div>"""
+  <a class="btn" href="/tc-check?src=seo_""" + slug + """" data-evt="guide_check_cta">""" + _GUIDE_CTA_TEXT.get(slug, "Check a file free") + """ &rarr;</a></div>"""
     )
     others = "".join(
         f'<li><a href="/guides/{s}">{escape(o["h1"])}</a></li>' for s, o in _GUIDES.items() if s != slug
