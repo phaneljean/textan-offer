@@ -30,6 +30,9 @@ COPY = {
     # --- /tc-check -----------------------------------------------------------
     "tc_eyebrow": "TC File Check",
     "tc_h1": "Find the blank date or missing initial before title calls you back.",
+    # co_audit doesn't check initials; blank/N/A §3.1 deadlines and the
+    # §4.1 price sum are live rules.
+    "tc_h1_co": "Find the blank deadline or the price that doesn&rsquo;t add up before title calls you back.",
     "tc_sub_tx": "Free check for a filled TREC 20-19. Built for Texas TCs, brokers and their agents.",
     "tc_sub_co": "Free check for a filled Colorado CBS1. Built for Colorado TCs, brokers and their agents.",
     "tc_sample_btn": "See a sample report &mdash; no file needed &rarr;",

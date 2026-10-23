@@ -4671,7 +4671,7 @@ html.state-tx [data-state="co"],html.state-co [data-state="tx"]{display:none !im
      the src-matched title line come from first_screen.py. -->
 __FS_TITLE_LINE__
 <p class="eyebrow">__FS_TC_EYEBROW__</p>
-<h1>__FS_TC_H1__</h1>
+<h1><span data-state="tx">__FS_TC_H1__</span><span data-state="co">__FS_TC_H1_CO__</span></h1>
 <div class="state-switch" role="group" aria-label="Which state's contract">
 <button type="button" data-set-state="tx" aria-pressed="__TX_PRESSED__" data-evt="state_toggle_tx">Texas <small>TREC 20-19</small></button>
 <button type="button" data-set-state="co" aria-pressed="__CO_PRESSED__" data-evt="state_toggle_co">Colorado <small>CBS1</small></button>
