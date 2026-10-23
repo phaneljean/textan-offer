@@ -45,6 +45,7 @@ import archive as archive_store
 import crm
 import broker_auth
 from reminders import run_reminders_if_due
+import nurture
 from deadlines import earnest_money_deadline, option_end_date, build_day_one_summary
 import transaction_tasks
 from drafts import save_draft, get_draft, clear_draft
@@ -103,6 +104,15 @@ def _redirect_www():
     if request.host.lower() == "www." + CANONICAL_HOST and request.method in ("GET", "HEAD"):
         qs = request.query_string.decode("utf-8", "replace")
         return redirect(f"https://{CANONICAL_HOST}{request.path}" + (f"?{qs}" if qs else ""), code=301)
+
+
+@app.before_request
+def _nurture_tick():
+    # SMS nurture (nurture.py) rides on any request, not just /sms: with a
+    # handful of texting users, /sms alone could go days without a hit and
+    # the ~24h follow-ups would never fire. A no-op unless
+    # SMS_NURTURE_ENABLED is set; otherwise one time check per request.
+    nurture.run_nurture_if_due(twilio_send_sms)
 
 
 # One shared rule for the nav CTA, injected after each page's own <style>
@@ -2981,6 +2991,14 @@ def sms_reply():
     # Log all incoming SMS for debugging
     print(f"[SMS] From: {agent_phone}, Body: {incoming_msg}")
     track_event("sms_received", agent_phone, {"body": incoming_msg})
+    # Recorded for nurture.py, which must never text someone who opted out.
+    # Twilio itself answers STOP/START (and blocks our sends after a STOP),
+    # so don't also run the word through the offer parser. CANCEL is a
+    # Twilio opt-out word too but still cancels a pending draft below.
+    nurture.record_opt_keyword(agent_phone, incoming_msg, _form.get("OptOutType", ""))
+    _word = incoming_msg.strip().upper()
+    if _word in (nurture.OPT_OUT_WORDS - {"CANCEL"}) or _word in nurture.OPT_IN_WORDS:
+        return "", 200
     run_cleanup_if_due(OUTPUT_DIR)
     run_reminders_if_due(twilio_send_sms)
     run_tc_followup_if_due()
