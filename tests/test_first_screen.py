@@ -94,12 +94,14 @@ class TcCheckFirstScreen(unittest.TestCase):
             self.assertIn(COPY[key], html, key)
         self.assertIn("123 Main St", COPY["tc_strip_label_tx"])
 
-    def test_sample_button_and_strip_sit_above_the_drop_box(self):
+    def test_drop_box_first_then_sample_button_then_strip(self):
+        # Redesign 2026-10-23: the drop box is the hero, the sample button
+        # sits under it, and the sample strip is its own section below.
         html = _get("/tc-check")
         btn = html.find('id="demoBtn" data-evt="tc_sample_btn"')
         self.assertGreater(btn, 0)
+        self.assertLess(html.find('id="dropZone"'), btn)
         self.assertLess(btn, html.find('id="sampleStrip"'))
-        self.assertLess(html.find('id="sampleStrip"'), html.find('id="dropZone"'))
         self.assertEqual(html.count('id="demoBtn"'), 1)
         self.assertIn("tc_sample_btn", app_module.SAMPLE_CTA_EVENTS)
 
@@ -173,7 +175,7 @@ class HomepageFirstScreen(unittest.TestCase):
         html = _get("/tc-check")
         self.assertEqual(html.count('id="what-it-checks"'), 1)
         anchor = html.find('id="what-it-checks"')
-        self.assertLess(anchor, html.find("What this checks &middot; Texas TREC 20-19"))
+        self.assertLess(anchor, html.find("<li>Property address, county"))
         self.assertLess(anchor, html.find('id="colorado"'))
 
 

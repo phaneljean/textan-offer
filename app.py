@@ -594,6 +594,95 @@ STATE_SWITCH_JS = """<script>
 </script>"""
 
 
+# --- Site chrome: nav + footer (2026-10-23) ---------------------------------
+# Shared by the simplified homepage and /tc-check, so the two can't drift.
+# The CSS uses each page's own --green/--ink/--mute/--gray/--line variables.
+# "html nav.nav" / ".nav .act .nav-cta": NAV_CTA_CSS (injected after the
+# page's <style>) restyles every .nav-cta; these win on specificity.
+_SITE_CHROME_CSS = """  /* ---------- nav: 4 links + one action ---------- */
+  html nav.nav{position:sticky;top:0;z-index:10;height:52px;display:flex;align-items:center;justify-content:space-between;
+       padding:0 max(22px,calc((100% - 1024px)/2));background:rgba(255,255,255,.86);
+       -webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);
+       border-bottom:1px solid rgba(0,0,0,.06)}
+  .nav img{height:19px;width:auto;display:block}
+  .nav ul{display:flex;gap:34px;list-style:none;font-size:13px;color:#424245}
+  .nav ul .m-only{display:none}
+  .nav ul .on{color:var(--ink);font-weight:600}
+  .nav .act{display:flex;align-items:center;gap:22px;font-size:13px}
+  .nav .act .login{color:#424245}
+  .nav .act .nav-cta{background:var(--green);color:#fff;font-weight:600;padding:7px 15px;border-radius:980px;font-size:13px;margin:0;white-space:nowrap}
+  .burger{display:none;width:18px;height:12px;background:none;border:none;border-top:1.5px solid #424245;border-bottom:1.5px solid #424245;position:relative;cursor:pointer;padding:0}
+  .burger:after{content:"";position:absolute;left:0;right:0;top:4px;border-top:1.5px solid #424245}
+  /* ---------- footer ---------- */
+  footer{background:var(--gray);border-top:1px solid var(--line);padding:22px max(22px,calc((100% - 1024px)/2)) 30px;font-size:12px;color:var(--mute)}
+  footer .legal{line-height:1.6;padding-bottom:16px;border-bottom:1px solid var(--line)}
+  .cols{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;padding:18px 0;border-bottom:1px solid var(--line)}
+  .cols b{display:block;color:var(--ink);font-weight:600;margin-bottom:8px}
+  .cols a{display:block;margin-bottom:6px}
+  .copy{padding-top:14px}
+  @media (max-width:734px){
+    .nav ul,.nav .login{display:none}
+    /* The burger opens the same 4 links (plus Log in) as a drop-down. */
+    .nav ul.open{display:flex;flex-direction:column;gap:0;position:absolute;top:52px;left:0;right:0;background:#fff;
+                 border-bottom:1px solid var(--line);padding:6px 22px 12px;font-size:16px;text-align:left}
+    .nav ul.open li a{display:block;padding:11px 0}
+    .nav ul.open .m-only{display:block}
+    .burger{display:block}
+    .cols{grid-template-columns:1fr 1fr}
+  }
+"""
+
+
+def _site_nav(text_href="/#text", cta_href="/tc-check", active=""):
+    """The nav bar plus its burger script. text_href is "#text" on the
+    homepage (same-page anchor); cta_href is "#check" on /tc-check, where
+    the drop box is the page itself."""
+    return """<nav class="nav">
+  <a href="/"><img src="/static/logo-wordmark.png?v=2" alt="TxtAnOffer"></a>
+  <ul id="navLinks">
+    <li><a href="/tc-check"{tc_on} data-evt="nav_check_link">TC Check</a></li>
+    <li><a href="{text_href}">Text an offer</a></li>
+    <li><a href="/brokers">Brokers</a></li>
+    <li><a href="/pricing">Pricing</a></li>
+    <li class="m-only"><a href="/login">Log in</a></li>
+  </ul>
+  <div class="act">
+    <a class="login" href="/login">Log in</a>
+    <a href="{cta_href}" class="nav-cta" data-evt="nav_check_cta">Check a file</a>
+    <button type="button" class="burger" id="navToggle" aria-label="Menu" aria-expanded="false" aria-controls="navLinks"></button>
+  </div>
+</nav>
+<script>
+(function(){{
+  var t=document.getElementById('navToggle'), l=document.getElementById('navLinks');
+  if(!t||!l) return;
+  t.addEventListener('click', function(){{
+    var open = l.classList.toggle('open');
+    t.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }});
+  l.querySelectorAll('a').forEach(function(a){{
+    a.addEventListener('click', function(){{ l.classList.remove('open'); t.setAttribute('aria-expanded','false'); }});
+  }});
+}})();
+</script>
+
+""".format(text_href=text_href, cta_href=cta_href,
+                 tc_on=' class="on" aria-current="page"' if active == "tc" else "")
+
+
+_SITE_FOOTER = """<footer>
+  <div class="legal">TC Check flags likely issues on a filled form. It is not legal advice and does not replace your own review. TxtAnOffer is not affiliated with the Texas Real Estate Commission (TREC) or the Colorado Real Estate Commission. Built by Phanel Jean-Baptiste, a software builder, not a licensed agent or broker. Examples use sample contracts with planted mistakes, not client files.</div>
+  <div class="cols">
+    <div><b>Check</b><a href="/tc-check" data-evt="footer_check_link">TC Check</a><a href="/tc-check/bulk">Bulk check</a><a href="/tc-hub">TC Hub</a><a href="/tc-hub/colorado">Colorado TC Hub</a></div>
+    <div><b>Learn</b><a href="/guides">Guides</a><a href="/tools/colorado-deadlines" data-evt="states_co_tool">Deadline calculator</a><a href="/faq">FAQ</a><a href="/about">About</a></div>
+    <div><b>Brokerages</b><a href="/brokers">For brokers</a><a href="/pricing">Pricing</a><a href="/login">Brokerage sign-in</a></div>
+    <div><b>Trust</b><a href="/trust">Trust Center</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="mailto:support@txtanoffer.com">support@txtanoffer.com</a></div>
+  </div>
+  <div class="copy">&copy; 2026 TxtAnOffer &middot; Serving Texas &amp; Colorado</div>
+</footer>
+"""
+
+
 @app.route("/")
 def index():
     # Simplified 2026-10-23 (ad-creative mockup, Phanel-approved, copy passed
@@ -635,21 +724,7 @@ def index():
   body{font-family:Inter,-apple-system,system-ui,sans-serif;color:var(--ink);background:#fff;line-height:1.4}
   a{color:inherit;text-decoration:none}
 
-  /* ---------- nav: 4 links + one action ---------- */
-  /* "html nav.nav" / ".nav .act .nav-cta": NAV_CTA_CSS (injected after this
-     <style>) restyles every .nav-cta; these win on specificity. */
-  html nav.nav{position:sticky;top:0;z-index:10;height:52px;display:flex;align-items:center;justify-content:space-between;
-       padding:0 max(22px,calc((100% - 1024px)/2));background:rgba(255,255,255,.86);
-       -webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);
-       border-bottom:1px solid rgba(0,0,0,.06)}
-  .nav img{height:19px;width:auto;display:block}
-  .nav ul{display:flex;gap:34px;list-style:none;font-size:13px;color:#424245}
-  .nav ul .m-only{display:none}
-  .nav .act{display:flex;align-items:center;gap:22px;font-size:13px}
-  .nav .act .login{color:#424245}
-  .nav .act .nav-cta{background:var(--green);color:#fff;font-weight:600;padding:7px 15px;border-radius:980px;font-size:13px;margin:0;white-space:nowrap}
-  .burger{display:none;width:18px;height:12px;background:none;border:none;border-top:1.5px solid #424245;border-bottom:1.5px solid #424245;position:relative;cursor:pointer;padding:0}
-  .burger:after{content:"";position:absolute;left:0;right:0;top:4px;border-top:1.5px solid #424245}
+  __SITE_CHROME_CSS__
 
   /* ---------- shared type scale (3 sizes only) ---------- */
   section{padding:110px 22px 0;text-align:center;overflow:hidden}
@@ -744,23 +819,8 @@ def index():
   .facts span{display:flex;align-items:center;gap:8px}
   .facts i{width:22px;height:22px;border-radius:50%;background:var(--green);color:#fff;font-style:normal;font-size:12px;display:grid;place-items:center}
 
-  /* ---------- footer: everything moved off the page lives here ---------- */
-  footer{background:var(--gray);border-top:1px solid var(--line);padding:22px max(22px,calc((100% - 1024px)/2)) 30px;font-size:12px;color:var(--mute)}
-  footer .legal{line-height:1.6;padding-bottom:16px;border-bottom:1px solid var(--line)}
-  .cols{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;padding:18px 0;border-bottom:1px solid var(--line)}
-  .cols b{display:block;color:var(--ink);font-weight:600;margin-bottom:8px}
-  .cols a{display:block;margin-bottom:6px}
-  .copy{padding-top:14px}
-
   /* ---------- mobile (734px break) ---------- */
   @media (max-width:734px){
-    .nav ul,.nav .login{display:none}
-    /* The burger opens the same 4 links (plus Log in) as a drop-down. */
-    .nav ul.open{display:flex;flex-direction:column;gap:0;position:absolute;top:52px;left:0;right:0;background:#fff;
-                 border-bottom:1px solid var(--line);padding:6px 22px 12px;font-size:16px;text-align:left}
-    .nav ul.open li a{display:block;padding:11px 0}
-    .nav ul.open .m-only{display:block}
-    .burger{display:block}
     section{padding-top:72px}
     .hero{padding-top:52px}
     .eyebrow{font-size:17px}
@@ -787,41 +847,12 @@ def index():
     .brokers,.trust{padding-bottom:72px}
     .num{font-size:150px}
     .facts{flex-direction:column;align-items:center;gap:16px}
-    .cols{grid-template-columns:1fr 1fr}
   }
   </style>
 </head>
 <body>
 
-<nav class="nav">
-  <a href="/"><img src="/static/logo-wordmark.png?v=2" alt="TxtAnOffer"></a>
-  <ul id="navLinks">
-    <li><a href="/tc-check" data-evt="nav_check_link">TC Check</a></li>
-    <li><a href="#text">Text an offer</a></li>
-    <li><a href="/brokers">Brokers</a></li>
-    <li><a href="/pricing">Pricing</a></li>
-    <li class="m-only"><a href="/login">Log in</a></li>
-  </ul>
-  <div class="act">
-    <a class="login" href="/login">Log in</a>
-    <a href="/tc-check" class="nav-cta" data-evt="nav_check_cta">Check a file</a>
-    <button type="button" class="burger" id="navToggle" aria-label="Menu" aria-expanded="false" aria-controls="navLinks"></button>
-  </div>
-</nav>
-<script>
-(function(){
-  var t=document.getElementById('navToggle'), l=document.getElementById('navLinks');
-  if(!t||!l) return;
-  t.addEventListener('click', function(){
-    var open = l.classList.toggle('open');
-    t.setAttribute('aria-expanded', open ? 'true' : 'false');
-  });
-  l.querySelectorAll('a').forEach(function(a){
-    a.addEventListener('click', function(){ l.classList.remove('open'); t.setAttribute('aria-expanded','false'); });
-  });
-})();
-</script>
-
+__SITE_NAV__
 <!-- 1. HERO: one idea, the product doing it -->
 <section class="hero">
   <div class="eyebrow">TC Check</div>
@@ -959,21 +990,14 @@ def index():
   <div class="ctas"><a class="link" href="/trust">Visit the Trust Center</a></div>
 </section>
 
-<footer>
-  <div class="legal">TC Check flags likely issues on a filled form. It is not legal advice and does not replace your own review. TxtAnOffer is not affiliated with the Texas Real Estate Commission (TREC) or the Colorado Real Estate Commission. Built by Phanel Jean-Baptiste, a software builder, not a licensed agent or broker. Examples use sample contracts with planted mistakes, not client files.</div>
-  <div class="cols">
-    <div><b>Check</b><a href="/tc-check" data-evt="footer_check_link">TC Check</a><a href="/tc-check/bulk">Bulk check</a><a href="/tc-hub">TC Hub</a><a href="/tc-hub/colorado">Colorado TC Hub</a></div>
-    <div><b>Learn</b><a href="/guides">Guides</a><a href="/tools/colorado-deadlines" data-evt="states_co_tool">Deadline calculator</a><a href="/faq">FAQ</a><a href="/about">About</a></div>
-    <div><b>Brokerages</b><a href="/brokers">For brokers</a><a href="/pricing">Pricing</a><a href="/login">Brokerage sign-in</a></div>
-    <div><b>Trust</b><a href="/trust">Trust Center</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="mailto:support@txtanoffer.com">support@txtanoffer.com</a></div>
-  </div>
-  <div class="copy">&copy; 2026 TxtAnOffer &middot; Serving Texas &amp; Colorado</div>
-</footer>
-
+__SITE_FOOTER__
 </body>
 </html>
 """
-    html = (html.replace("__HOME_FINDINGS_TX__", _home_findings("tx"))
+    html = (html.replace("__SITE_CHROME_CSS__", _SITE_CHROME_CSS)
+                .replace("__SITE_NAV__", _site_nav(text_href="#text"))
+                .replace("__SITE_FOOTER__", _SITE_FOOTER)
+                .replace("__HOME_FINDINGS_TX__", _home_findings("tx"))
                 .replace("__HOME_FINDINGS_CO__", _home_findings("co")))
     # Carry ?src=name (e.g. from a Direct Reach email) onto every /tc-check
     # link on the page, so a click through to TC Check still attributes
@@ -1158,7 +1182,6 @@ def validate_address(address: str, raw_text: str = None) -> dict:
 
     result["valid"] = True
     return result
-
 
 
 # --- stub MLS lookup ---------------------------------------------------
@@ -2814,40 +2837,6 @@ def api_parse():
     })
 
 
-# Short chip-style labels for the anonymous gate's category teaser --
-# distinct from analytics.TC_ISSUE_LABELS, which is full-sentence and built
-# for a stats table row, not a compact "including X, Y, Z" phrase.
-TC_GATE_CATEGORY_LABELS = {
-    "address": "Property Address",
-    "city": "City",
-    "county": "County",
-    "buyer_name": "Buyer Name",
-    "seller_name": "Seller Name",
-    "escrow_agent_name": "Escrow Agent",
-    "earnest_money_amount": "Earnest Money",
-    "option_fee_amount": "Option Fee",
-    "title_company": "Title Company",
-    "effective_date": "Effective Date",
-    "initials_buyer": "Buyer Initials",
-    "initials_seller": "Seller Initials",
-    "loan_amount_mismatch": "Loan Amount Mismatch",
-    "addendum_checkbox_mismatch": "Financing Checkbox",
-    "sales_price_math": "Sales Price Math",
-    "closing_date_invalid": "Closing Date",
-    "option_days_blank": "Option Period",
-    "check_one_conflict": "Checkbox Conflict",
-    "disclosure_days_blank": "Seller's Disclosure",
-    "broker_contribution_incomplete": "Broker Contribution",
-    "receipt_mismatch": "Receipt Amount",
-    "header_address": "Page Header Address",
-    "header_address_blank": "Page Header Address",
-    "financing_addendum_missing": "Financing Addendum",
-    "closing_before_effective": "Closing Date",
-    "disclosure_box_missing": "Seller's Disclosure",
-    "initials_mismatch": "Wrong Initials",
-}
-
-
 @app.route("/v1/tc/check", methods=["POST"])
 def tc_check():
     """Transaction-coordinator file audit: upload a TREC 20-19 AcroForm PDF,
@@ -3015,34 +3004,20 @@ def tc_check():
     # the frontend leads with this number even before an email is on file,
     # same "tell them enough to know it's real" logic as the itemized count.
     payload["blocker_count"] = sum(1 for i in full_issues if i.get("severity") == "blocker")
+    # The gate's "N must-fix items found." headline -- counted on the same
+    # folded list the report shows (per-page initials merged), so the number
+    # behind the gate matches the "N must fix" the report shows once
+    # unlocked. blocker_count above is the raw count (13 on the sample, vs
+    # 12 in the report); kept as is for API callers. trec-qa 2026-10-23.
+    from tc_check_email import _display_issues as _fold_issues
+    payload["must_fix_count"] = sum(1 for i in _fold_issues(full_issues) if i.get("severity") == "blocker")
     if not gate_cleared and full_issues:
-        # Reveal scope, not location: how many blockers and which short
-        # categories they fall into (deduped, blockers only, in the order
-        # they were found), but never the exact section/page/message text
-        # -- that specific "where to fix it" detail is the whole reason an
-        # email is worth giving. Categories are computed from this file's
-        # own real issues, never a fixed/example list.
-        categories = []
-        for issue in full_issues:
-            if issue.get("severity") != "blocker":
-                continue
-            label = TC_GATE_CATEGORY_LABELS.get(issue.get("key"))
-            if label and label not in categories:
-                categories.append(label)
-        payload["categories"] = categories[:3]
+        # Reveal how many, never where: the exact section/page/message text
+        # is the whole reason an email is worth giving. The "including X, Y"
+        # category teaser and the gate's stats line were removed 2026-10-23
+        # (trec-qa): the count alone, and no stats claim.
         payload["issues"] = []
         payload["gated"] = True
-        # Real, self-updating social proof for the gate -- same MIN_SAMPLE
-        # guard as the homepage stats (see index()): never show a stat
-        # built from too small a sample to be honest, and never a fixed
-        # string that would silently go stale as real usage changes it.
-        tc_stats = get_tc_check_summary(days=30)
-        if PUBLIC_TC_STATS_ENABLED and tc_stats["recognized"] >= 5:
-            proof = f"{tc_stats['recognized']} files checked in the last 30 days — {tc_stats['completion_rate']:g}% came back complete."
-            top_issue = tc_stats["issue_frequency"][0] if tc_stats["issue_frequency"] else None
-            if top_issue:
-                proof += f" {top_issue['label']} on {top_issue['pct_of_recognized']:g}% of them."
-            payload["social_proof"] = proof
     else:
         payload["gated"] = False
     # Report-ready view of the same findings (2026-10-07): per-page initials
@@ -3290,6 +3265,14 @@ def tc_compare():
 
 @app.route("/tc-check")
 def tc_check_page():
+    # Redesigned 2026-10-23 (ad-creative mockup, Phanel-approved, copy passed
+    # by txo-trec-qa), in the homepage's style with its nav and footer
+    # (_site_nav / _SITE_FOOTER). Five sections: the drop box as the hero
+    # (it shrinks to one "Check another file" line above a report), the
+    # sample, what it checks (#what-it-checks / #colorado), trust, and other
+    # ways to check. Every id, data-evt and flow the old page had is kept:
+    # ?demo=1, ?carry=1, ?state=co, the 3-free-reports gate, the title-team
+    # src line.
     html = """<!DOCTYPE html>
 <html lang="en" class="__STATE_CLASS__">
 <head>
@@ -3298,318 +3281,354 @@ def tc_check_page():
 <title>TC File Check — TxtAnOffer</title>
 <meta name="description" content="Drop a filled Texas TREC 20-19 or Colorado CBS1 PDF and see what's missing before title kicks it back.">
 <link rel="icon" href="/static/favicon.ico?v=2" type="image/x-icon">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <style>
-:root{--bg:#F5F5F7;--bg-card:#fff;--border:rgba(15,31,47,0.08);
---text:#0f1f2f;--text-muted:#5a6b7a;--text-dim:#5f707f;--accent:#0b5d52;--accent-light:#16806e;
---accent-dark:#0a3a33;--accent-tint:#E7F3F1;--radius:1.25rem;--radius-sm:0.85rem;}
-*{margin:0;padding:0;box-sizing:border-box;}
-body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;
--webkit-font-smoothing:antialiased;}
-a{color:inherit;text-decoration:none;}
-.nav{display:flex;align-items:center;justify-content:space-between;padding:1rem 2rem;
-background:rgba(255,255,255,0.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);
-position:sticky;top:0;z-index:100;}
-.nav-left{display:flex;align-items:center;gap:0.6rem;font-weight:700;font-size:1.1rem;color:var(--text);}
-.nav-logo{width:34px;height:34px;border-radius:22%;overflow:hidden;}
-.nav-logo img{width:100%;height:100%;object-fit:contain;}
-.container{max-width:700px;margin:0 auto;padding:3rem 2rem;}
-h1{font-size:2rem;font-weight:800;letter-spacing:-0.03em;margin-bottom:0.5rem;color:var(--text);}
-.subtitle{color:var(--text-muted);font-size:1rem;margin-bottom:1.25rem;}
-.eyebrow{font-size:0.75rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--accent);margin-bottom:0.4rem;}
-/* First screen, 2026-10-23 (first_screen.py) */
-.demo-check-btn.sample-top{margin-top:0;padding:0.95rem 1rem;background:#f5c242;border-color:#f5c242;color:#0f1f2f;font-size:1rem;font-weight:700;}
-.demo-check-btn.sample-top:hover{background:#ffd25e;border-color:#ffd25e;color:#0f1f2f;}
-.sample-strip{margin:0.9rem 0 1.5rem;background:#fff;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0.75rem 1rem 0.35rem;cursor:pointer;text-align:left;}
-.sample-strip:hover{border-color:rgba(11,93,82,0.35);}
-.sample-strip:focus-visible{outline:3px solid #f5c242;outline-offset:2px;}
-.ss-label{font-size:0.75rem;color:var(--text-dim);line-height:1.4;}
-.sample-strip ul{list-style:none;}
-.sample-strip li{display:flex;gap:0.6rem;align-items:flex-start;padding:0.55rem 0;border-bottom:1px solid var(--border);font-size:0.85rem;line-height:1.45;color:var(--text);}
-.sample-strip li:last-child{border-bottom:none;}
-.ss-tag{flex-shrink:0;font-size:0.62rem;font-weight:800;letter-spacing:0.04em;padding:0.2rem 0.3rem;border-radius:999px;width:68px;text-align:center;margin-top:1px;}
-.ss-tag.b{background:rgba(239,68,68,0.12);color:#dc2626;}
-.ss-tag.w{background:rgba(245,158,11,0.14);color:#b45309;}
-.title-line{margin-bottom:1.25rem;padding:0.85rem 1rem;background:var(--accent-tint);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:0.88rem;color:var(--text);line-height:1.5;}
-.title-link{display:flex;gap:0.5rem;margin-top:0.6rem;}
-.title-link input{flex:1;min-width:0;padding:0.5rem 0.7rem;border:1px solid rgba(15,31,47,0.16);border-radius:8px;font:inherit;font-size:0.8rem;color:var(--text-muted);background:#fff;}
-.title-link button{flex-shrink:0;background:var(--accent);color:#fff;border:none;padding:0.5rem 1rem;border-radius:8px;font:inherit;font-size:0.82rem;font-weight:700;cursor:pointer;}
-@media(max-width:480px){h1{font-size:1.6rem;line-height:1.2;}.subtitle{font-size:0.92rem;}}
-.card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:2rem;box-shadow:0 1px 3px rgba(15,31,47,0.05);}
-/* Same minimal drop zone as the homepage widget (see index()) */
-.drop-zone{border:1.5px dashed #d9dee3;border-radius:16px;background:#fff;padding:2.75rem 1.5rem 2.5rem;
-text-align:center;cursor:pointer;transition:border-color 0.18s ease,background 0.18s ease,box-shadow 0.18s ease;}
-.drop-zone:hover{border-color:rgba(11,93,82,0.35);background:#fbfdfc;}
-.drop-zone.drag{border-style:solid;border-color:var(--accent);background:var(--accent-tint);box-shadow:0 0 0 4px rgba(11,93,82,0.18);}
-.drop-zone.drag *{pointer-events:none;}
-.dz-icon{width:56px;height:56px;margin:0 auto 1.1rem;border-radius:14px;background:#f5c242;display:flex;align-items:center;justify-content:center;color:#0a3f3a;transition:background 0.18s ease,color 0.18s ease;}
-.drop-zone:hover .dz-icon,.drop-zone.drag .dz-icon{background:#0b5d52;color:#f5c242;}
-.drop-zone .dz-title{font-weight:600;font-size:1rem;color:var(--text);margin-bottom:0.35rem;}
-.drop-zone .dz-sub{color:var(--text-muted);font-size:0.85rem;}
-.drop-zone .dz-sub u{text-decoration-color:rgba(11,93,82,0.35);text-underline-offset:3px;color:var(--accent);}
-.drop-zone .dz-touch{display:none;}
-@media (hover:none){.drop-zone .dz-mouse{display:none;}.drop-zone .dz-touch{display:inline;}}
-.drop-zone .dz-meta{color:var(--text-dim);font-size:0.75rem;margin-top:0.85rem;}
-.dz-trust{display:flex;justify-content:center;flex-wrap:wrap;gap:0.4rem 1.25rem;margin-top:0.9rem;font-size:0.8rem;color:var(--text-muted);}
-.dz-trust span{display:inline-flex;align-items:center;gap:0.35rem;}
-.dz-trust svg{color:var(--accent);flex-shrink:0;}
-.dz-trust-line{display:flex;justify-content:center;align-items:baseline;gap:0.4rem;margin-top:0.75rem;font-size:0.85rem;color:var(--text-muted);text-align:center;line-height:1.5;}
-.dz-trust-line svg{color:var(--accent);flex-shrink:0;position:relative;top:2px;}
-.dz-trust-line a,.dz-forward-line a{color:var(--accent);font-weight:600;text-decoration:underline;text-underline-offset:2px;white-space:nowrap;}
-.dz-forward-line{margin-top:0.4rem;font-size:0.85rem;color:var(--text-muted);text-align:center;line-height:1.5;}
-/* Card-inside-a-card left the drop zone ~260px wide on a phone. */
-@media(max-width:480px){.container{padding:2rem 1rem;}.card{padding:1.1rem;}}
-.demo-check-btn{display:block;width:100%;margin-top:1.1rem;padding:0.8rem 1rem;background:#fff;border:1px solid #d9dee3;border-radius:12px;font:inherit;font-size:0.9rem;font-weight:600;color:var(--text);cursor:pointer;text-align:center;transition:all 0.2s;}
-.demo-check-btn:hover{border-color:var(--accent);color:var(--accent);box-shadow:0 4px 14px rgba(11,93,82,0.18);}
-.demo-check-btn:disabled{opacity:0.6;cursor:default;}
-.demo-banner{font-size:0.78rem;font-weight:700;letter-spacing:0.02em;color:var(--text-dim);text-transform:uppercase;margin-bottom:0.5rem;}
-.privacy-note{display:flex;align-items:center;gap:0.45rem;margin-top:0.9rem;font-size:0.8rem;color:var(--text-dim);}
-.privacy-note svg{flex-shrink:0;}
-.or-divider{display:flex;align-items:center;gap:0.75rem;margin:0.15rem 0;font-size:0.7rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-dim);}
-.or-divider::before,.or-divider::after{content:"";flex:1;height:1px;background:var(--border);}
-.email-forward-note{display:flex;align-items:center;gap:0.6rem;font-size:0.85rem;color:var(--text-muted);background:var(--accent-tint);border-radius:var(--radius-sm);padding:0.85rem 1rem;}
-.email-forward-note svg{flex-shrink:0;color:var(--text-dim);}
-.email-forward-note a{color:var(--accent);font-weight:700;text-decoration:underline;text-underline-offset:2px;}
-input[type=file]{display:none;}
-.status{margin-top:1.25rem;font-size:0.9rem;color:var(--text-muted);display:none;}
-.status.show{display:block;}
-.result{margin-top:1.5rem;display:none;}
-.result.show{display:block;}
-.result-banner{border-radius:var(--radius-sm);padding:1rem 1.25rem;font-weight:700;margin-bottom:1rem;}
-.result-banner.complete{background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.25);color:#047857;}
-.result-banner.incomplete{background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);color:#dc2626;}
-.rep-head{background:#0a3f3a;border-radius:12px 12px 0 0;padding:16px 18px;display:flex;justify-content:space-between;align-items:center;gap:12px;}
-.rep-head img{height:20px;width:auto;display:block;}
-.rep-head .rep-kick{font-size:0.62rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#f5c242;}
-.rep-head .rep-kick{white-space:nowrap;}
-@media(max-width:480px){.rep-head{padding:12px 14px;}.rep-head img{height:16px;}.rep-head .rep-kick{font-size:0.55rem;letter-spacing:0.08em;}}
-.rep-bar{height:4px;background:#f5c242;margin-bottom:16px;}
-.rep-addr{font-size:1.35rem;font-weight:800;letter-spacing:-0.02em;color:var(--text);line-height:1.25;}
-.rep-addr.blank{color:#b91c1c;}
-.rep-sub{font-size:0.82rem;color:var(--text-muted);margin:4px 0 14px;}
-.rep-counts{margin-top:4px;font-size:0.8rem;font-weight:700;}
-.rep-counts .must{color:#dc2626;margin-right:10px;}
-.rep-counts .review{color:#b45309;}
-.issue-item .issue-body{display:flex;flex-direction:column;gap:3px;}
-.issue-list{list-style:none;margin-bottom:1.25rem;}
-.issue-item{display:flex;gap:0.6rem;padding:0.65rem 0;border-bottom:1px solid var(--border);font-size:0.9rem;}
-.issue-item:last-child{border-bottom:none;}
-.issue-tag{flex-shrink:0;font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;
-padding:0.15rem 0.5rem;border-radius:9999px;height:fit-content;}
-.issue-tag.blocker{background:rgba(239,68,68,0.12);color:#dc2626;}
-.issue-tag.warning{background:rgba(245,158,11,0.12);color:#b45309;}
-.copy-btn{background:var(--accent);color:#fff;border:none;padding:0.7rem 1.5rem;border-radius:var(--radius-sm);
-font-family:inherit;font-size:0.85rem;font-weight:600;cursor:pointer;}
-.copy-btn:hover{opacity:0.9;}
-.fixit-cta{margin-top:1.25rem;padding:1.1rem 1.25rem;background:var(--accent-tint);border:1px solid var(--border);
-border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;}
-.fixit-cta p{font-size:0.85rem;color:var(--text-muted);margin:0;}
-.fixit-cta a{background:var(--accent);color:#fff;padding:0.6rem 1.25rem;border-radius:9999px;
-font-size:0.85rem;font-weight:600;display:inline-block;max-width:100%;text-align:center;}
-.fixit-cta a:hover{opacity:0.9;}
-.gate-box{margin-top:0.5rem;padding:1.25rem 1.4rem;background:#0f1f2f;border-radius:var(--radius);}
-.gate-shield{display:inline-flex;align-items:center;gap:0.4rem;color:#6fe0c8;font-weight:700;font-size:0.7rem;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:0.6rem;}
-.gate-headline{color:#fff;font-weight:700;font-size:1rem;line-height:1.4;margin:0 0 0.9rem;}
-.gate-sub{color:rgba(255,255,255,0.72);font-size:0.85rem;margin:0 0 0.9rem;}
-.gate-form{display:flex;gap:0.6rem;flex-wrap:wrap;}
-.gate-form input{flex:1;min-width:200px;padding:0.7rem 0.9rem;border:1px solid rgba(255,255,255,0.2);border-radius:var(--radius-sm);font-family:inherit;font-size:0.85rem;background:rgba(255,255,255,0.08);color:#fff;}
-.gate-form input::placeholder{color:rgba(255,255,255,0.45);}
-.gate-form input:focus{outline:none;border-color:var(--accent);}
-.gate-form button{background:var(--accent);color:#fff;border:none;padding:0.7rem 1.4rem;border-radius:var(--radius-sm);font-family:inherit;font-size:0.85rem;font-weight:700;cursor:pointer;white-space:nowrap;}
-.gate-form button:hover{opacity:0.9;}
-.gate-error{color:#fca5a5;font-size:0.78rem;margin-top:0.5rem;min-height:1em;}
-.gate-note{color:rgba(255,255,255,0.5);font-size:0.75rem;margin-top:0.7rem;}
-.gate-proof{color:rgba(255,255,255,0.65);font-size:0.78rem;margin-top:0.9rem;padding-top:0.7rem;border-top:1px solid rgba(255,255,255,0.08);}
-.gate-bridge{margin-top:0.85rem;font-size:0.82rem;color:var(--text-muted);text-align:center;}
-.gate-bridge a{color:var(--accent);font-weight:600;}
-.meta-bar{display:flex;flex-wrap:wrap;gap:0.4rem 1.25rem;padding:0.85rem 1.1rem;margin-bottom:1rem;
-background:var(--accent-tint);border:1px solid var(--border);border-radius:var(--radius-sm);
-font-size:0.8rem;color:var(--text-muted);}
-.meta-bar strong{color:var(--text);font-weight:600;}
-.download-btn{background:#fff;color:var(--text);border:1px solid rgba(15,31,47,0.14);padding:0.7rem 1.5rem;
-border-radius:var(--radius-sm);font-family:inherit;font-size:0.85rem;font-weight:600;cursor:pointer;margin-left:0.6rem;margin-top:0.6rem;}
-.download-btn:hover{border-color:var(--accent);}
-/* Texas | Colorado switch -- same markup and behavior as the homepage's
-   light variant; see _site_state() / STATE_SWITCH_JS. */
-html.state-tx [data-state="co"],html.state-co [data-state="tx"]{display:none !important;}
-.state-switch{display:inline-flex;gap:0.2rem;padding:0.22rem;margin:0 0 1.1rem;border-radius:999px;background:#e8ecef;border:1px solid var(--border);width:fit-content;max-width:100%;}
-.state-switch button{appearance:none;-webkit-appearance:none;border:0;background:transparent;color:var(--text-muted);font:inherit;font-size:0.88rem;font-weight:700;line-height:1.2;padding:0.42rem 0.95rem;border-radius:999px;cursor:pointer;display:inline-flex;align-items:baseline;gap:0.4rem;white-space:nowrap;transition:background 0.15s ease,color 0.15s ease;}
-.state-switch button small{font-size:0.68rem;font-weight:600;letter-spacing:0.03em;opacity:0.75;}
-.state-switch button:hover{color:var(--text);background:rgba(15,31,47,0.05);}
-.state-switch button[aria-pressed="true"]{background:var(--accent);color:#fff;}
-.state-switch button[aria-pressed="true"] small{opacity:0.85;}
-.state-switch button:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
-.scope-card{margin-top:2rem;background:var(--accent-tint);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem 1.75rem;}
-.scope-card h3{font-size:0.75rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-dim);margin-bottom:0.9rem;}
-.scope-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.5rem 2rem;margin-bottom:1rem;}
-.scope-grid ul{list-style:none;}
-.scope-grid li{position:relative;padding-left:1.1rem;font-size:0.85rem;color:var(--text-muted);line-height:1.7;}
-.scope-grid li::before{content:'\\2713';position:absolute;left:0;color:#0f9960;font-weight:700;}
-.scope-grid .not-checked li::before{content:'\\2013';color:var(--text-dim);}
-.scope-footnote{font-size:0.78rem;color:var(--text-dim);line-height:1.6;border-top:1px solid var(--border);padding-top:0.85rem;}
-@media(max-width:600px){.scope-grid{grid-template-columns:1fr;}}
-.checks-remaining{font-size:0.78rem;color:var(--text-dim);margin:-0.5rem 0 1rem;}
-.email-optin{margin-top:1rem;display:flex;flex-direction:column;gap:0.5rem;}
-.email-optin-check{display:flex;align-items:center;gap:0.5rem;font-size:0.85rem;color:var(--text-muted);cursor:pointer;}
-.email-optin-check input{width:auto;}
-.email-optin-input{padding:0.65rem 0.9rem;border:1px solid rgba(15,31,47,0.16);border-radius:var(--radius-sm);font-family:inherit;font-size:0.85rem;background:#fff;color:var(--text);}
-.email-optin-input:focus{outline:none;border-color:var(--accent);}
-.email-optin-confirm{font-size:0.78rem;color:#047857;display:none;}
-.email-optin-confirm.show{display:block;}
-.addendum-toggle{margin-top:0.85rem;font-size:0.82rem;color:var(--text-muted);cursor:pointer;text-decoration:underline;text-underline-offset:2px;width:fit-content;}
-.addendum-toggle:hover{color:var(--text);}
-.addendum-row{margin-top:0.6rem;display:flex;align-items:center;gap:0.6rem;font-size:0.85rem;}
-.addendum-row[hidden]{display:none;}
-.addendum-filename{color:var(--text-muted);}
-.addendum-clear{background:none;border:none;color:var(--text-dim);font-size:1rem;cursor:pointer;line-height:1;padding:0.15rem 0.4rem;}
-.addendum-clear:hover{color:var(--text);}
-.unreadable-box{margin-top:0.25rem;padding:1.1rem 1.25rem;background:#f3f5f7;border:1px solid #dde2e7;border-radius:var(--radius-sm);font-size:0.9rem;color:var(--text-muted);line-height:1.55;}
-.unreadable-box p+p{margin-top:0.5rem;}
-.unreadable-box .unreadable-title{font-weight:700;color:var(--text);font-size:0.95rem;}
-.unreadable-box .unreadable-note{font-size:0.82rem;}
-.own-file-cta{margin-top:1.25rem;padding:1.1rem 1.25rem;background:var(--accent-tint);border:1px solid var(--border);border-radius:var(--radius-sm);}
-.own-file-lead{font-size:0.9rem;color:var(--text);line-height:1.55;margin:0;}
-.own-file-lead a{color:var(--accent);font-weight:600;text-decoration:underline;text-underline-offset:2px;}
-.own-file-btn{margin-top:0.85rem;background:#f5c242;color:#0f1f2f;border:none;padding:0.75rem 1.4rem;border-radius:10px;font-family:inherit;font-size:0.92rem;font-weight:700;cursor:pointer;}
-.own-file-btn:hover{background:#ffd25e;}
-.agent-alt{margin:0.75rem 0 0;font-size:0.8rem;color:var(--text-muted);}
-.agent-alt a{color:var(--text-muted);text-decoration:underline;text-underline-offset:2px;}
-.next-step-cta{margin-top:1.25rem;padding-top:1.1rem;border-top:1px solid var(--border);}
-.next-step-lead{font-size:0.85rem;color:var(--text-muted);line-height:1.6;}
-.next-step-lead a{color:var(--accent);font-weight:600;text-decoration:underline;text-underline-offset:2px;}
-.broker-cta{margin-top:0.9rem;padding:1rem 1.25rem;background:#0f1f2f;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;}
-.broker-cta p{margin:0;font-size:0.85rem;color:rgba(255,255,255,0.85);font-weight:600;}
-.broker-cta-btn{background:var(--accent);color:#fff;padding:0.65rem 1.25rem;border-radius:9999px;font-size:0.85rem;font-weight:700;white-space:nowrap;}
-.broker-cta-btn:hover{opacity:0.9;}
+  :root{--green:#0b5d52;--green-deep:#0a3f3a;--tint:#e7f3f1;--ink:#1d1d1f;--mute:#6e6e73;--gray:#f5f5f7;--line:#e3e3e6;--red:#c62828;--amber:#9a6200}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-font-smoothing:antialiased;scroll-behavior:smooth}
+  body{font-family:Inter,-apple-system,system-ui,sans-serif;color:var(--ink);background:#fff;line-height:1.4}
+  a{color:inherit;text-decoration:none}
+  html.state-tx [data-state="co"],html.state-co [data-state="tx"]{display:none !important}
+  input[type=file]{display:none}
+
+  __SITE_CHROME_CSS__
+
+  /* ---------- type scale: homepage's 3 sizes ---------- */
+  section{padding:96px 22px;text-align:center}
+  .eyebrow{font-size:19px;font-weight:600;color:var(--green);margin-bottom:10px}
+  h1{font-size:64px;line-height:1.05;letter-spacing:-.035em;font-weight:800}
+  h2{font-size:48px;line-height:1.08;letter-spacing:-.03em;font-weight:800}
+  .sub{font-size:21px;line-height:1.4;color:var(--mute);font-weight:500;max-width:640px;margin:16px auto 0}
+  .link{font-size:17px;color:var(--green);font-weight:600}
+  .link:after{content:" \\203A"}
+  .gray{background:var(--gray)}
+
+  /* title-team line (src ti_* / title_*, first_screen.title_line_html) */
+  .title-line{max-width:640px;margin:0 auto 26px;background:var(--tint);border-radius:18px;padding:14px 18px;font-size:14px;line-height:1.5;text-align:left}
+  .title-link{display:flex;gap:8px;margin-top:10px}
+  .title-link input{flex:1;min-width:0;font:13px Inter,sans-serif;padding:8px 12px;border:1px solid #d2d2d7;border-radius:980px;background:#fff}
+  .title-link button{font:600 13px Inter,sans-serif;padding:8px 14px;border-radius:980px;border:0;background:var(--green);color:#fff;cursor:pointer}
+
+  /* ---------- 1. hero = the drop box ---------- */
+  .hero{padding-top:64px;padding-bottom:88px}
+  .state-switch{display:inline-flex;background:#ececf0;border-radius:980px;padding:4px;margin-top:24px}
+  .state-switch button{border:0;background:none;font:600 14px Inter,sans-serif;color:#424245;padding:8px 18px;border-radius:980px;cursor:pointer}
+  .state-switch button small{font-weight:500;color:var(--mute);margin-left:4px}
+  .state-switch button[aria-pressed="true"]{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+  .state-switch button:focus-visible{outline:3px solid #f5c242;outline-offset:2px}
+  .checkbox-wrap{max-width:760px;margin:32px auto 0}
+  .drop-zone{border:2px dashed #9cc7bf;background:#fbfdfc;border-radius:28px;padding:56px 24px 44px;cursor:pointer;transition:.15s}
+  .drop-zone:hover,.drop-zone.drag{border-color:var(--green);background:var(--tint)}
+  .drop-zone.drag *{pointer-events:none}
+  .dz-icon{width:64px;height:64px;border-radius:50%;background:var(--green);color:#fff;display:grid;place-items:center;margin:0 auto 18px}
+  .dz-title{font-size:28px;font-weight:800;letter-spacing:-.02em}
+  .dz-sub{font-size:17px;color:var(--mute);margin-top:6px}
+  .dz-sub u{color:var(--green);text-decoration:none;font-weight:600}
+  .dz-meta{font-size:13px;color:var(--mute);margin-top:18px}
+  .dz-touch,.dz-again{display:none}
+  .under{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:10px 26px;margin-top:18px;font-size:14px;color:#424245}
+  .under .ok{display:inline-flex;gap:6px;align-items:center}
+  .under .ok i{width:18px;height:18px;border-radius:50%;background:var(--green);color:#fff;font:700 11px/18px Inter,sans-serif;text-align:center;font-style:normal}
+  .opts{display:flex;flex-wrap:wrap;justify-content:center;gap:12px 22px;margin-top:18px;font-size:14px;color:var(--mute)}
+  .email-optin{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center}
+  .email-optin-check{display:inline-flex;gap:6px;align-items:center;cursor:pointer}
+  .email-optin-input{font:15px Inter,sans-serif;padding:9px 14px;border:1px solid #d2d2d7;border-radius:980px;width:230px}
+  .email-optin-input:focus,.gate-form input:focus{outline:none;border-color:var(--green)}
+  .email-optin-confirm{display:none;width:100%;font-size:13px;color:var(--green);font-weight:600}
+  .email-optin-confirm.show{display:block}
+  .addendum-toggle{color:var(--green);font-weight:600;cursor:pointer}
+  .addendum-row{display:flex;align-items:center;gap:8px;justify-content:center}
+  .addendum-row[hidden]{display:none}
+  .addendum-filename{color:var(--ink)}
+  .addendum-clear{border:0;background:none;font-size:18px;color:var(--mute);cursor:pointer}
+  .sample-btn{display:inline-block;margin-top:26px;font:600 17px Inter,sans-serif;color:var(--green);background:#fff;border:1.5px solid var(--green);border-radius:980px;padding:12px 24px;cursor:pointer}
+  .sample-btn:disabled{opacity:.7;cursor:default}
+
+  /* uploading: #status */
+  .status{display:none}
+  .status.show{display:block;margin-top:22px}
+  .up-file{display:inline-flex;align-items:center;gap:12px;background:var(--gray);border-radius:14px;padding:12px 18px;font-size:15px;max-width:100%}
+  .up-file b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .up-size{color:var(--mute)}
+  .spin{flex:none;width:18px;height:18px;border-radius:50%;border:2.5px solid #cfe3df;border-top-color:var(--green);animation:sp 1s linear infinite}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .up-step{font-size:15px;color:var(--mute);margin:12px 0 6px}
+
+  /* a report on screen: the box shrinks to one line, options hide */
+  .has-result .drop-zone{padding:18px 22px;display:flex;align-items:center;justify-content:center;gap:12px;border-radius:18px}
+  .has-result .dz-icon{width:34px;height:34px;margin:0}
+  .has-result .dz-icon svg{width:18px;height:18px}
+  .has-result .dz-title{font-size:17px}
+  .has-result .dz-first,.has-result .dz-sub,.has-result .dz-meta,.has-result .pre-result{display:none}
+  .has-result .dz-again{display:inline}
+
+  /* result: same card language as the homepage hero report */
+  .result{display:none;text-align:left;max-width:760px;margin:28px auto 0}
+  .result.show{display:block}
+  .demo-banner{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);margin-bottom:10px}
+  .rep{background:#fff;border-radius:22px;overflow:hidden;box-shadow:0 30px 70px -28px rgba(10,63,58,.35),0 0 0 1px rgba(0,0,0,.05)}
+  .rep-head{background:var(--green-deep);display:flex;justify-content:space-between;align-items:center;padding:15px 22px}
+  .rep-head img{height:17px;width:auto}
+  .rep-kick{font-size:11px;font-weight:700;letter-spacing:.1em;color:#cfe3df;text-transform:uppercase}
+  .rep-body{padding:20px 22px 8px}
+  .rep-addr{font-size:22px;font-weight:700;letter-spacing:-.01em}
+  .rep-addr.blank{color:var(--red)}
+  .rep-sub{font-size:13px;color:var(--mute);margin-top:2px}
+  .meta-bar{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12.5px;color:var(--mute);margin-top:12px}
+  .meta-bar strong{color:var(--ink);word-break:break-all}
+  .result-banner{border-radius:12px;padding:12px 15px;margin:14px 0 6px;font-size:15px;font-weight:700}
+  .result-banner.incomplete{background:#fdecec;color:var(--red)}
+  .result-banner.complete{background:var(--tint);color:var(--green)}
+  .rep-counts{display:flex;gap:12px;font-size:13px;margin-top:2px}
+  .rep-counts .review{color:var(--amber)}
+  .grp{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);margin:16px 0 2px}
+  .issue-list{list-style:none}
+  .issue-item{display:grid;grid-template-columns:200px 1fr;gap:14px;padding:11px 0;border-bottom:1px solid var(--line);font-size:14px;line-height:1.45}
+  .issue-item:last-child{border-bottom:0}
+  .issue-tag{font-size:10.5px;font-weight:800;letter-spacing:.04em;padding:4px 8px;border-radius:6px;height:fit-content;width:fit-content}
+  .issue-tag.blocker{background:#fdecec;color:var(--red)}
+  .issue-tag.warning,.issue-tag.info{background:#fff4dc;color:var(--amber)}
+  .rep-actions{display:flex;flex-wrap:wrap;gap:10px;padding:16px 22px 20px;border-top:1px solid var(--line)}
+  .pill{font:600 14px Inter,sans-serif;padding:9px 16px;border-radius:980px;border:1.5px solid #d2d2d7;background:#fff;color:var(--ink);cursor:pointer}
+  .pill.solid{background:var(--green);border-color:var(--green);color:#fff}
+  .pill:disabled{opacity:.7}
+  .fixit-cta{background:#fff4dc;border-radius:12px;padding:12px 15px;margin:10px 0;font-size:14px}
+  .fixit-cta a{color:var(--green);font-weight:600}
+  .own-file-cta,.next-step-cta{margin-top:18px;background:var(--tint);border-radius:18px;padding:20px 22px;font-size:15px;line-height:1.5}
+  .own-file-cta a,.next-step-lead a{color:var(--green);font-weight:600}
+  .own-file-btn{margin-top:12px}
+  .agent-alt{font-size:13px;color:var(--mute);margin-top:10px}
+  .agent-alt a{text-decoration:underline;color:var(--mute);font-weight:500}
+  .unreadable-box{background:var(--gray);border-radius:18px;padding:18px 20px;margin-top:14px;font-size:15px;line-height:1.5;color:#424245}
+  .unreadable-box p+p{margin-top:8px}
+  .unreadable-title{font-weight:700;color:var(--ink)}
+  .unreadable-note{color:var(--green);font-weight:600}
+  /* gate (and the optional "email me this report" ask, same box) */
+  .gate-box{background:#fff;border-radius:22px;padding:26px 24px;margin-top:14px;box-shadow:0 0 0 1px rgba(0,0,0,.06);text-align:center}
+  .gate-headline{font-size:22px;font-weight:800;letter-spacing:-.02em}
+  .gate-sub{font-size:15px;color:var(--mute);margin:8px auto 0;max-width:520px}
+  .gate-form{display:flex;gap:10px;justify-content:center;margin-top:16px;flex-wrap:wrap}
+  .gate-form input{font:15px Inter,sans-serif;padding:11px 16px;border:1px solid #d2d2d7;border-radius:980px;width:260px}
+  .gate-error{font-size:13px;color:var(--red);margin-top:8px;min-height:1px}
+  .gate-note{font-size:13px;color:var(--mute);margin-top:12px}
+  .gate-bridge{font-size:14px;color:var(--mute);margin-top:14px;text-align:center}
+  .gate-bridge a{color:var(--green);font-weight:600}
+  .locked{filter:blur(4px);opacity:.55;pointer-events:none;user-select:none}
+
+  /* ---------- 2. sample ---------- */
+  .sample-strip{max-width:620px;margin:40px auto 0;text-align:left;cursor:pointer;background:#fff;border-radius:22px;padding:6px 22px 4px;
+                box-shadow:0 30px 70px -30px rgba(10,63,58,.3),0 0 0 1px rgba(0,0,0,.04);transition:transform .15s}
+  .sample-strip:hover{transform:translateY(-2px)}
+  .sample-strip:focus-visible{outline:3px solid #f5c242;outline-offset:2px}
+  .ss-label{font-size:13px;color:var(--mute);padding:14px 0 6px}
+  .sample-strip ul{list-style:none}
+  .sample-strip li{display:flex;gap:12px;padding:13px 0;border-top:1px solid var(--line);font-size:15px;line-height:1.45}
+  .ss-tag{flex:none;font-size:10.5px;font-weight:800;letter-spacing:.04em;padding:4px 8px;border-radius:6px;height:fit-content}
+  .ss-tag.b{background:#fdecec;color:var(--red)}
+  .ss-tag.w{background:#fff4dc;color:var(--amber)}
+  .ss-go{display:block;text-align:center;font-weight:600;color:var(--green);padding:14px 0 12px;border-top:1px solid var(--line);font-size:15px}
+
+  /* ---------- 3. what it checks ---------- */
+  .scope{max-width:1024px;margin:44px auto 0;text-align:left}
+  .scope ul{list-style:none;display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  .scope li{background:var(--gray);border-radius:16px;padding:16px 18px;font-size:14.5px;line-height:1.45;font-weight:500}
+  .scope .not{margin-top:22px;font-size:14px;color:var(--mute);text-align:center}
+  .scope .not b{color:var(--ink)}
+  .scope-footnote{font-size:14px;color:var(--mute);text-align:center;margin-top:12px}
+  .scope-footnote a{color:var(--green);font-weight:600}
+
+  /* ---------- 4. trust ---------- */
+  .facts{display:flex;justify-content:center;gap:48px;margin-top:36px;font-size:17px;font-weight:600;flex-wrap:wrap}
+  .facts span{display:flex;align-items:center;gap:8px}
+  .facts i{flex:none;width:22px;height:22px;border-radius:50%;background:var(--green);color:#fff;font-style:normal;font-size:12px;display:grid;place-items:center}
+  .privacy-note{font-size:14px;color:var(--mute);max-width:620px;margin:26px auto 0;line-height:1.55}
+
+  /* ---------- 5. other ways: 4 small tiles ---------- */
+  .ways{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;max-width:1024px;margin:44px auto 0;text-align:left}
+  .way{background:var(--gray);border-radius:22px;padding:26px 22px;display:flex;flex-direction:column;gap:10px}
+  .way b{font-size:17px}
+  .way p{font-size:14.5px;color:var(--mute);line-height:1.45;flex:1}
+  .way a{font-size:15px;color:var(--green);font-weight:600;overflow-wrap:anywhere}
+  .learn{margin-top:26px;font-size:15px;color:var(--mute)}
+  .learn a{color:var(--green);font-weight:600;margin:0 8px}
+
+  @media (hover:none){.dz-mouse{display:none}.dz-touch{display:inline}}
+  @media (max-width:734px){
+    section{padding:64px 20px}
+    .hero{padding-top:36px;padding-bottom:56px}
+    .eyebrow{font-size:16px}
+    h1{font-size:38px}
+    h2{font-size:32px}
+    .sub{font-size:17px}
+    .state-switch{margin-top:18px}
+    .state-switch button{padding:8px 14px;font-size:13px}
+    .checkbox-wrap{margin-top:22px}
+    .drop-zone{padding:34px 18px 28px;border-radius:22px}
+    .dz-icon{width:54px;height:54px;margin-bottom:14px}
+    .dz-title{font-size:22px}
+    .dz-mouse{display:none}.dz-touch{display:inline}
+    .has-result .dz-touch{display:none}
+    .under{gap:8px 16px;font-size:13px}
+    .email-optin-input{width:100%}
+    .sample-btn{font-size:16px;margin-top:20px}
+    .issue-item{grid-template-columns:1fr;gap:6px}
+    .rep-body{padding:16px 16px 6px}.rep-actions{padding:14px 16px 16px}
+    .gate-headline{font-size:19px}
+    .gate-form input{width:100%}
+    .scope ul{grid-template-columns:1fr;gap:8px}
+    .scope li{padding:12px 14px;font-size:14px}
+    .ways{grid-template-columns:1fr}
+    .facts{flex-direction:column;align-items:center;gap:14px}
+  }
 </style>
 </head>
 <body>
-<nav class="nav">
-<a href="/" class="nav-left">
-<img src="/static/logo-wordmark.png?v=2" alt="TxtAnOffer" style="height:26px;width:auto;display:block;">
-</a>
-</nav>
-<div class="container">
-<!-- First screen (2026-10-23): proof before the upload box. Most tagged
-     traffic lands here on a phone with no PDF at hand, and the old first
-     screen was a title plus an empty drop box. All copy, the sample rows and
-     the src-matched title line come from first_screen.py. -->
-__FS_TITLE_LINE__
-<p class="eyebrow">__FS_TC_EYEBROW__</p>
-<h1><span data-state="tx">__FS_TC_H1__</span><span data-state="co">__FS_TC_H1_CO__</span></h1>
-<div class="state-switch" role="group" aria-label="Which state's contract">
-<button type="button" data-set-state="tx" aria-pressed="__TX_PRESSED__" data-evt="state_toggle_tx">Texas <small>TREC 20-19</small></button>
-<button type="button" data-set-state="co" aria-pressed="__CO_PRESSED__" data-evt="state_toggle_co">Colorado <small>CBS1</small></button>
-</div>
-__STATE_SWITCH_JS__
-<p class="subtitle"><span data-state="tx">__FS_TC_SUB_TX__</span><span data-state="co">__FS_TC_SUB_CO__</span></p>
-<button type="button" class="demo-check-btn sample-top" id="demoBtn" data-evt="tc_sample_btn">__FS_TC_SAMPLE_BTN__</button>
-<!-- Illustration of the same sample report the button runs; clicking it
-     runs the real check (see the sampleStrip handler below). -->
-<div class="sample-strip" id="sampleStrip" role="button" tabindex="0" aria-label="Findings from TC Check's sample contract. Open the full sample report.">
-<div data-state="tx"><p class="ss-label">__FS_TC_STRIP_LABEL_TX__</p><ul>__FS_STRIP_TX__</ul></div>
-<div data-state="co"><p class="ss-label">__FS_TC_STRIP_LABEL_CO__</p><ul>__FS_STRIP_CO__</ul></div>
-</div>
-<div class="card">
-<div class="drop-zone" id="dropZone">
-<div class="dz-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 13v8"/><path d="m8 17 4-4 4 4"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg></div>
-<div class="dz-title"><span class="dz-mouse">Drop your contract PDF here</span><span class="dz-touch">Choose your contract PDF</span></div>
-<div class="dz-sub"><span class="dz-mouse">or <u>click to browse</u></span><span class="dz-touch"><u>Tap to browse files</u></span></div>
-<div class="dz-meta"><span data-state="tx">Fillable TREC 20-19 PDF</span><span data-state="co">Fillable CBS1 (2026) PDF</span> &middot; not scanned or flattened files &middot; flags likely issues, not legal advice</div>
-</div>
-<input type="file" id="fileInput" accept="application/pdf">
-<div class="dz-trust">
-<span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>3 free reports, no signup</span>
-<span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>Results in seconds</span>
-</div>
-<!-- The privacy answer sits at the upload step. Both claims are on /trust
-     and true of the code: a web upload goes to a temp file that's deleted
-     after the check, and TC Check is rule code with no model/LLM dependency. -->
-<p class="dz-trust-line"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span>Checked, then deleted. No AI reads your contract. <a href="/trust#contracts" data-evt="tc_trust_link">How we handle files &rarr;</a></span></p>
-<!-- Independence line, moved from the homepage drop box 2026-10-23. Keep
-     true: no brokerage/MLS/portal ownership, no data sales (matches /trust#data). -->
-<p class="dz-trust-line" style="margin-top:0.35rem;"><span>Independent. Not owned by Zillow, a brokerage or an MLS. We don&rsquo;t sell data.</span></p>
-<p class="dz-forward-line">Or forward it to <a href="mailto:tc@check.txtanoffer.com">tc@check.txtanoffer.com</a> and the report comes back by email.</p>
-<p class="dz-forward-line">Prefer to walk through it together? <a href="https://calendly.com/pejeanbaptiste/15-min-file-check?utm_source=txtanoffer&amp;utm_content=tc_check" target="_blank" rel="noopener" data-evt="book_call_tccheck">Book a free 15-min file check &rarr;</a></p>
-<div>
-<div class="addendum-toggle" id="addendumToggle"><span data-state="tx">+ Also have the 40-11, 41-3 or 39-11? Add up to 3 to cross-check them against the contract, too.</span><span data-state="co">+ Also have the buyer&rsquo;s Exclusive Right-to-Buy, an Amend/Extend, Counterproposal, Inspection Objection Notice or Source of Water Addendum? Add up to 3 to check them against the CBS1.</span></div>
-<div class="addendum-row" id="addendumRow" hidden>
-<input type="file" id="addendumInput" accept="application/pdf" multiple>
-<span class="addendum-filename" id="addendumFileName"></span>
-<button type="button" class="addendum-clear" id="addendumClear" title="Remove">&times;</button>
-</div>
-</div>
-<div class="email-optin">
-<label class="email-optin-check"><input type="checkbox" id="emailOptinCheckbox" checked> Email me this report + future checks for this address</label>
-<input type="email" id="emailOptinInput" class="email-optin-input" placeholder="you@example.com" autocomplete="email">
-<div class="email-optin-confirm" id="emailOptinConfirm"></div>
-</div>
-<div class="privacy-note"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Your PDF is written to a temporary file, checked, then deleted &mdash; normally within seconds (bulk uploads: when the batch finishes). On the Brokerage plan, contracts forwarded from your brokerage&rsquo;s emails go to its archive (on by default; the brokerage can turn it off).</div>
-<div class="status" id="status"></div>
-<div class="result" id="result"></div>
-</div>
-<!-- #what-it-checks: the homepage's "See everything it checks" link lands here (2026-10-23).
-     On a wrapper around both cards so the anchor works in either state. -->
-<div id="what-it-checks">
-<div class="scope-card" data-state="tx">
-<h3>What this checks &middot; Texas TREC 20-19</h3>
-<div class="scope-grid">
-<ul>
-<li>Property address, county &mdash; and the address header on every page</li>
-<li>Buyer &amp; Seller legal name</li>
-<li>Earnest money, option fee, option period days</li>
-<li>Escrow agent, title company</li>
-<li>Effective Date, and a closing date that's real and after it</li>
-<li>Initials on pages 1&ndash;9: one per buyer and seller, from the right person</li>
-<li>Sales price math: 3A + 3B = 3C</li>
-<li>&ldquo;Check one box only&rdquo; conflicts (survey, Seller&rsquo;s Disclosure, As Is, possession, owners association)</li>
-<li>Seller&rsquo;s Disclosure delivery days and 12B broker contributions filled in</li>
-<li>Page 12 receipts match the option fee and earnest money</li>
-<li>40-11 addendum loan amount, and Third Party Financing listed and attached</li>
-<li>Business terms written into Special Provisions (Paragraph 11)</li>
-<li>Notice email addresses that would bounce</li>
-</ul>
-<ul class="not-checked">
-<li>Signatures on pages 10&ndash;11</li>
-<li>Scanned or flattened PDFs</li>
-</ul>
-</div>
-<p class="scope-footnote">Every check above is verified directly against TREC's actual 20-19 form fields &mdash; not guessed from field names, which routinely lie about their own position. The 40-11 can be its own separate PDF &mdash; it doesn't need to be merged into the contract file.</p>
-<p class="scope-footnote">Comparing an original against a later version? <a href="/tc-check/compare" style="color:var(--accent);font-weight:700;text-decoration:underline;text-underline-offset:2px;">See exactly what changed &rarr;</a></p>
-<p class="scope-footnote">Auditing a whole closed-file archive? <a href="/tc-check/bulk" style="color:var(--accent);font-weight:700;text-decoration:underline;text-underline-offset:2px;">Bulk-check up to 20 files free (200 with a Brokerage join code) &rarr;</a></p>
-<p class="scope-footnote">Want checklists and TREC form references instead? <a href="/tc-hub" style="color:var(--accent);font-weight:700;text-decoration:underline;text-underline-offset:2px;">Visit the free TC Hub &rarr;</a></p>
-</div>
-<div class="scope-card" id="colorado" data-state="co">
-<h3>What this checks &middot; Colorado CBS1 (2026)</h3>
-<div class="scope-grid">
-<ul>
-<li>Property street, city, county &mdash; and that the state is Colorado</li>
-<li>Buyer &amp; Seller names, contract date</li>
-<li>&sect;4.1 price table: Earnest Money + loan + Cash at Closing = Purchase Price, and both TOTAL lines</li>
-<li>Earnest Money amount and Earnest Money Holder</li>
-<li>Loan amount vs. loan type checked (&sect;4.5.3), and Available Funds (&sect;4.4.3)</li>
-<li>Blank or N/A deadlines that delete a contingency under &sect;3.2: loan, appraisal, inspection, title objection</li>
-<li>&sect;3.1 deadlines out of order (delivery &rarr; objection &rarr; resolution) or after the Closing Date</li>
-<li>Closing Date blank, on a weekend, or on a federal or Colorado holiday</li>
-<li>Possession before closing, Acceptance Deadline after closing</li>
-<li>Both boxes checked where only one applies, and two payers on one &sect;15 fee</li>
-<li>&sect;29 compensation lines checked with no % or $</li>
-<li>Lead-based paint deadlines left blank</li>
-<li>Amend/Extend and Counterproposal: the contract re-checked as amended &mdash; a new date that lands after closing, a deleted loan or inspection deadline, conflicting boxes, a price change</li>
-<li>Inspection Objection Notice dated after the Inspection Objection Deadline, or with no description</li>
-<li>Attached forms that name a different property or contract date; a Source of Water Addendum listed in &sect;31 but not attached</li>
-<li>HB26-1426: the CBS1 marks a buyer&rsquo;s agent or transaction-broker but no Exclusive Right-to-Buy is attached (signatures aren&rsquo;t checked); an attached one whose Listing Period doesn&rsquo;t cover the contract date, names a different buyer, or states no compensation</li>
-</ul>
-<ul class="not-checked">
-<li>Signatures</li>
-<li>Foreclosure CBS (CBSF1) and Colorado forms not listed here</li>
-<li>Scanned or flattened PDFs</li>
-</ul>
-</div>
-<p class="scope-footnote">Checked against the Colorado Real Estate Commission&rsquo;s published CBS1 (mandatory since January 1, 2026), field by field. Flags likely issues; not legal advice. Not affiliated with the Colorado Real Estate Commission.</p>
-</div>
-</div>
-</div>
+__SITE_NAV__
+<!-- 1. HERO: the drop box is the page. The title-team line
+     (__FS_TITLE_LINE__, src ti_*/title_* only) sits above the H1. -->
+<section class="hero" id="check">
+  __FS_TITLE_LINE__
+  <div class="eyebrow">__FS_TC_EYEBROW__</div>
+  <h1><span data-state="tx">__FS_TC_H1__</span><span data-state="co">__FS_TC_H1_CO__</span></h1>
+  <p class="sub"><span data-state="tx">__FS_TC_SUB_TX__</span><span data-state="co">__FS_TC_SUB_CO__</span></p>
+  <div class="state-switch" role="group" aria-label="Which state's contract">
+    <button type="button" data-set-state="tx" aria-pressed="__TX_PRESSED__" data-evt="state_toggle_tx">Texas <small>TREC 20-19</small></button>
+    <button type="button" data-set-state="co" aria-pressed="__CO_PRESSED__" data-evt="state_toggle_co">Colorado <small>CBS1</small></button>
+  </div>
+  __STATE_SWITCH_JS__
+
+  <div class="checkbox-wrap" id="checkWrap">
+    <div class="drop-zone" id="dropZone">
+      <div class="dz-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 13v8"/><path d="m8 17 4-4 4 4"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg></div>
+      <div class="dz-title"><span class="dz-first"><span class="dz-mouse">Drop your contract PDF here</span><span class="dz-touch">Choose your contract PDF</span></span><span class="dz-again">Check another file</span></div>
+      <div class="dz-sub"><span class="dz-mouse">or <u>click to browse</u></span><span class="dz-touch"><u>Tap to browse files</u></span></div>
+      <div class="dz-meta"><span data-state="tx">Fillable TREC 20-19 PDF</span><span data-state="co">Fillable CBS1 (2026) PDF</span> &middot; not scanned or flattened files &middot; flags likely issues, not legal advice</div>
+    </div>
+    <input type="file" id="fileInput" accept="application/pdf">
+
+    <!-- Uploading: #status, the same generic step labels as before (no fake stages) -->
+    <div class="status" id="status"></div>
+
+    <!-- Before a report: one line of reassurance, one of options, one secondary action -->
+    <div class="pre-result">
+      <div class="under">
+        <span class="ok"><i>&#10003;</i>3 free reports, no signup</span>
+        <span class="ok"><i>&#10003;</i>Results in seconds</span>
+        <span class="ok"><i>&#10003;</i>Checked, then deleted. No AI reads your contract.</span>
+      </div>
+      <div class="opts">
+        <div class="email-optin">
+          <label class="email-optin-check"><input type="checkbox" id="emailOptinCheckbox" checked> Email me this report + future checks for this address</label>
+          <input type="email" id="emailOptinInput" class="email-optin-input" placeholder="you@example.com" autocomplete="email">
+          <div class="email-optin-confirm" id="emailOptinConfirm"></div>
+        </div>
+      </div>
+      <div class="opts">
+        <div class="addendum-toggle" id="addendumToggle"><span data-state="tx">+ Also have the 40-11, 41-3 or 39-11? Add up to 3 to cross-check them.</span><span data-state="co">+ Also have the buyer&rsquo;s Exclusive Right-to-Buy, an Amend/Extend, Counterproposal, Inspection Objection Notice or Source of Water Addendum? Add up to 3 to check them against the CBS1.</span></div>
+        <div class="addendum-row" id="addendumRow" hidden><input type="file" id="addendumInput" accept="application/pdf" multiple><span class="addendum-filename" id="addendumFileName"></span><button type="button" class="addendum-clear" id="addendumClear" title="Remove">&times;</button></div>
+      </div>
+      <button type="button" class="sample-btn demo-check-btn" id="demoBtn" data-evt="tc_sample_btn">__FS_TC_SAMPLE_BTN__</button>
+    </div>
+
+    <div class="result" id="result"></div>
+  </div>
+</section>
+
+<!-- 2. SAMPLE: tapping the strip runs the real sample check (sampleStrip -> demoBtn.click(), counts as tc_sample_btn) -->
+<section class="gray">
+  <div class="eyebrow">Sample report</div>
+  <h2>No PDF handy?<br>Run the sample.</h2>
+  <p class="sub">A sample contract with planted mistakes. Not a client file.</p>
+  <div class="sample-strip" id="sampleStrip" role="button" tabindex="0" aria-label="Findings from TC Check's sample contract. Open the full sample report.">
+    <div data-state="tx"><p class="ss-label">__FS_TC_STRIP_LABEL_TX__</p><ul>__FS_STRIP_TX__</ul></div>
+    <div data-state="co"><p class="ss-label">__FS_TC_STRIP_LABEL_CO__</p><ul>__FS_STRIP_CO__</ul></div>
+    <span class="ss-go">See the full sample report &rarr;</span>
+  </div>
+</section>
+
+<!-- 3. WHAT IT CHECKS: #what-it-checks wraps both states (the homepage links here) -->
+<section id="what-it-checks">
+  <h2>What it checks.</h2>
+  <div data-state="tx">
+    <p class="sub">Each check reads a specific field of TREC&rsquo;s published 20-19, its position confirmed by rendering the form.</p>
+    <div class="scope">
+      <ul>
+        <li>Property address, county &mdash; and the address header on every page</li>
+        <li>Buyer &amp; Seller legal name</li>
+        <li>Earnest money, option fee, option period days</li>
+        <li>Escrow agent, title company</li>
+        <li>Effective Date, and a closing date that&rsquo;s real and after it</li>
+        <li>Initials on pages 1&ndash;9: one per buyer and seller, from the right person</li>
+        <li>Sales price math: 3A + 3B = 3C</li>
+        <li>&ldquo;Check one box only&rdquo; conflicts (survey, Seller&rsquo;s Disclosure, As Is, possession, owners association)</li>
+        <li>Seller&rsquo;s Disclosure delivery days and 12B broker contributions filled in</li>
+        <li>Page 12 receipts match the option fee and earnest money</li>
+        <li>40-11 addendum loan amount, and Third Party Financing listed and attached</li>
+        <li>Business terms written into Special Provisions (Paragraph 11)</li>
+        <li>Notice email addresses that would bounce</li>
+      </ul>
+      <p class="not"><b>Not checked:</b> signatures &middot; TREC forms not listed here &middot; scanned or flattened PDFs</p>
+      <p class="scope-footnote">The 40-11 can be its own separate PDF &mdash; it doesn&rsquo;t need to be merged into the contract file.</p>
+    </div>
+  </div>
+  <div data-state="co" id="colorado">
+    <p class="sub">Checked against the Colorado Real Estate Commission&rsquo;s published CBS1 (mandatory since January 1, 2026), field by field.</p>
+    <div class="scope">
+      <ul>
+        <li>Property street, city, county &mdash; and that the state is Colorado</li>
+        <li>Buyer &amp; Seller names, contract date</li>
+        <li>&sect;4.1 price table: Earnest Money + loan + Cash at Closing = Purchase Price, and both TOTAL lines</li>
+        <li>Earnest Money amount and Earnest Money Holder</li>
+        <li>Loan amount vs. loan type checked (&sect;4.5.3), and Available Funds (&sect;4.4.3)</li>
+        <li>Blank or N/A deadlines that delete a contingency under &sect;3.2: loan, appraisal, inspection, title objection</li>
+        <li>&sect;3.1 deadlines out of order (delivery &rarr; objection &rarr; resolution) or after the Closing Date</li>
+        <li>Closing Date blank, on a weekend, or on a federal or Colorado holiday</li>
+        <li>Possession before closing, Acceptance Deadline after closing</li>
+        <li>Both boxes checked where only one applies, and two payers on one &sect;15 fee</li>
+        <li>&sect;29 compensation lines checked with no % or $</li>
+        <li>Lead-based paint deadlines left blank</li>
+        <li>Amend/Extend and Counterproposal: the contract re-checked as amended &mdash; a new date that lands after closing, a deleted loan or inspection deadline, conflicting boxes, a price change</li>
+        <li>Inspection Objection Notice dated after the Inspection Objection Deadline, or with no description</li>
+        <li>Attached forms that name a different property or contract date; a Source of Water Addendum listed in &sect;31 but not attached</li>
+        <li>HB26-1426: the CBS1 marks a buyer&rsquo;s agent or transaction-broker but no Exclusive Right-to-Buy is attached (signatures aren&rsquo;t checked); an attached one whose Listing Period doesn&rsquo;t cover the contract date, names a different buyer, or states no compensation</li>
+      </ul>
+      <p class="not"><b>Not checked:</b> signatures &middot; Foreclosure CBS (CBSF1) and Colorado forms not listed here &middot; scanned or flattened PDFs</p>
+      <p class="scope-footnote">Flags likely issues; not legal advice. Not affiliated with the Colorado Real Estate Commission.</p>
+    </div>
+  </div>
+  <p class="scope-footnote" style="margin-top:26px">Comparing an original against a later version? <a href="/tc-check/compare">See exactly what changed &rarr;</a></p>
+</section>
+
+<!-- 4. TRUST: the privacy lines in one section. Claims are on /trust and
+     true of the code: a web upload goes to a temp file that's deleted after
+     the check, and TC Check is rule code with no model/LLM dependency. -->
+<section class="gray">
+  <h2>Checked.<br>Then deleted.</h2>
+  <p class="sub">No AI reads your contract.</p>
+  <div class="facts">
+    <span><i>&#10003;</i>Independent. Not owned by Zillow, a brokerage or an MLS.</span>
+    <span><i>&#10003;</i>We don&rsquo;t sell data.</span>
+  </div>
+  <div class="privacy-note">Your PDF is written to a temporary file, checked, then deleted &mdash; normally within seconds (bulk uploads: when the batch finishes). On the Brokerage plan, contracts forwarded from your brokerage&rsquo;s emails go to its archive (on by default; the brokerage can turn it off).</div>
+  <p style="margin-top:22px"><a class="link" href="/trust#contracts" data-evt="tc_trust_link">How we handle files</a></p>
+</section>
+
+<!-- 5. OTHER WAYS: everything secondary, one tile each -->
+<section>
+  <h2>Other ways to check.</h2>
+  <div class="ways">
+    <div class="way"><b>Forward it</b><p>Forward it to tc@check.txtanoffer.com and the report comes back by email.</p><a href="mailto:tc@check.txtanoffer.com">tc@check.txtanoffer.com</a></div>
+    <div class="way"><b>Walk through it together</b><p>A free 15-minute call to walk through the report on one of your files, or on the sample.</p><a href="https://calendly.com/pejeanbaptiste/15-min-file-check?utm_source=txtanoffer&amp;utm_content=tc_check" target="_blank" rel="noopener" data-evt="book_call_tccheck">Book a free 15-min file check &rarr;</a></div>
+    <div class="way" data-state="tx"><b>A whole closed-file archive</b><p>Zip up to 20 closed files for a free report by email (200 with a Brokerage join code).</p><a href="/tc-check/bulk">Bulk check &rarr;</a></div>
+    <div class="way" data-state="co"><b>Colorado deadlines</b><p>Work out a CBS1 &sect;3.1 deadline schedule.</p><a href="/tools/colorado-deadlines" data-evt="states_co_tool">Deadline calculator &rarr;</a></div>
+    <div class="way"><b>Checklists and form references</b><p>Want checklists and TREC form references instead?</p><a href="/tc-hub">Visit the free TC Hub &rarr;</a></div>
+  </div>
+  <p class="learn">Questions? <a href="/faq">FAQ</a> &middot; <a href="/guides">Guides</a> &middot; <a href="mailto:support@txtanoffer.com">support@txtanoffer.com</a></p>
+</section>
+
+__SITE_FOOTER__
 <script>
 const dropZone = document.getElementById('dropZone');
 const fileInput = document.getElementById('fileInput');
@@ -3624,6 +3643,10 @@ const emailOptinCheckbox = document.getElementById('emailOptinCheckbox');
 const emailOptinInput = document.getElementById('emailOptinInput');
 const emailOptinConfirm = document.getElementById('emailOptinConfirm');
 const demoBtn = document.getElementById('demoBtn');
+// Wraps the drop box, its options and the report. 'has-result' shrinks the
+// box to one "Check another file" line above a report (2026-10-23 redesign);
+// uploadFile() and resetForm() take it off again.
+const checkWrap = document.getElementById('checkWrap');
 const stateMode = () => (window.taState ? window.taState() : 'tx');
 
 try { const savedEmail = localStorage.getItem('tc_email_hint'); if (savedEmail) emailOptinInput.value = savedEmail; } catch (e) {}
@@ -3770,12 +3793,15 @@ function uploadFile(file, email, isDemo) {
   pendingFile = file;
   resultEl.classList.remove('show');
   emailOptinConfirm.classList.remove('show');
+  checkWrap.classList.remove('has-result');
   statusTimers.forEach(clearTimeout);
   const STATUS_STEPS = STATUS_STEPS_BY_STATE[stateMode()];
+  statusEl.innerHTML = '<div class="up-file"><span class="spin"></span><b>' + escapeHtml(file.name) + '</b><span class="up-size">' + formatBytes(file.size) + '</span></div><div class="up-step"></div>';
+  const stepEl = statusEl.querySelector('.up-step');
   statusTimers = STATUS_STEPS.map((label, i) =>
-    setTimeout(() => { statusEl.textContent = label; }, i * 450)
+    setTimeout(() => { stepEl.textContent = label; }, i * 450)
   );
-  statusEl.textContent = STATUS_STEPS[0];
+  stepEl.textContent = STATUS_STEPS[0];
   statusEl.classList.add('show');
 
   const formData = new FormData();
@@ -3838,6 +3864,7 @@ function formatBytes(n) {
 function renderError(msg) {
   resultEl.innerHTML = '<div class="result-banner incomplete">' + escapeHtml(msg) + '</div>';
   resultEl.classList.add('show');
+  checkWrap.classList.add('has-result');
 }
 
 // Next steps after a report (2026-10-13). The agent SMS-drafting pitch that
@@ -3852,7 +3879,7 @@ function formLabel(data) { return data.state === 'CO' ? 'CBS1' : 'TREC 20-19'; }
 function buildOwnFileCta(data) {
   return '<div class="own-file-cta">' +
     '<p class="own-file-lead"><strong>That was our sample. Now run one of yours.</strong> Drop a filled ' + formLabel(data) + ' above, or forward it to <a href="mailto:tc@check.txtanoffer.com">tc@check.txtanoffer.com</a>. It&rsquo;s checked, then deleted, unless your brokerage archives it.</p>' +
-    '<button type="button" class="own-file-btn" onclick="pickOwnFile()" data-evt="tc_own_file_cta">Check my own file &rarr;</button>' +
+    '<button type="button" class="pill solid own-file-btn" onclick="pickOwnFile()" data-evt="tc_own_file_cta">Check my own file &rarr;</button>' +
     buildAgentAltLink() +
   '</div>';
 }
@@ -3894,13 +3921,14 @@ function buildEmailReportAsk(left) {
     : 'That was your last free full report on this browser -- add an email to keep getting them.';
   return '<div class="gate-box">' +
     '<p class="gate-headline">Want this report in your inbox?</p>' +
-    '<div class="gate-form"><input type="email" id="gateEmailInput" placeholder="work email" autocomplete="email" onkeydown="if(event.key===\\'Enter\\')unlockGate()"><button type="button" onclick="unlockGate()">Email me this report</button></div>' +
+    '<div class="gate-form"><input type="email" id="gateEmailInput" placeholder="work email" autocomplete="email" onkeydown="if(event.key===\\'Enter\\')unlockGate()"><button type="button" class="pill solid" onclick="unlockGate()">Email me this report</button></div>' +
     '<div class="gate-error" id="gateError"></div>' +
     '<div class="gate-note">' + leftText + ' Your file is deleted after the check.</div>' +
   '</div>';
 }
 
 function resetForm() {
+  checkWrap.classList.remove('has-result');
   resultEl.classList.remove('show');
   resultEl.innerHTML = '';
   pendingFile = null;
@@ -3910,11 +3938,16 @@ function resetForm() {
   dropZone.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
-function buildReportHead(data) {
-  if (!data.recognized) return '';
+// The report card (2026-10-23 redesign): the same card language as the
+// homepage's sample card -- green head, then address, meta bar, banner and
+// the findings grouped "Must fix" / "To review".
+function buildReportHead() {
+  return '<div class="rep-head"><img src="/static/logo-wordmark-white.png?v=1" alt="txtanoffer"><span class="rep-kick">TC File Check report</span></div>';
+}
+
+function buildReportAddress(data) {
   const p = data.property || {};
-  let html = '<div class="rep-head"><img src="/static/logo-wordmark-white.png?v=1" alt="txtanoffer"><span class="rep-kick">TC File Check report</span></div><div class="rep-bar"></div>';
-  html += p.address
+  let html = p.address
     ? '<div class="rep-addr">' + escapeHtml(p.address) + '</div>'
     : '<div class="rep-addr blank">Property address not filled in</div>';
   const bits = [];
@@ -3922,6 +3955,21 @@ function buildReportHead(data) {
   else bits.push('Section 2A is blank');
   if (data.files_line) bits.push(escapeHtml(data.files_line));
   html += '<div class="rep-sub">' + bits.join(' &middot; ') + '</div>';
+  return html;
+}
+
+function buildIssueGroups(issues) {
+  const groups = [['Must fix', issues.filter(i => i.severity === 'blocker')],
+                  ['To review', issues.filter(i => i.severity !== 'blocker')]];
+  let html = '';
+  for (const [label, list] of groups) {
+    if (!list.length) continue;
+    html += '<div class="grp">' + label + '</div><ul class="issue-list">';
+    for (const issue of list) {
+      html += '<li class="issue-item"><span class="issue-tag ' + issue.severity + '">' + escapeHtml(issue.tag || issue.severity) + '</span><span>' + escapeHtml(issue.message) + '</span></li>';
+    }
+    html += '</ul>';
+  }
   return html;
 }
 
@@ -3940,6 +3988,7 @@ function buildUnreadable(data, formName) {
 }
 
 function renderResult(data, file, isDemo) {
+  checkWrap.classList.add('has-result');
   if (!data.recognized) {
     resultEl.innerHTML = buildMetaBar(data, file) + buildUnreadable(data, stateMode() === 'co' ? 'CBS1' : 'TREC 20-19') + buildNextStepCta();
     resultEl.classList.add('show');
@@ -3948,79 +3997,66 @@ function renderResult(data, file, isDemo) {
   }
   const issues = (data.display_issues && data.display_issues.length) ? data.display_issues : (data.issues || []);
   const totalIssues = typeof data.issue_count === 'number' ? data.issue_count : issues.length;
+  // Gate count = must-fix lines in the folded report (per-page initials
+  // merged), so it matches the "N must fix" shown once unlocked; raw
+  // blocker_count only for an older server response.
+  const mustFix = typeof data.must_fix_count === 'number' ? data.must_fix_count
+    : (typeof data.blocker_count === 'number' ? data.blocker_count : 0);
   let html = isDemo ? '<div class="demo-banner">Demo result &mdash; a sample contract with planted mistakes, not your file.</div>' : '';
-  html += buildReportHead(data);
+  html += '<div class="rep">' + buildReportHead() + '<div class="rep-body">';
+  html += buildReportAddress(data);
   html += buildMetaBar(data, file);
 
   if (data.complete) {
     html += '<div class="result-banner complete">All checked fields are filled in.</div>';
+  } else if (data.gated) {
+    // Gated: no counts here -- the gate box below carries the one number.
+    const toReview = Math.max(totalIssues - (typeof data.blocker_count === 'number' ? data.blocker_count : 0), 0);
+    html += '<div class="result-banner incomplete">' + (mustFix ? 'Not ready &mdash; fix before this goes to title' : toReview + ' item' + (toReview === 1 ? '' : 's') + ' to review') + '</div>';
   } else {
-    // Lead with the blocking count -- the concrete "title will reject this"
-    // number -- when there is one; fall back to a plain issue count for a
-    // file whose only findings are non-blocking warnings.
-    const blockerCount = typeof data.blocker_count === 'number' ? data.blocker_count : 0;
-    const bannerText = blockerCount > 0
-      ? blockerCount + ' title-blocking error' + (blockerCount === 1 ? '' : 's') + ' found'
-      : totalIssues + ' issue' + (totalIssues === 1 ? '' : 's') + ' found';
-    let counts = '';
-    if (data.display_issues && data.display_issues.length) {
-      const nb = data.display_issues.filter(i => i.severity === 'blocker').length;
-      const nw = data.display_issues.length - nb;
-      counts = '<div class="rep-counts">' + (nb ? '<span class="must">' + nb + ' must fix</span>' : '') + (nw ? '<span class="review">' + nw + ' to review</span>' : '') + '</div>';
-      html += '<div class="result-banner incomplete">' + (nb ? 'Not ready &mdash; fix before this goes to title' : nw + ' item' + (nw === 1 ? '' : 's') + ' to review') + counts + '</div>';
-    } else {
-      html += '<div class="result-banner incomplete">' + bannerText + '</div>';
-    }
+    const nb = issues.filter(i => i.severity === 'blocker').length;
+    const nw = issues.length - nb;
+    const counts = '<div class="rep-counts">' + (nb ? '<span class="must">' + nb + ' must fix</span>' : '') + (nw ? '<span class="review">' + nw + ' to review</span>' : '') + '</div>';
+    html += '<div class="result-banner incomplete">' + (nb ? 'Not ready &mdash; fix before this goes to title' : nw + ' item' + (nw === 1 ? '' : 's') + ' to review') + counts + '</div>';
   }
   if (data.looks_like_blank_draft) {
     html += '<div class="fixit-cta"><p>This looks like an essentially blank draft &mdash; more gaps than a quick fix. It may be faster to generate a clean one from scratch.</p><a href="/demo">Generate a clean offer &rarr;</a></div>';
   }
-  if (issues.length) {
-    html += '<ul class="issue-list">';
-    for (const issue of issues) {
-      html += '<li class="issue-item"><span class="issue-body"><span><span class="issue-tag ' + issue.severity + '">' + escapeHtml(issue.tag || issue.severity) + '</span></span><span>' + escapeHtml(issue.message) + '</span></span></li>';
-    }
-    html += '</ul>';
-  }
   if (data.gated) {
-    // Reveals scope (count + which categories), never location -- exact
-    // pages/lines are the specific thing an email buys. Categories come
-    // from this file's own real blockers (see /v1/tc/check), never a
-    // fixed example list, so the teaser can't say something untrue about
-    // a file it hasn't actually found those problems on.
-    const blockerCount = typeof data.blocker_count === 'number' ? data.blocker_count : totalIssues;
-    const cats = Array.isArray(data.categories) ? data.categories : [];
-    let gateHeadline;
-    if (blockerCount > 0 && cats.length) {
-      const catText = cats.length > 1
-        ? cats.slice(0, -1).join(', ') + ' and ' + cats[cats.length - 1]
-        : cats[0];
-      gateHeadline = blockerCount + ' blocker' + (blockerCount === 1 ? '' : 's') + ' found that will bounce at Title — including ' + catText + '.';
-    } else if (blockerCount > 0) {
-      gateHeadline = blockerCount + ' title-blocking error' + (blockerCount === 1 ? '' : 's') + ' found.';
-    } else {
-      gateHeadline = 'Where should we send this secure audit report so you can review it before your deadline?';
-    }
+    // The server sends no findings while gated; these rows only suggest a
+    // list behind the email (count, never location).
+    html += '<ul class="issue-list locked" aria-hidden="true">'
+      + '<li class="issue-item"><span class="issue-tag blocker">MUST FIX</span><span>&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;</span></li>'
+      + '<li class="issue-item"><span class="issue-tag blocker">MUST FIX</span><span>&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;</span></li></ul>';
+  } else {
+    html += buildIssueGroups(issues);
+  }
+  html += '</div>';
+  if (!data.gated && issues.length) {
+    html += '<div class="rep-actions">';
+    // Not on an unrecognized file: its only finding is about this tool's
+    // template match, not anything the agent could fix.
+    if (data.recognized) html += '<button class="pill solid" onclick="copyAgentMessage()" data-evt="tc_copy_agent_msg">Copy as message to agent</button>';
+    html += '<button class="pill copy-btn" onclick="copyChecklist()">Copy checklist</button>';
+    html += '<button class="pill download-btn" onclick="downloadReport(this)">Download report</button>';
+    html += '</div>';
+  }
+  html += '</div>';
+  if (data.gated) {
+    // trec-qa 2026-10-23: one number (the folded must-fix count) and one
+    // button; no category teaser, no shield badge, no stats line.
+    const gateHeadline = mustFix > 0
+      ? mustFix + ' must-fix item' + (mustFix === 1 ? '' : 's') + ' found.'
+      : totalIssues + ' item' + (totalIssues === 1 ? '' : 's') + ' to review found.';
     html += '<div class="gate-box">';
-    html += '<div class="gate-shield">&#128737; Secure Audit Report</div>';
     html += '<p class="gate-headline">' + gateHeadline + '</p>';
     html += '<p class="gate-sub">You&rsquo;ve used your free full reports on this browser. Enter your email to see the exact pages and lines &mdash; your file is deleted after the check.</p>';
-    html += '<div class="gate-form"><input type="email" id="gateEmailInput" placeholder="work email" autocomplete="email" onkeydown="if(event.key===\\'Enter\\')unlockGate()"><button type="button" onclick="unlockGate()">See my bounce report</button></div>';
+    html += '<div class="gate-form"><input type="email" id="gateEmailInput" placeholder="work email" autocomplete="email" onkeydown="if(event.key===\\'Enter\\')unlockGate()"><button type="button" class="pill solid" onclick="unlockGate()">See my full report</button></div>';
     html += '<div class="gate-error" id="gateError"></div>';
-    if (data.social_proof) {
-      html += '<div class="gate-proof">' + escapeHtml(data.social_proof) + '</div>';
-    }
     html += '<div class="gate-note">Free, no card, no password &mdash; unsubscribe anytime.</div>';
     html += '</div>';
-    html += '<div class="gate-bridge">Leading a team? <a href="/pricing#brokerage">See how Brokerage auto-checks every agent\\'s offer before it reaches you &rarr;</a></div>';
+    html += '<div class="gate-bridge">Leading a team? <a href="/pricing#brokerage">See how Brokerage checks every offer your agents draft here before it&rsquo;s sent &rarr;</a></div>';
   } else {
-    if (issues.length) {
-      html += '<button class="copy-btn" onclick="copyChecklist()">Copy checklist</button>';
-      // Not on an unrecognized file: its only finding is about this tool's
-      // template match, not anything the agent could fix.
-      if (data.recognized) html += '<button class="download-btn" onclick="copyAgentMessage()" data-evt="tc_copy_agent_msg">Copy as message to agent</button>';
-      html += '<button class="download-btn" onclick="downloadReport(this)">Download report</button>';
-    }
     if (isDemo) html += buildOwnFileCta(data);
     if (!isDemo && typeof data.free_reports_left === 'number') html += buildEmailReportAsk(data.free_reports_left);
     if (!isDemo) html += buildForwardNextCta() + buildNextStepCta();
@@ -4134,6 +4170,9 @@ function escapeHtml(s) {
     import re as _re
     src = _re.sub(r"[^a-zA-Z0-9_-]", "", request.args.get("src", ""))[:60]
     html = first_screen.fill_tokens(html, src)
+    html = (html.replace("__SITE_CHROME_CSS__", _SITE_CHROME_CSS)
+                .replace("__SITE_NAV__", _site_nav(cta_href="#check", active="tc"))
+                .replace("__SITE_FOOTER__", _SITE_FOOTER))
     site_state = _site_state()
     html = _apply_site_state(html.replace("__STATE_SWITCH_JS__", STATE_SWITCH_JS), site_state)
     resp = make_response(html)

@@ -21,15 +21,13 @@ COPY = {
     # home_broker_line) went with the 2026-10-23 homepage simplification;
     # its copy is in app.py's index(). SAMPLE_ROWS below still feeds its card.
 
-    # --- /tc-check -----------------------------------------------------------
+    # --- /tc-check (redesign 2026-10-23, ad-creative mockup, trec-qa copy) ---
     "tc_eyebrow": "TC File Check",
-    "tc_h1": "Find the blank date or missing initial before title calls you back.",
-    # co_audit doesn't check initials; blank/N/A §3.1 deadlines and the
-    # §4.1 price sum are live rules.
-    "tc_h1_co": "Find the blank deadline or the price that doesn&rsquo;t add up before title calls you back.",
-    "tc_sub_tx": "Free check for a filled TREC 20-19. Built for Texas TCs, brokers and their agents.",
+    "tc_h1": "Drop a TREC 20-19.<br>See what&rsquo;s missing.",
+    "tc_h1_co": "Drop a CBS1.<br>See what&rsquo;s missing.",
+    "tc_sub_tx": 'Free check for a filled <span style="white-space:nowrap">TREC 20-19</span>. Built for Texas TCs, brokers and their agents.',
     "tc_sub_co": "Free check for a filled Colorado CBS1. Built for Colorado TCs, brokers and their agents.",
-    "tc_sample_btn": "See a sample report &mdash; no file needed &rarr;",
+    "tc_sample_btn": "No PDF handy? See a sample report &rarr;",
     "tc_strip_label_tx": "Sample contract, 123 Main St, Austin, TX 78704, with planted mistakes. Not a client file.",
     "tc_strip_label_co": "Sample CBS1, 123 Main St, Denver, with planted mistakes. Not a client file.",
 
