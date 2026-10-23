@@ -49,6 +49,7 @@ from deadlines import earnest_money_deadline, option_end_date, build_day_one_sum
 import transaction_tasks
 from drafts import save_draft, get_draft, clear_draft
 from tc_audit import check_tc_file, compare_contracts
+import first_screen
 from tc_report_pdf import generate_tc_report_pdf
 from rate_limit import check_and_increment
 from real_upload_alert import maybe_send_alert as maybe_send_real_upload_alert
@@ -224,7 +225,9 @@ _ENGAGEMENT_TYPES = ("js_ok", "hero_cta", "hero_sample", "hero_card", "dropzone_
                      # "call" buttons until 2026-10-14; kept so old rows still parse.
                      # /tools/colorado-deadlines, 2026-10-13 (tool_check_cta is in CHECK_CTA_EVENTS)
                      "tool_calc_run", "tool_ics", "tool_copy_text", "tool_embed_copy", "hub_tool_link",
-                     "guide_trec_official") \
+                     "guide_trec_official",
+                     # first_screen.py, 2026-10-23
+                     "hero_broker_cta", "tc_title_copy_link") \
     + CHECK_CTA_EVENTS + SAMPLE_CTA_EVENTS + BOOK_CALL_EVENTS + (DROPZONE_INTERACT_EVENT,)
 # Pages whose beacons /v1/evt accepts: the ones with their own
 # track_page_view() call, plus _BEACON_ONLY_PAGES below.
@@ -760,6 +763,11 @@ def index():
     .sl-hero-phone { display: none; margin-top: 1rem; font-size: 0.875rem; line-height: 1.5; color: rgba(255,255,255,0.85); }
     .sl-hero-phone a { color: #f5c242; font-weight: 600; }
     @media (max-width: 900px), (hover: none) { .sl-hero-phone { display: block; } }
+    /* First screen (2026-10-23, first_screen.py): who it's for above the H1,
+       and the brokerage bulk check -- D3's buyer -- under the buttons. */
+    .sl-eyebrow { font-size: 0.8rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; line-height: 1.45; color: #f5c242; margin: 0 0 0.8rem; max-width: 520px; }
+    .sl-broker-line { margin-top: 1.1rem; width: fit-content; font-size: 0.95rem; font-weight: 600; color: #fff; text-decoration: underline; text-underline-offset: 5px; text-decoration-color: rgba(255,255,255,0.45); }
+    .sl-broker-line:hover { text-decoration-color: #fff; }
     .sl-hero-note { display: flex; flex-wrap: wrap; gap: 0.6rem 1.4rem; margin-top: 1.6rem; font-size: 0.875rem; color: rgba(255,255,255,0.78); }
     .sl-hero-note span { display: inline-flex; align-items: center; gap: 7px; }
     .sl-hero-note svg { width: 16px; height: 16px; color: #f5c242; flex-shrink: 0; }
@@ -821,6 +829,32 @@ def index():
       .hx-paper .hide-sm { display: none; }
       .hx-paper .scrawl { font-size: 21px; right: 10px; bottom: 6px; }
       .hx-card, html.state-co .hx-card { position: relative; top: -2px; width: 100%; }
+      /* Phone first screen (2026-10-23): the report card was ~860px down, so
+         a phone visitor saw a claim with no proof. At 390x700 (an in-app
+         browser) the eyebrow, H1, both buttons and the card's first MUST FIX
+         now fit: the panel's children join the hero's flex column so the
+         card (compact: 2 findings) comes right after the buttons, ahead of
+         the paper scrap, the broker line, trust notes and the forward line. */
+      .sl-hero-in { display: flex; flex-direction: column; align-items: stretch; gap: 0; padding-top: 18px; }
+      .sl-hero-panel { display: contents; }
+      .sl-hero-panel .state-switch { align-self: flex-start; margin-bottom: 0.75rem; }
+      .sl-eyebrow { font-size: 0.72rem; margin-bottom: 0.5rem; }
+      .sl-hero-panel h1 { font-size: 2.05rem; line-height: 1.03; }
+      .sl-hero-panel p { font-size: 0.93rem; line-height: 1.5; margin-top: 0.65rem; }
+      .sl-hero-actions { margin-top: 0.95rem; gap: 0.55rem; }
+      .sl-hero-actions .sl-cta { padding: 0.85rem 1.2rem; }
+      .sl-cta-secondary { width: 100%; text-align: center; padding: 0.75rem 1rem; border: 1.5px solid rgba(255,255,255,0.55); border-radius: 10px; text-decoration: none; }
+      .hx-visual { order: 1; margin-top: 0.9rem; }
+      .sl-broker-line, .sl-hero-note, .sl-hero-phone { order: 2; }
+      .sl-broker-line { margin-top: 1.4rem; }
+      .hx-card, html.state-co .hx-card { order: -1; top: 0; }
+      .hx-paper { margin-top: 1.4rem; }
+      .hx-card-head { padding: 7px 14px; }
+      .hx-card-body { padding: 8px 14px 4px; }
+      .hx-addr { font-size: 15px; }
+      .hx-sub { display: none; }
+      .hx-banner { margin-top: 6px; padding: 6px 10px; gap: 1px; }
+      .hx-list li { padding: 8px 0; }
     }
     /* Calm still-life rows (image on cream + plain headline + outlined button) */
     .sl-row { display: grid; grid-template-columns: 1fr 1fr; gap: 2.5rem; align-items: center; margin: 0 0 2.25rem; text-align: left; }
@@ -1381,13 +1415,16 @@ def index():
         <button type="button" data-set-state="tx" aria-pressed="__TX_PRESSED__" data-evt="state_toggle_tx">Texas <small>TREC 20-19</small></button>
         <button type="button" data-set-state="co" aria-pressed="__CO_PRESSED__" data-evt="state_toggle_co">Colorado <small>CBS1</small></button>
       </div>
+      <!-- Eyebrow, Texas subhead, sample-button label and broker line: copy in first_screen.py (COPY) -->
+      <div class="sl-eyebrow">__FS_HOME_EYEBROW__</div>
       <h1>Catch what title kicks back <em>before you send the file.</em></h1>
-      <p data-state="tx">Drop a filled TREC 20-19 and see what title would kick back in seconds &mdash; blank dates, missing initials, mismatched checkboxes.</p>
+      <p data-state="tx">__FS_HOME_SUB_TX__</p>
       <p data-state="co">Drop a filled CBS1 and see what title would kick back in seconds &mdash; &sect;3.1 deadlines left blank that delete a contingency, &sect;4.1 price math that doesn&rsquo;t add up, deadlines that land after closing.</p>
       <div class="sl-hero-actions">
         <a class="sl-cta" href="#check" data-evt="hero_cta">Check a file free <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a>
-        <button type="button" class="sl-cta-secondary" id="heroSampleBtn" data-evt="hero_sample">See a sample report &rarr;</button>
+        <button type="button" class="sl-cta-secondary" id="heroSampleBtn" data-evt="hero_sample">__FS_HOME_SAMPLE_BTN__</button>
       </div>
+      <a class="sl-broker-line" data-state="tx" href="/tc-check/bulk" data-evt="hero_broker_cta">__FS_HOME_BROKER_LINE__</a>
       <div class="sl-hero-note">
         <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>3 free reports, no signup</span>
         <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>Checked, then deleted &mdash; no copy kept</span>
@@ -2156,6 +2193,7 @@ def index():
         ("__TC_STAT3_NUM__", stat3_num), ("__TC_STAT3_LABEL__", stat3_label),
     ):
         html = html.replace(token, value)
+    html = first_screen.fill_tokens(html)
     site_state = _site_state()
     html = _apply_site_state(html.replace("__STATE_SWITCH_JS__", STATE_SWITCH_JS), site_state)
 
@@ -4452,7 +4490,26 @@ position:sticky;top:0;z-index:100;}
 .nav-logo img{width:100%;height:100%;object-fit:contain;}
 .container{max-width:700px;margin:0 auto;padding:3rem 2rem;}
 h1{font-size:2rem;font-weight:800;letter-spacing:-0.03em;margin-bottom:0.5rem;color:var(--text);}
-.subtitle{color:var(--text-muted);font-size:1rem;margin-bottom:2rem;}
+.subtitle{color:var(--text-muted);font-size:1rem;margin-bottom:1.25rem;}
+.eyebrow{font-size:0.75rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--accent);margin-bottom:0.4rem;}
+/* First screen, 2026-10-23 (first_screen.py) */
+.demo-check-btn.sample-top{margin-top:0;padding:0.95rem 1rem;background:#f5c242;border-color:#f5c242;color:#0f1f2f;font-size:1rem;font-weight:700;}
+.demo-check-btn.sample-top:hover{background:#ffd25e;border-color:#ffd25e;color:#0f1f2f;}
+.sample-strip{margin:0.9rem 0 1.5rem;background:#fff;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0.75rem 1rem 0.35rem;cursor:pointer;text-align:left;}
+.sample-strip:hover{border-color:rgba(11,93,82,0.35);}
+.sample-strip:focus-visible{outline:3px solid #f5c242;outline-offset:2px;}
+.ss-label{font-size:0.75rem;color:var(--text-dim);line-height:1.4;}
+.sample-strip ul{list-style:none;}
+.sample-strip li{display:flex;gap:0.6rem;align-items:flex-start;padding:0.55rem 0;border-bottom:1px solid var(--border);font-size:0.85rem;line-height:1.45;color:var(--text);}
+.sample-strip li:last-child{border-bottom:none;}
+.ss-tag{flex-shrink:0;font-size:0.62rem;font-weight:800;letter-spacing:0.04em;padding:0.2rem 0.3rem;border-radius:999px;width:68px;text-align:center;margin-top:1px;}
+.ss-tag.b{background:rgba(239,68,68,0.12);color:#dc2626;}
+.ss-tag.w{background:rgba(245,158,11,0.14);color:#b45309;}
+.title-line{margin-bottom:1.25rem;padding:0.85rem 1rem;background:var(--accent-tint);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:0.88rem;color:var(--text);line-height:1.5;}
+.title-link{display:flex;gap:0.5rem;margin-top:0.6rem;}
+.title-link input{flex:1;min-width:0;padding:0.5rem 0.7rem;border:1px solid rgba(15,31,47,0.16);border-radius:8px;font:inherit;font-size:0.8rem;color:var(--text-muted);background:#fff;}
+.title-link button{flex-shrink:0;background:var(--accent);color:#fff;border:none;padding:0.5rem 1rem;border-radius:8px;font:inherit;font-size:0.82rem;font-weight:700;cursor:pointer;}
+@media(max-width:480px){h1{font-size:1.6rem;line-height:1.2;}.subtitle{font-size:0.92rem;}}
 .card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:2rem;box-shadow:0 1px 3px rgba(15,31,47,0.05);}
 /* Same minimal drop zone as the homepage widget (see index()) */
 .drop-zone{border:1.5px dashed #d9dee3;border-radius:16px;background:#fff;padding:2.75rem 1.5rem 2.5rem;
@@ -4608,13 +4665,26 @@ html.state-tx [data-state="co"],html.state-co [data-state="tx"]{display:none !im
 </a>
 </nav>
 <div class="container">
-<h1>TC File Check</h1>
+<!-- First screen (2026-10-23): proof before the upload box. Most tagged
+     traffic lands here on a phone with no PDF at hand, and the old first
+     screen was a title plus an empty drop box. All copy, the sample rows and
+     the src-matched title line come from first_screen.py. -->
+__FS_TITLE_LINE__
+<p class="eyebrow">__FS_TC_EYEBROW__</p>
+<h1>__FS_TC_H1__</h1>
 <div class="state-switch" role="group" aria-label="Which state's contract">
 <button type="button" data-set-state="tx" aria-pressed="__TX_PRESSED__" data-evt="state_toggle_tx">Texas <small>TREC 20-19</small></button>
 <button type="button" data-set-state="co" aria-pressed="__CO_PRESSED__" data-evt="state_toggle_co">Colorado <small>CBS1</small></button>
 </div>
 __STATE_SWITCH_JS__
-<p class="subtitle"><span data-state="tx">Drop a filled TREC 20-19 PDF.</span><span data-state="co">Drop a filled CBS1 PDF.</span> We'll tell you what's missing before title kicks it back.</p>
+<p class="subtitle"><span data-state="tx">__FS_TC_SUB_TX__</span><span data-state="co">__FS_TC_SUB_CO__</span></p>
+<button type="button" class="demo-check-btn sample-top" id="demoBtn" data-evt="tc_sample_btn">__FS_TC_SAMPLE_BTN__</button>
+<!-- Illustration of the same sample report the button runs; clicking it
+     runs the real check (see the sampleStrip handler below). -->
+<div class="sample-strip" id="sampleStrip" role="button" tabindex="0" aria-label="Findings from TC Check's sample contract. Open the full sample report.">
+<div data-state="tx"><p class="ss-label">__FS_TC_STRIP_LABEL_TX__</p><ul>__FS_STRIP_TX__</ul></div>
+<div data-state="co"><p class="ss-label">__FS_TC_STRIP_LABEL_CO__</p><ul>__FS_STRIP_CO__</ul></div>
+</div>
 <div class="card">
 <div class="drop-zone" id="dropZone">
 <div class="dz-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 13v8"/><path d="m8 17 4-4 4 4"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg></div>
@@ -4641,7 +4711,6 @@ __STATE_SWITCH_JS__
 <button type="button" class="addendum-clear" id="addendumClear" title="Remove">&times;</button>
 </div>
 </div>
-<button type="button" class="demo-check-btn" id="demoBtn" data-evt="tc_sample_btn">No PDF handy? Run a sample check &rarr;</button>
 <div class="email-optin">
 <label class="email-optin-check"><input type="checkbox" id="emailOptinCheckbox" checked> Email me this report + future checks for this address</label>
 <input type="email" id="emailOptinInput" class="email-optin-input" placeholder="you@example.com" autocomplete="email">
@@ -4767,6 +4836,28 @@ if (demoBtn) {
   // instead of landing on an empty form the visitor has to re-trigger by
   // hand.
   if (new URLSearchParams(location.search).get('demo') === '1') demoBtn.click();
+  // The sample strip is the same sample report, so a tap on it runs the
+  // real check (and counts as tc_sample_btn, via the button's click).
+  const sampleStrip = document.getElementById('sampleStrip');
+  if (sampleStrip) {
+    sampleStrip.addEventListener('click', () => { if (!demoBtn.disabled) demoBtn.click(); });
+    sampleStrip.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (!demoBtn.disabled) demoBtn.click(); }
+    });
+  }
+}
+// Title-team line (src ti_* / title_* only, first_screen.py): copies the one
+// generic share link, same for every title company.
+const titleCopyBtn = document.getElementById('titleCopyBtn');
+if (titleCopyBtn) {
+  const titleLinkUrl = document.getElementById('titleLinkUrl');
+  const copyLabel = titleCopyBtn.textContent;
+  const copied = () => { titleCopyBtn.textContent = titleCopyBtn.dataset.done; setTimeout(() => { titleCopyBtn.textContent = copyLabel; }, 2000); };
+  titleCopyBtn.addEventListener('click', () => {
+    const fallback = () => { titleLinkUrl.select(); try { document.execCommand('copy'); copied(); } catch (e) {} };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(titleLinkUrl.value).then(copied, fallback);
+    else fallback();
+  });
 }
 
 // Same idea as the demo replay above, but for a real file: the homepage
@@ -5210,6 +5301,7 @@ function escapeHtml(s) {
     # (LinkedIn, a DM) drove any traffic here at all.
     import re as _re
     src = _re.sub(r"[^a-zA-Z0-9_-]", "", request.args.get("src", ""))[:60]
+    html = first_screen.fill_tokens(html, src)
     site_state = _site_state()
     html = _apply_site_state(html.replace("__STATE_SWITCH_JS__", STATE_SWITCH_JS), site_state)
     resp = make_response(html)
