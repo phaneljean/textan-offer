@@ -6290,16 +6290,11 @@ def create_checkout_session():
 @app.route("/success")
 def success():
     """Payment success page"""
-    session_id = request.args.get('session_id')
-    # Try to get phone from the checkout session to pre-fill profile
-    phone_from_checkout = ""
-    if session_id and stripe.api_key:
-        try:
-            sess = stripe.checkout.Session.retrieve(session_id)
-            phone_from_checkout = sess.customer_details.get('phone', '') if sess.customer_details else ''
-        except Exception:
-            pass
-    profile_link = sign_dashboard_url(phone_from_checkout, request.host_url.rstrip("/")).replace("/dashboard?", "/profile?")
+    # No signed profile link here. This page used to sign one for the phone
+    # typed at Stripe checkout (or for an empty phone when there was no
+    # session_id, which any visitor got) -- neither proves the visitor owns
+    # that number. The PROFILE keyword texts the link to the phone itself.
+    # Security audit 2026-10-23.
     return f"""
 <!DOCTYPE html>
 <html lang="en">
@@ -6347,13 +6342,13 @@ def success():
     <div class="next-steps">
       <h3>Next Steps</h3>
       <ol>
-        <li><strong>Set up your profile</strong> &mdash; your name, license, and brokerage auto-fill every offer</li>
+        <li><strong>Set up your profile</strong> &mdash; text <strong>PROFILE</strong> to <strong>1-833-897-0333</strong> from the phone you'll draft offers from and we'll text you a private link. Your name, license, and brokerage auto-fill every offer.</li>
         <li>Text your first offer to <strong>1-833-897-0333</strong></li>
         <li>Or use the web demo at <strong>txtanoffer.com/demo</strong></li>
       </ol>
     </div>
 
-    <a href="{profile_link}" class="btn">Set Up Your Profile &rarr;</a>
+    <a href="sms:+18338970333?body=PROFILE" class="btn">Text PROFILE &rarr;</a>
   </div>
 </body>
 </html>
@@ -7275,24 +7270,33 @@ def signup():
                 # The SMS box is "(Optional)", so it has to mean something: no
                 # box, no welcome text (trec-qa 10-23 found it was never read).
                 # The exact label shown is stored with the consent.
+                # The signed profile link goes only to the phone itself, never
+                # into this page: nothing here proves the visitor owns the
+                # number they typed, and the same signature opens /dashboard
+                # (every offer + PDF link). It used to be a button on this
+                # page, so typing any agent's public number handed over their
+                # account. Security audit 2026-10-23. Same reply whether or
+                # not the phone already had an account.
                 sms_sent = False
                 if request.form.get("sms_consent"):
                     nurture.record_sms_consent(phone, SMS_CONSENT_LABEL, request.remote_addr)
+                    profile_url = sign_dashboard_url(phone, request.host_url.rstrip("/")).replace("/dashboard?", "/profile?")
                     sms_sent = twilio_send_sms(phone,
                         "Welcome to TxtAnOffer! Text your offer: 725k 3% 21day 123 Main St. "
+                        f"Set up your profile (auto-fills every offer): {profile_url} "
                         "Msg freq varies. Msg & data rates may apply. Reply HELP for help, STOP to opt out."
                     )
-                profile_url = sign_dashboard_url(phone, request.host_url.rstrip("/")).replace("/dashboard?", "/profile?")
-                intro_line = "Check your texts for a welcome message." if sms_sent else "Tap below to set up your profile now."
+                intro_line = (
+                    "Check your texts for a welcome message with your private profile link."
+                    if sms_sent else
+                    "To set up your profile, text PROFILE to (833) 897-0333 from this phone and we'll text you a private link."
+                )
                 success_msg = (
                     '<div class="success">'
                     f'<strong>You\'re in!</strong> {intro_line}<br><br>'
                     '<span style="font-size:0.8rem;color:var(--text-muted);">You have 3 free offers to try it out.</span>'
                     '</div>'
                     '<div style="display:flex;gap:0.5rem;margin-top:1rem;flex-wrap:wrap;">'
-                    f'<a href="{profile_url}" style="flex:1;text-align:center;padding:0.75rem 1rem;'
-                    'background:linear-gradient(135deg,var(--accent),#0a3a33);color:#fff;border-radius:var(--radius-sm);'
-                    'font-weight:600;font-size:0.85rem;text-decoration:none;">Set Up Your Profile &rarr;</a>'
                     '<a href="/pricing" style="flex:1;text-align:center;padding:0.75rem 1rem;'
                     'background:var(--bg-card);color:var(--text-muted);border:1px solid var(--border);'
                     'border-radius:var(--radius-sm);font-weight:600;font-size:0.85rem;text-decoration:none;">View Plans</a>'
@@ -10514,7 +10518,15 @@ def profile():
     error = ""
 
     if request.method == "POST":
-        phone = request.form.get("phone", "").strip()
+        # Save only to the phone the signature was checked against.
+        # request.values reads the query string before the form, so a
+        # signed link for one phone (e.g. the empty-phone link /success
+        # used to hand out) plus a different phone in the form body used
+        # to verify as the first and save over the second -- anyone could
+        # rewrite any agent's name/license/brokerage, which auto-fill into
+        # their contracts. Security audit 2026-10-23.
+        if request.form.get("phone", "").strip() != phone:
+            abort(403)
         if not phone:
             error = "Phone number is required."
         else:
@@ -10735,7 +10747,7 @@ def profile():
       <input type="hidden" name="expires" value="{expires}">
       <input type="hidden" name="sig" value="{sig}">
       <label class="field-label">Phone number (used for SMS offers)</label>
-      <input type="text" name="phone" placeholder="+15125551234" value="{phone or existing.get('phone', '')}" required>
+      <input type="text" name="phone" value="{phone}" readonly required>
 
       <label class="field-label">Full name</label>
       <input type="text" name="name" placeholder="Jane Smith" value="{existing.get('name', '')}">
@@ -11809,6 +11821,10 @@ def sign_dashboard_url(phone, base_url=""):
 
 
 def verify_dashboard_signature(phone, expires_str, sig):
+    # A link for no phone isn't anyone's dashboard/profile -- /success used
+    # to sign one for every visitor, which then opened /profile's save form.
+    if not phone:
+        return False
     try:
         expires = int(expires_str)
     except (ValueError, TypeError):
