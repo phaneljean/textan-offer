@@ -95,6 +95,8 @@ Railway will:
 - `TREC_TEMPLATE_PATH` (default: `20-19_2.pdf`) — Path to the clean TREC form template
 - `OFFER_OUTPUT_DIR` (default: `generated_offers`) — Directory to store generated PDFs
 - `PORT` (default: `5000`) — Server port for Flask/Gunicorn
+- `SMS_NURTURE_ENABLED` (default off) — follow-up texts after a free user's 1st/2nd offer (`nurture.py`)
+- `SMS_NURTURE_PAYWALL_ENABLED` (default off, also needs the flag above) — the one promotional reminder 3 days after the paywall
 
 ### Payment Processing (Stripe)
 - `STRIPE_SECRET_KEY` — Stripe secret key (sk_test_... or sk_live_...)
