@@ -78,7 +78,7 @@ class GoogleSignIn(unittest.TestCase):
             self.assertEqual(self.c.get("/broker/login/google").status_code, 404)
             self.assertEqual(self.c.get("/broker/login/google/callback").status_code, 404)
             self.assertNotIn("Google (Sign-in)", self.c.get("/privacy").get_data(as_text=True))
-            self.assertNotIn("Single sign-on with Google", self.c.get("/trust").get_data(as_text=True))
+            self.assertNotIn("Sign in with Google</h3>", self.c.get("/trust").get_data(as_text=True))
 
     # --- on ---
     def test_button_and_redirect(self):
@@ -152,7 +152,7 @@ class GoogleSignIn(unittest.TestCase):
 
     def test_pages_mention_google_only_when_on(self):
         with mock.patch.dict(os.environ, ON):
-            self.assertIn("Single sign-on with Google", self.c.get("/trust").get_data(as_text=True))
+            self.assertIn("Sign in with Google</h3>", self.c.get("/trust").get_data(as_text=True))
             self.assertIn("Okta or SAML single sign-on", self.c.get("/trust").get_data(as_text=True))
             self.assertIn("Google (Sign-in)", self.c.get("/privacy").get_data(as_text=True))
 

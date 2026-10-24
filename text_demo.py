@@ -110,7 +110,7 @@ HTML = """
       <div class="td-tabs" role="tablist" aria-label="How texting an offer works">
         <button class="td-tab" type="button" role="tab" data-step="0"><span class="td-t"><span class="td-n">1</span>Text the terms</span><p>Price, down payment, closing days and the address, in one text.</p><span class="td-bar"><i></i></span></button>
         <button class="td-tab" type="button" role="tab" data-step="1"><span class="td-t"><span class="td-n">2</span>Reply YES</span><p>Check the summary it sends back, then confirm.</p><span class="td-bar"><i></i></span></button>
-        <button class="td-tab" type="button" role="tab" data-step="2"><span class="td-t"><span class="td-n">3</span>Open the filled PDF</span><p>The TREC 20&#8209;19 and its addenda, filled from your text.</p><span class="td-bar"><i></i></span></button>
+        <button class="td-tab" type="button" role="tab" data-step="2"><span class="td-t"><span class="td-n">3</span>Open the filled PDF</span><p>The TREC 20&#8209;19 and the forms that go with it, with your terms filled in.</p><span class="td-bar"><i></i></span></button>
       </div>
       <div class="td-ctl"><button id="tdPause" type="button">Pause</button><button id="tdReplay" type="button">Replay</button></div>
     </div>
@@ -135,7 +135,7 @@ HTML = """
       </div>
     </div>
   </div>
-  <p class="td-fine">Shown: the real replies and the real draft for the 123 Main St sample. Names and other terms are left blank for you to complete. Draft only: review every page before anyone signs.</p>
+  <p class="td-fine">Shown: the real replies (shortened) and the real draft for the 123 Main St sample. Some terms start from defaults you should check: earnest money, option fee, As Is, possession at closing, and conventional financing on the 40&#8209;11. Names and the rest are left blank for you to complete. Draft only: review every page before anyone signs.</p>
 """
 
 JS = r"""

@@ -114,16 +114,16 @@ def _controls() -> str:
     cards = []
     if _encryption_on():
         cards += [
-            ("lock", "Data encryption at rest", "Offers and drafts you generate, and Brokerage archive contracts, are encrypted with AES-256 before they&rsquo;re written to disk, and decrypted only when they&rsquo;re opened, sent or checked."),
-            ("key-round", "Encryption keys", "The key is a secret in our hosting environment, kept apart from the stored files and never in our code. A copy of the disk alone can&rsquo;t be read."),
+            ("lock", "Contract files encrypted at rest", "Offers and drafts you generate, and Brokerage archive contracts, are encrypted with AES-256 before they&rsquo;re written to disk, and decrypted only when they&rsquo;re opened, downloaded, sent or checked. Not covered: our database (account emails, phone numbers, offer terms and logs), copies that go out by email, and a file you send us for a hand check, which stays in our email inbox."),
+            ("key-round", "Encryption keys", "The key is a secret in our hosting environment, kept apart from the stored files and never in our code. A copy of the stored contract files alone can&rsquo;t be read."),
         ]
     google = _google_on()
-    signin = ("Brokers sign in with a one-time link emailed to an approved address, valid for 20 minutes"
+    signin = ("Brokers sign in with a link emailed to an approved address, valid for 20 minutes"
               + (", or with Google, which confirms the same address" if google else "")
               + ". No passwords are stored. Sessions are signed, HttpOnly cookies that expire after 14 days.")
     cards += [
-        ("mail", "Single sign-on with Google" if google else "Passwordless sign-in", signin),
-        ("user-check", "Access control", "Only the emails on a brokerage&rsquo;s account can sign in to its archive, and each brokerage sees only its own files. Ask us to remove an email and that access ends on the next page load."),
+        ("mail", "Sign in with Google" if google else "Passwordless sign-in", signin),
+        ("user-check", "Access control", "Only the emails on a brokerage&rsquo;s account can sign in to its archive, and each brokerage sees only its own files. Ask us to remove an email and that access ends on the next page load. Outside your team, only TxtAnOffer&rsquo;s founder can reach stored files, for support."),
         ("history", "Event logs", "Archive saves, downloads, deletions and exports, and broker sign-ins, are logged with the brokerage they belong to and kept about 90 days."),
         ("cpu", "Responsible AI", "No AI model reads your contract. TC Check is rule code, so your contracts are never used to train AI."),
     ]
@@ -138,7 +138,7 @@ def _google_vendor_row() -> str:
     if not _google_on():
         return ""
     return ('<tr><td>Google (Sign-in)</td><td>Only if a broker chooses &ldquo;Sign in with Google&rdquo;: '
-            'Google confirms their email address to us. We don&rsquo;t receive their password or other Google data.</td></tr>')
+            'Google confirms their email address to us. We never see their Google password, and we use and keep nothing else from their Google account.</td></tr>')
 
 
 def body() -> str:

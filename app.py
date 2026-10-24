@@ -123,6 +123,15 @@ def _nurture_tick():
     nurture.run_nurture_if_due(twilio_send_sms)
 
 
+@app.before_request
+def _cleanup_tick():
+    # Retention promises (30-day offer PDFs, ~90-day logs, 5-year archive
+    # purge -- privacy policy and /trust) used to run only from /sms, so a
+    # site with few texts never kept them. run_cleanup_if_due throttles
+    # itself to once per 6h and works in a background thread.
+    run_cleanup_if_due(OUTPUT_DIR)
+
+
 # One shared rule for the nav CTA, injected after each page's own <style>
 # so it wins the cascade. There are ~17 hand-copied navs in this file with
 # their own .nav-cta CSS; some let the pill wrap to two lines at phone width
@@ -697,8 +706,8 @@ def _home_trust() -> str:
     cards = [("Files you check", "Deleted",
               "Read for the report, then deleted. We keep short issue codes, not the file.")]
     if filecrypt.enabled():
-        cards.append(("Drafts and archived contracts", "Encrypted",
-                      "Encrypted with AES&#8209;256 on our servers, and decrypted only when they&rsquo;re opened, sent or checked."))
+        cards.append(("Offer PDFs and archived contracts", "Encrypted",
+                      "Encrypted with AES&#8209;256 on our servers, and decrypted only when they&rsquo;re opened, downloaded, sent or checked."))
     cards += [("Links to your PDFs", "Private", "Signed and set to expire, so they can&rsquo;t be guessed or shared forever."),
               ("Brokerage archive", "Your team only",
                ("Sign in with Google or an emailed link" if google_auth.enabled() else "Passwordless sign-in")
@@ -706,7 +715,7 @@ def _home_trust() -> str:
     grid = "".join(f'<div><span class="ptag">{t}</span><b>{h}</b><p>{p}</p></div>' for h, t, p in cards)
     return f"""<section class="trust">
   <h2>Checked.<br>Then deleted.</h2>
-  <p class="sub">A file you check is read for the report, then deleted. We keep short issue codes, not the file (bulk checks also keep file names). Two exceptions: a file you choose to send us for a hand check, and contracts sent to a Brokerage-plan archive, kept 5 years.</p>
+  <p class="sub">A file you check is read for the report, then deleted. We keep short issue codes, not the file (bulk checks also keep file names). Two exceptions: a file you choose to send us for a hand check (it stays in our email inbox), and contracts sent to a Brokerage-plan archive, kept 5 years.</p>
   <div class="protect">{grid}</div>
   <div class="facts facts4">
     <span><i>&#10003;</i>Built on the published TREC and Colorado forms</span>
@@ -967,7 +976,7 @@ __SITE_NAV__
 <section class="text" id="text">
   <div class="eyebrow">Text an offer</div>
   <h2>Text the terms.<br>Get a filled draft back.</h2>
-  <p class="sub">Price, down payment, closing days, address. Reply YES and the TREC 20&#8209;19 comes back filled in, ready to review.</p>
+  <p class="sub">Price, down payment, closing days, address. Reply YES and the TREC 20&#8209;19 comes back with your terms filled in, ready to review.</p>
   <div class="ctas">
     <a class="btn solid" href="sms:+18338970333" data-evt="workflow_offer_sms">Text (833) 897-0333</a>
     <a class="btn ghost" href="/pricing">See pricing</a>
@@ -7006,7 +7015,7 @@ def privacy():
 </div>
 </body>
 </html>"""
-    google_line = ("\n      <li><strong>Google (Sign-in)</strong> — Only if a broker chooses \u201cSign in with Google\u201d: Google confirms their email address to us; we don\u2019t receive their password or other Google data</li>" if google_auth.enabled() else "")
+    google_line = ("\n      <li><strong>Google (Sign-in)</strong> — Only if a broker chooses \u201cSign in with Google\u201d: Google confirms their email address to us; we never see their Google password, and we use and keep nothing else from their Google account</li>" if google_auth.enabled() else "")
     return html.replace("__PRIVACY_GOOGLE__", google_line)
 
 
@@ -8820,7 +8829,7 @@ def broker_login():
                 link = request.host_url.rstrip("/") + "/broker/login/verify?" + "&".join(f"{k}={_quote(str(v))}" for k, v in p.items())
                 send_html_email(
                     email, "Your TxtAnOffer sign-in link",
-                    f"Sign in to {b['name']}'s archive on TxtAnOffer:\n{link}\n\nThis link works once and expires in 20 minutes. If you didn't ask for it, ignore this email.",
+                    f"Sign in to {b['name']}'s archive on TxtAnOffer:\n{link}\n\nThis link expires in 20 minutes. If you didn't ask for it, ignore this email.",
                     f'<div style="font-family:Arial,sans-serif;font-size:14px;color:#0f1f2f;"><p>Sign in to <strong>{escape(b["name"])}</strong>&rsquo;s archive on TxtAnOffer:</p>'
                     f'<p><a href="{escape(link)}" style="display:inline-block;background:#0b5d52;color:#fff;padding:10px 18px;border-radius:999px;text-decoration:none;font-weight:700;">Sign in &rarr;</a></p>'
                     f'<p style="color:#5a6b7a;font-size:12px;">This link expires in 20 minutes. If you didn&rsquo;t ask for it, ignore this email.</p></div>',
@@ -8830,8 +8839,8 @@ def broker_login():
         msg = '<div class="flash">If that email belongs to a TxtAnOffer brokerage, a sign-in link is on its way. Check your inbox (and spam).</div>'
     body = ("""<div class="card" style="max-width:460px;margin:2rem auto;">
   <h1>Sign in to your archive</h1>
-  <p class="sub">""" + ("Sign in with Google, or get a one-time link by email. No password needed." if google_auth.enabled()
-                         else "We&rsquo;ll email you a one-time sign-in link. No password needed.") + """</p>
+  <p class="sub">""" + ("Sign in with Google, or get a sign-in link by email. No password needed." if google_auth.enabled()
+                         else "We&rsquo;ll email you a sign-in link. No password needed.") + """</p>
   """ + msg + """
   """ + _google_button() + """
   <form method="post"><input type="email" name="email" required placeholder="you@brokerage.com" autocomplete="email">

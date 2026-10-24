@@ -54,7 +54,7 @@ class FileCryptTests(unittest.TestCase):
         with _with_key():
             sealed = filecrypt.encrypt(PDF)
             self.assertTrue(sealed.startswith(filecrypt.MAGIC))
-            self.assertNotIn(b"%PDF", sealed)
+            self.assertNotIn(PDF[:256], sealed)  # header + first objects never appear in the clear
             self.assertEqual(filecrypt.decrypt(sealed), PDF)
             self.assertNotEqual(filecrypt.encrypt(PDF), sealed)  # fresh nonce each time
 
@@ -202,7 +202,7 @@ class TrustPageTests(unittest.TestCase):
         self.assertIn("Passwordless sign-in", off)
         with _with_key():
             on = c.get("/trust").get_data(as_text=True)
-        self.assertIn("Data encryption at rest", on)
+        self.assertIn("Contract files encrypted at rest", on)
         self.assertIn("Encryption keys", on)
 
     def test_no_claims_we_dont_have(self):
