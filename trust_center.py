@@ -100,11 +100,11 @@ def body() -> str:
 
   <div class="trust-section" id="contracts">
     <h2><span class="ti-badge">{_icon("file-check")}</span>Your contracts</h2>
-    <p class="sub">A contract is a confidential document. Here is exactly what happens when you upload one or forward it to tc@check.txtanoffer.com. The one exception is a file you choose to send us for a hand check (step 3).</p>
+    <p class="sub">A contract is a confidential document. Here is exactly what happens when you upload one or forward it to tc@check.txtanoffer.com. Two exceptions: a file you choose to send us for a hand check (step 3), and the Brokerage-plan archive (below).</p>
     <div class="flow">
       <div><b>1 &middot; Receive</b>Your PDF is written to a temporary file.</div>
       <div><b>2 &middot; Check</b>Rule code reads the form fields and builds your report.</div>
-      <div><b>3 &middot; Delete</b>The file is deleted, normally within seconds (bulk uploads: when the batch finishes). Except a hand check: if TC Check can&rsquo;t read your file and you choose to send it to us, that copy stays in our email inbox, with no set expiry, until we delete it.</div>
+      <div><b>3 &middot; Delete</b>The file is deleted, normally within seconds (bulk uploads: when the batch finishes). A hand check is different: if TC Check can&rsquo;t read your file and you choose to send it to us, that copy stays in our email inbox, with no set expiry, until we delete it.</div>
       <div><b>4 &middot; Record</b>We keep a short record &mdash; your email if you gave one and short issue codes &mdash; not the file or its contents. (Bulk checks keep a little more; see below.)</div>
     </div>
     <ul>
@@ -140,7 +140,7 @@ def body() -> str:
       <tr><td>Railway</td><td>Hosting &mdash; our app server and database run there</td></tr>
       <tr><td>SendGrid</td><td>Inbound email &mdash; receives contracts forwarded to tc@check.txtanoffer.com; backup outbound email</td></tr>
       <tr><td>Resend</td><td>Outbound email &mdash; TC Check reports, offer emails and account notices, and a file you send for a hand check, to our inbox</td></tr>
-      <tr><td>Google (Gmail)</td><td>Hosts the inbox that receives a file you choose to send us for a hand check, with your email</td></tr>
+      <tr><td>Google (Gmail)</td><td>Hosts the inbox that receives a file you choose to send us for a hand check, with your email address</td></tr>
       <tr><td>DocuSign</td><td>Only when you send an offer for signature: the PDF and the signers&rsquo; names and emails</td></tr>
       <tr><td>Your webhook</td><td>Only if you set one up (e.g. Zapier): offer data goes to the URL you choose</td></tr>
     </table>

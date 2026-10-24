@@ -255,8 +255,8 @@ class PrivacyDisclosesHandChecks(unittest.TestCase):
 
     def test_privacy_policy(self):
         for line in (
-            "and account notifications, and, if you send a file for a hand check, that file to our inbox</li>",
-            "<strong>Google (Gmail)</strong> — Hosts the inbox that receives a file you choose to send us for a hand check",
+            "and account notifications; if you send a file for a hand check from the web page, Resend also carries that file to our inbox</li>",
+            "<strong>Google (Gmail)</strong> — Hosts the inbox that receives a file you choose to send us for a hand check, with your email address</li>",
             "except a file you choose to send us for a hand check.</li>",
             "<li>Hand checks: a file you choose to send us after TC Check couldn&rsquo;t read it is kept in our email "
             "inbox with your email, with no set expiry, until we delete it. Ask support@txtanoffer.com to delete it sooner.</li>",
@@ -266,10 +266,10 @@ class PrivacyDisclosesHandChecks(unittest.TestCase):
 
     def test_trust_center(self):
         for line in (
-            "The one exception is a file you choose to send us for a hand check (step 3).",
-            "Except a hand check: if TC Check can&rsquo;t read your file and you choose to send it to us, that copy "
+            "Two exceptions: a file you choose to send us for a hand check (step 3), and the Brokerage-plan archive (below).",
+            "A hand check is different: if TC Check can&rsquo;t read your file and you choose to send it to us, that copy "
             "stays in our email inbox, with no set expiry, until we delete it.",
-            "<td>Google (Gmail)</td><td>Hosts the inbox that receives a file you choose to send us for a hand check",
+            "<td>Google (Gmail)</td><td>Hosts the inbox that receives a file you choose to send us for a hand check, with your email address</td>",
             "Processing is automated, except hand checks you request, which Phanel reads;",
         ):
             self.assertIn(line, self.trust, line)
@@ -277,6 +277,8 @@ class PrivacyDisclosesHandChecks(unittest.TestCase):
     def test_pricing_faq(self):
         self.assertIn("No. A file you check is deleted right after your report. If TC Check can&rsquo;t read it and you "
                       "choose to send it to us for a hand check, that copy stays in our inbox until we delete it.", self.faq)
+        self.assertIn("The other exception is on purpose: on the Brokerage plan,", self.faq)
+        self.assertNotIn("The one exception", self.faq)
 
     def test_no_reply_time_or_delete_after_reply_promise(self):
         for html in (self.privacy, self.trust, self.faq):

@@ -5177,7 +5177,7 @@ def pricing():
     </div>
     <div class="value-card">
       <div class="value-title">Do you keep my client&rsquo;s file?</div>
-      <div class="value-text">No. A file you check is deleted right after your report. If TC Check can&rsquo;t read it and you choose to send it to us for a hand check, that copy stays in our inbox until we delete it. If you get the report by email, its subject line includes the property address, and for bulk checks we keep each file&rsquo;s name and issue count, viewable at your batch link. The one exception is on purpose: on the Brokerage plan, contracts you forward or upload to your archive, and offers your agents text in, are kept 5 years for your records.</div>
+      <div class="value-text">No. A file you check is deleted right after your report. If TC Check can&rsquo;t read it and you choose to send it to us for a hand check, that copy stays in our inbox until we delete it. If you get the report by email, its subject line includes the property address, and for bulk checks we keep each file&rsquo;s name and issue count, viewable at your batch link. The other exception is on purpose: on the Brokerage plan, contracts you forward or upload to your archive, and offers your agents text in, are kept 5 years for your records.</div>
     </div>
     <div class="value-card">
       <div class="value-title">Can I cancel?</div>
@@ -6950,8 +6950,8 @@ def privacy():
       <li><strong>SendGrid</strong> — Inbound email: receives emails (and attached contracts) forwarded to tc@check.txtanoffer.com; also our backup outbound email provider</li>
       <li><strong>DocuSign</strong> — E-signature: when you send an offer for signature, the PDF and the signers&rsquo; names and emails</li>
       <li><strong>Your webhook</strong> — If you set up a webhook (e.g. Zapier), offer data is sent to the URL you choose</li>
-      <li><strong>Resend</strong> — Outbound email: sends TC Check report emails (your email address, the property address and the findings), offer emails with the generated PDF, and account notifications, and, if you send a file for a hand check, that file to our inbox</li>
-      <li><strong>Google (Gmail)</strong> — Hosts the inbox that receives a file you choose to send us for a hand check, with your email</li>
+      <li><strong>Resend</strong> — Outbound email: sends TC Check report emails (your email address, the property address and the findings), offer emails with the generated PDF, and account notifications; if you send a file for a hand check from the web page, Resend also carries that file to our inbox</li>
+      <li><strong>Google (Gmail)</strong> — Hosts the inbox that receives a file you choose to send us for a hand check, with your email address</li>
     </ul>
     <p>We may disclose information if required by law, legal process, or to protect the rights and safety of our users or the public.</p>
 
