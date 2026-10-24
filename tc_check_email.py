@@ -464,14 +464,14 @@ def reply_to_for(result: dict):
 
 _HAND_REVIEW_TEXT = (
     HAND_REVIEW_LINE + "\n\n"
-    "We couldn't read the form fields in that file. E-signed and scanned copies are often "
-    "flattened, so TC Check can't read them automatically. That isn't a finding about your contract.\n\n"
+    "We couldn't read the form fields in that file. E-signed copies are often flattened, "
+    "and scans have no form fields, so TC Check can't read them automatically. That isn't a finding about your contract.\n\n"
     "Reply to this email with the file attached. Your reply goes to Phanel at TxtAnOffer, who will "
     "check it by hand and write back. A file you send this way stays in that inbox; it isn't "
     "deleted automatically the way TC Check's own check is.\n\n"
     "If you have an unsigned, fillable copy from your forms software, you can also forward that "
     "to tc@check.txtanoffer.com for an automatic check.\n\n"
-    "A hand check flags blanks and mismatches, the same as TC Check. It isn't legal advice.\n\n"
+    "A hand check looks for the same kinds of blanks and mismatches TC Check flags. It isn't legal advice.\n\n"
     "-- TxtAnOffer TC Check"
 )
 
@@ -768,15 +768,15 @@ def _hand_review_html() -> str:
     # Grey, not red: nothing was found wrong with the contract.
     body = (
         f'<div style="background:#F5F5F7;border-radius:10px;padding:14px 16px;margin-bottom:18px;">'
-        f'<p style="{_P_STYLE}margin:0;">We couldn&rsquo;t read the form fields in that file. E-signed and scanned copies are often '
-        f'flattened, so TC Check can&rsquo;t read them automatically. That isn&rsquo;t a finding about your contract.</p></div>'
+        f'<p style="{_P_STYLE}margin:0;">We couldn&rsquo;t read the form fields in that file. E-signed copies are often flattened, '
+        f'and scans have no form fields, so TC Check can&rsquo;t read them automatically. That isn&rsquo;t a finding about your contract.</p></div>'
         f'<p style="{_P_STYLE}"><strong>Reply to this email with the file attached.</strong> Your reply goes to Phanel at TxtAnOffer, '
         f'who will check it by hand and write back. A file you send this way stays in that inbox; it isn&rsquo;t deleted '
         f'automatically the way TC Check&rsquo;s own check is.</p>'
         f'<p style="{_P_STYLE}">If you have an unsigned, fillable copy from your forms software, you can also forward that to '
         f'<a href="mailto:tc@check.txtanoffer.com" style="color:{_GREEN};font-weight:600;">tc@check.txtanoffer.com</a> for an automatic check.</p>'
         f'<p style="margin:24px 0 0;padding-top:16px;border-top:1px solid #eef0f2;font-size:11px;line-height:1.6;color:#8a9aa9;font-family:{_FONT};">'
-        f'A hand check flags blanks and mismatches, the same as TC Check. It isn&rsquo;t legal advice.</p>'
+        f'A hand check looks for the same kinds of blanks and mismatches TC Check flags. It isn&rsquo;t legal advice.</p>'
     )
     return _email_shell("Send it, we&rsquo;ll check it by hand.", "We couldn&rsquo;t read this file automatically", body)
 

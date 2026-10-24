@@ -4075,7 +4075,7 @@ function buildHandReview(data, formName) {
   return '<div class="unreadable-box" id="handReviewBox">' +
     '<p class="unreadable-title">Send it, we&rsquo;ll check it by hand.</p>' +
     '<p>We couldn&rsquo;t read the form fields in this file. It may be a flattened e-signed or scanned copy, or it may not be a ' + formName + '. That isn&rsquo;t a finding about your contract.</p>' +
-    '<p>Leave your email and we&rsquo;ll send this file to Phanel at TxtAnOffer, who will check it by hand and write back. A file you send this way stays in our inbox; it isn&rsquo;t deleted automatically the way TC Check&rsquo;s own check is.</p>' +
+    '<p>Leave your email and we&rsquo;ll send this file (and any addenda you added) to Phanel at TxtAnOffer, who will check it by hand and write back. A hand check looks for the same kinds of blanks and mismatches TC Check flags. It isn&rsquo;t legal advice. A file you send this way is emailed to our inbox and stays there; it isn&rsquo;t deleted automatically the way TC Check&rsquo;s own check is.</p>' +
     '<div class="gate-form"><input type="email" id="handReviewEmail" placeholder="work email" autocomplete="email" value="' + escapeHtml(prefill) + '" onkeydown="if(event.key===\\'Enter\\')sendHandReview()"><button type="button" class="pill solid" id="handReviewBtn" onclick="sendHandReview()">Send it for a hand check</button></div>' +
     '<div class="gate-error" id="handReviewError"></div>' +
     (data.free_report_not_used ? '<p class="unreadable-note">This check didn&rsquo;t use one of your free reports.</p>' : '') +

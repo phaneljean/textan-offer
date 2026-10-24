@@ -136,6 +136,11 @@ class Routes(unittest.TestCase):
         self.assertIn("Send it, we&rsquo;ll check it by hand.", html)
         self.assertIn("Reply to this email with the file attached.", text)
         self.assertIn("isn't deleted automatically", text)
+        # trec-qa 2026-10-24 edits, word for word.
+        for s in ("E-signed copies are often flattened, and scans have no form fields, so TC Check can't read them automatically.",
+                  "A hand check looks for the same kinds of blanks and mismatches TC Check flags. It isn't legal advice."):
+            self.assertIn(s, text)
+            self.assertIn(s.replace("'", "&rsquo;"), html)
         for bad in NEVER:
             self.assertNotIn(bad, text.lower(), bad)
             self.assertNotIn(bad, html.lower(), bad)
@@ -226,6 +231,10 @@ class PageCopy(unittest.TestCase):
         block = html[start:html.index("function renderResult", start)]
         self.assertIn("Send it, we&rsquo;ll check it by hand.", block)
         self.assertIn("isn&rsquo;t deleted automatically", block)
+        self.assertIn("Leave your email and we&rsquo;ll send this file (and any addenda you added) to Phanel at TxtAnOffer, "
+                      "who will check it by hand and write back. A hand check looks for the same kinds of blanks and "
+                      "mismatches TC Check flags. It isn&rsquo;t legal advice. A file you send this way is emailed to our "
+                      "inbox and stays there; it isn&rsquo;t deleted automatically the way TC Check&rsquo;s own check is.", block)
         self.assertIn("if (data.hand_review) return buildHandReview", html)
         for bad in NEVER:
             self.assertNotIn(bad, block.lower(), bad)
