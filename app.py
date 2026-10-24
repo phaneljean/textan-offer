@@ -253,7 +253,9 @@ _ENGAGEMENT_TYPES = ("js_ok", "hero_cta", "hero_sample", "hero_card", "dropzone_
                      "tool_calc_run", "tool_ics", "tool_copy_text", "tool_embed_copy", "hub_tool_link",
                      "guide_trec_official",
                      # first_screen.py, 2026-10-23
-                     "hero_broker_cta", "tc_title_copy_link") \
+                     "hero_broker_cta", "tc_title_copy_link",
+                     # homepage Text an offer -> /text-an-offer, 2026-10-24
+                     "text_learn_more") \
     + CHECK_CTA_EVENTS + SAMPLE_CTA_EVENTS + BOOK_CALL_EVENTS + (DROPZONE_INTERACT_EVENT,)
 # Pages whose beacons /v1/evt accepts: the ones with their own
 # track_page_view() call, plus _BEACON_ONLY_PAGES below.
@@ -385,6 +387,8 @@ _BEACON_ONLY_PAGES = {
     # /demo, 2026-10-14: ads point here, and without a page_view its ?src=
     # never reached the /analytics channel tables.
     "demo": "demo_page",
+    # /text-an-offer, 2026-10-24: the homepage section's "Learn more".
+    "text_an_offer": "text_offer_page",
 }
 _TRACKED_PAGES.update(_BEACON_ONLY_PAGES.values())
 
@@ -980,6 +984,7 @@ __SITE_NAV__
   <div class="ctas">
     <a class="btn solid" href="sms:+18338970333" data-evt="workflow_offer_sms">Text (833) 897-0333</a>
     <a class="btn ghost" href="/pricing">See pricing</a>
+    <a class="btn ghost" href="/text-an-offer" data-evt="text_learn_more">Learn more</a>
   </div>
   <p class="fine">By texting, you agree to receive SMS replies and reminders about your offers, plus up to 2 tips on the free trial. Reply STOP to opt out, HELP for help. Msg frequency varies. Msg &amp; data rates may apply. <a href="/privacy">Privacy</a> &middot; <a href="/terms">Terms</a></p>
 __TEXT_DEMO__
@@ -7886,6 +7891,58 @@ def co_deadlines_ics():
                              "Cache-Control": "no-store"})
 
 
+@app.route("/text-an-offer")
+def text_an_offer():
+    """How texting an offer works, in depth (text_offer_page.py) -- the
+    homepage Text an offer section's "Learn more". Same variables, nav and
+    footer as the homepage; the nav's "Text an offer" still goes to /#text,
+    where the demo plays."""
+    import text_offer_page as top
+    return """<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Text an offer: how it works — TxtAnOffer</title>
+  <meta name="description" content="Text the price, down payment, closing days and address to (833) 897-0333. Reply YES and get a TREC 20-19 draft with those terms filled in, plus the 40-11 when there's a loan. What it reads, what it fills, what stays yours.">
+  <link rel="icon" href="/static/favicon.ico?v=2" type="image/x-icon">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+  <style>
+  /* Homepage variables and type scale (see index()). */
+  :root{
+    --green:#0b5d52; --green-deep:#0a3f3a; --ink:#1d1d1f; --mute:#6e6e73;
+    --gray:#f5f5f7; --line:#e3e3e6; --red:#c62828; --amber:#9a6200;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-font-smoothing:antialiased;scroll-behavior:smooth}
+  body{font-family:Inter,-apple-system,system-ui,sans-serif;color:var(--ink);background:#fff;line-height:1.4}
+  a{color:inherit;text-decoration:none}
+""" + _SITE_CHROME_CSS + """
+  section{text-align:center;overflow:hidden}
+  .eyebrow{font-size:19px;font-weight:600;color:var(--green);margin-bottom:10px}
+  h1{font-weight:800;letter-spacing:-.035em}
+  h2{font-size:56px;line-height:1.07;letter-spacing:-.03em;font-weight:800}
+  .sub{font-size:24px;line-height:1.35;color:var(--mute);font-weight:500;max-width:680px;margin:18px auto 0}
+  .ctas{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:30px}
+  .btn{display:inline-block;font-size:17px;font-weight:600;padding:13px 26px;border-radius:980px;border:1.5px solid var(--green)}
+  .btn.solid{background:var(--green);color:#fff}
+  .btn.ghost{color:var(--green)}
+  .fine{font-size:13px;color:var(--mute);margin-top:18px}
+  @media (max-width:734px){
+    .eyebrow{font-size:17px}
+    .sub{font-size:19px}
+    .btn{font-size:16px;padding:12px 22px}
+  }
+""" + top.CSS + """  </style>
+</head>
+<body>
+""" + _site_nav() + top.body() + _SITE_FOOTER + """</body>
+</html>
+"""
+
+
 @app.route("/trust")
 def trust_center():
     """Trust Center -- same page shell as /privacy (head, styles, nav), body
@@ -11540,7 +11597,8 @@ _SITEMAP_PATHS = ["/", "/tc-check", "/brokers", "/pricing", "/trec-changes", "/t
                   "/guides/trec-20-19-checklist", "/guides/trec-20-19-effective-date",
                   "/guides/broker-record-retention-texas", "/guides/40-11-loan-amount-mismatch",
                   "/guides/trec-20-19-initials", "/guides/trec-39-11-amendment-mismatch",
-                  "/guides/trec-deadline-calculator", "/guides/transaction-coordinator-software-texas", "/archive", "/tools/colorado-deadlines"]
+                  "/guides/trec-deadline-calculator", "/guides/transaction-coordinator-software-texas", "/archive", "/tools/colorado-deadlines",
+                  "/text-an-offer"]
 
 
 @app.route("/favicon.ico")
