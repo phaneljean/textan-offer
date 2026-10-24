@@ -54,6 +54,7 @@ import first_screen
 from tc_report_pdf import generate_tc_report_pdf
 from rate_limit import check_and_increment
 from real_upload_alert import maybe_send_alert as maybe_send_real_upload_alert
+from real_upload_alert import maybe_send_unreadable_alert
 from tc_gate import get_client as get_tc_client, record_use as record_tc_use, save_email as save_tc_email
 from tc_nudge import run_followup_if_due as run_tc_followup_if_due
 from tc_check_email import (
@@ -61,6 +62,7 @@ from tc_check_email import (
     format_reply_body, format_reply_html, subject_line,
     format_no_pdf_reply, format_no_pdf_html,
     format_unreadable_reply, format_unreadable_html,
+    hand_review_email, reply_to_for, format_hand_review_request,
 )
 from tc_bulk import (
     extract_pdfs_from_zip, create_batch, get_batch, process_batch,
@@ -2872,6 +2874,9 @@ def tc_check():
     # to tell whether the homepage's widget converts differently from
     # /tc-check's, only a combined total.
     source_page = request.form.get("source_page") or "unknown"
+    # Deploy checks post source_page=claude_verify (normalized to "unknown"
+    # just below): never alert Phanel about our own verification run.
+    verify_run = source_page == "claude_verify"
     if source_page not in ("homepage", "tc_check_page"):
         source_page = "unknown"
 
@@ -2995,7 +3000,13 @@ def tc_check():
     # real_upload_alert.py for exactly what's excluded). Metadata only.
     maybe_send_real_upload_alert(
         result, f"web upload ({source_page})", src_tag=request.cookies.get("ta_src") or "direct",
-        sender=client["email"] or submitted_email, is_demo=is_demo, internal=_is_internal_traffic())
+        sender=client["email"] or submitted_email, is_demo=is_demo, internal=_is_internal_traffic() or verify_run)
+    # An unreadable file gets its own alert (S1): it's the likeliest first
+    # real file (a flattened e-sign export), and without this nobody sees it.
+    maybe_send_unreadable_alert(
+        result, f"web upload ({source_page})", src_tag=request.cookies.get("ta_src") or "direct",
+        sender=client["email"] or submitted_email, is_demo=is_demo, internal=_is_internal_traffic() or verify_run,
+        hand_review_on=bool(hand_review_email()))
 
     payload = dict(result)
     full_issues = payload.get("issues") or []
@@ -3036,6 +3047,9 @@ def tc_check():
             payload["free_reports_left"] = max(TC_FREE_FULL_REPORTS - client["use_count"] - 1, 0)
         else:
             payload["free_report_not_used"] = True
+    # The page shows "Send it, we'll check it by hand." + a send button only
+    # when there's an inbox to send it to (see tc_check_email.hand_review_email).
+    payload["hand_review"] = bool(not result.get("recognized") and not is_demo and hand_review_email())
 
     resp = jsonify(payload)
 
@@ -3053,7 +3067,8 @@ def tc_check():
 
         def _send_report(to_email=submitted_email, res=result, count=check_count):
             try:
-                send_html_email(to_email, subject_line(res), format_reply_body(res, count), format_reply_html(res, count))
+                send_html_email(to_email, subject_line(res), format_reply_body(res, count), format_reply_html(res, count),
+                                reply_to=reply_to_for(res))
             except Exception as e:
                 print(f"[tc_check] report email failed for {to_email}: {e}")
 
@@ -3101,6 +3116,58 @@ def tc_check_report_pdf():
     resp.headers["Content-Type"] = "application/pdf"
     resp.headers["Content-Disposition"] = f'attachment; filename="{base_name}-tc-check-report.pdf"'
     return resp
+
+
+@app.route("/v1/tc/check/hand-review", methods=["POST"])
+def tc_check_hand_review():
+    """S1 (2026-10-24): the "Send it, we'll check it by hand." button under
+    an unreadable web result. The browser still holds the file it just
+    uploaded, so this re-posts it with the visitor's email and we email it,
+    attached, to HAND_REVIEW_EMAIL with Reply-To set to the visitor --
+    Phanel answers by replying. Nothing is written to disk or the volume
+    here; the copy lives in that inbox (the page says so).
+
+    Only reachable from the page when HAND_REVIEW_EMAIL is set (the result
+    payload's hand_review flag); 503 otherwise, so a stale page can't claim
+    a send that went nowhere. Confirms only after the send succeeds."""
+    to = hand_review_email()
+    if not to:
+        return jsonify({"error": "Hand checks aren't set up yet."}), 503
+    client_ip = request.remote_addr or "unknown"
+    if not check_and_increment(f"tc_hand_review:{client_ip}", limit=5):
+        return jsonify({"error": "Too many requests. Try again in a bit."}), 429
+
+    email = (request.form.get("email") or "").strip()
+    if "@" not in email or "." not in email.split("@")[-1] or len(email) > 254:
+        return jsonify({"error": "Enter your email so Phanel can write back."}), 400
+    uploads = [f for f in request.files.getlist("file") if f and f.filename]
+    if not uploads or len(uploads) > 4 or any(not f.filename.lower().endswith(".pdf") for f in uploads):
+        return jsonify({"error": "Attach the PDF you just checked."}), 400
+
+    raw_page = request.form.get("source_page") or ""
+    source_page = raw_page if raw_page in ("homepage", "tc_check_page") else "unknown"
+    src_tag = request.cookies.get("ta_src") or "direct"
+    # Our own deploy check: exercise everything except the send itself.
+    if raw_page == "claude_verify":
+        return jsonify({"ok": True, "verify": True})
+
+    import base64
+    attachments = [{"filename": os.path.basename(f.filename), "content": base64.b64encode(f.read()).decode()}
+                   for f in uploads]
+    subject, text = format_hand_review_request(email, source_page, src_tag, [a["filename"] for a in attachments])
+    sent = send_html_email(to, subject, text, "<pre style=\"font-family:sans-serif;white-space:pre-wrap\">" + escape(text) + "</pre>",
+                           reply_to=email, attachments=attachments)
+    if not sent.get("success"):
+        return jsonify({"error": "That didn't send. Try again in a minute."}), 502
+
+    cid = request.cookies.get("tc_cid")
+    if cid and not get_tc_client(cid)["email"]:
+        save_tc_email(cid, email)
+    track_event("tc_hand_review_requested", email.lower(), {
+        "files": len(attachments), "source": src_tag, "source_page": source_page,
+        "internal": _is_internal_traffic(), "visitor": request.cookies.get("ta_vid", ""),
+    })
+    return jsonify({"ok": True})
 
 
 @app.route("/v1/tc/check/email/<token>", methods=["POST"])
@@ -3185,6 +3252,8 @@ def tc_check_email_inbound(token):
         "sender": sender,
     })
     maybe_send_real_upload_alert(result, "email forward", src_tag="email", sender=sender)
+    maybe_send_unreadable_alert(result, "email forward", src_tag="email", sender=sender,
+                                hand_review_on=bool(hand_review_email()))
 
     # Brokerage archive (2026-10-07): a forward from a brokerage's own TC/
     # login email or a roster agent is kept, not just checked -- unless the
@@ -3204,8 +3273,10 @@ def tc_check_email_inbound(token):
         track_event("archive_saved", None, {"brokerage_id": brokerage["id"], "source": "forward", "files": saved, "duplicates": dupes})
 
     check_count = get_tc_check_count_for_sender(sender)
+    # Reply-To is the hand-review inbox on an unreadable file, so "reply
+    # with the file attached" reaches a person (tc_check_email.reply_to_for).
     send_html_email(sender, subject_line(result), format_reply_body(result, check_count, archived),
-                    format_reply_html(result, check_count, archived))
+                    format_reply_html(result, check_count, archived), reply_to=reply_to_for(result))
     return "", 200
 
 
@@ -3788,9 +3859,14 @@ function revealResult() {
   if (r.top < 20 || r.top > window.innerHeight * 0.6) resultEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 let pendingAddendumFiles = [];
+// The exact files of the last check, kept in the browser only, so an
+// unreadable result's "send it for a hand check" button can send them
+// without asking the visitor to pick them again.
+let lastCheckedFiles = [];
 
 function uploadFile(file, email, isDemo) {
   pendingFile = file;
+  lastCheckedFiles = [file].concat(isDemo ? [] : pendingAddendumFiles);
   resultEl.classList.remove('show');
   emailOptinConfirm.classList.remove('show');
   checkWrap.classList.remove('has-result');
@@ -3979,12 +4055,61 @@ function buildIssueGroups(issues) {
 // contract. Worded for the state the visitor picked, so a Colorado visitor
 // isn't told about the TREC 20-19.
 function buildUnreadable(data, formName) {
+  if (data.hand_review) return buildHandReview(data, formName);
   return '<div class="unreadable-box">' +
     '<p class="unreadable-title">We couldn&rsquo;t read the form fields in this file.</p>' +
     '<p>It may be scanned, or flattened when it was signed or exported, or it may not be a ' + formName + '. That isn&rsquo;t a finding about your contract: TC Check needs a fillable ' + formName + ' PDF (addenda are checked alongside it).</p>' +
     '<p>Try an unsigned copy exported from your forms software.</p>' +
     (data.free_report_not_used ? '<p class="unreadable-note">This check didn&rsquo;t use one of your free reports.</p>' : '') +
   '</div>';
+}
+
+// S1 (2026-10-24): with a hand-review inbox configured (data.hand_review),
+// an unreadable file isn't a dead end. "Send it, we'll check it by hand."
+// is Phanel-approved wording, kept word for word. The file only leaves the
+// browser again if the visitor presses the button, and the note says that
+// copy isn't auto-deleted. No reply-time promise for a single file (D4).
+function buildHandReview(data, formName) {
+  let prefill = '';
+  try { prefill = (emailOptinInput && emailOptinInput.value) || localStorage.getItem('tc_email_hint') || ''; } catch (e) {}
+  return '<div class="unreadable-box" id="handReviewBox">' +
+    '<p class="unreadable-title">Send it, we&rsquo;ll check it by hand.</p>' +
+    '<p>We couldn&rsquo;t read the form fields in this file. It may be a flattened e-signed or scanned copy, or it may not be a ' + formName + '. That isn&rsquo;t a finding about your contract.</p>' +
+    '<p>Leave your email and we&rsquo;ll send this file to Phanel at TxtAnOffer, who will check it by hand and write back. A file you send this way stays in our inbox; it isn&rsquo;t deleted automatically the way TC Check&rsquo;s own check is.</p>' +
+    '<div class="gate-form"><input type="email" id="handReviewEmail" placeholder="work email" autocomplete="email" value="' + escapeHtml(prefill) + '" onkeydown="if(event.key===\\'Enter\\')sendHandReview()"><button type="button" class="pill solid" id="handReviewBtn" onclick="sendHandReview()">Send it for a hand check</button></div>' +
+    '<div class="gate-error" id="handReviewError"></div>' +
+    (data.free_report_not_used ? '<p class="unreadable-note">This check didn&rsquo;t use one of your free reports.</p>' : '') +
+  '</div>';
+}
+
+function sendHandReview() {
+  const input = document.getElementById('handReviewEmail');
+  const errorEl = document.getElementById('handReviewError');
+  const btn = document.getElementById('handReviewBtn');
+  const email = (input && input.value || '').trim();
+  if (!email || email.indexOf('@') === -1) { errorEl.textContent = 'Enter your email so Phanel can write back.'; return; }
+  if (!lastCheckedFiles.length) { errorEl.textContent = 'Drop the file again, then send it.'; return; }
+  errorEl.textContent = '';
+  btn.disabled = true;
+  btn.textContent = 'Sending\u2026';
+  const fd = new FormData();
+  lastCheckedFiles.forEach(f => fd.append('file', f));
+  fd.append('email', email);
+  fd.append('source_page', 'tc_check_page');
+  try { localStorage.setItem('tc_email_hint', email); } catch (e) {}
+  fetch('/v1/tc/check/hand-review', { method: 'POST', body: fd })
+    .then(r => r.json())
+    .then(d => {
+      if (d.error) throw new Error(d.error);
+      document.getElementById('handReviewBox').innerHTML =
+        '<p class="unreadable-title">Sent.</p>' +
+        '<p>Phanel will check it by hand and write back to ' + escapeHtml(email) + '.</p>';
+    })
+    .catch(err => {
+      btn.disabled = false;
+      btn.textContent = 'Send it for a hand check';
+      errorEl.textContent = (err && err.message) || 'That didn\\'t send. Try again in a minute.';
+    });
 }
 
 function renderResult(data, file, isDemo) {

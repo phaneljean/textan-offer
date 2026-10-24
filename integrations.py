@@ -24,7 +24,8 @@ RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
 FROM_EMAIL = os.environ.get("FROM_EMAIL", "offers@txtanoffer.com")
 
 
-def _send_via_resend(to_email: str, subject: str, text_body: str, html_body: str = None, attachments: list = None) -> dict:
+def _send_via_resend(to_email: str, subject: str, text_body: str, html_body: str = None, attachments: list = None,
+                     reply_to: str = None) -> dict:
     """attachments: [{"filename": ..., "content": <base64 str>}]. Resend
     doesn't rewrite links unless a tracking subdomain is configured (it
     isn't), so URLs reach the recipient as-is, same as SendGrid with click
@@ -37,6 +38,8 @@ def _send_via_resend(to_email: str, subject: str, text_body: str, html_body: str
     }
     if html_body:
         payload["html"] = html_body
+    if reply_to:
+        payload["reply_to"] = reply_to
     if attachments:
         payload["attachments"] = attachments
     req = urllib.request.Request(
@@ -146,24 +149,30 @@ def send_plain_email(to_email: str, subject: str, text_body: str) -> dict:
     return _send_email(to_email, subject, [{"type": "text/plain", "value": text_body}])
 
 
-def send_html_email(to_email: str, subject: str, text_body: str, html_body: str) -> dict:
+def send_html_email(to_email: str, subject: str, text_body: str, html_body: str,
+                    reply_to: str = None, attachments: list = None) -> dict:
     """Same as send_plain_email but with a branded HTML part alongside the
     plain-text fallback (multipart/alternative -- text/plain MUST come
     first in SendGrid's content array, or delivery is rejected). Every
     client that can render HTML shows html_body; anything that can't
     (some corporate filters, screen readers set to plain-text-only) still
-    gets a fully readable text_body."""
+    gets a fully readable text_body.
+
+    reply_to: where a reply goes instead of FROM_EMAIL (offers@, whose
+    forwarding isn't something this code controls) -- used by the
+    hand-review path so "reply with the file" reaches a person.
+    attachments: [{"filename": ..., "content": <base64 str>}], PDFs."""
     return _send_email(to_email, subject, [
         {"type": "text/plain", "value": text_body},
         {"type": "text/html", "value": html_body},
-    ])
+    ], reply_to=reply_to, attachments=attachments)
 
 
-def _send_email(to_email: str, subject: str, content: list) -> dict:
+def _send_email(to_email: str, subject: str, content: list, reply_to: str = None, attachments: list = None) -> dict:
     if RESEND_API_KEY:
         text = next((c["value"] for c in content if c["type"] == "text/plain"), "")
         html = next((c["value"] for c in content if c["type"] == "text/html"), None)
-        return _send_via_resend(to_email, subject, text, html)
+        return _send_via_resend(to_email, subject, text, html, attachments=attachments, reply_to=reply_to)
     if not SENDGRID_API_KEY:
         return {"success": False, "error": "Email not configured (RESEND_API_KEY / SENDGRID_API_KEY missing)"}
 
@@ -176,6 +185,11 @@ def _send_email(to_email: str, subject: str, content: list) -> dict:
             "click_tracking": {"enable": False, "enable_text": False}
         },
     }
+    if reply_to:
+        payload["reply_to"] = {"email": reply_to}
+    if attachments:
+        payload["attachments"] = [{"content": a["content"], "filename": a["filename"],
+                                   "type": "application/pdf", "disposition": "attachment"} for a in attachments]
 
     data = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(

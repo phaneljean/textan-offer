@@ -429,6 +429,70 @@ _ARCHIVE_TEXT_CO = (
 )
 
 
+# --- Hand check for files TC Check can't read (S1, 2026-10-24) ---------
+# The likeliest first real file is a flattened Dotloop/Authentisign export,
+# which comes back unreadable. Instead of a dead end ("re-send a fillable
+# PDF"), the reply offers a hand check -- but only when there's a real inbox
+# to send it to. HAND_REVIEW_EMAIL is set on Railway by Phanel; there's no
+# default on purpose (the repo is public, and an unset address must not
+# silently route files somewhere). Unset = the old reply, unchanged.
+#
+# The file only goes to that inbox when the sender chooses to send it
+# (replying with it attached, or the web page's "send it" button). The
+# automatic check still deletes its temp copy, so the "checked, then
+# deleted" wording elsewhere on the site stays true for the automatic path.
+# A copy sent for a hand check is NOT deleted automatically; the copy below
+# says so. No reply-time promise: D4 only sets one for the paid 10-file
+# audit, not a single free file.
+HAND_REVIEW_LINE = "Send it, we'll check it by hand."  # Phanel-approved, word for word
+
+
+def hand_review_email() -> str:
+    """Read per call (not at import) so it can be toggled without a restart
+    in tests, and so an unset var can never be cached as a stale address."""
+    return os.environ.get("HAND_REVIEW_EMAIL", "").strip()
+
+
+def reply_to_for(result: dict):
+    """Reply-To for the report email: the hand-review inbox on an unreadable
+    file (so "reply with the file" reaches a person, not offers@), else
+    None (the default From)."""
+    if result is not None and not result.get("recognized", True) and hand_review_email():
+        return hand_review_email()
+    return None
+
+
+_HAND_REVIEW_TEXT = (
+    HAND_REVIEW_LINE + "\n\n"
+    "We couldn't read the form fields in that file. E-signed and scanned copies are often "
+    "flattened, so TC Check can't read them automatically. That isn't a finding about your contract.\n\n"
+    "Reply to this email with the file attached. Your reply goes to Phanel at TxtAnOffer, who will "
+    "check it by hand and write back. A file you send this way stays in that inbox; it isn't "
+    "deleted automatically the way TC Check's own check is.\n\n"
+    "If you have an unsigned, fillable copy from your forms software, you can also forward that "
+    "to tc@check.txtanoffer.com for an automatic check.\n\n"
+    "A hand check flags blanks and mismatches, the same as TC Check. It isn't legal advice.\n\n"
+    "-- TxtAnOffer TC Check"
+)
+
+
+def format_hand_review_request(sender: str, source_page: str = "", src_tag: str = "", filenames: list = None) -> tuple:
+    """(subject, text) for the email to HAND_REVIEW_EMAIL when a web visitor
+    sends an unreadable file for a hand check. Reply-To is the visitor, so
+    Phanel answers by replying."""
+    names = ", ".join(filenames or []) or "(no name)"
+    return (f"Hand check requested: {sender}", "\n".join([
+        f"{sender} asked for a hand check after TC Check couldn't read their file on the web.",
+        "The file is attached. Reply to this email to answer them (Reply-To is their address).",
+        "",
+        f"Source page: {source_page or 'unknown'}",
+        f"src tag: {src_tag or 'direct'}",
+        f"Files: {names}",
+        "",
+        "This copy isn't deleted automatically. Delete it once you've replied.",
+    ]))
+
+
 def _is_co(result: dict) -> bool:
     return (result or {}).get("state") == "CO"
 
@@ -470,6 +534,8 @@ def _archived_text(archived) -> str:
 
 def format_reply_body(result: dict, check_count: int = 0, archived: dict = None) -> str:
     if not result["recognized"]:
+        if hand_review_email():
+            return _HAND_REVIEW_TEXT
         return (
             "We couldn't read that as a TREC 20-19 or Colorado CBS1 we recognize.\n\n"
             "This works with AcroForm-fillable TREC 20-19 and Colorado CBS1 PDFs (not scanned "
@@ -660,6 +726,8 @@ def _archived_html(archived) -> str:
 
 def format_reply_html(result: dict, check_count: int = 0, archived: dict = None) -> str:
     if not result["recognized"]:
+        if hand_review_email():
+            return _hand_review_html()
         body = (
             f'<p style="{_P_STYLE}">This works with AcroForm-fillable TREC 20-19 and Colorado CBS1 PDFs '
             f"(not scanned or flattened files). If you forwarded a scan, try re-sending "
@@ -694,6 +762,23 @@ def format_reply_html(result: dict, check_count: int = 0, archived: dict = None)
     body += _booking_html(bool(issues))
     body += _footer_html(check_count, _is_co(result))
     return _email_shell(heading, subheading, body, kicker="TC File Check report")
+
+
+def _hand_review_html() -> str:
+    # Grey, not red: nothing was found wrong with the contract.
+    body = (
+        f'<div style="background:#F5F5F7;border-radius:10px;padding:14px 16px;margin-bottom:18px;">'
+        f'<p style="{_P_STYLE}margin:0;">We couldn&rsquo;t read the form fields in that file. E-signed and scanned copies are often '
+        f'flattened, so TC Check can&rsquo;t read them automatically. That isn&rsquo;t a finding about your contract.</p></div>'
+        f'<p style="{_P_STYLE}"><strong>Reply to this email with the file attached.</strong> Your reply goes to Phanel at TxtAnOffer, '
+        f'who will check it by hand and write back. A file you send this way stays in that inbox; it isn&rsquo;t deleted '
+        f'automatically the way TC Check&rsquo;s own check is.</p>'
+        f'<p style="{_P_STYLE}">If you have an unsigned, fillable copy from your forms software, you can also forward that to '
+        f'<a href="mailto:tc@check.txtanoffer.com" style="color:{_GREEN};font-weight:600;">tc@check.txtanoffer.com</a> for an automatic check.</p>'
+        f'<p style="margin:24px 0 0;padding-top:16px;border-top:1px solid #eef0f2;font-size:11px;line-height:1.6;color:#8a9aa9;font-family:{_FONT};">'
+        f'A hand check flags blanks and mismatches, the same as TC Check. It isn&rsquo;t legal advice.</p>'
+    )
+    return _email_shell("Send it, we&rsquo;ll check it by hand.", "We couldn&rsquo;t read this file automatically", body)
 
 
 def format_no_pdf_html() -> str:

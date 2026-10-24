@@ -78,14 +78,7 @@ def format_alert(result: dict, source: str, src_tag: str = "", sender: str = "")
     return subject, "\n".join(lines)
 
 
-def maybe_send_alert(result: dict, source: str, src_tag: str = "", sender: str = "",
-                     is_demo: bool = False, internal: bool = False) -> bool:
-    """Sends the alert on a background thread (never delays the visitor's
-    response) when should_alert() passes. Returns whether one was queued."""
-    if not should_alert(result, sender, is_demo, internal):
-        return False
-    subject, body = format_alert(result, source, src_tag, sender)
-
+def _queue(subject: str, body: str) -> None:
     def _send():
         try:
             send_plain_email(ALERT_TO, subject, body)
@@ -93,4 +86,54 @@ def maybe_send_alert(result: dict, source: str, src_tag: str = "", sender: str =
             print(f"[real_upload_alert] send failed: {e}")
 
     threading.Thread(target=_send, daemon=True).start()
+
+
+def maybe_send_alert(result: dict, source: str, src_tag: str = "", sender: str = "",
+                     is_demo: bool = False, internal: bool = False) -> bool:
+    """Sends the alert on a background thread (never delays the visitor's
+    response) when should_alert() passes. Returns whether one was queued."""
+    if not should_alert(result, sender, is_demo, internal):
+        return False
+    _queue(*format_alert(result, source, src_tag, sender))
+    return True
+
+
+# --- Unreadable files (S1, 2026-10-24) ---------------------------------
+# should_alert() above skips unrecognized files on purpose (a blank or
+# random PDF isn't a closed file). But the likeliest first real file is a
+# flattened Dotloop/Authentisign export, which comes back unreadable -- and
+# then nobody ever saw it. This is a separate, clearly-labeled alert so
+# Phanel can follow up on the hand check. Same exclusions as above (demo,
+# his own traffic and addresses); the web route also counts
+# source_page=claude_verify as internal. Metadata only, no file.
+
+def should_alert_unreadable(result: dict, sender: str = "", is_demo: bool = False, internal: bool = False) -> bool:
+    if is_demo or internal or is_internal_email(sender):
+        return False
+    return bool(result) and not result.get("recognized")
+
+
+def format_unreadable_alert(source: str, src_tag: str = "", sender: str = "", hand_review_on: bool = False) -> tuple:
+    subject = f"Unreadable TC Check file ({source}): {sender or 'unknown sender'}"
+    lines = [
+        "An outside sender's file couldn't be read automatically (flattened, scanned, or not a 20-19/CBS1).",
+        "",
+        f"Source: {source}",
+        f"src tag: {src_tag or 'direct'}",
+        f"Sender: {sender or 'unknown (no email given)'}",
+        "",
+        ("They were offered a hand check. If they send the file, it arrives at HAND_REVIEW_EMAIL."
+         if hand_review_on else
+         "HAND_REVIEW_EMAIL isn't set, so they got the old 're-send a fillable PDF' reply, with no hand-check offer."),
+        "",
+        "The file was not kept or attached. See /analytics for the full event.",
+    ]
+    return subject, "\n".join(lines)
+
+
+def maybe_send_unreadable_alert(result: dict, source: str, src_tag: str = "", sender: str = "",
+                                is_demo: bool = False, internal: bool = False, hand_review_on: bool = False) -> bool:
+    if not should_alert_unreadable(result, sender, is_demo, internal):
+        return False
+    _queue(*format_unreadable_alert(source, src_tag, sender, hand_review_on))
     return True
