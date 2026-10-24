@@ -44,6 +44,7 @@ from cleanup import run_cleanup_if_due, encrypt_legacy_files_in_background
 import archive as archive_store
 import filecrypt
 import google_auth
+import text_demo
 filecrypt.startup_check()
 encrypt_legacy_files_in_background(OUTPUT_DIR)
 import crm
@@ -816,32 +817,14 @@ def index():
   .tile .big.eff{font-size:40px}
 
   /* ---------- 3. text an offer: dark, phone ---------- */
-  .text{background:var(--green-deep);color:#fff;padding-bottom:0}
+  .text{background:var(--green-deep);color:#fff}
   .text .eyebrow{color:#9fd4c9}
   .text .sub{color:#b9d3ce}
   .text .btn.solid{background:#fff;color:var(--green-deep);border-color:#fff}
   .text .btn.ghost{color:#fff;border-color:rgba(255,255,255,.55)}
   .text .fine{color:#8fb1aa;max-width:560px;margin-left:auto;margin-right:auto}
   .text .fine a{text-decoration:underline}
-  /* Real photo (Unsplash License; credits in the ad-creative work folder,
-     2026-10-23_homepage_simplify/PHOTO_CREDITS.txt): hand + phone cut out
-     and baked onto the exact section green (#0a3f3a). The SMS screen is
-     live HTML laid over the photo's blank screen; coordinates are % of the
-     978x1309 image. */
-  .shot{position:relative;width:500px;max-width:100%;margin:56px auto 0;aspect-ratio:978/1309}
-  .scene{position:absolute;inset:0;background:url(/static/hand_phone.jpg) center/100% 100% no-repeat}
-  .screen{position:absolute;left:37.12%;top:2.75%;width:50.51%;height:82.2%;transform:rotate(.6deg);
-          background:#fff;border-radius:10.5% / 4.8%;overflow:hidden;container-type:inline-size;
-          text-align:left;color:var(--ink)}
-  .scr-in{padding:15cqw 4.6cqw 0}
-  .island{position:absolute;top:0;left:50%;transform:translateX(-50%);width:53%;height:3.7%;background:#0d0d0d;
-          border-radius:0 0 7cqw 7cqw}
-  .who{text-align:center;font-size:4.3cqw;color:var(--mute);margin-bottom:5.5cqw;padding-bottom:4cqw;border-bottom:1px solid #eee}
-  .who b{display:block;color:var(--ink);font-size:4.8cqw}
-  .bub{max-width:84%;padding:3.4cqw 4.6cqw;border-radius:6.5cqw;font-size:5.3cqw;line-height:1.35;margin-bottom:3.4cqw}
-  .me{margin-left:auto;background:var(--green);color:#fff;border-bottom-right-radius:2cqw}
-  .them{background:#e9e9eb;border-bottom-left-radius:2cqw}
-  .them u{color:var(--green);text-decoration:none;font-weight:600}
+__TEXT_DEMO_CSS__
 
   /* ---------- 4. brokers: one oversized number ---------- */
   .brokers{padding-bottom:110px}
@@ -881,9 +864,6 @@ def index():
     .tile .mono{font-size:26px}
     .tile p{font-size:17px}
     .blank{width:100px}
-    /* mobile: hand spans the full viewport width so the screen stays readable */
-    .shot{width:100vw;max-width:none;margin:40px 0 0 calc(50% - 50vw)}
-    .bub{font-size:6cqw}
     .brokers,.trust{padding-bottom:72px}
     .num{font-size:150px}
     .facts{flex-direction:column;align-items:center;gap:16px}
@@ -983,28 +963,17 @@ __SITE_NAV__
   <div class="ctas"><a class="link" href="/tc-check#what-it-checks" data-evt="home_check_link">See everything it checks</a></div>
 </section>
 
-<!-- 3. TEXT AN OFFER: the namesake product, one phone -->
+<!-- 3. TEXT AN OFFER: the namesake product, played as a 3-step demo (text_demo.py) -->
 <section class="text" id="text">
   <div class="eyebrow">Text an offer</div>
-  <h2>Text the terms.<br>Get a draft back.</h2>
-  <p class="sub">Price, down payment, closing days, address. Confirm with YES and a TREC 20-19 draft comes back to review before anyone signs.</p>
+  <h2>Text the terms.<br>Get a filled draft back.</h2>
+  <p class="sub">Price, down payment, closing days, address. Reply YES and the TREC 20&#8209;19 comes back filled in, ready to review.</p>
   <div class="ctas">
     <a class="btn solid" href="sms:+18338970333" data-evt="workflow_offer_sms">Text (833) 897-0333</a>
     <a class="btn ghost" href="/pricing">See pricing</a>
   </div>
   <p class="fine">By texting, you agree to receive SMS replies and reminders about your offers, plus up to 2 tips on the free trial. Reply STOP to opt out, HELP for help. Msg frequency varies. Msg &amp; data rates may apply. <a href="/privacy">Privacy</a> &middot; <a href="/terms">Terms</a></p>
-  <div class="shot" role="img" aria-label="A hand holding a phone showing a text to TxtAnOffer and the reply that the TREC draft is ready">
-    <div class="scene">
-      <div class="screen">
-        <div class="island"></div>
-        <div class="scr-in">
-        <div class="who"><b>TxtAnOffer</b>(833) 897-0333</div>
-        <div class="bub me">725k 3% 21day 123 Main St, Austin, TX</div>
-        <div class="bub them">Your TREC draft for 123 Main St, Austin, TX is ready.<br><br>Review and email it: <u>txtanoffer.com/&hellip;</u><br><br>Draft only: review every page before signing.</div>
-        </div>
-      </div>
-    </div>
-  </div>
+__TEXT_DEMO__
 </section>
 
 <!-- 4. BROKERS: one number. Texas only: /tc-check/bulk checks TREC 20-19s. -->
@@ -1022,13 +991,16 @@ __SITE_NAV__
 __HOME_TRUST__
 
 __SITE_FOOTER__
-</body>
+__TEXT_DEMO_JS__</body>
 </html>
 """
     html = (html.replace("__SITE_CHROME_CSS__", _SITE_CHROME_CSS)
                 .replace("__SITE_NAV__", _site_nav(text_href="#text"))
                 .replace("__SITE_FOOTER__", _SITE_FOOTER)
                 .replace("__HOME_TRUST__", _home_trust())
+                .replace("__TEXT_DEMO_CSS__", text_demo.CSS)
+                .replace("__TEXT_DEMO__", text_demo.HTML)
+                .replace("__TEXT_DEMO_JS__", text_demo.JS)
                 .replace("__HOME_FINDINGS_TX__", _home_findings("tx"))
                 .replace("__HOME_FINDINGS_CO__", _home_findings("co")))
     # Carry ?src=name (e.g. from a Direct Reach email) onto every /tc-check
