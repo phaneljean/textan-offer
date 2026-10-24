@@ -45,8 +45,13 @@ EXTRA_CSS = """
   .report-btn b {display:block;font-size:0.9rem;color:var(--text);margin-bottom:0.2rem;}
   .report-btn span {font-size:0.8rem;color:var(--text-muted);}
   .report-btn:hover {border-color:var(--accent);}
-  @media(max-width:820px){ .trust-cards{grid-template-columns:1fr 1fr;} .flow{grid-template-columns:1fr 1fr;} }
-  @media(max-width:520px){ .trust-cards,.flow,.report-grid{grid-template-columns:1fr;} .trust-section{padding:1.4rem 1.1rem;} }
+  .ctrl-grid {display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin:0.5rem 0 1.5rem;}
+  .ctrl {border:1px solid var(--border);border-radius:var(--radius-sm);padding:1.1rem;}
+  .ctrl h3 {font-size:0.92rem;font-weight:700;margin:0.55rem 0 0.35rem;}
+  .ctrl p {font-size:0.82rem;line-height:1.6;}
+  .ctrl-note {font-size:0.8rem;color:var(--text-muted);margin:-0.5rem 0 1.25rem;}
+  @media(max-width:820px){ .trust-cards,.ctrl-grid{grid-template-columns:1fr 1fr;} .flow{grid-template-columns:1fr 1fr;} }
+  @media(max-width:520px){ .trust-cards,.ctrl-grid,.flow,.report-grid{grid-template-columns:1fr;} .trust-section{padding:1.4rem 1.1rem;} }
   .ti {width:22px;height:22px;color:var(--accent);flex-shrink:0;}
   .ti-badge {display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:12px;background:var(--accent-tint);margin-bottom:0.8rem;}
   .ti-badge .ti {width:24px;height:24px;}
@@ -69,6 +74,11 @@ _ICONS = {
     'scale': '<path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z" /><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z" /><path d="M7 21h10" /><path d="M12 3v18" /><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2" />',
     'handshake': '<path d="m11 17 2 2a1 1 0 1 0 3-3" /><path d="m14 14 2.5 2.5a1 1 0 1 0 3-3l-3.88-3.88a3 3 0 0 0-4.24 0l-.88.88a1 1 0 1 1-3-3l2.81-2.81a5.79 5.79 0 0 1 7.06-.87l.47.28a2 2 0 0 0 1.42.25L21 4" /><path d="m21 3 1 11h-2" /><path d="M3 3 2 14l6.5 6.5a1 1 0 1 0 3-3" /><path d="M3 4h8" />',
     'hand-heart': '<path d="M11 14h2a2 2 0 1 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 16" /><path d="m7 20 1.6-1.4c.3-.4.8-.6 1.4-.6h4c1.1 0 2.1-.4 2.8-1.2l4.6-4.4a2 2 0 0 0-2.75-2.91l-4.2 3.9" /><path d="m2 15 6 6" /><path d="M19.5 8.5c.7-.7 1.5-1.6 1.5-2.7A2.73 2.73 0 0 0 16 4a2.78 2.78 0 0 0-5 1.8c0 1.2.8 2 1.5 2.8L16 12Z" />',
+    'key-round': '<path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z" /><circle cx="16.5" cy="7.5" r=".5" fill="currentColor" />',
+    'history': '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" /><path d="M12 7v5l4 2" />',
+    'user-check': '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><polyline points="16 11 18 13 22 9" />',
+    'mail': '<rect width="20" height="16" x="2" y="4" rx="2" /><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />',
+    'cpu': '<rect width="16" height="16" x="4" y="4" rx="2" /><rect width="6" height="6" x="9" y="9" rx="1" /><path d="M15 2v2" /><path d="M15 20v2" /><path d="M2 15h2" /><path d="M2 9h2" /><path d="M20 15h2" /><path d="M20 9h2" /><path d="M9 2v2" /><path d="M9 20v2" />',
 }
 
 
@@ -81,13 +91,42 @@ def _mail(subject: str) -> str:
     return "mailto:support@txtanoffer.com?subject=" + subject.replace(" ", "%20")
 
 
+def _encryption_on() -> bool:
+    try:
+        import filecrypt
+        return filecrypt.enabled()
+    except Exception:
+        return False
+
+
+def _controls() -> str:
+    """Security and controls cards. The two encryption cards appear only
+    while FILE_ENCRYPTION_KEY is set, so the page never claims encryption
+    that isn't running."""
+    cards = []
+    if _encryption_on():
+        cards += [
+            ("lock", "Data encryption at rest", "Brokerage archive contracts are encrypted with AES-256 before they&rsquo;re written to disk, and decrypted only when a signed-in user of that brokerage downloads them."),
+            ("key-round", "Encryption keys", "The key is a secret in our hosting environment, kept apart from the stored files and never in our code. A copy of the disk alone can&rsquo;t be read."),
+        ]
+    cards += [
+        ("mail", "Passwordless sign-in", "Brokers sign in with a one-time link emailed to an approved address, valid for 20 minutes. No passwords are stored. Sessions are signed, HttpOnly cookies that expire after 14 days."),
+        ("user-check", "Access control", "Only the emails on a brokerage&rsquo;s account can sign in to its archive, and each brokerage sees only its own files. Ask us to remove an email and that access ends on the next page load."),
+        ("history", "Event logs", "Archive saves, downloads, deletions and exports, and broker sign-ins, are logged with the brokerage they belong to and kept about 90 days."),
+        ("cpu", "Responsible AI", "No AI model reads your contract. TC Check is rule code, so your contracts are never used to train AI."),
+    ]
+    grid = "".join(f'<div class="ctrl"><span class="ti-badge">{_icon(i)}</span><h3>{t}</h3><p>{d}</p></div>' for i, t, d in cards)
+    return (f'<div class="ctrl-grid">{grid}</div>'
+            '<p class="ctrl-note">Not available yet: single sign-on (Okta, Google Workspace), SCIM provisioning, or a SOC&nbsp;2 report.</p>')
+
+
 def body() -> str:
     return f"""
 <div class="container trust">
   <div class="page-header trust-hero">
     <span class="hero-icon">{_icon("hand-heart")}</span>
     <h1>Trust Center</h1>
-    <div class="updated">Last reviewed October 13, 2026</div>
+    <div class="updated">Last reviewed October 24, 2026</div>
     <p>How TxtAnOffer handles your contracts, your data and your trust &mdash; in plain language. Everything here matches our <a href="/privacy" style="color:var(--accent-dark);text-decoration:underline;">Privacy Policy</a> and <a href="/terms" style="color:var(--accent-dark);text-decoration:underline;">Terms</a>; if anything ever differs, those documents control.</p>
   </div>
 
@@ -153,8 +192,9 @@ def body() -> str:
   </div>
 
   <div class="trust-section" id="security">
-    <h2><span class="ti-badge">{_icon("lock")}</span>Security</h2>
+    <h2><span class="ti-badge">{_icon("lock")}</span>Security and controls</h2>
     <p class="sub">Reasonable, plain measures &mdash; described honestly.</p>
+    {_controls()}
     <ul>
       <li>The site is served over HTTPS.</li>
       <li>Payment card data is handled entirely by Stripe.</li>

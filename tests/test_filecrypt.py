@@ -186,5 +186,23 @@ class LegacyMigrationTests(unittest.TestCase):
             self.assertEqual(second["encrypted"], 0)
 
 
+class TrustPageTests(unittest.TestCase):
+    def test_encryption_cards_only_while_key_is_set(self):
+        c = app_module.app.test_client()
+        off = c.get("/trust").get_data(as_text=True)
+        self.assertNotIn("encryption at rest", off.lower())
+        self.assertIn("Passwordless sign-in", off)
+        with _with_key():
+            on = c.get("/trust").get_data(as_text=True)
+        self.assertIn("Data encryption at rest", on)
+        self.assertIn("Encryption keys", on)
+
+    def test_no_claims_we_dont_have(self):
+        with _with_key():
+            html = app_module.app.test_client().get("/trust").get_data(as_text=True)
+        self.assertNotIn("KMS", html)
+        self.assertIn("Not available yet: single sign-on", html)
+
+
 if __name__ == "__main__":
     unittest.main()
