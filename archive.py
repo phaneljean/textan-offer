@@ -8,7 +8,9 @@ file after the report. Files live on the Railway volume under
 OUTPUT_DIR/archive/<brokerage_id>/ (a subfolder, so cleanup.py's 30-day
 top-level PDF sweep never touches them) and are purged after
 ARCHIVE_RETENTION_DAYS (5 years). Access is only through a signed-in broker
-session (see broker_auth.py) -- never by a guessable URL.
+session (see broker_auth.py) -- never by a guessable URL. With
+FILE_ENCRYPTION_KEY set, files are encrypted at rest (filecrypt.py); always
+read them through read_file(), never open() the path directly.
 """
 import hashlib
 import json
@@ -17,6 +19,8 @@ import sqlite3
 import time
 import uuid
 from datetime import datetime, timedelta
+
+import filecrypt
 
 DB_PATH = os.environ.get("DATABASE_PATH", "subscriptions.db")
 OUTPUT_DIR = os.environ.get("OFFER_OUTPUT_DIR", "generated_offers")
@@ -141,8 +145,7 @@ def save_file(brokerage_id: int, data: bytes, original_name: str, source: str, s
     os.makedirs(folder, exist_ok=True)
     stored = uuid.uuid4().hex + ".pdf"
     path = os.path.join(folder, stored)
-    with open(path, "wb") as f:
-        f.write(data)
+    filecrypt.write_file(path, data)
 
     result = result or {}
     prop = result.get("property") or {}
@@ -194,6 +197,12 @@ def get_file(file_id: int, brokerage_id: int):
     return d
 
 
+def read_file(f: dict) -> bytes:
+    """Plaintext PDF bytes for a get_file()/list_files() record."""
+    path = f.get("path") or os.path.join(ARCHIVE_DIR, str(int(f["brokerage_id"])), f["stored_name"])
+    return filecrypt.read_file(path)
+
+
 def delete_file(file_id: int, brokerage_id: int) -> bool:
     f = get_file(file_id, brokerage_id)
     if not f:
@@ -207,6 +216,47 @@ def delete_file(file_id: int, brokerage_id: int) -> bool:
     conn.commit()
     conn.close()
     return True
+
+
+def encrypt_legacy_files() -> dict:
+    """Encrypt archive files saved before FILE_ENCRYPTION_KEY was set. Each
+    file is replaced only after its ciphertext decrypts back to bytes whose
+    sha256 matches the one recorded at upload. Safe to run repeatedly (and
+    from two workers at once); a no-op while the key is unset."""
+    counts = {"encrypted": 0, "already": 0, "missing": 0, "mismatch": 0}
+    if not filecrypt.enabled():
+        return counts
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    try:
+        rows = conn.execute("SELECT brokerage_id, stored_name, sha256 FROM archive_files").fetchall()
+    except sqlite3.OperationalError:
+        rows = []
+    conn.close()
+    for r in rows:
+        path = os.path.join(ARCHIVE_DIR, str(int(r["brokerage_id"])), r["stored_name"])
+        try:
+            with open(path, "rb") as f:
+                raw = f.read()
+        except OSError:
+            counts["missing"] += 1
+            continue
+        if filecrypt.is_encrypted(raw):
+            counts["already"] += 1
+            continue
+        if hashlib.sha256(raw).hexdigest() != r["sha256"]:
+            counts["mismatch"] += 1  # never touch a file that isn't what was uploaded
+            continue
+        sealed = filecrypt.encrypt(raw)
+        if hashlib.sha256(filecrypt.decrypt(sealed)).hexdigest() != r["sha256"]:
+            counts["mismatch"] += 1
+            continue
+        tmp = f"{path}.{os.getpid()}.{uuid.uuid4().hex[:8]}.tmp"
+        with open(tmp, "wb") as f:
+            f.write(sealed)
+        os.replace(tmp, path)
+        counts["encrypted"] += 1
+    return counts
 
 
 def set_archive_forwards(brokerage_id: int, on: bool):
@@ -240,3 +290,9 @@ def purge_expired(max_age_days: int = ARCHIVE_RETENTION_DAYS) -> int:
 
 
 init_archive_tables()
+
+
+if __name__ == "__main__":
+    import sys
+    if "--encrypt-existing" in sys.argv:
+        print(encrypt_legacy_files())

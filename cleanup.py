@@ -103,6 +103,13 @@ def run_cleanup_if_due(output_dir: str):
                     print(f"[cleanup] Purged {archive_deleted} archived file(s) past the 5-year retention")
             except Exception as e:
                 print(f"[cleanup] Archive purge error: {e}")
+            try:
+                from archive import encrypt_legacy_files
+                enc = encrypt_legacy_files()
+                if enc["encrypted"] or enc["mismatch"]:
+                    print(f"[cleanup] Archive encryption: {enc}")
+            except Exception as e:
+                print(f"[cleanup] Archive encryption error: {e}")
             if pdfs_deleted or logs_deleted:
                 print(f"[cleanup] Deleted {pdfs_deleted} old PDF(s), {logs_deleted} old SMS/event log row(s)")
         except Exception as e:

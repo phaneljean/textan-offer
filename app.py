@@ -42,6 +42,8 @@ from sponsors import create_sponsor, list_sponsors, set_sponsor_active
 from sms_utils import parse_incoming_sms
 from cleanup import run_cleanup_if_due
 import archive as archive_store
+import filecrypt
+filecrypt.startup_check()
 import crm
 import broker_auth
 from reminders import run_reminders_if_due
@@ -8989,9 +8991,12 @@ def broker_archive_file(file_id):
     f = archive_store.get_file(file_id, cur[0]["id"])
     if not f or not os.path.isfile(f["path"]):
         abort(404)
+    data = archive_store.read_file(f)
     track_event("archive_download", None, {"brokerage_id": cur[0]["id"], "file_id": file_id})
-    return send_from_directory(os.path.dirname(f["path"]), os.path.basename(f["path"]), as_attachment=True,
-                               download_name=re.sub(r"[^A-Za-z0-9._ -]", "_", f["original_name"] or "contract.pdf"))
+    safe = re.sub(r"[^A-Za-z0-9._ -]", "_", f["original_name"] or "contract.pdf")
+    return Response(data, mimetype="application/pdf",
+                    headers={"Content-Disposition": f'attachment; filename="{safe}"',
+                             "Cache-Control": "no-store"})
 
 
 @app.route("/broker/archive/file/<int:file_id>/delete", methods=["POST"])
@@ -9021,7 +9026,7 @@ def broker_archive_export():
             path = os.path.join(archive_store.ARCHIVE_DIR, str(b["id"]), f["stored_name"])
             if os.path.isfile(path):
                 safe = re.sub(r"[^A-Za-z0-9._ -]", "_", f["original_name"] or "contract.pdf")
-                zf.write(path, arcname=f"executed/{f['created_at'][:10]}_{f['id']}_{safe}")
+                zf.writestr(f"executed/{f['created_at'][:10]}_{f['id']}_{safe}", archive_store.read_file(f))
         for r in list_brokerage_records(b["id"], limit=100000):
             path = os.path.join(OUTPUT_DIR, r["filename"])
             if "/" not in r["filename"] and os.path.isfile(path):
