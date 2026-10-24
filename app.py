@@ -688,6 +688,33 @@ _SITE_FOOTER = """<footer>
 """
 
 
+def _home_trust() -> str:
+    """Homepage section 5. The encryption card appears only while
+    FILE_ENCRYPTION_KEY is set (same rule as the Trust Center), so the
+    homepage never claims encryption that isn't running."""
+    cards = [("Files you check", "Deleted",
+              "Read for the report, then deleted. We keep short issue codes, not the file.")]
+    if filecrypt.enabled():
+        cards.append(("Drafts and archived contracts", "Encrypted",
+                      "Encrypted with AES&#8209;256 on our servers, and decrypted only when they&rsquo;re opened, sent or checked."))
+    cards += [("Links to your PDFs", "Private", "Signed and set to expire, so they can&rsquo;t be guessed or shared forever."),
+              ("Brokerage archive", "Your team only",
+               "Passwordless sign-in for the emails on your account. Each brokerage sees only its own files.")]
+    grid = "".join(f'<div><span class="ptag">{t}</span><b>{h}</b><p>{p}</p></div>' for h, t, p in cards)
+    return f"""<section class="trust">
+  <h2>Checked.<br>Then deleted.</h2>
+  <p class="sub">A file you check is read for the report, then deleted. We keep short issue codes, not the file (bulk checks also keep file names). Two exceptions: a file you choose to send us for a hand check, and contracts sent to a Brokerage-plan archive, kept 5 years.</p>
+  <div class="protect">{grid}</div>
+  <div class="facts facts4">
+    <span><i>&#10003;</i>Built on the published TREC and Colorado forms</span>
+    <span><i>&#10003;</i>No AI reads your contract</span>
+    <span><i>&#10003;</i>Flags issues, not legal advice</span>
+    <span><i>&#10003;</i>A real person answers</span>
+  </div>
+  <div class="ctas"><a class="link" href="/trust#security">See everything that&rsquo;s protected</a></div>
+</section>"""
+
+
 @app.route("/")
 def index():
     # Simplified 2026-10-23 (ad-creative mockup, Phanel-approved, copy passed
@@ -823,6 +850,12 @@ def index():
   .facts{display:flex;justify-content:center;gap:56px;margin-top:44px;font-size:17px;font-weight:600;flex-wrap:wrap}
   .facts span{display:flex;align-items:center;gap:8px}
   .facts i{width:22px;height:22px;border-radius:50%;background:var(--green);color:#fff;font-style:normal;font-size:12px;display:grid;place-items:center}
+  .protect{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;max-width:980px;margin:44px auto 0;text-align:left}
+  .protect div{background:#fff;border:1px solid var(--line);border-radius:18px;padding:24px 24px 26px}
+  .protect b{display:block;font-size:19px;font-weight:700;letter-spacing:-.01em}
+  .protect .ptag{display:inline-block;margin-bottom:12px;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--green)}
+  .facts4{gap:20px 34px;font-size:16px}
+  .protect p{margin-top:8px;font-size:16px;line-height:1.45;color:var(--mute)}
 
   /* ---------- mobile (734px break) ---------- */
   @media (max-width:734px){
@@ -983,17 +1016,8 @@ __SITE_NAV__
   </div>
 </section>
 
-<!-- 5. TRUST: one promise -->
-<section class="trust">
-  <h2>Checked.<br>Then deleted.</h2>
-  <p class="sub">A file you check is read for the report, then deleted. We keep short issue codes, not the file (bulk checks also keep file names). The exception: contracts sent to a Brokerage-plan archive, kept 5 years.</p>
-  <div class="facts">
-    <span><i>&#10003;</i>Built on the published TREC and Colorado forms</span>
-    <span><i>&#10003;</i>Flags issues, not legal advice</span>
-    <span><i>&#10003;</i>A real person answers</span>
-  </div>
-  <div class="ctas"><a class="link" href="/trust">Visit the Trust Center</a></div>
-</section>
+<!-- 5. TRUST: one promise, then what's protected (see _home_trust) -->
+__HOME_TRUST__
 
 __SITE_FOOTER__
 </body>
@@ -1002,6 +1026,7 @@ __SITE_FOOTER__
     html = (html.replace("__SITE_CHROME_CSS__", _SITE_CHROME_CSS)
                 .replace("__SITE_NAV__", _site_nav(text_href="#text"))
                 .replace("__SITE_FOOTER__", _SITE_FOOTER)
+                .replace("__HOME_TRUST__", _home_trust())
                 .replace("__HOME_FINDINGS_TX__", _home_findings("tx"))
                 .replace("__HOME_FINDINGS_CO__", _home_findings("co")))
     # Carry ?src=name (e.g. from a Direct Reach email) onto every /tc-check

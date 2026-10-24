@@ -68,8 +68,8 @@ class OfferFilenameCollision(unittest.TestCase):
                 f2.write(b"second")
         self.assertNotEqual(p1, p2)
         self.assertTrue(p2.endswith("_bbbbbb.pdf"))
-        with open(p1, "rb") as f:
-            self.assertEqual(f.read(), b"first")
+        import filecrypt
+        self.assertEqual(filecrypt.read_file(p1), b"first")  # decrypts when FILE_ENCRYPTION_KEY is set
 
 
 if __name__ == "__main__":

@@ -20,7 +20,6 @@ os.environ["DATABASE_PATH"] = os.path.join(_TMP, "test.db")
 os.environ["OFFER_OUTPUT_DIR"] = os.path.join(_TMP, "offers")
 os.makedirs(os.environ["OFFER_OUTPUT_DIR"], exist_ok=True)
 os.environ["ANALYTICS_PASSWORD"] = "test-internal"
-os.environ.pop("FILE_ENCRYPTION_KEY", None)
 for _k in ("APIFY_API_TOKEN", "TWILIO_AUTH_TOKEN", "RESEND_API_KEY", "SENDGRID_API_KEY"):
     os.environ[_k] = ""
 
@@ -43,6 +42,10 @@ def _with_key():
     return mock.patch.dict(os.environ, {"FILE_ENCRYPTION_KEY": KEY})
 
 
+def _no_key():
+    return mock.patch.dict(os.environ, {"FILE_ENCRYPTION_KEY": ""})
+
+
 def _raw(path):
     with open(path, "rb") as f:
         return f.read()
@@ -62,7 +65,8 @@ class GeneratedOfferEncryption(unittest.TestCase):
         self.assertNotIn(b"123 Main St", raw)
 
     def test_without_key_offers_stay_plaintext(self):
-        path = pdf_filler.fill_offer_pdf(dict(PARSED), "+15125550102")
+        with _no_key():
+            path = pdf_filler.fill_offer_pdf(dict(PARSED), "+15125550102")
         self.assertTrue(_raw(path).startswith(b"%PDF"))
 
     def test_signed_link_serves_the_pdf(self):
@@ -121,7 +125,8 @@ class LegacyOfferEncryption(unittest.TestCase):
 
     def test_noop_without_key(self):
         self._plain("old.pdf")
-        self.assertEqual(cleanup.encrypt_legacy_offers(self.dir), 0)
+        with _no_key():
+            self.assertEqual(cleanup.encrypt_legacy_offers(self.dir), 0)
 
     def test_converts_keeps_mtime_and_is_repeatable(self):
         pdf = self._plain("old.pdf", age_days=20)
@@ -144,6 +149,20 @@ class LegacyOfferEncryption(unittest.TestCase):
             cleanup.encrypt_legacy_offers(self.dir)
         self.assertEqual(cleanup.cleanup_old_pdfs(self.dir), 1)
         self.assertFalse(os.path.exists(pdf))
+
+
+class HomepageProtection(unittest.TestCase):
+    def test_encryption_card_only_while_key_is_set(self):
+        c = app_module.app.test_client()
+        with _no_key():
+            off = c.get("/").get_data(as_text=True)
+        self.assertNotIn("AES&#8209;256", off)
+        self.assertIn("Links to your PDFs", off)
+        with _with_key():
+            on = c.get("/").get_data(as_text=True)
+        self.assertIn("Encrypted with AES&#8209;256", on)
+        self.assertIn("Two exceptions: a file you choose to send us for a hand check", on)
+        self.assertNotIn("__HOME_TRUST__", on)
 
 
 if __name__ == "__main__":

@@ -20,7 +20,6 @@ os.environ["DATABASE_PATH"] = os.path.join(_TMP, "test.db")
 os.environ["OFFER_OUTPUT_DIR"] = os.path.join(_TMP, "offers")
 os.makedirs(os.environ["OFFER_OUTPUT_DIR"], exist_ok=True)
 os.environ["ANALYTICS_PASSWORD"] = "test-internal"
-os.environ.pop("FILE_ENCRYPTION_KEY", None)
 for _k in ("APIFY_API_TOKEN", "TWILIO_AUTH_TOKEN", "RESEND_API_KEY", "SENDGRID_API_KEY"):
     os.environ[_k] = ""
 
@@ -39,6 +38,10 @@ OTHER_KEY = filecrypt.new_key()
 
 def _with_key(key=KEY):
     return mock.patch.dict(os.environ, {"FILE_ENCRYPTION_KEY": key})
+
+
+def _no_key():
+    return mock.patch.dict(os.environ, {"FILE_ENCRYPTION_KEY": ""})
 
 
 def _on_disk(rec):
@@ -61,14 +64,15 @@ class FileCryptTests(unittest.TestCase):
             self.assertEqual(filecrypt.encrypt(sealed), sealed)
 
     def test_no_key_means_plaintext_both_ways(self):
-        self.assertFalse(filecrypt.enabled())
-        self.assertEqual(filecrypt.encrypt(PDF), PDF)
-        self.assertEqual(filecrypt.decrypt(PDF), PDF)
+        with _no_key():
+            self.assertFalse(filecrypt.enabled())
+            self.assertEqual(filecrypt.encrypt(PDF), PDF)
+            self.assertEqual(filecrypt.decrypt(PDF), PDF)
 
     def test_encrypted_file_without_key_fails_loudly(self):
         with _with_key():
             sealed = filecrypt.encrypt(PDF)
-        with self.assertRaises(filecrypt.FileCryptError):
+        with _no_key(), self.assertRaises(filecrypt.FileCryptError):
             filecrypt.decrypt(sealed)
 
     def test_wrong_key_and_tampering_fail(self):
@@ -143,7 +147,8 @@ class ArchiveEncryptionTests(unittest.TestCase):
         self.assertEqual(zf.read(executed[0]), PDF + b"\n% export")
 
     def test_legacy_plaintext_still_downloads_after_key_is_set(self):
-        rec = self._save(PDF + b"\n% legacy-read")  # saved before the key existed
+        with _no_key():
+            rec = self._save(PDF + b"\n% legacy-read")  # saved before the key existed
         self.assertEqual(_on_disk(rec), PDF + b"\n% legacy-read")
         with _with_key():
             r = self.client.get(f"/broker/archive/file/{rec['id']}")
@@ -155,11 +160,13 @@ class LegacyMigrationTests(unittest.TestCase):
         self.b = brokerages.create_brokerage("Legacy Realty", tc_email="tc@legacy-test.example")
 
     def _save(self, data):
-        return archive.save_file(self.b["id"], data, "old.pdf", "upload", "", {})
+        with _no_key():  # these files predate the key
+            return archive.save_file(self.b["id"], data, "old.pdf", "upload", "", {})
 
     def test_noop_without_key(self):
         rec = self._save(PDF + b"\n% noop")
-        self.assertEqual(archive.encrypt_legacy_files()["encrypted"], 0)
+        with _no_key():
+            self.assertEqual(archive.encrypt_legacy_files()["encrypted"], 0)
         self.assertEqual(_on_disk(rec), PDF + b"\n% noop")
 
     def test_converts_verifies_and_is_repeatable(self):
@@ -189,7 +196,8 @@ class LegacyMigrationTests(unittest.TestCase):
 class TrustPageTests(unittest.TestCase):
     def test_encryption_cards_only_while_key_is_set(self):
         c = app_module.app.test_client()
-        off = c.get("/trust").get_data(as_text=True)
+        with _no_key():
+            off = c.get("/trust").get_data(as_text=True)
         self.assertNotIn("encryption at rest", off.lower())
         self.assertIn("Passwordless sign-in", off)
         with _with_key():

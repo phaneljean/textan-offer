@@ -106,7 +106,7 @@ def _controls() -> str:
     cards = []
     if _encryption_on():
         cards += [
-            ("lock", "Data encryption at rest", "Brokerage archive contracts are encrypted with AES-256 before they&rsquo;re written to disk, and decrypted only when a signed-in user of that brokerage downloads them."),
+            ("lock", "Data encryption at rest", "Offers and drafts you generate, and Brokerage archive contracts, are encrypted with AES-256 before they&rsquo;re written to disk, and decrypted only when they&rsquo;re opened, sent or checked."),
             ("key-round", "Encryption keys", "The key is a secret in our hosting environment, kept apart from the stored files and never in our code. A copy of the disk alone can&rsquo;t be read."),
         ]
     cards += [
