@@ -8858,7 +8858,8 @@ def broker_login():
         msg = '<div class="flash">If that email belongs to a TxtAnOffer brokerage, a sign-in link is on its way. Check your inbox (and spam).</div>'
     body = ("""<div class="card" style="max-width:460px;margin:2rem auto;">
   <h1>Sign in to your archive</h1>
-  <p class="sub">We&rsquo;ll email you a one-time sign-in link. No password needed.</p>
+  <p class="sub">""" + ("Sign in with Google, or get a one-time link by email. No password needed." if google_auth.enabled()
+                         else "We&rsquo;ll email you a one-time sign-in link. No password needed.") + """</p>
   """ + msg + """
   """ + _google_button() + """
   <form method="post"><input type="email" name="email" required placeholder="you@brokerage.com" autocomplete="email">
