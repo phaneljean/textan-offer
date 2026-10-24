@@ -99,6 +99,14 @@ def _encryption_on() -> bool:
         return False
 
 
+def _google_on() -> bool:
+    try:
+        import google_auth
+        return google_auth.enabled()
+    except Exception:
+        return False
+
+
 def _controls() -> str:
     """Security and controls cards. The two encryption cards appear only
     while FILE_ENCRYPTION_KEY is set, so the page never claims encryption
@@ -109,15 +117,28 @@ def _controls() -> str:
             ("lock", "Data encryption at rest", "Offers and drafts you generate, and Brokerage archive contracts, are encrypted with AES-256 before they&rsquo;re written to disk, and decrypted only when they&rsquo;re opened, sent or checked."),
             ("key-round", "Encryption keys", "The key is a secret in our hosting environment, kept apart from the stored files and never in our code. A copy of the disk alone can&rsquo;t be read."),
         ]
+    google = _google_on()
+    signin = ("Brokers sign in with a one-time link emailed to an approved address, valid for 20 minutes"
+              + (", or with Google, which confirms the same address" if google else "")
+              + ". No passwords are stored. Sessions are signed, HttpOnly cookies that expire after 14 days.")
     cards += [
-        ("mail", "Passwordless sign-in", "Brokers sign in with a one-time link emailed to an approved address, valid for 20 minutes. No passwords are stored. Sessions are signed, HttpOnly cookies that expire after 14 days."),
+        ("mail", "Single sign-on with Google" if google else "Passwordless sign-in", signin),
         ("user-check", "Access control", "Only the emails on a brokerage&rsquo;s account can sign in to its archive, and each brokerage sees only its own files. Ask us to remove an email and that access ends on the next page load."),
         ("history", "Event logs", "Archive saves, downloads, deletions and exports, and broker sign-ins, are logged with the brokerage they belong to and kept about 90 days."),
         ("cpu", "Responsible AI", "No AI model reads your contract. TC Check is rule code, so your contracts are never used to train AI."),
     ]
     grid = "".join(f'<div class="ctrl"><span class="ti-badge">{_icon(i)}</span><h3>{t}</h3><p>{d}</p></div>' for i, t, d in cards)
     return (f'<div class="ctrl-grid">{grid}</div>'
-            '<p class="ctrl-note">Not available yet: single sign-on (Okta, Google Workspace), SCIM provisioning, or a SOC&nbsp;2 report.</p>')
+            '<p class="ctrl-note">Not available yet: '
+            + ('Okta or SAML single sign-on' if google else 'single sign-on (Okta, Google Workspace)')
+            + ', SCIM provisioning, or a SOC&nbsp;2 report.</p>')
+
+
+def _google_vendor_row() -> str:
+    if not _google_on():
+        return ""
+    return ('<tr><td>Google (Sign-in)</td><td>Only if a broker chooses &ldquo;Sign in with Google&rdquo;: '
+            'Google confirms their email address to us. We don&rsquo;t receive their password or other Google data.</td></tr>')
 
 
 def body() -> str:
@@ -180,6 +201,7 @@ def body() -> str:
       <tr><td>SendGrid</td><td>Inbound email &mdash; receives contracts forwarded to tc@check.txtanoffer.com; backup outbound email</td></tr>
       <tr><td>Resend</td><td>Outbound email &mdash; TC Check reports, offer emails and account notices, and a file you send for a hand check, to our inbox</td></tr>
       <tr><td>Google (Gmail)</td><td>Hosts the inbox that receives a file you choose to send us for a hand check, with your email address</td></tr>
+      {_google_vendor_row()}
       <tr><td>DocuSign</td><td>Only when you send an offer for signature: the PDF and the signers&rsquo; names and emails</td></tr>
       <tr><td>Your webhook</td><td>Only if you set one up (e.g. Zapier): offer data goes to the URL you choose</td></tr>
     </table>

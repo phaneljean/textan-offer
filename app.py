@@ -43,6 +43,7 @@ from sms_utils import parse_incoming_sms
 from cleanup import run_cleanup_if_due, encrypt_legacy_files_in_background
 import archive as archive_store
 import filecrypt
+import google_auth
 filecrypt.startup_check()
 encrypt_legacy_files_in_background(OUTPUT_DIR)
 import crm
@@ -699,7 +700,8 @@ def _home_trust() -> str:
                       "Encrypted with AES&#8209;256 on our servers, and decrypted only when they&rsquo;re opened, sent or checked."))
     cards += [("Links to your PDFs", "Private", "Signed and set to expire, so they can&rsquo;t be guessed or shared forever."),
               ("Brokerage archive", "Your team only",
-               "Passwordless sign-in for the emails on your account. Each brokerage sees only its own files.")]
+               ("Sign in with Google or an emailed link" if google_auth.enabled() else "Passwordless sign-in")
+               + " for the emails on your account. Each brokerage sees only its own files.")]
     grid = "".join(f'<div><span class="ptag">{t}</span><b>{h}</b><p>{p}</p></div>' for h, t, p in cards)
     return f"""<section class="trust">
   <h2>Checked.<br>Then deleted.</h2>
@@ -6790,7 +6792,7 @@ def terms():
 # not inside emails). TODO(Phanel): legal entity still unconfirmed.
 @app.route("/privacy")
 def privacy():
-    return """<!DOCTYPE html>
+    html = """<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -6979,7 +6981,7 @@ def privacy():
       <li><strong>DocuSign</strong> — E-signature: when you send an offer for signature, the PDF and the signers&rsquo; names and emails</li>
       <li><strong>Your webhook</strong> — If you set up a webhook (e.g. Zapier), offer data is sent to the URL you choose</li>
       <li><strong>Resend</strong> — Outbound email: sends TC Check report emails (your email address, the property address and the findings), offer emails with the generated PDF, and account notifications; if you send a file for a hand check from the web page, Resend also carries that file to our inbox</li>
-      <li><strong>Google (Gmail)</strong> — Hosts the inbox that receives a file you choose to send us for a hand check, with your email address</li>
+      <li><strong>Google (Gmail)</strong> — Hosts the inbox that receives a file you choose to send us for a hand check, with your email address</li>__PRIVACY_GOOGLE__
     </ul>
     <p>We may disclose information if required by law, legal process, or to protect the rights and safety of our users or the public.</p>
 
@@ -7032,6 +7034,8 @@ def privacy():
 </div>
 </body>
 </html>"""
+    google_line = ("\n      <li><strong>Google (Sign-in)</strong> — Only if a broker chooses \u201cSign in with Google\u201d: Google confirms their email address to us; we don\u2019t receive their password or other Google data</li>" if google_auth.enabled() else "")
+    return html.replace("__PRIVACY_GOOGLE__", google_line)
 
 
 @app.route("/faq")
@@ -8792,6 +8796,10 @@ _BROKER_PAGE_CSS = """
   .tag.warn{background:#fdf3e3;color:#b45309;}
   .tag.na{background:#eef0f2;color:var(--muted);}
   .flash{background:var(--tint);border-radius:10px;padding:0.8rem 1rem;margin-bottom:1rem;font-size:0.9rem;}
+  .gbtn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:0.7rem 1rem;border:1px solid #dadce0;border-radius:999px;background:#fff;color:#1f1f1f;font-weight:600;font-size:0.95rem;text-decoration:none;}
+  .gbtn:hover{background:#f8f9fa;}
+  .or{display:flex;align-items:center;gap:10px;margin:1rem 0;color:#8a96a3;font-size:0.8rem;}
+  .or:before,.or:after{content:"";flex:1;border-top:1px solid #e6e9ec;}
   .flash.err{background:#fdecec;}
   .muted{color:var(--dim);font-size:0.78rem;}
   .tablewrap{overflow-x:auto;}
@@ -8852,11 +8860,68 @@ def broker_login():
   <h1>Sign in to your archive</h1>
   <p class="sub">We&rsquo;ll email you a one-time sign-in link. No password needed.</p>
   """ + msg + """
+  """ + _google_button() + """
   <form method="post"><input type="email" name="email" required placeholder="you@brokerage.com" autocomplete="email">
   <button class="btn" style="margin-top:0.8rem;width:100%;">Email me a sign-in link</button></form>
   <p class="muted" style="margin-top:1rem;">Use the email your brokerage signed up with. Not a customer yet? <a href="/brokers">Start with a free 20-file audit</a>.</p>
 </div>""")
     return _broker_shell("Sign in", body)
+
+
+_GOOGLE_G = ('<svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.7 13.2l7.9 6.2C12.5 13.6 17.8 9.5 24 9.5z"/>'
+             '<path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.3 5.7c4.3-3.9 7-9.7 7-17.1z"/>'
+             '<path fill="#FBBC05" d="M10.6 28.6c-.5-1.4-.8-3-.8-4.6s.3-3.2.8-4.6l-7.9-6.2C1 16.6 0 20.2 0 24s1 7.4 2.7 10.8l7.9-6.2z"/>'
+             '<path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.3-5.7c-2.2 1.5-5 2.3-8.6 2.3-6.2 0-11.5-4.1-13.4-9.9l-7.9 6.2C6.6 42.6 14.6 48 24 48z"/></svg>')
+
+
+def _google_button() -> str:
+    """Shown only while GOOGLE_CLIENT_ID/SECRET are set (google_auth.enabled)."""
+    if not google_auth.enabled():
+        return ""
+    return ('<a class="gbtn" href="/broker/login/google" data-evt="broker_google_login">' + _GOOGLE_G +
+            '<span>Sign in with Google</span></a><div class="or"><span>or</span></div>')
+
+
+@app.route("/broker/login/google")
+def broker_login_google():
+    if not google_auth.enabled():
+        abort(404)
+    url, cookie = google_auth.start()
+    resp = make_response(redirect(url))
+    resp.set_cookie(google_auth.STATE_COOKIE, cookie, max_age=google_auth.STATE_TTL, httponly=True,
+                    secure=request.is_secure or request.headers.get("X-Forwarded-Proto") == "https", samesite="Lax")
+    return resp
+
+
+@app.route("/broker/login/google/callback")
+def broker_login_google_callback():
+    if not google_auth.enabled():
+        abort(404)
+    ip = request.remote_addr or "unknown"
+
+    def fail(msg, code=400):
+        resp = make_response(_broker_shell("Sign-in failed", '<div class="card" style="max-width:460px;margin:2rem auto;"><h1>Couldn&rsquo;t sign you in</h1><p class="sub">'
+                                           + escape(msg) + '</p><a class="btn" href="/broker/login">Back to sign-in</a></div>'), code)
+        resp.delete_cookie(google_auth.STATE_COOKIE)
+        return resp
+
+    if not check_and_increment(f"broker_google:{ip}", limit=10):
+        return fail("Too many attempts. Try again in a few minutes.", 429)
+    try:
+        email = google_auth.finish(request.args, request.cookies.get(google_auth.STATE_COOKIE, ""))
+    except google_auth.GoogleAuthError as e:
+        return fail(str(e))
+    b = archive_store.find_brokerage_for_login(email)
+    if not b or email not in archive_store.login_emails_for(b):
+        track_event("broker_google_login_unknown", None, {})
+        return fail("That Google account's email isn't on a TxtAnOffer brokerage account. "
+                    "Use the email your brokerage signed up with, or ask us to add yours.", 403)
+    resp = make_response(redirect("/broker/archive"))
+    resp.set_cookie(broker_auth.COOKIE, broker_auth.session_value(b["id"], email), max_age=broker_auth.SESSION_TTL,
+                    httponly=True, secure=request.is_secure or request.headers.get("X-Forwarded-Proto") == "https", samesite="Lax")
+    resp.delete_cookie(google_auth.STATE_COOKIE)
+    track_event("broker_login", None, {"brokerage_id": b["id"], "method": "google"})
+    return resp
 
 
 def _quote(v):
