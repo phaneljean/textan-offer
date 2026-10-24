@@ -240,6 +240,50 @@ class PageCopy(unittest.TestCase):
             self.assertNotIn(bad, block.lower(), bad)
 
 
+class PrivacyDisclosesHandChecks(unittest.TestCase):
+    """Phanel 2026-10-24: hand-check copies have no set expiry and land in
+    a Gmail inbox. trec-qa's wording, pinned so the policy can't drift
+    from what the hand-review path actually does."""
+
+    @classmethod
+    def setUpClass(cls):
+        c = app_module.app.test_client()
+        cls.privacy = c.get("/privacy", headers=UA).get_data(as_text=True)
+        cls.trust = c.get("/trust", headers=UA).get_data(as_text=True)
+        # The "Do you keep my client's file?" FAQ (app.py ~5180) is on /pricing.
+        cls.faq = c.get("/pricing", headers=UA).get_data(as_text=True)
+
+    def test_privacy_policy(self):
+        for line in (
+            "and account notifications, and, if you send a file for a hand check, that file to our inbox</li>",
+            "<strong>Google (Gmail)</strong> — Hosts the inbox that receives a file you choose to send us for a hand check",
+            "except a file you choose to send us for a hand check.</li>",
+            "<li>Hand checks: a file you choose to send us after TC Check couldn&rsquo;t read it is kept in our email "
+            "inbox with your email, with no set expiry, until we delete it. Ask support@txtanoffer.com to delete it sooner.</li>",
+            "processing is automated, except hand checks you request, which Phanel reads;",
+        ):
+            self.assertIn(line, self.privacy, line)
+
+    def test_trust_center(self):
+        for line in (
+            "The one exception is a file you choose to send us for a hand check (step 3).",
+            "Except a hand check: if TC Check can&rsquo;t read your file and you choose to send it to us, that copy "
+            "stays in our email inbox, with no set expiry, until we delete it.",
+            "<td>Google (Gmail)</td><td>Hosts the inbox that receives a file you choose to send us for a hand check",
+            "Processing is automated, except hand checks you request, which Phanel reads;",
+        ):
+            self.assertIn(line, self.trust, line)
+
+    def test_pricing_faq(self):
+        self.assertIn("No. A file you check is deleted right after your report. If TC Check can&rsquo;t read it and you "
+                      "choose to send it to us for a hand check, that copy stays in our inbox until we delete it.", self.faq)
+
+    def test_no_reply_time_or_delete_after_reply_promise(self):
+        for html in (self.privacy, self.trust, self.faq):
+            self.assertNotIn("deleted after we reply", html)
+            self.assertNotIn("deleted once we&rsquo;ve replied", html)
+
+
 class SendersPassReplyTo(unittest.TestCase):
     def test_resend_payload(self):
         seen = {}

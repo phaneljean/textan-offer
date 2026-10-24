@@ -5177,7 +5177,7 @@ def pricing():
     </div>
     <div class="value-card">
       <div class="value-title">Do you keep my client&rsquo;s file?</div>
-      <div class="value-text">No. A file you check is deleted right after your report. If you get the report by email, its subject line includes the property address, and for bulk checks we keep each file&rsquo;s name and issue count, viewable at your batch link. The one exception is on purpose: on the Brokerage plan, contracts you forward or upload to your archive, and offers your agents text in, are kept 5 years for your records.</div>
+      <div class="value-text">No. A file you check is deleted right after your report. If TC Check can&rsquo;t read it and you choose to send it to us for a hand check, that copy stays in our inbox until we delete it. If you get the report by email, its subject line includes the property address, and for bulk checks we keep each file&rsquo;s name and issue count, viewable at your batch link. The one exception is on purpose: on the Brokerage plan, contracts you forward or upload to your archive, and offers your agents text in, are kept 5 years for your records.</div>
     </div>
     <div class="value-card">
       <div class="value-title">Can I cancel?</div>
@@ -6950,7 +6950,8 @@ def privacy():
       <li><strong>SendGrid</strong> — Inbound email: receives emails (and attached contracts) forwarded to tc@check.txtanoffer.com; also our backup outbound email provider</li>
       <li><strong>DocuSign</strong> — E-signature: when you send an offer for signature, the PDF and the signers&rsquo; names and emails</li>
       <li><strong>Your webhook</strong> — If you set up a webhook (e.g. Zapier), offer data is sent to the URL you choose</li>
-      <li><strong>Resend</strong> — Outbound email: sends TC Check report emails (your email address, the property address and the findings), offer emails with the generated PDF, and account notifications</li>
+      <li><strong>Resend</strong> — Outbound email: sends TC Check report emails (your email address, the property address and the findings), offer emails with the generated PDF, and account notifications, and, if you send a file for a hand check, that file to our inbox</li>
+      <li><strong>Google (Gmail)</strong> — Hosts the inbox that receives a file you choose to send us for a hand check, with your email</li>
     </ul>
     <p>We may disclose information if required by law, legal process, or to protect the rights and safety of our users or the public.</p>
 
@@ -6958,9 +6959,10 @@ def privacy():
     <ul>
       <li>Generated PDFs: on the free trial, stored for download and deleted after 30 days; on a paid plan, kept 5 years in your dashboard</li>
       <li>Brokerage plan: offers and amendments drafted by an agent linked to a brokerage are kept for 5 years from creation while the agent stays linked, viewable and exportable by that brokerage</li>
-      <li>Brokerage contract archive: executed contracts a brokerage forwards from a linked email or uploads while signed in are stored for 5 years from when they are added (or until the brokerage deletes them), visible only to that brokerage's signed-in users, and exportable anytime. Files checked outside the archive are still deleted after the check (bulk uploads: when the batch finishes).</li>
+      <li>Brokerage contract archive: executed contracts a brokerage forwards from a linked email or uploads while signed in are stored for 5 years from when they are added (or until the brokerage deletes them), visible only to that brokerage's signed-in users, and exportable anytime. Files checked outside the archive are still deleted after the check (bulk uploads: when the batch finishes), except a file you choose to send us for a hand check.</li>
       <li>TC Check records: for each check we keep a record (your email if you gave one, and short issue codes &mdash; not the file, the property address or the form contents). Records older than 90 days are removed by an automatic cleanup that doesn&rsquo;t run on a fixed schedule, so some may last longer than 90 days. We also keep a per-browser count of free checks (a random browser ID and your email if you gave one) with no set expiry.</li>
       <li>TC Check bulk uploads: we keep your email, the number of files, and each file&rsquo;s original filename, whether it was recognized, its issue count and up to 10 issue messages, with no set expiry. Anyone with the batch results link can view them.</li>
+      <li>Hand checks: a file you choose to send us after TC Check couldn&rsquo;t read it is kept in our email inbox with your email, with no set expiry, until we delete it. Ask support@txtanoffer.com to delete it sooner.</li>
       <li>Account data: retained while your account is active and for 90 days after cancellation</li>
       <li>Billing records: retained as required by applicable tax and accounting laws</li>
       <li>SMS logs: kept for support and debugging purposes, deleted after about 90 days</li>
@@ -6973,7 +6975,7 @@ def privacy():
     <ul>
       <li><strong>Encryption in transit:</strong> the site is served over HTTPS</li>
       <li><strong>Infrastructure:</strong> hosted on Railway</li>
-      <li><strong>Access:</strong> processing is automated; TxtAnOffer&rsquo;s founder can access stored data for support and debugging</li>
+      <li><strong>Access:</strong> processing is automated, except hand checks you request, which Phanel reads; TxtAnOffer&rsquo;s founder can access stored data for support and debugging</li>
       <li><strong>Payment data:</strong> Handled exclusively by Stripe (PCI DSS Level 1); card numbers never touch our servers</li>
     </ul>
     <p>No method of transmission over the internet is 100% secure, and we cannot guarantee absolute security.</p>
