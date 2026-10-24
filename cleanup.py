@@ -82,6 +82,48 @@ def cleanup_old_sms_logs(max_age_days: int = SMS_LOG_RETENTION_DAYS) -> int:
     return deleted
 
 
+def encrypt_legacy_offers(output_dir: str) -> int:
+    """Encrypt top-level generated PDFs saved before FILE_ENCRYPTION_KEY was
+    set, keeping each file's mtime so cleanup_old_pdfs' clock doesn't reset."""
+    import filecrypt
+    if not filecrypt.enabled() or not os.path.isdir(output_dir):
+        return 0
+    done = 0
+    for name in os.listdir(output_dir):
+        path = os.path.join(output_dir, name)
+        if not name.lower().endswith(".pdf") or not os.path.isfile(path):
+            continue
+        try:
+            if filecrypt.encrypt_in_place(path):
+                done += 1
+        except Exception as e:
+            print(f"[cleanup] Could not encrypt {name}: {e}")
+    return done
+
+
+def encrypt_legacy_files(output_dir: str):
+    """Both kinds of stored files: generated offers and the brokerage archive."""
+    try:
+        n = encrypt_legacy_offers(output_dir)
+        if n:
+            print(f"[cleanup] Encrypted {n} older generated PDF(s)")
+    except Exception as e:
+        print(f"[cleanup] Offer encryption error: {e}")
+    try:
+        from archive import encrypt_legacy_files as archive_encrypt
+        enc = archive_encrypt()
+        if enc["encrypted"] or enc["mismatch"]:
+            print(f"[cleanup] Archive encryption: {enc}")
+    except Exception as e:
+        print(f"[cleanup] Archive encryption error: {e}")
+
+
+def encrypt_legacy_files_in_background(output_dir: str):
+    """Called once at app start, so files left from before the key existed are
+    converted on the next deploy instead of waiting for SMS-triggered cleanup."""
+    threading.Thread(target=encrypt_legacy_files, args=(output_dir,), daemon=True).start()
+
+
 def run_cleanup_if_due(output_dir: str):
     """Called on request traffic; actually runs at most once per _CHECK_INTERVAL_SECONDS,
     in a background thread so it never delays the caller's response."""
@@ -103,13 +145,7 @@ def run_cleanup_if_due(output_dir: str):
                     print(f"[cleanup] Purged {archive_deleted} archived file(s) past the 5-year retention")
             except Exception as e:
                 print(f"[cleanup] Archive purge error: {e}")
-            try:
-                from archive import encrypt_legacy_files
-                enc = encrypt_legacy_files()
-                if enc["encrypted"] or enc["mismatch"]:
-                    print(f"[cleanup] Archive encryption: {enc}")
-            except Exception as e:
-                print(f"[cleanup] Archive encryption error: {e}")
+            encrypt_legacy_files(output_dir)
             if pdfs_deleted or logs_deleted:
                 print(f"[cleanup] Deleted {pdfs_deleted} old PDF(s), {logs_deleted} old SMS/event log row(s)")
         except Exception as e:

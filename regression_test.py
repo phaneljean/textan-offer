@@ -24,6 +24,7 @@ cheap, exact, and it's what would have caught every bug found in
 going missing, not a visual/layout change).
 """
 import json
+import filecrypt
 import os
 import re
 import sys
@@ -143,7 +144,7 @@ def _expected_overlay_checks(parsed: dict) -> dict:
 
 
 def _snapshot(pdf_path: str, parsed: dict) -> dict:
-    reader = PdfReader(pdf_path)
+    reader = PdfReader(filecrypt.pdf_source(pdf_path))
     fields = reader.get_fields() or {}
     field_values = {name: str(f.get("/V") or "") for name, f in fields.items()}
     # Only keep non-empty values -- an all-blank field is not interesting to

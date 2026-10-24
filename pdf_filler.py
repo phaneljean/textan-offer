@@ -14,6 +14,7 @@ why some are verbose ("Texas known as") and some are generic
 ("undefined_3") -- that's TREC's export, not a choice we made.
 """
 import os
+import filecrypt
 import io
 import secrets
 from datetime import datetime, timedelta
@@ -527,7 +528,7 @@ def open_unique_output(output_dir: str, stem: str):
     while True:
         path = os.path.join(output_dir, f"{stem}_{timestamp}_{secrets.token_hex(3)}.pdf")
         try:
-            return open(path, "xb"), path
+            return filecrypt.sealed_writer(open(path, "xb")), path
         except FileExistsError:
             continue
 

@@ -30,6 +30,7 @@ present in the uploaded file, this reports the file as unrecognized rather
 than claiming everything on it is "missing".
 """
 import re
+import filecrypt
 from datetime import date
 from pypdf import PdfReader
 from pdf_validator import _read_values, _is_checked, _money_to_int
@@ -293,7 +294,7 @@ def _contains_41_3(paths) -> bool:
     contract packet (before or after it), or flattened so its fields can't
     be read. Then "not attached" would be false."""
     for path in paths:
-        for p in PdfReader(path).pages:
+        for p in PdfReader(filecrypt.pdf_source(path)).pages:
             text = (p.extract_text() or "").upper()
             if "LOAN ASSUMPTION ADDENDUM" in text and re.search(r"TREC\s*NO\.?\s*41-", text):
                 return True
@@ -778,7 +779,7 @@ def check_tc_file(pdf_paths) -> dict:
     # Page count only, for the upload-result metadata bar -- a second,
     # cheap PdfReader open (separate from _read_values' own) rather than
     # threading a reader object through pdf_validator.py's private helper.
-    page_count = sum(len(PdfReader(p).pages) for p in pdf_paths)
+    page_count = sum(len(PdfReader(filecrypt.pdf_source(p)).pages) for p in pdf_paths)
     all_values = [_read_values(p) for p in pdf_paths]
 
     main_values = None
@@ -858,7 +859,7 @@ def check_tc_file(pdf_paths) -> dict:
 
     # Initials for identification, main contract -- one per party, boxes
     # found by position on each printed page.
-    pages = _contract_pages(PdfReader(main_path))
+    pages = _contract_pages(PdfReader(filecrypt.pdf_source(main_path)))
     buyers = _party_names(values.get(FIELD_MAP["buyer_name"], ""))
     sellers = _party_names(values.get(FIELD_MAP["seller_name"], ""))
     for page_label, buyer_boxes, seller_boxes in _initials_by_position(pages):

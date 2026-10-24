@@ -28,6 +28,7 @@ different field names and comes back unrecognized; other CREC forms in a
 multi-file upload are ignored (not audited), and the result says so.
 """
 import re
+import filecrypt
 from datetime import date, timedelta
 from pypdf import PdfReader
 from pdf_validator import _read_values, _is_checked
@@ -446,7 +447,7 @@ def check_co_file(pdf_paths, page_count=None, all_values=None, summary=None) -> 
     if all_values is None:
         all_values = [_read_values(p) for p in pdf_paths]
     if page_count is None:
-        page_count = sum(len(PdfReader(p).pages) for p in pdf_paths)
+        page_count = sum(len(PdfReader(filecrypt.pdf_source(p)).pages) for p in pdf_paths)
     values = next(v for v in all_values if is_cbs1(v))
     issues = audit_values(values)
     others, unknown, seen_contract = [], 0, False

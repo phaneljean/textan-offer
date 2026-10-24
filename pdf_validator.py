@@ -17,6 +17,7 @@ them in by hand before presenting). Blocking send on those would make
 blocking failures. Every other field in the QA spec is a hard block.
 """
 import re
+import filecrypt
 from datetime import datetime, timedelta
 
 from pypdf import PdfReader
@@ -32,13 +33,13 @@ def _fa(key: str) -> str:
 
 
 def _read_values(pdf_path: str) -> dict:
-    reader = PdfReader(pdf_path)
+    reader = PdfReader(filecrypt.pdf_source(pdf_path))
     fields = reader.get_fields() or {}
     return {name: str(f.get("/V") or "") for name, f in fields.items()}
 
 
 def _read_text(pdf_path: str) -> str:
-    reader = PdfReader(pdf_path)
+    reader = PdfReader(filecrypt.pdf_source(pdf_path))
     return "\n".join(page.extract_text() or "" for page in reader.pages)
 
 
@@ -103,7 +104,7 @@ def _checkbox_appearance_mismatches(pdf_path: str) -> list:
     now fixed to read each checkbox's real on-state instead of assuming
     "/On" -- this is the permanent regression guard for that bug class,
     covering any future checkbox this app didn't get to manually audit."""
-    reader = PdfReader(pdf_path)
+    reader = PdfReader(filecrypt.pdf_source(pdf_path))
     mismatches = []
     for page in reader.pages:
         if "/Annots" not in page:

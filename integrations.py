@@ -67,8 +67,8 @@ def send_offer_email(to_email: str, pdf_path: str, parsed: dict, thread_url: str
 
     import base64
 
-    with open(pdf_path, "rb") as f:
-        pdf_b64 = base64.b64encode(f.read()).decode()
+    import filecrypt
+    pdf_b64 = base64.b64encode(filecrypt.read_file(pdf_path)).decode()
 
     filename = os.path.basename(pdf_path)
     subject = f"Purchase Offer - {parsed.get('address', 'New Offer')}"
@@ -348,8 +348,8 @@ def send_to_docusign(pdf_path: str, parsed: dict, signer_email: str, signer_name
 
     import base64
 
-    with open(pdf_path, "rb") as f:
-        pdf_bytes = base64.b64encode(f.read()).decode("utf-8")
+    import filecrypt
+    pdf_bytes = base64.b64encode(filecrypt.read_file(pdf_path)).decode("utf-8")
 
     envelope = {
         "emailSubject": f"Purchase Offer for {parsed.get('address', 'Property')} - Please Review & Sign",

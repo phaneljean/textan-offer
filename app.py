@@ -40,10 +40,11 @@ from offers_db import record_offer, get_offers_for_phone, get_offer_by_filename,
 from brokerages import extract_brokerage_prefix, link_user_to_brokerage, get_brokerage, get_brokerage_by_code, create_brokerage, list_brokerages, list_brokerage_agents, list_brokerage_records
 from sponsors import create_sponsor, list_sponsors, set_sponsor_active
 from sms_utils import parse_incoming_sms
-from cleanup import run_cleanup_if_due
+from cleanup import run_cleanup_if_due, encrypt_legacy_files_in_background
 import archive as archive_store
 import filecrypt
 filecrypt.startup_check()
+encrypt_legacy_files_in_background(OUTPUT_DIR)
 import crm
 import broker_auth
 from reminders import run_reminders_if_due
@@ -6185,7 +6186,7 @@ def broker_archive_zip(join_code):
             if name in seen or "/" in name or ".." in name or not os.path.isfile(path):
                 continue
             seen.add(name)
-            zf.write(path, arcname=f"{(r['created_at'] or '')[:10]}_{name}")
+            zf.writestr(f"{(r['created_at'] or '')[:10]}_{name}", filecrypt.read_file(path))
     buf.seek(0)
     track_event("brokerage_archive_export", None, {"brokerage_id": brokerage["id"], "files": len(seen)})
     safe_name = re.sub(r"[^A-Za-z0-9]+", "-", brokerage["name"]).strip("-") or "brokerage"
@@ -9030,7 +9031,7 @@ def broker_archive_export():
         for r in list_brokerage_records(b["id"], limit=100000):
             path = os.path.join(OUTPUT_DIR, r["filename"])
             if "/" not in r["filename"] and os.path.isfile(path):
-                zf.write(path, arcname=f"drafts/{(r['created_at'] or '')[:10]}_{r['filename']}")
+                zf.writestr(f"drafts/{(r['created_at'] or '')[:10]}_{r['filename']}", filecrypt.read_file(path))
     track_event("brokerage_archive_export", None, {"brokerage_id": b["id"], "scope": "full"})
     safe_name = re.sub(r"[^A-Za-z0-9]+", "-", b["name"]).strip("-") or "brokerage"
     return Response(buf.getvalue(), mimetype="application/zip",
@@ -10786,7 +10787,12 @@ def serve_offer(filename):
     sig = request.args.get("sig")
     if not verify_pdf_signature(filename, expires, sig):
         abort(403)
-    return send_from_directory(OUTPUT_DIR, filename, as_attachment=False)
+    path = os.path.join(OUTPUT_DIR, filename)
+    if not os.path.isfile(path):
+        abort(404)
+    return Response(filecrypt.read_file(path), mimetype="application/pdf",
+                    headers={"Content-Disposition": f'inline; filename="{os.path.basename(filename)}"',
+                             "Cache-Control": "private, no-store"})
 
 
 @app.route("/offers/<path:filename>/preview.png")
@@ -10808,7 +10814,7 @@ def serve_offer_preview(filename):
         abort(404)
 
     import fitz
-    doc = fitz.open(pdf_path)
+    doc = fitz.open(stream=filecrypt.read_file(pdf_path), filetype="pdf")
     page_num = max(0, min(page_num, len(doc) - 1))
     pix = doc[page_num].get_pixmap(matrix=fitz.Matrix(2, 2))
     png_bytes = pix.tobytes("png")
