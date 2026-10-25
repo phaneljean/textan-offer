@@ -229,7 +229,7 @@ class SendOfferEmailUsesResend(unittest.TestCase):
         self.assertEqual([c["type"] for c in content], ["text/plain"])
         self.assertEqual(content[0]["value"].count("https://txtanoffer.com/tc-check?src=offer_email_listing"), 1)
         # The footer's "3 free reports, no signup" is only true while this holds.
-        self.assertIn("3 free reports, no signup", integrations.OFFER_EMAIL_FOOTER)
+        self.assertIn("first 3 reports need no signup", integrations.OFFER_EMAIL_FOOTER)
         self.assertEqual(app_module.TC_FREE_FULL_REPORTS, 3)
 
 
