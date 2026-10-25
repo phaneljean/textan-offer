@@ -34,7 +34,8 @@ OUTPUT_DIR = os.environ.get("OFFER_OUTPUT_DIR", "generated_offers")
 # merge/namespacing logic -- it's stamped on every generated PDF (footer +
 # document metadata) and logged with the offer so that if a bug is found
 # later, affected contracts can be identified by which version made them.
-GENERATOR_VERSION = "2026-10-24.2"  # CBS1 drafts dated on Denver's calendar (deadlines.colorado_date); 20-19 output unchanged from .1
+GENERATOR_VERSION = "2026-10-25.1"  # HOA addendum is now TREC 36-11 (replaced 36-10, effective 07/01/2026); 20-19 output unchanged
+# 2026-10-24.2: CBS1 drafts dated on Denver's calendar (deadlines.colorado_date); 20-19 output unchanged from .1
 # 2026-10-24.1: 9A closing date on the Texas date, off weekends/federal
 # holidays. Offers before .1 printed the unrolled UTC date; see
 # deadlines.ROLLED_CLOSING_SINCE, which stays at .1.
@@ -462,7 +463,7 @@ def fill_offer_pdf(parsed: dict, agent_phone: str) -> str:
     water_pdf_bytes = fill_water_disclosure(parsed)
     final_writer.append(PdfReader(io.BytesIO(water_pdf_bytes)))
 
-    # TREC 36-10 (Addendum for Property Subject to Mandatory Membership in a
+    # TREC 36-11 (Addendum for Property Subject to Mandatory Membership in a
     # Property Owners Association) -- unlike the Water Disclosure above,
     # this is genuinely conditional: not every property has a mandatory
     # HOA, so it's only attached when the agent's own text says "HOA" (see

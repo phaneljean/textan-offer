@@ -149,15 +149,17 @@ class TextOfferPage(unittest.TestCase):
         self.assertIn("First 3 offers free", pricing)
 
     def test_no_hoa_form_number(self):
-        # TREC may have replaced 36-10; the page says "the HOA addendum".
+        # 36-11 replaced 36-10 effective 07/01/2026 (verified on
+        # trec.texas.gov 2026-10-25); the page names the form we attach.
         html = self.client.get("/text-an-offer", headers=UA).get_data(as_text=True)
         self.assertNotIn("36-10", html)
         self.assertNotIn("36&#8209;10", html)
+        self.assertIn("36&#8209;11", html)
 
     def test_forms_list_matches_finalize(self):
         with open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "app.py")) as fh:
             src = fh.read()
-        for f in ('"40-11 Financing Addendum"', '"36-10 HOA Addendum"', '["61-0 Water Disclosure", "IABS"]'):
+        for f in ('"40-11 Financing Addendum"', '"36-11 HOA Addendum"', '["61-0 Water Disclosure", "IABS"]'):
             self.assertIn(f, src)
 
 

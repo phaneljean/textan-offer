@@ -1807,7 +1807,7 @@ def finalize_offer_sms(agent_phone: str, draft: dict):
     if draft.get("loan_amount", 0) > 0:
         forms.append("40-11 Financing Addendum")
     if draft.get("has_hoa"):
-        forms.append("36-10 HOA Addendum")
+        forms.append("36-11 HOA Addendum")
     forms += ["61-0 Water Disclosure", "IABS"]
     includes = ", ".join(forms[:-1]) + " and " + forms[-1]
 
@@ -7407,10 +7407,10 @@ def trec_changes():
   </div>
 
   <div class="change-card">
-    <span class="tag">TREC 36-10</span>
+    <span class="tag">TREC 36-11</span>
     <h2>Addendum for Property Subject to Mandatory HOA Membership</h2>
-    <p>Required whenever the property is subject to mandatory membership in a property owners association -- a common miss when a contract gets typed up quickly.</p>
-    <div class="handled"><b>How TxtAnOffer handles it:</b> Mention an HOA anywhere in your text and the 36-10 addendum attaches itself automatically, checkbox and all.</div>
+    <p>Required whenever the property is subject to mandatory membership in a property owners association -- a common miss when a contract gets typed up quickly. TREC 36-11 replaced 36-10 effective July 1, 2026.</p>
+    <div class="handled"><b>How TxtAnOffer handles it:</b> Mention an HOA anywhere in your text and the 36-11 addendum attaches itself automatically, checkbox and all.</div>
   </div>
 
   <div class="change-card">
@@ -7700,7 +7700,7 @@ def tc_hub():
         <a class="form-link" href="https://www.trec.texas.gov/forms/third-party-financing-addendum-0" target="_blank" rel="noopener">Official TREC source &rarr;</a>
       </div>
     </div>
-    <div class="also-covered"><b>Also referenced on this site:</b> IABS 1-2 (Information About Brokerage Services), TREC 61-0 (Seller's Disclosure re: Groundwater/Surface Water Rights), and TREC 36-10 (HOA Addendum) -- see <a href="/trec-changes" style="color:var(--accent-dark);text-decoration:underline;">what changed &rarr;</a> for the full rundown of when each applies.</div>
+    <div class="also-covered"><b>Also referenced on this site:</b> IABS 1-2 (Information About Brokerage Services), TREC 61-0 (Seller's Disclosure re: Groundwater/Surface Water Rights), and TREC 36-11 (HOA Addendum) -- see <a href="/trec-changes" style="color:var(--accent-dark);text-decoration:underline;">what changed &rarr;</a> for the full rundown of when each applies.</div>
   </div>
 
   <div class="section" id="checklists">
@@ -9506,7 +9506,7 @@ def brokers():
   <ol class="flow">
     <li><strong>Offer</strong> &mdash; your agents text the terms in and get back a structured offer in seconds &mdash; the starting point everything else builds on, and the first record in your brokerage's archive. For example: <strong>725k 3% 21day 123 Main St, Austin, TX</strong>. Text <a href="sms:+18338970333" data-evt="workflow_offer_sms" style="color:var(--accent-dark);text-decoration:underline;">(833) 897-0333</a>.
       <span class="fine" style="display:block;margin-top:0.35rem;">By texting, you agree to receive SMS replies and reminders about your offers, plus up to 2 tips on the free trial. Reply STOP to opt out, HELP for help. Msg frequency varies. Msg &amp; data rates may apply. <a href="/privacy" style="color:inherit;text-decoration:underline;">Privacy</a> &middot; <a href="/terms" style="color:inherit;text-decoration:underline;">Terms</a></span></li>
-    <li><strong>TREC Documents</strong> &mdash; the required forms are generated straight from the transaction: 20-19, 39-11, 40-11, IABS, 61-0, 36-10.</li>
+    <li><strong>TREC Documents</strong> &mdash; the required forms are generated straight from the transaction: 20-19, 39-11, 40-11, IABS, 61-0, 36-11.</li>
     <li><strong>Compliance &mdash; TC Check</strong> &mdash; checked for completeness, cross-document consistency, and version-to-version comparison &mdash; before it moves forward.</li>
     <li><strong>Review before it goes out</strong> &mdash; every draft opens on a review page that lists what&rsquo;s still blank. Emailing it to the listing agent stays locked until the required fields are filled.</li>
     <li><strong>Communication</strong> &mdash; SMS confirmations, email notifications, and a listing-agent accept/decline thread, built in from the first text.</li>

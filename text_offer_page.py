@@ -177,7 +177,7 @@ def body() -> str:
       <p>Checks that box on the 40&#8209;11 and puts the loan amount next to it. Leave it out and the 40&#8209;11 starts as Conventional.</p></div>
     <div class="to-card"><span class="req opt">Optional</span><h3>Option period, HOA, county</h3>
       <span class="to-sms">10-day option</span><span class="to-sms">10 day inspection</span><span class="to-sms">HOA</span><span class="to-sms">Travis County</span>
-      <p>Option days go in 5B. &ldquo;HOA&rdquo; attaches the HOA addendum. A county it knows (Travis, Harris, Bexar, Dallas, Tarrant, Collin, Denton, Williamson, Fort Bend, Montgomery, El Paso, Hidalgo, Cameron) goes in 2A County of and shows in the summary for you to check. Write &ldquo;Travis County&rdquo;, or the name on its own before the street address. A street or city with the same name (Denton Dr, or Dallas, TX) is not read as the county.</p></div>
+      <p>Option days go in 5B. &ldquo;HOA&rdquo; attaches the HOA addendum (TREC 36&#8209;11). A county it knows (Travis, Harris, Bexar, Dallas, Tarrant, Collin, Denton, Williamson, Fort Bend, Montgomery, El Paso, Hidalgo, Cameron) goes in 2A County of and shows in the summary for you to check. Write &ldquo;Travis County&rdquo;, or the name on its own before the street address. A street or city with the same name (Denton Dr, or Dallas, TX) is not read as the county.</p></div>
   </div>
 </section>
 
@@ -207,7 +207,7 @@ Reply YES to create the TREC draft, or text a correction (ex: "make it 820k").</
     <li><b>Reply YES, NO or a correction</b>
       <p>YES creates the draft. NO cancels it. Or text just the change, like <span class="to-sms">make it 820k</span>, <span class="to-sms">close in 25 days</span> or <span class="to-sms">FHA instead</span>, and you get a new summary. A summary waits 30 minutes for your answer.</p></li>
     <li><b>Open the link</b>
-      <p>The reply has a private link to review and email the draft. The link is signed and expires. The PDF has a one-page summary on top, then the TREC 20&#8209;19, the 40&#8209;11 Third Party Financing Addendum when there&rsquo;s a loan, the 61&#8209;0 water disclosure, the HOA addendum if you texted &ldquo;HOA&rdquo;, the IABS, and a certification page for you to sign after the forms.</p></li>
+      <p>The reply has a private link to review and email the draft. The link is signed and expires. The PDF has a one-page summary on top, then the TREC 20&#8209;19, the 40&#8209;11 Third Party Financing Addendum when there&rsquo;s a loan, the 61&#8209;0 water disclosure, the HOA addendum (TREC 36&#8209;11) if you texted &ldquo;HOA&rdquo;, the IABS, and a certification page for you to sign after the forms.</p></li>
   </ol>
   <h3 style="font-size:22px;margin-top:8px">When something is missing or unclear</h3>
   <ul style="padding-left:20px;margin-top:12px">

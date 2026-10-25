@@ -118,6 +118,26 @@ TEST_CASES = {
         },
         "phone": "+15125550100",
     },
+    "hoa_addendum": {
+        # has_hoa attaches TREC 36-11 and checks its Paragraph 22 box
+        # ("Check Box9"). 36-11 is the first HOA form with real fields, so
+        # this locks in the HOA_ namespacing: its "Buyer" box must never
+        # merge with 20-19's 6C(1) survey box of the same name, and its
+        # address field must carry the property address.
+        "parsed": {
+            "address": "123 Main St", "city": "Austin", "county": "Travis",
+            "price": 500000, "down_payment_amount": 100000, "loan_amount": 400000,
+            "earnest_money": 5000, "option_fee": 250, "close_days": 30,
+            "has_hoa": True,
+            "agent": {
+                "name": "Jane Smith", "license": "0654321", "brokerage": "Keller Williams",
+                "phone": "(512) 555-0147", "email": "jane@realty.com",
+                "business_address": "100 Congress Ave, Austin, TX 78701",
+                "title_company": "Independence Title",
+            },
+        },
+        "phone": "+15125550100",
+    },
 }
 
 # Overlay text isn't an AcroForm field -- these substrings must appear

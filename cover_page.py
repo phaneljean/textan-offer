@@ -144,14 +144,14 @@ def _fmt_long_date(d) -> str:
 def packet_forms(parsed: dict) -> list:
     """The forms actually attached to this offer's PDF, in packet order.
     Must stay in sync with generate_offer_pdf() in pdf_filler.py: the 40-11
-    only rides along when there's a loan, the 36-10 only when the text said
+    only rides along when there's a loan, the 36-11 only when the text said
     HOA. The cover and certification pages both list exactly these, so a cash
     offer never claims a financing addendum that isn't there."""
     forms = [("TREC 20-19", "One to Four Family Residential Contract (Resale)")]
     if (parsed.get("loan_amount") or 0) > 0:
         forms.append(("TREC 40-11", "Third Party Financing Addendum"))
     if parsed.get("has_hoa"):
-        forms.append(("TREC 36-10", "Addendum for Mandatory Owners' Association Membership"))
+        forms.append(("TREC 36-11", "Addendum for Mandatory Owners' Association Membership"))
     forms.append(("TREC 61-0", "Seller's Disclosure re: Groundwater/Surface Water"))
     forms.append(("IABS 1-2", "Information About Brokerage Services"))
     return forms
