@@ -15,6 +15,7 @@ import os
 import io
 import re
 from datetime import datetime, timedelta
+from deadlines import offer_closing_date, add_trec_days
 from pypdf import PdfReader, PdfWriter
 from pypdf.generic import NameObject, BooleanObject
 
@@ -72,9 +73,11 @@ def fill_amendment_pdf(original_offer: dict, amendment: dict) -> str:
         values[FIELD_MAP["price_total"]] = f"{amendment['value']:,}"
         suffix = f"price{amendment['value']}"
     else:
-        original_close = datetime.fromisoformat(original_offer["created_at"]) + \
-            timedelta(days=original_offer.get("close_days", 0))
-        new_close = original_close + timedelta(days=amendment["value"])
+        # The original is whatever the 20-19 actually printed
+        # (deadlines.offer_closing_date); the extended date gets the same
+        # move-off-the-weekend rule.
+        original_close = offer_closing_date(original_offer.get("close_days", 0), original_offer["created_at"])
+        new_close = add_trec_days(original_close, amendment["value"])
         checkboxes.append(FIELD_MAP["close_checkbox"])
         # Form pre-prints "20", so only the 2-digit year suffix is filled here.
         values[FIELD_MAP["close_date"]] = new_close.strftime("%B %d,")

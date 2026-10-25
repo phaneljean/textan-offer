@@ -19,6 +19,7 @@ blocking failures. Every other field in the QA spec is a hard block.
 import re
 import filecrypt
 from datetime import datetime, timedelta
+from deadlines import offer_closing_date
 
 from pypdf import PdfReader
 
@@ -200,16 +201,9 @@ def validate_offer_pdf(pdf_path: str, parsed: dict) -> dict:
     # at generation time, so re-deriving it from "now" at validation time
     # drifts a day later for every day that passes before this check runs,
     # producing a false mismatch against a PDF that was generated correctly.
+    # Computed by the same deadlines.offer_closing_date pdf_filler stamps with.
     if parsed.get("close_days") is not None:
-        reference = parsed.get("created_at")
-        if isinstance(reference, str):
-            try:
-                reference = datetime.fromisoformat(reference)
-            except ValueError:
-                reference = None
-        if not isinstance(reference, datetime):
-            reference = datetime.now()
-        close_dt = reference + timedelta(days=parsed["close_days"])
+        close_dt = offer_closing_date(parsed["close_days"], parsed.get("created_at"))
         expected = close_dt.strftime("%B %d,")
         if expected not in text:
             blocking.append("Section 9: Closing Date")

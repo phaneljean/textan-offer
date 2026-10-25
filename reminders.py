@@ -29,7 +29,7 @@ import time
 import threading
 from datetime import datetime, timedelta
 
-from deadlines import earnest_money_deadline, option_end_date
+from deadlines import earnest_money_deadline, option_end_date, offer_closing_date
 
 DB_PATH = os.environ.get("DATABASE_PATH", "subscriptions.db")
 CLOSING_REMINDER_DAYS_BEFORE = int(os.environ.get("CLOSING_REMINDER_DAYS_BEFORE", 3))
@@ -101,7 +101,7 @@ def _due_offers():
             created = datetime.fromisoformat(r["created_at"])
         except (ValueError, TypeError):
             continue
-        closing_date = (created + timedelta(days=r["close_days"])).date()
+        closing_date = offer_closing_date(r["close_days"], created)
         co = _co_values(r.get("filename"))
         if co is not None:
             import co_audit

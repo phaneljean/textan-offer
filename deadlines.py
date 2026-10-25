@@ -21,12 +21,20 @@ shift a holiday that falls on a weekend to the nearest weekday the way
 Thanksgiving; not a substitute for checking an actual title company's
 calendar on a deal that matters.
 
-Closing date is NOT computed here: it's a hard calendar date fixed at
-drafting time (created_at + close_days, see pdf_filler.py) and printed as
-such on the contract itself, so it never depends on the Effective Date the
-way the earnest money and option deadlines do.
+Closing date doesn't depend on the Effective Date: it's a hard calendar
+date fixed at drafting time and printed as such on the contract itself.
+offer_closing_date() below is the ONE place it's computed -- the PDF overlay
+and cover page (pdf_filler.py, cover_page.py), the validator that gates the
+Email button (pdf_validator.py), the review/thread/transaction pages and the
+SMS confirmation (app.py), the 39-11 (amendment.py) and the closing reminder
+(reminders.py) all call it, so they can't disagree. Found 2026-10-24: each
+of those did its own `now/created_at + timedelta(close_days)`, with
+pdf_filler on the server's local clock and created_at stored in UTC, so any
+offer drafted after ~5 PM Pacific / 7 PM Central on a non-UTC host got one
+date on the PDF and the next day on the review page, and the validator
+blocked sending.
 """
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 
 def _nth_weekday(year: int, month: int, weekday: int, n: int) -> date:
@@ -75,6 +83,58 @@ def add_trec_days(start: date, days: int) -> date:
     while not is_business_day(d):
         d += timedelta(days=1)
     return d
+
+
+# Texas offers are drafted on Texas dates. offers.created_at is naive UTC
+# (offers_db.record_offer uses utcnow), so "today" has to be converted, or an
+# 8 PM Central text drafts as tomorrow. tzdata missing on the host would make
+# ZoneInfo raise; fall back to CST (UTC-6) rather than break offer drafting --
+# off by one hour for the DST half of the year, never by a day before 6 PM.
+try:
+    from zoneinfo import ZoneInfo
+    TX_TZ = ZoneInfo("America/Chicago")
+except Exception:
+    TX_TZ = timezone(timedelta(hours=-6))
+
+
+def _utcnow() -> datetime:
+    """Aware UTC now. Its own function so tests can freeze the clock."""
+    return datetime.now(timezone.utc)
+
+
+def texas_date(moment=None) -> date:
+    """The calendar date in Texas at `moment`: a naive datetime (or ISO
+    string) is read as UTC, the way created_at is stored; None means now."""
+    if moment is None:
+        moment = _utcnow()
+    elif isinstance(moment, str):
+        moment = datetime.fromisoformat(moment)
+    elif isinstance(moment, date) and not isinstance(moment, datetime):
+        return moment  # already a calendar date
+    if moment.tzinfo is None:
+        moment = moment.replace(tzinfo=timezone.utc)
+    return moment.astimezone(TX_TZ).date()
+
+
+def offer_closing_date(close_days, drafted_at=None) -> date:
+    """Paragraph 9A closing date for an offer drafted at `drafted_at` (the
+    offer's created_at; None = being drafted right now) with `close_days`
+    to close: the Texas drafting date + close_days, moved forward off a
+    Saturday, Sunday or holiday -- a closing can't fund on a day title and
+    the lender are shut, and it's the same rule add_trec_days applies to
+    every other deadline (and co_filler.contract_dates to CBS1 closings).
+    An unreadable created_at falls back to now rather than crashing a page."""
+    try:
+        start = texas_date(drafted_at)
+    except (TypeError, ValueError):
+        start = texas_date()
+    return add_trec_days(start, int(close_days or 0))
+
+
+def fmt_closing_date(d: date) -> str:
+    """'November 16, 2026' -- the long form the review/demo pages show
+    (no zero-padded day, unlike strftime's %d)."""
+    return f"{d:%B} {d.day}, {d.year}"
 
 
 def earnest_money_deadline(effective_date: date) -> date:

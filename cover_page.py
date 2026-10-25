@@ -7,6 +7,7 @@ from reportlab.lib.units import inch
 from reportlab.pdfgen import canvas
 from reportlab.lib.colors import HexColor, Color
 from datetime import datetime, timedelta
+from deadlines import offer_closing_date
 import io
 import os
 import re
@@ -280,7 +281,8 @@ def generate_cover_page(parsed: dict, agent: dict, mode: str = "light") -> bytes
     down_amt = parsed.get('down_payment_amount', 0) or 0
     loan_amt = parsed.get('loan_amount', 0) or 0
     close_days = parsed.get('close_days', 0) or 0
-    close_date = _fmt_long_date(now + timedelta(days=close_days)) if close_days else "—"
+    # Same date as the 9A overlay (deadlines.offer_closing_date), not now + N.
+    close_date = _fmt_long_date(offer_closing_date(close_days, parsed.get("created_at"))) if close_days else "—"
 
     tiles = [
         ("Sales price", f"${price:,}", BRAND["green"]),

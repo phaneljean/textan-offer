@@ -123,7 +123,7 @@ TEST_CASES = {
 # Overlay text isn't an AcroForm field -- these substrings must appear
 # somewhere in the extracted page text, derived per-case from `parsed`.
 # Keyed by a STABLE name (not the literal date string) -- the closing date
-# is computed from datetime.now() at generation time, so the actual text
+# is computed from today's date at generation time, so the actual text
 # changes every single day regardless of any code change. Storing the
 # literal string as a golden dict key (an earlier version of this function
 # did exactly that) means the snapshot goes stale and fails the day after
@@ -133,10 +133,10 @@ TEST_CASES = {
 # "what should today's date look like" fresh, and only the presence
 # boolean is diffed, not the date text itself.
 def _expected_overlay_checks(parsed: dict) -> dict:
-    from datetime import datetime, timedelta
+    from deadlines import offer_closing_date
     checks = {}
     if parsed.get("close_days") is not None:
-        close_dt = datetime.now() + timedelta(days=parsed["close_days"])
+        close_dt = offer_closing_date(parsed["close_days"], parsed.get("created_at"))
         checks["closing_date"] = close_dt.strftime("%B %d,")
     if parsed.get("inspection_days") is not None:
         checks["inspection_days"] = str(parsed["inspection_days"])

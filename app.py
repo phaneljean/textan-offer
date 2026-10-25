@@ -51,7 +51,7 @@ import crm
 import broker_auth
 from reminders import run_reminders_if_due
 import nurture
-from deadlines import earnest_money_deadline, option_end_date, build_day_one_summary
+from deadlines import earnest_money_deadline, option_end_date, build_day_one_summary, offer_closing_date, fmt_closing_date
 import transaction_tasks
 from drafts import save_draft, get_draft, clear_draft
 from tc_audit import check_tc_file, compare_contracts
@@ -1489,7 +1489,8 @@ def format_offer_confirmation(parsed: dict) -> str:
     omitted if the agent hasn't set up their profile yet."""
     if parsed.get("state") == "CO":
         return format_co_confirmation(parsed)
-    close_dt = datetime.now() + timedelta(days=parsed["close_days"])
+    # Same date the PDF will print (deadlines.offer_closing_date).
+    close_dt = offer_closing_date(parsed["close_days"])
 
     addr_parts = [parsed["address"]]
     if parsed.get("city"):
@@ -2647,9 +2648,7 @@ def _demo_page(demo_key):
             _pdf_sig = hmac.new(PDF_LINK_SECRET.encode(), f"{filename}:{_pdf_expires}".encode(), hashlib.sha256).hexdigest()[:16]
             close_date_str = ""
             try:
-                close_dt = datetime.now()
-                from datetime import timedelta
-                close_date_str = (close_dt + timedelta(days=parsed["close_days"])).strftime("%B %d, %Y")
+                close_date_str = fmt_closing_date(offer_closing_date(parsed["close_days"]))
             except Exception:
                 close_date_str = f"{parsed['close_days']} days"
             warning_html = ""
@@ -2807,8 +2806,7 @@ def api_demo():
     filename = os.path.basename(pdf_path)
     record_offer("landing-demo", parsed, filename)
     pdf_url = sign_pdf_url(filename, request.host_url.rstrip("/"))
-    from datetime import timedelta
-    close_date = (datetime.now() + timedelta(days=parsed["close_days"])).strftime("%B %d, %Y")
+    close_date = fmt_closing_date(offer_closing_date(parsed["close_days"]))
     return jsonify({
         "address": parsed["address"],
         "price": parsed["price"],
@@ -2832,8 +2830,7 @@ def api_parse():
     address_issue = addr_check["reason"] if not addr_check["valid"] else (
         addr_check["warnings"][0] if addr_check["warnings"] else None
     )
-    from datetime import timedelta
-    close_date = (datetime.now() + timedelta(days=parsed["close_days"])).strftime("%B %d, %Y")
+    close_date = fmt_closing_date(offer_closing_date(parsed["close_days"]))
     down_amt = int(parsed["price"] * parsed["down_payment_pct"])
     loan_amt = parsed["price"] - down_amt
     return jsonify({
@@ -9985,18 +9982,13 @@ def review_offer(filename):
 
     pdf_url = f"/offers/{filename}?expires={expires}&sig={sig}"
 
-    from datetime import timedelta
     # Anchor to the offer's actual creation time, not "now" -- this page can
     # be opened any time after generation, and the closing date is fixed at
     # generation time (baked into the PDF then). Recomputing from "now" here
     # made the summary card silently drift a day later for every day that
     # passes before the agent opens this link, disagreeing with the PDF.
-    try:
-        created_dt = datetime.fromisoformat(offer["created_at"])
-    except (KeyError, TypeError, ValueError):
-        created_dt = datetime.now()
-    close_dt = created_dt + timedelta(days=close_days) if close_days else None
-    close_date = f"{close_dt:%B} {close_dt.day}, {close_dt.year}" if close_dt else ""
+    # deadlines.offer_closing_date is the same function the PDF stamps with.
+    close_date = fmt_closing_date(offer_closing_date(close_days, offer.get("created_at"))) if close_days else ""
     is_co = filename.startswith("CBS1_")
     if is_co:
         # The CBS1 closing date moves off weekends (co_filler.contract_dates),
@@ -10349,12 +10341,8 @@ def offer_thread(filename):
             if action == "accept":
                 effective_date = datetime.utcnow().date()
                 close_date = None
-                try:
-                    created_dt = datetime.fromisoformat(offer["created_at"])
-                    if offer.get("close_days"):
-                        close_date = (created_dt + timedelta(days=offer["close_days"])).date()
-                except (KeyError, TypeError, ValueError):
-                    pass
+                if offer.get("close_days"):
+                    close_date = offer_closing_date(offer["close_days"], offer.get("created_at"))
                 summary_lines = _day_one_lines(
                     filename, offer["address"], effective_date, offer.get("option_days"), close_date
                 )
@@ -10415,8 +10403,7 @@ def offer_thread(filename):
         created_dt = datetime.fromisoformat(offer["created_at"])
     except (KeyError, TypeError, ValueError):
         created_dt = datetime.now()
-    close_dt = created_dt + timedelta(days=close_days) if close_days else None
-    close_date = f"{close_dt:%B} {close_dt.day}, {close_dt.year}" if close_dt else ""
+    close_date = fmt_closing_date(offer_closing_date(close_days, offer.get("created_at"))) if close_days else ""
 
     action_expires = int(time.time()) + THREAD_LINK_TTL
     accept_sig = sign_thread_action(filename, "accept", action_expires)
@@ -10459,7 +10446,7 @@ def offer_thread(filename):
             effective_date = datetime.fromisoformat(offer.get("thread_responded_at") or "").date()
         except ValueError:
             effective_date = created_dt.date()
-        close_date_obj = (created_dt + timedelta(days=close_days)).date() if close_days else None
+        close_date_obj = offer_closing_date(close_days, offer.get("created_at")) if close_days else None
         summary_lines = _day_one_lines(filename, address, effective_date, offer.get("option_days"), close_date_obj)
         summary_text = "\n".join(summary_lines)
         summary_items_html = "".join(f"<li>{line}</li>" for line in summary_lines[1:-1])
@@ -10654,7 +10641,7 @@ def transaction_page(filename):
         created_dt = datetime.fromisoformat(offer["created_at"])
     except (KeyError, TypeError, ValueError):
         created_dt = datetime.now()
-    close_date_obj = (created_dt + timedelta(days=close_days)).date() if close_days else None
+    close_date_obj = offer_closing_date(close_days, offer.get("created_at")) if close_days else None
 
     if thread_status not in ("accept", "accepted"):
         return f"""<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
