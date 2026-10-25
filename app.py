@@ -3473,7 +3473,9 @@ def tc_check_page():
   .has-result .dz-again{display:inline}
 
   /* result: same card language as the homepage hero report */
-  .result{display:none;text-align:left;max-width:760px;margin:28px auto 0}
+  /* scroll-margin-top: revealResult() scrolls this to block:'start', which put the
+     demo banner and report header under the 52px sticky nav at 375px. */
+  .result{display:none;text-align:left;max-width:760px;margin:28px auto 0;scroll-margin-top:68px}
   .result.show{display:block}
   .demo-banner{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);margin-bottom:10px}
   .rep{background:#fff;border-radius:22px;overflow:hidden;box-shadow:0 30px 70px -28px rgba(10,63,58,.35),0 0 0 1px rgba(0,0,0,.05)}
@@ -3894,9 +3896,15 @@ function demoDone(ok) {
   demoBtn.textContent = ok ? '\u2713 Done \u2014 results below' : 'Couldn\u2019t load the sample. Try again \u2192';
   setTimeout(() => { demoBtn.textContent = demoBtn.dataset.label; demoBtn.disabled = false; }, ok ? 3500 : 2500);
 }
+// Measured after .drop-zone's .15s transition: 'has-result' shrinks its
+// padding, and scrolling mid-shrink landed ~26px too far at 375px, putting
+// the demo banner under the sticky nav (.result's scroll-margin-top clears
+// the nav itself).
 function revealResult() {
-  const r = resultEl.getBoundingClientRect();
-  if (r.top < 20 || r.top > window.innerHeight * 0.6) resultEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  setTimeout(() => {
+    const r = resultEl.getBoundingClientRect();
+    if (r.top < 20 || r.top > window.innerHeight * 0.6) resultEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 200);
 }
 let pendingAddendumFiles = [];
 // The exact files of the last check, kept in the browser only, so an
