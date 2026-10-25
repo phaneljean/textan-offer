@@ -3068,9 +3068,13 @@ def tc_check():
     # folded into one line, each with its consequence tag -- the exact list
     # the emailed report shows, so the on-screen report and the downloaded
     # PDF match it. Empty while gated, same as "issues".
-    from tc_check_email import _display_issues, _consequence_tag, _clean, _files_line
+    from tc_check_email import _display_issues, _consequence_tag, _clean, _files_line, _finding_page, _why_it_matters
     payload["display_issues"] = sorted(
-        ({"severity": i.get("severity"), "tag": _consequence_tag(i), "message": _clean(i.get("message", ""))}
+        ({"severity": i.get("severity"), "tag": _consequence_tag(i), "message": _clean(i.get("message", "")),
+          # The sample report (2026-10-25) also shows each finding's form
+          # page and a "Why it matters" line; real reports don't yet, since
+          # only the sample's finding keys have a line written.
+          **({"page": _finding_page(i), "why": _why_it_matters(i)} if is_demo else {})}
          for i in _display_issues(payload.get("issues") or [])),
         key=lambda i: i["severity"] != "blocker",  # must-fix first, same order as the email/PDF
     )
@@ -3491,6 +3495,9 @@ def tc_check_page():
   .issue-list{list-style:none}
   .issue-item{display:grid;grid-template-columns:200px 1fr;gap:14px;padding:11px 0;border-bottom:1px solid var(--line);font-size:14px;line-height:1.45}
   .issue-item:last-child{border-bottom:0}
+  .issue-page{display:block;margin-top:4px;font-size:12px;font-weight:700;color:var(--mute)}
+  .issue-why{display:block;margin-top:4px;font-size:13px;color:var(--mute)}
+  .issue-why b{color:var(--ink)}
   .issue-tag{font-size:10.5px;font-weight:800;letter-spacing:.04em;padding:4px 8px;border-radius:6px;height:fit-content;width:fit-content}
   .issue-tag.blocker{background:#fdecec;color:var(--red)}
   .issue-tag.warning,.issue-tag.info{background:#fff4dc;color:var(--amber)}
@@ -4075,7 +4082,11 @@ function buildIssueGroups(issues) {
     if (!list.length) continue;
     html += '<div class="grp">' + label + '</div><ul class="issue-list">';
     for (const issue of list) {
-      html += '<li class="issue-item"><span class="issue-tag ' + issue.severity + '">' + escapeHtml(issue.tag || issue.severity) + '</span><span>' + escapeHtml(issue.message) + '</span></li>';
+      // page/why come only on the sample report (see /tc-check's payload).
+      let extra = '';
+      if (issue.page) extra += '<span class="issue-page">' + label + ' &middot; ' + escapeHtml(issue.page) + '</span>';
+      if (issue.why) extra += '<span class="issue-why"><b>Why it matters:</b> ' + escapeHtml(issue.why) + '</span>';
+      html += '<li class="issue-item"><span class="issue-tag ' + issue.severity + '">' + escapeHtml(issue.tag || issue.severity) + '</span><span>' + escapeHtml(issue.message) + extra + '</span></li>';
     }
     html += '</ul>';
   }

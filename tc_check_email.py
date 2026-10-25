@@ -184,6 +184,89 @@ def _consequence_tag(issue: dict) -> str:
     return issue.get("severity", "issue").upper()
 
 
+# "Why it matters" lines (2026-10-25, Phanel): one sentence per finding key
+# on the downstream consequence a TC cares about, shown under each finding
+# in the sample report (/tc-check?demo=1). Same rules as _CONSEQUENCE_TAGS
+# above: what the form itself says the field does (paragraph cited), "can"
+# and "may" where it depends on title, the lender or the other side, and
+# never a legal conclusion like "voids the contract". Written to be true
+# for every message a key can produce (check_one_conflict covers 6C, 7B,
+# 7D, 6E(2) and 10A; receipt_mismatch both page-12 receipts), so a real
+# report can show the same line later. Only the sample report's keys so
+# far; a key not listed simply shows no line.
+_WHY_IT_MATTERS = {
+    "initials_buyer": "The footer initials show each party saw that page, so a page missing them can get the file sent back by broker compliance or title to collect them before closing.",
+    "initials_seller": "The footer initials show each party saw that page, so a page missing them can get the file sent back by broker compliance or title to collect them before closing.",
+    "initials_mismatch": "Initials that don't match a party named in Paragraph 1 don't show that party saw the page, so compliance or title may ask for the right party's initials before closing.",
+    "sales_price_math": "Paragraph 3C is the sum of 3A and 3B, and title and the lender work from these numbers, so when they don't add up the agreed price is unclear and the file can come back for an amendment.",
+    "closing_date_invalid": "Paragraph 9A sets the date closing must happen by, and a date that doesn't exist can't be calendared by title or the lender, so it may take a signed amendment to fix.",
+    "option_days_blank": "The 5B day count is what sets when the option period ends, so with it blank the buyer's termination deadline can't be computed and may be disputed.",
+    "check_one_conflict": "Each box in a check-one group sets different terms, so with two checked it's unclear which terms the parties agreed to, and title or the other side may ask for an amendment to settle it.",
+    "disclosure_days_blank": "7B(2) gives the seller a set number of days to deliver the Seller's Disclosure Notice, and the buyer's termination rights in 7B depend on when it's delivered, so with the days blank the delivery deadline can't be computed.",
+    "broker_contribution_incomplete": "Title fills in the settlement statement from Paragraph 12B, so until one of the $ or % boxes is chosen and filled in the broker payment can't be computed and title may ask the parties to clarify it.",
+    "poa_addendum_missing": "The Owners Association Addendum sets who orders the subdivision information and the buyer's right to terminate after receiving it, so if it isn't part of the contract those terms and deadlines may be missing from the file.",
+    "receipt_mismatch": "The page-12 receipt is the escrow agent's record of what it received, and under Paragraph 5 a deposit or option fee that isn't paid in full on time can give the seller a right to terminate or cost the buyer the option.",
+    "header_address_blank": "The header is what ties each page to this property, so a blank one can be sent back by broker compliance or title for correction.",
+    "header_address": "A page whose header names a different address doesn't clearly belong to this contract, and title or the lender may ask for a corrected page before closing.",
+    "special_provisions_business_term": "TREC rules don't let licensees draft business terms in Paragraph 11, so a credit written there can become a compliance issue for the agent and may need to be redone in an addendum or amendment before closing.",
+    "email_invalid": "Paragraph 21 makes these addresses places to deliver notices, such as an option termination, and a notice sent to a broken address may not arrive and can be disputed as not delivered.",
+    "financing_addendum_missing": "The 40-11 holds the buyer's loan approval terms and the right to terminate if financing isn't approved, so without it the financing contingency is unclear and the lender or title can ask for it before closing.",
+    "co_price_math": "The closing company builds the settlement statement from the §4.1 table, so when its amounts don't add up to the Purchase Price the price terms are unclear and closing may need an amendment.",
+    "co_loan_avail_deleted": "Without the §5.2.2 right, a buyer whose loan isn't approved may have no loan-based way to terminate, which can put the earnest money at risk.",
+    "co_closing_holiday": "A holiday closing can leave the lender or closing company unable to fund that day, and the §3.3.3 Will/Will Not box decides whether a deadline that falls on a holiday moves to the next business day.",
+}
+
+# Printed form page(s) holding the fields each check reads, from the
+# widgets' real positions (tc_audit's FIELD_MAP/SLOTS/box tables, co_audit's
+# F/DEADLINES) on the TREC 20-19 ("of 12") and CBS1 ("of 20").
+# tests/test_why_it_matters.py re-derives every entry from the sample PDFs'
+# widgets, so a wrong page fails the suite. A dict is per message prefix,
+# for keys whose fields depend on which group fired. Findings whose message
+# already names its page (initials, page headers) are read from the message.
+_FINDING_PAGES = {
+    "sales_price_math": (1,),
+    "closing_date_invalid": (6,),
+    "option_days_blank": (2,),
+    "check_one_conflict": {"Paragraph 6C": (3,), "Paragraph 7B": (4,), "Paragraph 7D": (5,),
+                           "Paragraph 6E(2)": (3,), "Paragraph 10A": (6,)},
+    "disclosure_days_blank": (4,),
+    "broker_contribution_incomplete": (7,),
+    "poa_addendum_missing": (3, 9),
+    "receipt_mismatch": (2, 12),
+    "special_provisions_business_term": (6,),
+    "email_invalid": (8,),
+    "financing_addendum_missing": (1, 9),
+    "co_price_math": (4,),
+    "co_loan_avail_deleted": (3, 4),
+    "co_closing_holiday": (4,),
+}
+_FORM_PAGE_TOTAL = {"tx": 12, "co": 20}
+_PAGES_IN_MESSAGE_RE = re.compile(r"\b[Pp]ages? (\d+(?:(?:, | and )\d+)*) of (\d+)\b")
+
+
+def _why_it_matters(issue: dict) -> str:
+    return _WHY_IT_MATTERS.get(issue.get("key") or "", "")
+
+
+def _finding_page(issue: dict) -> str:
+    """'Page 6 of 12' / 'Pages 3 and 9 of 12' for a finding, or '' when
+    the page isn't known."""
+    key, msg = issue.get("key") or "", issue.get("message") or ""
+    m = _PAGES_IN_MESSAGE_RE.search(msg)
+    if m:
+        nums, total = [int(n) for n in re.findall(r"\d+", m.group(1))], int(m.group(2))
+    else:
+        nums = _FINDING_PAGES.get(key, ())
+        if isinstance(nums, dict):
+            nums = next((p for prefix, p in nums.items() if msg.startswith(prefix)), ())
+        total = _FORM_PAGE_TOTAL["co" if key.startswith("co_") else "tx"]
+    if not nums:
+        return ""
+    nums = [str(n) for n in sorted(set(nums))]
+    joined = nums[0] if len(nums) == 1 else ", ".join(nums[:-1]) + " and " + nums[-1]
+    return f"Page{'s' if len(nums) > 1 else ''} {joined} of {total}"
+
+
 def _join_pages(labels: list) -> str:
     """['Page 1 of 12', 'Page 4 of 12', '40-11 addendum'] ->
     'pages 1 and 4 of 12, plus the 40-11 addendum'."""
