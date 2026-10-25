@@ -185,7 +185,23 @@ class FunnelCountsAnyCheckCta(unittest.TestCase):
         self.assertEqual(f("zillow_broker_reach_oct"), "Cold email")
         self.assertEqual(f("seo_trec-20-19-checklist"), "Search (guides)")
         self.assertEqual(f("direct"), "direct (no tag)")
+        self.assertEqual(f("offer_email_listing"), "Offer emails")
         self.assertEqual(f("something_new"), "other")
+
+    def test_offer_email_footer_src_recorded(self):
+        # integrations.OFFER_EMAIL_FOOTER links here; the hit must show in
+        # /analytics under its own src.
+        _clear_events()
+        client = app_module.app.test_client()
+        r = client.get("/tc-check?src=offer_email_listing", headers=UA)
+        self.assertEqual(r.status_code, 200)
+        conn = sqlite3.connect(analytics.DB_PATH)
+        rows = conn.execute("SELECT event_type, metadata FROM events").fetchall()
+        conn.close()
+        by_type = {t: json.loads(m or "{}") for t, m in rows}
+        self.assertEqual(by_type["landing_visit"]["source"], "offer_email_listing")
+        self.assertEqual(by_type["page_view"]["source"], "offer_email_listing")
+        self.assertEqual(by_type["page_view"]["page"], "tc_check_page")
 
     def test_analytics_page_shows_new_columns_and_ua_filter(self):
         old = app_module.ANALYTICS_PASSWORD

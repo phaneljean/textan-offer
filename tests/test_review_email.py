@@ -194,6 +194,43 @@ class SendOfferEmailUsesResend(unittest.TestCase):
         body = json.loads(captured[0].data)
         self.assertEqual(body["to"], ["listing@example.com"])
         self.assertEqual(body["attachments"][0]["filename"], "offer.pdf")
+        # Footer invite to TC Check (2026-10-25): link with its src tag
+        # exactly once, below the offer content. No HTML part is sent.
+        link = "https://txtanoffer.com/tc-check?src=offer_email_listing"
+        self.assertEqual(body["text"].count(link), 1)
+        self.assertEqual(body["text"].count("tc-check"), 1)
+        self.assertLess(body["text"].index("Price: $725,000"), body["text"].index(link))
+        self.assertNotIn("html", body)
+        self.assertEqual(body["subject"], "Purchase Offer - 123 Main St")
+
+    def test_sendgrid_fallback_has_same_footer(self):
+        import integrations
+        import app as app_module
+        pdf = os.path.join(_TMP, "offer_sg.pdf")
+        with open(pdf, "wb") as f:
+            f.write(b"%PDF-1.4 test")
+        captured = []
+
+        class _Resp:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *a):
+                return False
+
+        with mock.patch.object(integrations, "RESEND_API_KEY", ""), \
+                mock.patch.object(integrations, "SENDGRID_API_KEY", "SG.test"), \
+                mock.patch("integrations.urllib.request.urlopen",
+                           side_effect=lambda req, timeout=None: captured.append(req) or _Resp()):
+            integrations.send_offer_email("listing@example.com", pdf,
+                                          {"address": "123 Main St", "price": 725000, "close_days": 21})
+        import json
+        content = json.loads(captured[0].data)["content"]
+        self.assertEqual([c["type"] for c in content], ["text/plain"])
+        self.assertEqual(content[0]["value"].count("https://txtanoffer.com/tc-check?src=offer_email_listing"), 1)
+        # The footer's "3 free reports, no signup" is only true while this holds.
+        self.assertIn("3 free reports, no signup", integrations.OFFER_EMAIL_FOOTER)
+        self.assertEqual(app_module.TC_FREE_FULL_REPORTS, 3)
 
 
 if __name__ == "__main__":

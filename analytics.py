@@ -704,6 +704,10 @@ def _channel_for_source(src: str) -> str:
         return "Instagram"
     if s.startswith("seo_"):
         return "Search (guides)"
+    # Footer link on offers emailed to the listing agent (integrations.py
+    # OFFER_EMAIL_FOOTER, 2026-10-25) -- product-driven, not outreach.
+    if s.startswith("offer_email"):
+        return "Offer emails"
     # co_ti_* = the Colorado title batch (title_reach_tx_co_2026-10-19.md).
     if (s.startswith(("ti_", "co_ti_", "title_reach", "tc_check_reach", "zillow_broker_reach", "direct_reach", "apollo"))
             or re.match(r"(d|co)\d{4}_", s)):
