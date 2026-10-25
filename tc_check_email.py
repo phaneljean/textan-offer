@@ -195,25 +195,25 @@ def _consequence_tag(issue: dict) -> str:
 # report can show the same line later. Only the sample report's keys so
 # far; a key not listed simply shows no line.
 _WHY_IT_MATTERS = {
-    "initials_buyer": "The footer initials show each party saw that page, so a page missing them can get the file sent back by broker compliance or title to collect them before closing.",
-    "initials_seller": "The footer initials show each party saw that page, so a page missing them can get the file sent back by broker compliance or title to collect them before closing.",
-    "initials_mismatch": "Initials that don't match a party named in Paragraph 1 don't show that party saw the page, so compliance or title may ask for the right party's initials before closing.",
+    "initials_buyer": "Each page's footer reads 'Initialed for identification by Buyer and Seller,' so a page missing a party's initials can be sent back by broker compliance or title to collect them before closing.",
+    "initials_seller": "Each page's footer reads 'Initialed for identification by Buyer and Seller,' so a page missing a party's initials can be sent back by broker compliance or title to collect them before closing.",
+    "initials_mismatch": "Initials that don't match a party named in Paragraph 1 don't identify the page with that party, so compliance or title may ask for the right party's initials before closing.",
     "sales_price_math": "Paragraph 3C is the sum of 3A and 3B, and title and the lender work from these numbers, so when they don't add up the agreed price is unclear and the file can come back for an amendment.",
     "closing_date_invalid": "Paragraph 9A sets the date closing must happen by, and a date that doesn't exist can't be calendared by title or the lender, so it may take a signed amendment to fix.",
     "option_days_blank": "The 5B day count is what sets when the option period ends, so with it blank the buyer's termination deadline can't be computed and may be disputed.",
     "check_one_conflict": "Each box in a check-one group sets different terms, so with two checked it's unclear which terms the parties agreed to, and title or the other side may ask for an amendment to settle it.",
     "disclosure_days_blank": "7B(2) gives the seller a set number of days to deliver the Seller's Disclosure Notice, and the buyer's termination rights in 7B depend on when it's delivered, so with the days blank the delivery deadline can't be computed.",
     "broker_contribution_incomplete": "Title fills in the settlement statement from Paragraph 12B, so until one of the $ or % boxes is chosen and filled in the broker payment can't be computed and title may ask the parties to clarify it.",
-    "poa_addendum_missing": "The Owners Association Addendum sets who orders the subdivision information and the buyer's right to terminate after receiving it, so if it isn't part of the contract those terms and deadlines may be missing from the file.",
-    "receipt_mismatch": "The page-12 receipt is the escrow agent's record of what it received, and under Paragraph 5 a deposit or option fee that isn't paid in full on time can give the seller a right to terminate or cost the buyer the option.",
+    "poa_addendum_missing": "The Owners Association Addendum sets who obtains and pays for the Subdivision Information and the buyer's right to terminate after receiving it, so if it isn't part of the contract those terms and deadlines may be missing from the file.",
+    "receipt_mismatch": "The page-12 receipt is the escrow agent's acknowledgment of what it received, so when it differs from the amount in Paragraph 5A it's unclear whether the full amount was delivered, and under Paragraphs 5C and 5D an earnest money or option fee not delivered in time can let the seller terminate or cost the buyer the unrestricted right to terminate.",
     "header_address_blank": "The header is what ties each page to this property, so a blank one can be sent back by broker compliance or title for correction.",
     "header_address": "A page whose header names a different address doesn't clearly belong to this contract, and title or the lender may ask for a corrected page before closing.",
-    "special_provisions_business_term": "TREC rules don't let licensees draft business terms in Paragraph 11, so a credit written there can become a compliance issue for the agent and may need to be redone in an addendum or amendment before closing.",
+    "special_provisions_business_term": "The form says Paragraph 11 is for informational items only and that agents shall not add to or modify contract terms there unless a party or a party's attorney drafted the language, so broker compliance may ask for a credit written there to be moved to a TREC addendum or redrafted before closing.",
     "email_invalid": "Paragraph 21 makes these addresses places to deliver notices, such as an option termination, and a notice sent to a broken address may not arrive and can be disputed as not delivered.",
-    "financing_addendum_missing": "The 40-11 holds the buyer's loan approval terms and the right to terminate if financing isn't approved, so without it the financing contingency is unclear and the lender or title can ask for it before closing.",
+    "financing_addendum_missing": "The 40-11 holds the loan terms and the Paragraph 2 Buyer Approval and Property Approval terms, including any right to terminate if approval isn't obtained, so without it the financing in Paragraph 3B is unclear and the lender or title can ask for it before closing.",
     "co_price_math": "The closing company builds the settlement statement from the §4.1 table, so when its amounts don't add up to the Purchase Price the price terms are unclear and closing may need an amendment.",
-    "co_loan_avail_deleted": "Without the §5.2.2 right, a buyer whose loan isn't approved may have no loan-based way to terminate, which can put the earnest money at risk.",
-    "co_closing_holiday": "A holiday closing can leave the lender or closing company unable to fund that day, and the §3.3.3 Will/Will Not box decides whether a deadline that falls on a holiday moves to the next business day.",
+    "co_loan_avail_deleted": "Under §3.2 an N/A deadline deletes its provision, so with item 15 N/A the buyer has no §5.2.2 right to terminate if the lender's underwriting of the loan application isn't satisfactory, and whether the earnest money is protected then depends on the contract's other termination rights.",
+    "co_closing_holiday": "A holiday closing can leave the lender or closing company unable to fund that day, and the §3.3.3 Will/Will Not box decides whether a deadline that falls on a holiday moves to the next day that isn't a Saturday, Sunday or Holiday (if neither box is checked, it doesn't move).",
 }
 
 # Printed form page(s) holding the fields each check reads, from the
