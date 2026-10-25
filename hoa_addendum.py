@@ -26,6 +26,7 @@ names elsewhere in this app.
 """
 import os
 import io
+import re
 from pypdf import PdfReader, PdfWriter
 from pypdf.generic import (NameObject, BooleanObject, TextStringObject, DictionaryObject,
                            ArrayObject, FloatObject, StreamObject)
@@ -33,7 +34,46 @@ from reportlab.pdfbase.pdfmetrics import stringWidth
 
 from water_disclosure import _full_address
 
-TEMPLATE_PATH = os.environ.get("HOA_ADDENDUM_TEMPLATE_PATH", "36-11.pdf")
+BUNDLED_TEMPLATE_PATH = "36-11.pdf"
+
+# Lowest revision we'll fill. 36-11's own text also says "TREC No. 36-10"
+# (in "This form replaces..."), so the check takes the highest 36-N on the
+# form instead of accepting any match.
+MIN_FORM_REVISION = 11
+_FORM_ID_RE = re.compile(r"TREC\s+NO\.?\s*36-(\d+)", re.IGNORECASE)
+
+
+def _form_revision(path: str):
+    """Highest TREC 36-N revision printed on the PDF, or None if unreadable."""
+    try:
+        text = "".join(page.extract_text() or "" for page in PdfReader(path).pages)
+    except Exception:
+        return None
+    revisions = [int(n) for n in _FORM_ID_RE.findall(text)]
+    return max(revisions) if revisions else None
+
+
+def _template_path() -> str:
+    """The env override, but only if it's really 36-11 or newer.
+    If Railway still has HOA_ADDENDUM_TEMPLATE_PATH pointing at the deleted
+    36-10.pdf (or at an outdated copy), failing every HOA offer would be
+    worse than using the bundled form, so warn and fall back instead.
+    Read at call time, not import time, so a fixed env var applies without
+    a code change."""
+    path = os.environ.get("HOA_ADDENDUM_TEMPLATE_PATH")
+    if not path or path == BUNDLED_TEMPLATE_PATH:
+        return BUNDLED_TEMPLATE_PATH
+    if not os.path.exists(path):
+        print(f"[hoa_addendum] WARNING: HOA_ADDENDUM_TEMPLATE_PATH={path} does not exist; "
+              f"using bundled {BUNDLED_TEMPLATE_PATH}.")
+        return BUNDLED_TEMPLATE_PATH
+    revision = _form_revision(path)
+    if revision is None or revision < MIN_FORM_REVISION:
+        found = f"36-{revision}" if revision is not None else "no TREC 36-N form ID"
+        print(f"[hoa_addendum] WARNING: HOA_ADDENDUM_TEMPLATE_PATH={path} is {found}, "
+              f"not 36-{MIN_FORM_REVISION} or newer; using bundled {BUNDLED_TEMPLATE_PATH}.")
+        return BUNDLED_TEMPLATE_PATH
+    return path
 
 # "ADDENDUM TO CONTRACT CONCERNING THE PROPERTY AT ___" blank. Rect-verified
 # 2026-10-25 against 36-11.pdf: widget spans x 36-576, top-down y 121.6-134.4,
@@ -83,10 +123,11 @@ def _address_appearance(annot, text: str) -> StreamObject:
 
 
 def fill_hoa_addendum(parsed: dict) -> bytes:
-    if not os.path.exists(TEMPLATE_PATH):
-        raise FileNotFoundError(f"TREC 36-11 template not found at {TEMPLATE_PATH}")
+    template_path = _template_path()
+    if not os.path.exists(template_path):
+        raise FileNotFoundError(f"TREC 36-11 template not found at {template_path}")
 
-    reader = PdfReader(TEMPLATE_PATH)
+    reader = PdfReader(template_path)
     writer = PdfWriter()
     writer.append(reader)
 
