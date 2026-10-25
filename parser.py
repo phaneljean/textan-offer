@@ -10,8 +10,10 @@ from datetime import datetime
 
 PRICE_RE = re.compile(r'(\d+(?:\.\d+)?)\s*([kK]|million|mil|m\b)?')
 PCT_RE = re.compile(r'(\d+(?:\.\d+)?)\s*(?:%|percent|pct)', re.IGNORECASE)
-DAYS_RE = re.compile(r'(\d+)\s*(?:day|days)', re.IGNORECASE)
-CLOSE_PHRASE_RE = re.compile(r'close\s+(?:in\s+)?(\d+)\s*(?:day|days)?', re.IGNORECASE)
+# "[\s-]*" so "21-day" counts too -- without it "21-day close 123 Main St"
+# fell through to CLOSE_PHRASE_RE and read the street number as close_days.
+DAYS_RE = re.compile(r'(\d+)[\s-]*(?:day|days)', re.IGNORECASE)
+CLOSE_PHRASE_RE = re.compile(r'clos(?:e|ing)\s+(?:in\s+)?(\d+)\s*(?:day|days)?', re.IGNORECASE)
 
 # Inspection/option period ("10-day inspection", "10 day option period") --
 # stripped out before the generic day-count patterns above run, so a message
@@ -211,8 +213,15 @@ def _parse_address(text):
     stripped = re.sub(r'\b\d{1,3}(?:,\d{3})+\b', '', stripped)  # comma-formatted numbers
     stripped = re.sub(r'\d+(?:\.\d+)?\s*(?:%|percent|pct)', '', stripped, flags=re.IGNORECASE)
     stripped = re.sub(r'\d+(?:\.\d+)?\s*down\b', '', stripped, flags=re.IGNORECASE)
-    stripped = re.sub(r'\d+[\s-]*day\w*', '', stripped, flags=re.IGNORECASE)
-    stripped = re.sub(r'\bclose\s+(?:in\s+)?\d+\s*(?:day|days)?\b', '', stripped, flags=re.IGNORECASE)
+    # Closing timeframe, stripped in ONE pass so the "close"/"day" words go
+    # with their own number. Two sequential strips used to chain: "close in
+    # 30 days 123 Main St" lost "30 days" first, then "close in 123" ate the
+    # street number. Covers "close in 30 days", "close in 30", "closing in
+    # 30 days", "30 day close", "21-day closing", "21day".
+    stripped = re.sub(
+        r'\bclos(?:e|ing)\s+(?:in\s+)?\d+(?:[\s-]*day\w*)?'
+        r'|\d+[\s-]*day\w*(?:\s+clos(?:e|ing)\b)?',
+        '', stripped, flags=re.IGNORECASE)
     stripped = CLOSE_DATE_RE.sub('', stripped)
     stripped = re.sub(r'\b(?:offer|down|closing|percent|pct|inspection|option|conventional|fha|va|cash|hoa)\b', '', stripped, flags=re.IGNORECASE)
     # Remove county/city names only when NOT followed by a street suffix
