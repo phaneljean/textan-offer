@@ -45,6 +45,11 @@ TX_COUNTIES = [
     'williamson', 'fort bend', 'montgomery', 'el paso', 'hidalgo', 'cameron',
 ]
 COUNTY_RE = re.compile(r'\b(' + '|'.join(TX_COUNTIES) + r')\b', re.IGNORECASE)
+# "Travis County", "Travis co." -- the explicit form, always taken as the
+# county. "co" needs its period: a bare "CO" is Colorado to validate_address.
+COUNTY_WORD_RE = re.compile(r'\b(' + '|'.join(TX_COUNTIES) + r')\s+(?:county\b|co\.)', re.IGNORECASE)
+# What follows a city in "Dallas, TX 75201": the city slot, not a county.
+_CITY_SLOT_RE = re.compile(r'\s*,?\s*(?:TX|Texas|7\d{4})\b', re.IGNORECASE)
 
 def _parse_price(text):
     # Priority 1: number with explicit unit (k/m/million)
@@ -151,10 +156,34 @@ def _parse_has_hoa(text):
     return bool(HOA_RE.search(text))
 
 
-def _parse_county(text):
-    # Look for county name in the text
-    m = COUNTY_RE.search(text)
-    return m.group(1).title() if m else None
+def _parse_county(text, address=None, city=None):
+    # A county name only counts when it's clearly the county (found
+    # 2026-10-24, trec-qa): "123 Denton Dr, Austin" put Denton in 2A, and
+    # "123 Main St, Dallas, TX 75201" put the city in as County of. So:
+    # "Travis County" / "Travis co." always wins; otherwise a bare name counts
+    # only as its own token -- not part of the street ("Denton Dr"), not in
+    # the city slot ("Dallas, TX"), and not the city again after the street
+    # ("Dallas 123 Main St, Dallas" still reads the first Dallas as county).
+    m = COUNTY_WORD_RE.search(text)
+    if m:
+        return m.group(1).title()
+    addr_start = None
+    words = (address or '').split()
+    if len(words) >= 2:
+        a = re.search(r'\b' + re.escape(words[0]) + r'\W+' + re.escape(words[1].strip('.,')),
+                      text, re.IGNORECASE)
+        addr_start = a.start() if a else None
+    for m in COUNTY_RE.finditer(text):
+        rest = text[m.end():]
+        if re.match(r'\s+' + STREET_SUFFIXES + r'\b', rest, re.IGNORECASE):
+            continue  # street name
+        if _CITY_SLOT_RE.match(rest):
+            continue  # "Dallas, TX" -- the city
+        if (city and m.group(1).lower() == city.lower()
+                and (addr_start is None or m.start() > addr_start)):
+            continue  # the city, named after the street
+        return m.group(1).title()
+    return None
 
 def _parse_city(text):
     # Common TX cities - look for them in the text
@@ -223,7 +252,17 @@ def _parse_address(text):
         r'|\d+[\s-]*day\w*(?:\s+clos(?:e|ing)\b)?',
         '', stripped, flags=re.IGNORECASE)
     stripped = CLOSE_DATE_RE.sub('', stripped)
-    stripped = re.sub(r'\b(?:offer|down|closing|percent|pct|inspection|option|conventional|fha|va|cash|hoa)\b', '', stripped, flags=re.IGNORECASE)
+    # Financing words come from FINANCING_RE itself, so every type
+    # _parse_financing_type knows is also stripped here -- "USDA", "Texas
+    # Veterans" and "reverse mortgage" used to stay in the address ("Usda 123
+    # Main St", rejected; or "123 Main St, , Usda", drafted). A trailing
+    # "loan" ("FHA loan") goes with it.
+    stripped = re.sub(FINANCING_RE.pattern + r'(?:\s+loan\b)?', '', stripped, flags=re.IGNORECASE)
+    stripped = re.sub(r'\b(?:offer|down|closing|percent|pct|inspection|option|hoa)\b', '', stripped, flags=re.IGNORECASE)
+    # "Travis County" / "Travis co.": drop the county word with its name (the
+    # place-name pass below removes the name itself).
+    stripped = re.sub(r'\b(' + '|'.join(TX_COUNTIES) + r')\s+(?:county\b|co\.)(?!\s+' + STREET_SUFFIXES + r'\b)',
+                      r'\1', stripped, flags=re.IGNORECASE)
     # Remove county/city names only when NOT followed by a street suffix
     # (protects addresses like "123 Dallas Pkwy" or "456 El Paso Dr")
     all_place_names = list(TX_COUNTIES) + [
@@ -275,9 +314,9 @@ def parse_offer_sms(text: str) -> dict:
     if pct is None and financing_type == "cash":
         pct = 1.0
     days = _parse_days(text)
-    county = _parse_county(text)  # optional
     city = _parse_city(text)  # optional
     address = _parse_address(text)
+    county = _parse_county(text, address, city)  # optional
     inspection_days = _parse_inspection_days(text)  # optional
 
     # Field-specific error message ("Variant B") instead of a raw list of

@@ -51,9 +51,11 @@ class TextDemo(unittest.TestCase):
         parsed = built[0] if isinstance(built, tuple) else built
         real = app_module.format_offer_confirmation(parsed)
         shown = _js_string("REPLY1")
-        # Same text, except the closing date, which the real reply computes from today.
-        norm = lambda s: re.sub(r"Closing [A-Z][a-z]{2} \d{1,2} ", "Closing DATE ", s)
+        # Same text, except the closing line, which the real reply computes from today.
+        norm = lambda s: re.sub(r"Closing [A-Z][a-z]{2}, [A-Z][a-z]{2} \d{1,2}, \d{4} \(21 days[^)]*\)", "Closing DATE", s)
         self.assertTrue(norm(real).startswith(norm(shown)), "demo bubble no longer matches format_offer_confirmation()")
+        # ...and the shown line is what drafting it on Sat Oct 24, 2026 really gives.
+        self.assertIn(app_module.closing_line(21, "2026-10-24T17:00:00"), shown)
 
     def test_ready_bubble_matches_real_sms(self):
         src = open(os.path.join(ROOT, "app.py")).read()

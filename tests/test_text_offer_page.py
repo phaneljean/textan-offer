@@ -70,6 +70,7 @@ class TextOfferPage(unittest.TestCase):
         self.assertEqual((p["down_payment_amount"], p["loan_amount"], p["price"]), (21750, 703250, 725000))
         self.assertEqual((p["earnest_money"], p["option_fee"]), (7250, 250))
         self.assertEqual(p["close_days"], 21)
+        self.assertEqual(p["county"], "")  # "not set by this text"
 
         p, err, w = app_module.build_offer_draft(b, "+15125550199")
         self.assertIsNone(err)
@@ -79,12 +80,20 @@ class TextOfferPage(unittest.TestCase):
         self.assertIsNone(err)
         self.assertEqual((p["down_payment_amount"], p["loan_amount"], p["price"]), (240000, 960000, 1200000))
         self.assertEqual((p["financing_type"], p["inspection_days"], p["has_hoa"], p["close_days"]), ("fha", 10, True, 45))
+        self.assertEqual((p["city"], p["county"]), ("Dallas", ""))  # the city isn't read as the county
 
     def test_summary_shown_matches_real_confirmation(self):
         p, _, _ = app_module.build_offer_draft(text_offer_page.EXAMPLES[0][0], "+15125550199")
         real = app_module.format_offer_confirmation(p)
-        real = re.sub(r"Closing [A-Z][a-z]{2} \d{1,2} ", "Closing (date) ", real)
         shown = re.search(r'<div class="to-reply">(.*?)</div>', text_offer_page.body(), re.S).group(1)
+        # The shown closing line is the real one for a text sent Sat Oct 24, 2026
+        # (as the caption under it says); today's differs only in that line.
+        example = app_module.closing_line(21, "2026-10-24T17:00:00")
+        self.assertEqual(example, "Closing Mon, Nov 16, 2026 (21 days, moved off the weekend)")
+        self.assertIn(example + "\n", shown)
+        self.assertIn("Example sent Sat, Oct 24, 2026: 21 days out is a Saturday, so closing moves to Monday.",
+                      text_offer_page.body())
+        real = real.replace(app_module.closing_line(21), example)
         self.assertTrue(real.startswith(shown), "summary on the page no longer matches format_offer_confirmation()")
 
     def test_shorthands_on_page_parse(self):
@@ -101,10 +110,18 @@ class TextOfferPage(unittest.TestCase):
             ("725k 3% 21 days 123 Main St, Austin, TX", "close_days", 21),
             ("725k 3% 21day 10 day inspection 123 Main St, Austin, TX", "inspection_days", 10),
             ("725k 3% 21day Travis 123 Main St, Austin, TX", "county", "Travis"),
+            ("725k 3% 21day Travis County 123 Main St, Austin, TX", "county", "Travis"),
+            ("725k 3% 21day 123 Denton Dr, Austin, TX", "county", None),
+            ("725k 3% 21day conventional 123 Main St, Austin, TX", "financing_type", "conventional"),
+            ("725k 3% 21day FHA 123 Main St, Austin, TX", "financing_type", "fha"),
+            ("725k 3% 21day VA 123 Main St, Austin, TX", "financing_type", "va"),
+            ("725k 3% 21day USDA 123 Main St, Austin, TX", "financing_type", "usda"),
+            ("725k 3% 21day Texas Veterans 123 Main St, Austin, TX", "financing_type", "texas_veterans"),
+            ("725k 3% 21day reverse mortgage 123 Main St, Austin, TX", "financing_type", "reverse_mortgage"),
         ]:
             r = parse_offer_sms(t)
             self.assertEqual(r.get(field), want, t)
-            self.assertEqual(r["address"], "123 Main St", t)
+            self.assertEqual(r["address"], "123 Denton Dr" if "Denton" in t else "123 Main St", t)
         self.assertIn("close_days", parse_offer_sms("725k 3% close Dec 15 123 Main St, Austin, TX"))
 
     def test_missing_and_out_of_range_replies(self):
@@ -130,6 +147,12 @@ class TextOfferPage(unittest.TestCase):
         pricing = self.client.get("/pricing", headers=UA).get_data(as_text=True)
         self.assertIn("$40", pricing)
         self.assertIn("First 3 offers free", pricing)
+
+    def test_no_hoa_form_number(self):
+        # TREC may have replaced 36-10; the page says "the HOA addendum".
+        html = self.client.get("/text-an-offer", headers=UA).get_data(as_text=True)
+        self.assertNotIn("36-10", html)
+        self.assertNotIn("36&#8209;10", html)
 
     def test_forms_list_matches_finalize(self):
         with open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "app.py")) as fh:

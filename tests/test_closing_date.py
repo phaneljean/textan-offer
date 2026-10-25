@@ -48,6 +48,10 @@ CASES = [
     ("live_repro", datetime(2026, 10, 25, 0, 7, tzinfo=UTC), 21, date(2026, 11, 16)),
 ]
 
+# What the SMS summary says about a rolled date (deadlines.roll_note).
+NOTES = {"saturday": "moved off the weekend", "sunday": "moved off the weekend",
+         "holiday": "moved off a holiday", "live_repro": "moved off the weekend"}
+
 
 class _FrozenDatetime(datetime):
     """offers_db.record_offer stamps created_at with datetime.utcnow()."""
@@ -76,6 +80,14 @@ class OfferClosingDateUnit(unittest.TestCase):
         # Nov 10, 05:30 UTC = Nov 9, 11:30 PM CST (UTC-6, DST ended Nov 1).
         self.assertEqual(texas_date("2026-11-10T05:30:00"), date(2026, 11, 9))
         self.assertEqual(texas_date("2026-11-10T06:30:00"), date(2026, 11, 10))
+
+    def test_roll_note(self):
+        from deadlines import roll_note
+        self.assertEqual(roll_note(date(2026, 11, 10)), "")                    # Tue
+        self.assertEqual(roll_note(date(2026, 11, 14)), "moved off the weekend")  # Sat
+        self.assertEqual(roll_note(date(2026, 11, 11)), "moved off a holiday")    # Veterans Day
+        # Sat Jan 16, 2027 -> Sun -> MLK Mon Jan 18 -> Tue Jan 19
+        self.assertEqual(roll_note(date(2027, 1, 16)), "moved off the weekend and a holiday")
 
     def test_thanksgiving(self):
         # Thu Oct 29 + 28 = Thu Nov 26, Thanksgiving -> Fri Nov 27.
@@ -130,8 +142,10 @@ class ClosingDateSurfacesAgree(unittest.TestCase):
                     sent = self._text_offer(201 + i, days)
                     joined = "\n".join(sent)
 
-                    # SMS confirmation
-                    self.assertIn(f"Closing {expected:%b} {expected.day} ({days} days)", joined)
+                    # SMS confirmation: the date, and why it moved when it did.
+                    note = NOTES.get(name, "")
+                    self.assertIn(f"Closing {expected:%a}, {expected:%b} {expected.day}, {expected.year} "
+                                  f"({days} days{', ' + note if note else ''})", joined)
 
                     m = re.search(r"http://localhost(/review/\S+)", joined)
                     self.assertIsNotNone(m, joined)

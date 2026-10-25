@@ -7,8 +7,11 @@ in _SITE_CHROME_CSS / _site_nav / _SITE_FOOTER.
 
 Every statement here is what the code does, as of 2026-10-24. Sources:
 - accepted formats + limits: parser.py (_parse_price, _parse_pct,
-  _parse_days, FINANCING_RE, INSPECTION_RE, HOA_RE, COUNTY_RE,
-  parse_offer_sms range checks, FIELD_HINTS order)
+  _parse_days, FINANCING_RE, INSPECTION_RE, HOA_RE, COUNTY_RE /
+  COUNTY_WORD_RE + _parse_county's rules, parse_offer_sms range checks,
+  FIELD_HINTS order)
+- closing date + weekend/holiday move: deadlines.offer_closing_date(),
+  roll_note(), app.closing_line()
 - address + state checks: app.py validate_address(), build_offer_draft(),
   format_tx_confirmation() / TX_NEEDS_STATE_MESSAGE, other_state_block_message()
 - YES / NO / corrections / AMEND / keywords: app.py sms_reply(),
@@ -103,12 +106,14 @@ SMS_CONSENT = ('By texting, you agree to receive SMS replies and reminders about
 # tests/test_text_offer_page.py.
 EXAMPLES = [
     ("725k 3% 21day 123 Main St, Austin, TX", [
-        ("2A Property, City of", "123 Main St, Austin"),
+        ("2A City of", "Austin"),
+        ("2A Known as", "123 Main St"),
+        ("2A County of", "not set by this text; add &ldquo;Travis County&rdquo; to fill it"),
         ("3A Cash portion", "$21,750"),
         ("3B Sum of all financing", "$703,250 (Third Party Financing box checked)"),
         ("3C Sales Price", "$725,000"),
         ("5A Earnest money / option fee", "$7,250 / $250 (your defaults)"),
-        ("9A Closing date", "21 days from today"),
+        ("9A Closing date", "today + 21 days, moved to the next business day if that&rsquo;s a weekend or holiday"),
         ("Forms", "20-19, 40-11 (Conventional, $703,250), 61-0, IABS"),
     ]),
     ("725k cash 21day 123 Main St, Austin, TX", [
@@ -118,11 +123,13 @@ EXAMPLES = [
         ("Forms", "20-19, 61-0, IABS (no 40-11)"),
     ]),
     ("1.2m 20% FHA 45 days 10-day option HOA 123 Main St, Dallas, TX 75201", [
+        ("2A City of", "Dallas"),
+        ("2A County of", "not set: a city name is never read as the county"),
         ("3A / 3B / 3C", "$240,000 / $960,000 / $1,200,000"),
         ("5B Option period", "10 days"),
-        ("9A Closing date", "45 days from today"),
+        ("9A Closing date", "today + 45 days, moved to the next business day if that&rsquo;s a weekend or holiday"),
         ("40-11", "FHA box checked, $960,000"),
-        ("HOA", "36-10 HOA addendum attached, its box in Paragraph 22 checked"),
+        ("HOA", "HOA addendum attached, its box in Paragraph 22 checked"),
     ]),
 ]
 
@@ -161,16 +168,16 @@ def body() -> str:
       <p>More than 0% and up to 50%. &ldquo;cash&rdquo; with no percent means an all-cash offer.</p></div>
     <div class="to-card"><span class="req">Required</span><h3>Closing</h3>
       <span class="to-sms">21day</span><span class="to-sms">21 days</span><span class="to-sms">close Dec 15</span>
-      <p>Counted from today. Between 7 and 365 days out. A date that has already passed this year means next year.</p></div>
+      <p>Counted from today. Between 7 and 365 days out. A date that has already passed this year means next year. If the day lands on a weekend or holiday, the closing date moves to the next business day and the summary says so.</p></div>
     <div class="to-card"><span class="req">Required</span><h3>Address</h3>
       <span class="to-sms">123 Main St, Austin, TX</span>
       <p>Street number, street name and type (St, Ave, Dr, Ln, Rd, Blvd and others). Add the city and TX, or a Texas ZIP, so it can confirm the property is in Texas.</p></div>
     <div class="to-card"><span class="req opt">Optional</span><h3>Financing type</h3>
       <span class="to-sms">conventional</span><span class="to-sms">FHA</span><span class="to-sms">VA</span><span class="to-sms">USDA</span><span class="to-sms">Texas Veterans</span><span class="to-sms">reverse mortgage</span>
-      <p>Checks that box on the 40&#8209;11. Leave it out and the 40&#8209;11 starts as Conventional.</p></div>
+      <p>Checks that box on the 40&#8209;11 and puts the loan amount next to it. Leave it out and the 40&#8209;11 starts as Conventional.</p></div>
     <div class="to-card"><span class="req opt">Optional</span><h3>Option period, HOA, county</h3>
-      <span class="to-sms">10-day option</span><span class="to-sms">10 day inspection</span><span class="to-sms">HOA</span><span class="to-sms">Travis</span>
-      <p>Option days go in 5B. &ldquo;HOA&rdquo; attaches the 36&#8209;10 addendum. A county name it knows (Travis, Harris, Bexar, Dallas, Tarrant, Collin, Denton, Williamson, Fort Bend, Montgomery, El Paso, Hidalgo, Cameron) goes in 2A.</p></div>
+      <span class="to-sms">10-day option</span><span class="to-sms">10 day inspection</span><span class="to-sms">HOA</span><span class="to-sms">Travis County</span>
+      <p>Option days go in 5B. &ldquo;HOA&rdquo; attaches the HOA addendum. A county it knows (Travis, Harris, Bexar, Dallas, Tarrant, Collin, Denton, Williamson, Fort Bend, Montgomery, El Paso, Hidalgo, Cameron) goes in 2A County of and shows in the summary for you to check. Write &ldquo;Travis County&rdquo;, or the name on its own before the street address. A street or city with the same name (Denton Dr, or Dallas, TX) is not read as the county.</p></div>
   </div>
 </section>
 
@@ -186,20 +193,21 @@ def body() -> str:
   <h2>What happens after you send it</h2>
   <ol class="to-steps">
     <li><b>It texts back a summary first</b>
-      <p>Nothing is created yet. You see the address, price, down payment, loan, earnest money, option fee and closing date, so a typo is caught before it&rsquo;s on a contract.</p>
+      <p>Nothing is created yet. You see the address, the county if one was set, price, down payment, loan, earnest money, option fee and closing date, so a typo is caught before it&rsquo;s on a contract.</p>
       <div class="to-reply">TxtAnOffer: got it.
 
 123 Main St, Austin, TX
 Price $725,000, 3% down ($21,750)
 Loan $703,250
 Earnest $7,250, option fee $250
-Closing (date) (21 days)
+Closing Mon, Nov 16, 2026 (21 days, moved off the weekend)
 
-Reply YES to create the TREC draft, or text a correction (ex: "make it 820k").</div></li>
+Reply YES to create the TREC draft, or text a correction (ex: "make it 820k").</div>
+      <p style="font-size:14px;margin-top:8px">Example sent Sat, Oct 24, 2026: 21 days out is a Saturday, so closing moves to Monday. Yours is counted from the day you text.</p></li>
     <li><b>Reply YES, NO or a correction</b>
       <p>YES creates the draft. NO cancels it. Or text just the change, like <span class="to-sms">make it 820k</span>, <span class="to-sms">close in 25 days</span> or <span class="to-sms">FHA instead</span>, and you get a new summary. A summary waits 30 minutes for your answer.</p></li>
     <li><b>Open the link</b>
-      <p>The reply has a private link to review and email the draft. The link is signed and expires. The PDF has a one-page summary on top, then the TREC 20&#8209;19, the 40&#8209;11 Third Party Financing Addendum when there&rsquo;s a loan, the 36&#8209;10 HOA addendum if you texted &ldquo;HOA&rdquo;, the 61&#8209;0 water disclosure, the IABS, and a certification page for you to sign at the end.</p></li>
+      <p>The reply has a private link to review and email the draft. The link is signed and expires. The PDF has a one-page summary on top, then the TREC 20&#8209;19, the 40&#8209;11 Third Party Financing Addendum when there&rsquo;s a loan, the 61&#8209;0 water disclosure, the HOA addendum if you texted &ldquo;HOA&rdquo;, the IABS, and a certification page for you to sign after the forms.</p></li>
   </ol>
   <h3 style="font-size:22px;margin-top:8px">When something is missing or unclear</h3>
   <ul style="padding-left:20px;margin-top:12px">
@@ -215,7 +223,7 @@ Reply YES to create the TREC draft, or text a correction (ex: "make it 820k").</
   <h2>What it fills, and what stays yours</h2>
   <div class="to-two">
     <div class="to-card"><h3>Filled in for you</h3><ul>
-      <li>2A address, plus city and county <span>when your text names one it recognizes</span></li>
+      <li>2A address, plus city and county <span>when your text names one it recognizes (county as above)</span></li>
       <li>&ldquo;Address of Property&rdquo; at the top of each page</li>
       <li>3A, 3B and 3C, and the Third Party Financing boxes when there&rsquo;s a loan</li>
       <li>5A earnest money and option fee <span>(your defaults)</span></li>
@@ -223,13 +231,13 @@ Reply YES to create the TREC draft, or text a correction (ex: "make it 820k").</
       <li>9A closing date</li>
       <li>7D &ldquo;As Is&rdquo; and 10A possession at closing and funding <span>(starting defaults, check them)</span></li>
       <li>Your name, license, brokerage, phone, email and office address, and your title company as escrow agent and title insurer <span>(from your saved profile)</span></li>
-      <li>40&#8209;11: financing type and loan amount, and &ldquo;subject to Buyer Approval&rdquo; checked</li>
-      <li>61&#8209;0 and 36&#8209;10: the property address</li>
+      <li>40&#8209;11: financing type and loan amount, and &ldquo;subject to Buyer Approval&rdquo; checked <span>(starting default, check it)</span></li>
+      <li>61&#8209;0 and the HOA addendum: the property address</li>
     </ul></div>
     <div class="to-card"><h3>Left for you</h3><ul>
       <li>Buyer and seller names</li>
       <li>Interest rate, loan term and origination limits on the 40&#8209;11</li>
-      <li>Every answer on the 61&#8209;0 and 36&#8209;10</li>
+      <li>Every answer on the 61&#8209;0 and the HOA addendum</li>
       <li>Any other term you and your buyer agree on, and changing any filled-in default that doesn&rsquo;t fit this deal</li>
       <li>Initials and signatures</li>
     </ul></div>
@@ -240,7 +248,7 @@ Reply YES to create the TREC draft, or text a correction (ex: "make it 820k").</
 <!-- 6. STATES + COMMANDS -->
 <section class="to-sec" id="states">
   <h2>Texas, and Colorado</h2>
-  <p class="lead">Texas addresses get the TREC 20&#8209;19 and the forms above. Put CO or Colorado in the address and you get a Colorado CBS1 draft instead, with its own summary first. For an address in any other state, it stops and doesn&rsquo;t create a contract; reply WAITLIST to hear when that state is added. A TREC form is never created for a property outside Texas.</p>
+  <p class="lead">Texas addresses get the TREC 20&#8209;19 and the forms above. Put the city and CO (e.g. 123 Main St, Denver, CO 80205) and you get a Colorado CBS1 draft instead, with its own summary first. For an address in any other state, it stops and doesn&rsquo;t create a contract; reply WAITLIST to hear when that state is added. It won&rsquo;t create a TREC form unless the address says TX, Texas or has a Texas ZIP.</p>
   <h3 style="font-size:22px;margin-top:40px">Other things you can text</h3>
   <table class="to-cmds">
     <tr><td><span class="to-sms">AMEND 123 Main St price 730k</span></td><td>A TREC 39&#8209;11 amendment with the new sales price</td></tr>

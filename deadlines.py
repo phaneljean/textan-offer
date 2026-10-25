@@ -131,6 +131,39 @@ def offer_closing_date(close_days, drafted_at=None) -> date:
     return add_trec_days(start, int(close_days or 0))
 
 
+def roll_note(unrolled: date, business_day=None) -> str:
+    """Why a date rolled off `unrolled`, for an SMS summary: "" when it isn't
+    moved, else "moved off the weekend" / "moved off a holiday" / "moved off
+    the weekend and a holiday". `business_day` defaults to is_business_day
+    (add_trec_days' rule); Colorado passes co_audit.is_business_day, which
+    also knows Colorado holidays."""
+    business_day = business_day or is_business_day
+    d, weekend, holiday = unrolled, False, False
+    while not business_day(d):
+        if d.weekday() >= 5:
+            weekend = True
+        else:
+            holiday = True
+        d += timedelta(days=1)
+    if weekend and holiday:
+        return "moved off the weekend and a holiday"
+    if weekend:
+        return "moved off the weekend"
+    if holiday:
+        return "moved off a holiday"
+    return ""
+
+
+def closing_roll_note(close_days, drafted_at=None) -> str:
+    """roll_note() for offer_closing_date(close_days, drafted_at). Without it
+    the SMS summary read "Nov 16 (21 days)" for a date 23 days out."""
+    try:
+        start = texas_date(drafted_at)
+    except (TypeError, ValueError):
+        start = texas_date()
+    return roll_note(start + timedelta(days=int(close_days or 0)))
+
+
 def fmt_closing_date(d: date) -> str:
     """'November 16, 2026' -- the long form the review/demo pages show
     (no zero-padded day, unlike strftime's %d)."""

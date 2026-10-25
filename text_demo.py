@@ -143,7 +143,7 @@ JS = r"""
 (function(){
   var root = document.getElementById("textDemo"); if(!root) return;
   var OFFER = "725k 3% 21day 123 Main St, Austin, TX";
-  var REPLY1 = "TxtAnOffer: got it.\n\n123 Main St, Austin, TX\nPrice $725,000, 3% down ($21,750)\nLoan $703,250\nEarnest $7,250, option fee $250\nClosing Nov 14 (21 days)\n\nReply YES to create the TREC draft, or text a correction (ex: \"make it 820k\").";
+  var REPLY1 = "TxtAnOffer: got it.\n\n123 Main St, Austin, TX\nPrice $725,000, 3% down ($21,750)\nLoan $703,250\nEarnest $7,250, option fee $250\nClosing Mon, Nov 16, 2026 (21 days, moved off the weekend)\n\nReply YES to create the TREC draft, or text a correction (ex: \"make it 820k\").";
   var REPLY2 = "Your TREC draft for 123 Main St is ready.\n\nReview and email it: <u>txtanoffer.com/review/&hellip;</u>\n\nIncludes TREC 20-19, 40-11 Financing Addendum, 61-0 Water Disclosure and IABS. Draft only: review every page before signing.";
   var DUR = [9000, 6500, 7500];
   var $ = function(id){ return document.getElementById(id); };

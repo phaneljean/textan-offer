@@ -51,7 +51,7 @@ import crm
 import broker_auth
 from reminders import run_reminders_if_due
 import nurture
-from deadlines import earnest_money_deadline, option_end_date, build_day_one_summary, offer_closing_date, fmt_closing_date
+from deadlines import earnest_money_deadline, option_end_date, build_day_one_summary, offer_closing_date, fmt_closing_date, closing_roll_note, roll_note
 import transaction_tasks
 from drafts import save_draft, get_draft, clear_draft
 from tc_audit import check_tc_file, compare_contracts
@@ -1412,9 +1412,13 @@ def _build_co_draft(parsed: dict, source_id: str) -> dict:
     parsed["loan_amount"] = price - parsed["down_payment_amount"]
     parsed["earnest_money"] = int(price * agent["default_earnest_pct"])
     parsed["option_fee"] = 0
-    acceptance, closing = contract_dates(parsed["close_days"])
+    today = datetime.now().date()  # contract_dates' own default "today"
+    acceptance, closing = contract_dates(parsed["close_days"], today)
     parsed["co_acceptance"] = f"{acceptance:%b} {acceptance.day}"
     parsed["co_closing"] = f"{closing:%b} {closing.day}"
+    # contract_dates rolls the closing off weekends/holidays too; say so.
+    from co_audit import is_business_day as co_business_day
+    parsed["co_closing_note"] = roll_note(today + timedelta(days=int(parsed["close_days"])), co_business_day)
     return parsed
 
 
@@ -1432,7 +1436,8 @@ def format_co_confirmation(parsed: dict) -> str:
     insp = parsed.get("inspection_days") or 10
     lines = ["TxtAnOffer: got it (Colorado).", "", where, county] + money + [
         f"Earnest ${parsed['earnest_money']:,}",
-        f"Closing {parsed['co_closing']} ({parsed['close_days']} days)",
+        f"Closing {parsed['co_closing']} ({parsed['close_days']} days"
+        + (f", {parsed['co_closing_note']})" if parsed.get("co_closing_note") else ")"),
         f"Offer expires {parsed['co_acceptance']} 5:00 PM",
         "",
         f"Deadlines: standard defaults (inspection objection {insp} days, title, "
@@ -1474,12 +1479,24 @@ def process_offer(incoming_msg: str, source_id: str):
     return parsed, pdf_path, None, warnings
 
 
-FINANCING_LABELS = {"conventional": "Conventional", "fha": "FHA", "va": "VA", "cash": "Cash"}
+FINANCING_LABELS = {"conventional": "Conventional", "fha": "FHA", "va": "VA", "usda": "USDA",
+                    "texas_veterans": "Texas Veterans", "reverse_mortgage": "Reverse Mortgage", "cash": "Cash"}
 
 
 def _fmt_pct(pct: float) -> str:
     pct100 = pct * 100
     return f"{pct100:.0f}" if pct100 == int(pct100) else f"{pct100:.1f}"
+
+
+def closing_line(close_days, drafted_at=None) -> str:
+    """The SMS summary's closing line, e.g. "Closing Mon, Nov 16, 2026 (21
+    days, moved off the weekend)". The date is rolled to the next business
+    day (deadlines.offer_closing_date), so a bare "(21 days)" next to a date
+    23 days out would be wrong; the note says why it moved."""
+    d = offer_closing_date(close_days, drafted_at)
+    note = closing_roll_note(close_days, drafted_at)
+    days = f"{close_days} days, {note}" if note else f"{close_days} days"
+    return f"Closing {d:%a}, {d:%b} {d.day}, {d.year} ({days})"
 
 
 def format_offer_confirmation(parsed: dict) -> str:
@@ -1489,9 +1506,6 @@ def format_offer_confirmation(parsed: dict) -> str:
     omitted if the agent hasn't set up their profile yet."""
     if parsed.get("state") == "CO":
         return format_co_confirmation(parsed)
-    # Same date the PDF will print (deadlines.offer_closing_date).
-    close_dt = offer_closing_date(parsed["close_days"])
-
     addr_parts = [parsed["address"]]
     if parsed.get("city"):
         addr_parts.append(parsed["city"])
@@ -1515,13 +1529,17 @@ def format_offer_confirmation(parsed: dict) -> str:
         "TxtAnOffer: got it.",
         "",
         full_addr,
-        money_line,
     ]
+    # 2A "County of" prints whatever is here, so the agent sees it before YES
+    # (a street or city name used to land in it unseen, e.g. "Denton Dr").
+    if parsed.get("county"):
+        lines.append(f"County: {parsed['county']}")
+    lines.append(money_line)
     if loan_line:
         lines.append(loan_line)
     lines += [
         f"Earnest ${parsed['earnest_money']:,}, option fee ${parsed['option_fee']:,}",
-        f"Closing {close_dt:%b} {close_dt.day} ({parsed['close_days']} days)",
+        closing_line(parsed["close_days"]),
     ]
     if parsed.get("financing_type") and parsed["financing_type"] != "cash":
         lines.append(f"Financing: {FINANCING_LABELS.get(parsed['financing_type'], parsed['financing_type'].title())}")
