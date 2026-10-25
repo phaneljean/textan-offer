@@ -168,7 +168,7 @@ def body() -> str:
       <p>More than 0% and up to 50%. &ldquo;cash&rdquo; with no percent means an all-cash offer.</p></div>
     <div class="to-card"><span class="req">Required</span><h3>Closing</h3>
       <span class="to-sms">21day</span><span class="to-sms">21 days</span><span class="to-sms">close Dec 15</span>
-      <p>Counted from today. Between 7 and 365 days out. A date that has already passed this year means next year. If that day is a Saturday, Sunday or federal holiday, the draft uses the next business day instead and the summary says so. The 20&#8209;19 itself doesn&rsquo;t move a 9A date; the date printed is the deadline.</p></div>
+      <p>Counted from today. Between 7 and 365 days out. A date that has already passed this year means next year. If that day is a Saturday, Sunday or federal holiday, the draft uses the next business day instead and the summary says so. The 20&#8209;19 itself doesn&rsquo;t extend a Paragraph 9A date for a weekend or holiday.</p></div>
     <div class="to-card"><span class="req">Required</span><h3>Address</h3>
       <span class="to-sms">123 Main St, Austin, TX</span>
       <p>Street number, street name and type (St, Ave, Dr, Ln, Rd, Blvd and others). Add the city and TX, or a Texas ZIP, so it can confirm the property is in Texas.</p></div>

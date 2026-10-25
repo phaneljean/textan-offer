@@ -36,7 +36,7 @@ DEFAULT_TASKS = [
     # holiday (deadlines.option_end_date), so the task says so.
     ("Option Period", "Confirm any objections/termination notice sent by 5:00 PM local time on the due date (Par. 5B, not extended for weekends/holidays)", "option_end"),
     ("Earnest Money", "Confirm earnest money delivered to title company", "earnest_deadline"),
-    ("Earnest Money", "Confirm option fee delivered to seller", "earnest_deadline"),
+    ("Earnest Money", "Confirm option fee delivered to Escrow Agent (Par. 5A)", "earnest_deadline"),
     ("Title", "Order title commitment", None),
     ("Title", "Review title commitment for exceptions", None),
     ("Financing", "Confirm buyer's loan application submitted", None),
