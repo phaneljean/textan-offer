@@ -168,7 +168,7 @@ def body() -> str:
       <p>More than 0% and up to 50%. &ldquo;cash&rdquo; with no percent means an all-cash offer.</p></div>
     <div class="to-card"><span class="req">Required</span><h3>Closing</h3>
       <span class="to-sms">21day</span><span class="to-sms">21 days</span><span class="to-sms">close Dec 15</span>
-      <p>Counted from today. Between 7 and 365 days out. A date that has already passed this year means next year. If the day lands on a weekend or holiday, the closing date moves to the next business day and the summary says so.</p></div>
+      <p>Counted from today. Between 7 and 365 days out. A date that has already passed this year means next year. If that day is a Saturday, Sunday or federal holiday, the draft uses the next business day instead and the summary says so. The 20&#8209;19 itself doesn&rsquo;t move a 9A date; the date printed is the deadline.</p></div>
     <div class="to-card"><span class="req">Required</span><h3>Address</h3>
       <span class="to-sms">123 Main St, Austin, TX</span>
       <p>Street number, street name and type (St, Ave, Dr, Ln, Rd, Blvd and others). Add the city and TX, or a Texas ZIP, so it can confirm the property is in Texas.</p></div>
@@ -252,7 +252,7 @@ Reply YES to create the TREC draft, or text a correction (ex: "make it 820k").</
   <h3 style="font-size:22px;margin-top:40px">Other things you can text</h3>
   <table class="to-cmds">
     <tr><td><span class="to-sms">AMEND 123 Main St price 730k</span></td><td>A TREC 39&#8209;11 amendment with the new sales price</td></tr>
-    <tr><td><span class="to-sms">AMEND 123 Main St close +10</span></td><td>A 39&#8209;11 pushing closing back 10 days</td></tr>
+    <tr><td><span class="to-sms">AMEND 123 Main St close +10</span></td><td>A 39&#8209;11 moving the Paragraph 9 closing date 10 days later (to the next business day if that&rsquo;s a weekend or holiday)</td></tr>
     <tr><td><span class="to-sms">PROFILE</span></td><td>A link to save your name, license, brokerage, title company and defaults, so they fill in every time</td></tr>
     <tr><td><span class="to-sms">DASHBOARD</span></td><td>A link to every offer you&rsquo;ve made</td></tr>
     <tr><td><span class="to-sms">STATUS</span></td><td>Your plan and how many free offers are left</td></tr>

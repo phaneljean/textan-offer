@@ -29,7 +29,7 @@ from twilio.rest import Client as TwilioClient
 from parser import parse_offer_sms, parse_amendment_sms, parse_correction_sms
 from pdf_filler import fill_offer_pdf, OUTPUT_DIR
 from pdf_validator import validate_offer_pdf
-from amendment import fill_amendment_pdf
+from amendment import fill_amendment_pdf, amended_closing_line
 from agent_profiles import get_agent_profile, save_agent_profile, find_by_email, get_emails_for_phones
 from subscriptions import can_generate_offer, increment_offer_count, activate_subscription, deactivate_subscription, get_user, create_user, FREE_OFFER_LIMIT, is_admin_phone, has_professional_access
 from analytics import _is_internal_traffic
@@ -51,7 +51,7 @@ import crm
 import broker_auth
 from reminders import run_reminders_if_due
 import nurture
-from deadlines import earnest_money_deadline, option_end_date, build_day_one_summary, offer_closing_date, fmt_closing_date, closing_roll_note, roll_note
+from deadlines import earnest_money_deadline, option_end_date, fmt_option_end, build_day_one_summary, offer_closing_date, fmt_closing_date, closing_roll_note, roll_note, colorado_date
 import transaction_tasks
 from drafts import save_draft, get_draft, clear_draft
 from tc_audit import check_tc_file, compare_contracts
@@ -1412,7 +1412,9 @@ def _build_co_draft(parsed: dict, source_id: str) -> dict:
     parsed["loan_amount"] = price - parsed["down_payment_amount"]
     parsed["earnest_money"] = int(price * agent["default_earnest_pct"])
     parsed["option_fee"] = 0
-    today = datetime.now().date()  # contract_dates' own default "today"
+    # Denver's date, not the host's: Railway runs on UTC, so a 9 PM Mountain
+    # text drafted as tomorrow. co_filler defaults to the same colorado_date().
+    today = colorado_date()
     acceptance, closing = contract_dates(parsed["close_days"], today)
     parsed["co_acceptance"] = f"{acceptance:%b} {acceptance.day}"
     parsed["co_closing"] = f"{closing:%b} {closing.day}"
@@ -2016,7 +2018,7 @@ def sms_reply():
         if amend["field"] == "price":
             change_line = f"New Sales Price: ${amend['value']:,}"
         else:
-            change_line = f"Closing extended {amend['value']} days"
+            change_line = amended_closing_line(offer, amend["value"])
         twilio_send_sms(agent_phone,
             f"Amendment (TREC 39-11) for {offer['address']}:\n{change_line}\n\n{pdf_url}\n\n"
             f"Draft only -- review before signing.\n\n"
@@ -2582,7 +2584,7 @@ def _demo_page(demo_key):
                         pdf_url = sign_pdf_url(filename)
                         _pdf_expires = int(time.time()) + PDF_LINK_TTL
                         _pdf_sig = hmac.new(PDF_LINK_SECRET.encode(), f"{filename}:{_pdf_expires}".encode(), hashlib.sha256).hexdigest()[:16]
-                        change_line = f"New Sales Price: ${amend['value']:,}" if amend["field"] == "price" else f"Closing extended {amend['value']} days"
+                        change_line = f"New Sales Price: ${amend['value']:,}" if amend["field"] == "price" else amended_closing_line(offer, amend["value"])
                         result_html = f"""
                         <div class="result">
                           <div class="result-stamp">Amendment (TREC 39-11)</div>
@@ -4768,7 +4770,7 @@ def api_send_email():
             "address": offer_row.get("address") or parsed.get("address", ""),
             "price": offer_row["price"], "down_payment_amount": down_amt,
             "loan_amount": offer_row["price"] - down_amt, "close_days": offer_row["close_days"],
-            "created_at": offer_row.get("created_at"),
+            "created_at": offer_row.get("created_at"), "generator_version": offer_row.get("generator_version"),
             "financing_type_specified": bool(offer_row.get("financing_type")),
         }
     else:
@@ -4900,7 +4902,7 @@ def api_docusign():
             "address": owning_offer.get("address") or parsed.get("address", ""),
             "price": owning_offer["price"], "down_payment_amount": down_amt,
             "loan_amount": owning_offer["price"] - down_amt, "close_days": owning_offer["close_days"],
-            "created_at": owning_offer.get("created_at"),
+            "created_at": owning_offer.get("created_at"), "generator_version": owning_offer.get("generator_version"),
             "financing_type_specified": bool(owning_offer.get("financing_type")),
         }
     else:
@@ -9989,6 +9991,7 @@ def review_offer(filename):
     validation = validate_offer_pdf(pdf_path_on_disk, {
         "price": price, "down_payment_amount": down_amt, "loan_amount": loan_amt,
         "close_days": close_days, "created_at": offer.get("created_at"),
+        "generator_version": offer.get("generator_version"),
         "financing_type_specified": bool(offer.get("financing_type")),
     }) if os.path.exists(pdf_path_on_disk) else {"ok": False, "blocking": ["PDF file not found on server"], "warnings": []}
     # DocuSign has no "fill in by hand" escape hatch (unlike Email/Download,
@@ -10006,7 +10009,7 @@ def review_offer(filename):
     # made the summary card silently drift a day later for every day that
     # passes before the agent opens this link, disagreeing with the PDF.
     # deadlines.offer_closing_date is the same function the PDF stamps with.
-    close_date = fmt_closing_date(offer_closing_date(close_days, offer.get("created_at"))) if close_days else ""
+    close_date = fmt_closing_date(offer_closing_date(close_days, offer.get("created_at"), offer.get("generator_version"))) if close_days else ""
     is_co = filename.startswith("CBS1_")
     if is_co:
         # The CBS1 closing date moves off weekends (co_filler.contract_dates),
@@ -10360,7 +10363,7 @@ def offer_thread(filename):
                 effective_date = datetime.utcnow().date()
                 close_date = None
                 if offer.get("close_days"):
-                    close_date = offer_closing_date(offer["close_days"], offer.get("created_at"))
+                    close_date = offer_closing_date(offer["close_days"], offer.get("created_at"), offer.get("generator_version"))
                 summary_lines = _day_one_lines(
                     filename, offer["address"], effective_date, offer.get("option_days"), close_date
                 )
@@ -10414,6 +10417,7 @@ def offer_thread(filename):
     validation = validate_offer_pdf(pdf_path_on_disk, {
         "price": price, "down_payment_amount": down_amt, "loan_amount": loan_amt,
         "close_days": close_days, "created_at": offer.get("created_at"),
+        "generator_version": offer.get("generator_version"),
         "financing_type_specified": bool(offer.get("financing_type")),
     }) if os.path.exists(pdf_path_on_disk) else {"ok": False, "blocking": [], "warnings": []}
 
@@ -10421,7 +10425,7 @@ def offer_thread(filename):
         created_dt = datetime.fromisoformat(offer["created_at"])
     except (KeyError, TypeError, ValueError):
         created_dt = datetime.now()
-    close_date = fmt_closing_date(offer_closing_date(close_days, offer.get("created_at"))) if close_days else ""
+    close_date = fmt_closing_date(offer_closing_date(close_days, offer.get("created_at"), offer.get("generator_version"))) if close_days else ""
 
     action_expires = int(time.time()) + THREAD_LINK_TTL
     accept_sig = sign_thread_action(filename, "accept", action_expires)
@@ -10464,7 +10468,7 @@ def offer_thread(filename):
             effective_date = datetime.fromisoformat(offer.get("thread_responded_at") or "").date()
         except ValueError:
             effective_date = created_dt.date()
-        close_date_obj = offer_closing_date(close_days, offer.get("created_at")) if close_days else None
+        close_date_obj = offer_closing_date(close_days, offer.get("created_at"), offer.get("generator_version")) if close_days else None
         summary_lines = _day_one_lines(filename, address, effective_date, offer.get("option_days"), close_date_obj)
         summary_text = "\n".join(summary_lines)
         summary_items_html = "".join(f"<li>{line}</li>" for line in summary_lines[1:-1])
@@ -10659,7 +10663,7 @@ def transaction_page(filename):
         created_dt = datetime.fromisoformat(offer["created_at"])
     except (KeyError, TypeError, ValueError):
         created_dt = datetime.now()
-    close_date_obj = offer_closing_date(close_days, offer.get("created_at")) if close_days else None
+    close_date_obj = offer_closing_date(close_days, offer.get("created_at"), offer.get("generator_version")) if close_days else None
 
     if thread_status not in ("accept", "accepted"):
         return f"""<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
@@ -10810,7 +10814,7 @@ a.btn{{display:inline-block;background:#0b5d52;color:#fff;padding:0.75rem 1.5rem
           <div class="closing-dates">
             <div>Effective Date: {_fmt(effective_date)}</div>
             {f'<div>Earnest money due: {_fmt(earnest_dl)}</div>' if earnest_dl else ''}
-            {f'<div>Option period ended: {_fmt(opt_end)}</div>' if opt_end else ''}
+            {f'<div>Option period ends: {fmt_option_end(opt_end)}</div>' if opt_end else ''}
             <div>Closing: {_fmt(close_date_obj)}</div>
           </div>
         </div>"""

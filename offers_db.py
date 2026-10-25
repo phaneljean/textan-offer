@@ -148,7 +148,7 @@ def get_offers_for_phone(phone: str, limit: int = 50) -> list:
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT id, address, price, down_pct, close_days, filename, created_at, thread_status, thread_responded_at, option_days
+        SELECT id, address, price, down_pct, close_days, filename, created_at, thread_status, thread_responded_at, option_days, generator_version
         FROM offers
         WHERE phone = ?
         ORDER BY created_at DESC

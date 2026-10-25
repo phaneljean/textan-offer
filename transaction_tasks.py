@@ -32,7 +32,9 @@ DEFAULT_TASKS = [
     ("Accepted", "Confirm Effective Date with all parties", "effective"),
     ("Accepted", "Share the Day One summary with buyer, lender, and title company", "effective"),
     ("Option Period", "Schedule inspections within the option period", "option_end"),
-    ("Option Period", "Confirm any objections/termination notice sent before option ends", "option_end"),
+    # 5B: 5:00 PM local time on the end date, never moved for a weekend or
+    # holiday (deadlines.option_end_date), so the task says so.
+    ("Option Period", "Confirm any objections/termination notice sent by 5:00 PM local time on the due date (Par. 5B, not extended for weekends/holidays)", "option_end"),
     ("Earnest Money", "Confirm earnest money delivered to title company", "earnest_deadline"),
     ("Earnest Money", "Confirm option fee delivered to seller", "earnest_deadline"),
     ("Title", "Order title commitment", None),

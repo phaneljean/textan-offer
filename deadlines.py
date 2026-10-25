@@ -1,25 +1,39 @@
 """
 deadlines.py -- Computes the dates that matter once a TREC 20-19 offer is
-actually accepted: the Effective Date, the Paragraph 5 earnest money /
+actually accepted: the Effective Date, the Paragraph 5A earnest money /
 option fee delivery deadline (3 days after the Effective Date), and the
-option period's own termination date (if the agent specified one) -- all
-with TREC's standard day-counting rule applied: a period that lands on a
-Saturday, Sunday, or legal holiday extends to the end of the next day that
-isn't one.
+option period's own termination date (if the agent specified one).
+
+What moves and what doesn't (TREC 20-19, 05-04-2026, read from 20-19_2.pdf):
+20-19 extends only 5A(2) deliveries (earnest money, option fee, additional
+earnest money) past a Saturday, Sunday or Legal Holiday. 9A and 5B are not
+extended. The 9A roll is TxtAnOffer's drafting default so the printed date
+is a funding day. So:
+  - earnest_money_deadline(): Effective Date + 3, extended to the end of the
+    next day that isn't a Saturday, Sunday or Texas Legal Holiday
+    (_tx_legal_holidays below, the form's own definition).
+  - option_end_date(): Effective Date + option days, 5:00 PM local time,
+    never moved. A 5B period that ends on a Saturday ends on that Saturday;
+    rolling it (as this module did until 2026-10-24) told a buyer they had
+    until Monday when the unrestricted right to terminate was already gone.
+  - offer_closing_date() / add_trec_days(): our drafting default for the 9A
+    date we print, off weekends and US federal holidays.
 
 Effective Date here is the date the listing agent clicks Accept on the
 /thread/<filename> page (offers.thread_responded_at) -- this app has no
 separate "date of final acceptance" field, and treating the accept click as
 that date is the closest available proxy, not a verified legal reading.
 
-Holiday set is US federal holidays only, computed by rule (not a maintained
-date list) so it keeps working in future years without upkeep -- this is a
-reasonable proxy for "legal holiday," not a verified list of the specific
-holidays Texas recognizes for contract day-counting purposes, and doesn't
-shift a holiday that falls on a weekend to the nearest weekday the way
-"observed" federal holidays do. Good enough to avoid landing a deadline on
-Thanksgiving; not a substitute for checking an actual title company's
-calendar on a deal that matters.
+Two holiday sets, both computed by rule (not a maintained date list) so they
+keep working in future years without upkeep, on their actual dates with no
+"observed" Monday shift:
+  - _federal_holidays(): US federal holidays, for the 9A drafting roll (and
+    the 39-11 date built on it) -- the days title and lenders don't fund.
+  - _tx_legal_holidays(): the 20-19's "Legal Holiday" -- Tex. Gov't Code
+    §662.003(a) national holidays plus (b)(4) June 19 and (b)(6) the Friday
+    after Thanksgiving. No Columbus Day (it's federal, not in §662.003(a)).
+    Used only for 5A(2) deliveries. Same list as static/trec-deadlines.js
+    (the public deadline calculator), so the two can't disagree.
 
 Closing date doesn't depend on the Effective Date: it's a hard calendar
 date fixed at drafting time and printed as such on the contract itself.
@@ -33,6 +47,12 @@ pdf_filler on the server's local clock and created_at stored in UTC, so any
 offer drafted after ~5 PM Pacific / 7 PM Central on a non-UTC host got one
 date on the PDF and the next day on the review page, and the validator
 blocked sending.
+
+Offers generated before GENERATOR_VERSION 2026-10-24.1 printed the old date
+(naive-UTC created_at date + close_days, never rolled: the filler ran on
+Railway's UTC clock), and that PDF is what the parties have. Callers that
+read an offer row pass its generator_version so every page, the validator,
+the reminders and a 39-11 keep agreeing with the PDF that actually exists.
 """
 from datetime import date, datetime, timedelta, timezone
 
@@ -69,18 +89,59 @@ def _federal_holidays(year: int) -> set:
     }
 
 
+def _tx_legal_holidays(year: int) -> set:
+    """The 20-19's "Legal Holiday" for 5A(2): Tex. Gov't Code §662.003(a)
+    national holidays plus (b)(4) June 19 and (b)(6) the Friday after
+    Thanksgiving. Not Columbus Day, which §662.003(a) doesn't list."""
+    thanksgiving = _nth_weekday(year, 11, 3, 4)
+    return {
+        date(year, 1, 1),               # New Year's Day
+        _nth_weekday(year, 1, 0, 3),     # Martin Luther King, Jr., Day
+        _nth_weekday(year, 2, 0, 3),     # Presidents' Day
+        _last_weekday(year, 5, 0),       # Memorial Day
+        date(year, 6, 19),               # Emancipation Day in Texas, (b)(4)
+        date(year, 7, 4),                # Independence Day
+        _nth_weekday(year, 9, 0, 1),     # Labor Day
+        date(year, 11, 11),              # Veterans Day
+        thanksgiving,                    # Thanksgiving Day
+        thanksgiving + timedelta(days=1),  # Friday after Thanksgiving, (b)(6)
+        date(year, 12, 25),              # Christmas Day
+    }
+
+
 def is_business_day(d: date) -> bool:
+    """Not a Saturday, Sunday or US federal holiday: the 9A drafting roll."""
     if d.weekday() >= 5:  # Saturday=5, Sunday=6
         return False
     return d not in _federal_holidays(d.year)
 
 
+def is_5a2_delivery_day(d: date) -> bool:
+    """Not a Saturday, Sunday or Texas Legal Holiday: the 5A(2) rule."""
+    if d.weekday() >= 5:
+        return False
+    return d not in _tx_legal_holidays(d.year)
+
+
 def add_trec_days(start: date, days: int) -> date:
-    """start + `days` calendar days, then rolled forward to the next day
-    that isn't a Saturday, Sunday, or (federal) legal holiday -- TREC's
-    standard day-counting rule for contract deadlines."""
+    """start + `days` calendar days, then moved forward to the next day that
+    isn't a Saturday, Sunday or US federal holiday. This is TxtAnOffer's 9A
+    drafting default (and the 39-11 closing date built on it), not a 20-19
+    rule: 20-19 extends only 5A(2) deliveries (earnest money, option fee,
+    additional earnest money) past a Saturday, Sunday or Legal Holiday. 9A
+    and 5B are not extended. The 9A roll is TxtAnOffer's drafting default so
+    the printed date is a funding day. Don't use it for 5A or 5B."""
     d = start + timedelta(days=days)
     while not is_business_day(d):
+        d += timedelta(days=1)
+    return d
+
+
+def add_5a2_days(start: date, days: int) -> date:
+    """Paragraph 5A(2): start + `days`, and if that day is a Saturday, Sunday
+    or Legal Holiday, the end of the next day that isn't one."""
+    d = start + timedelta(days=days)
+    while not is_5a2_delivery_day(d):
         d += timedelta(days=1)
     return d
 
@@ -116,14 +177,67 @@ def texas_date(moment=None) -> date:
     return moment.astimezone(TX_TZ).date()
 
 
-def offer_closing_date(close_days, drafted_at=None) -> date:
+try:
+    CO_TZ = ZoneInfo("America/Denver")
+except Exception:
+    CO_TZ = timezone(timedelta(hours=-7))
+
+
+def colorado_date(moment=None) -> date:
+    """texas_date() for a Colorado CBS1: the calendar date in Denver. A 9 PM
+    Mountain text is still today there, though UTC (and Railway's
+    datetime.now()) has already moved to tomorrow."""
+    if moment is None:
+        moment = _utcnow()
+    if moment.tzinfo is None:
+        moment = moment.replace(tzinfo=timezone.utc)
+    return moment.astimezone(CO_TZ).date()
+
+
+# The GENERATOR_VERSION that started printing offer_closing_date() on the
+# 20-19. Offers made by an older generator printed _legacy_closing_date().
+ROLLED_CLOSING_SINCE = "2026-10-24.1"
+
+
+def _is_legacy(generator_version) -> bool:
+    """True for an offer row made before ROLLED_CLOSING_SINCE. None means the
+    caller isn't reading a stored row (drafting right now), so not legacy. An
+    empty string is a row from before the generator_version column existed
+    (2026-08) -- record_offer has stamped every row since, and versions are
+    "YYYY-MM-DD.N", so a plain string compare orders them."""
+    if generator_version is None:
+        return False
+    return str(generator_version) < ROLLED_CLOSING_SINCE
+
+
+def _legacy_closing_date(close_days, drafted_at) -> date:
+    """What the old filler printed: the UTC date of created_at (stored naive
+    UTC; Railway's clock is UTC) + close_days, no TZ conversion, no roll."""
+    moment = datetime.fromisoformat(drafted_at) if isinstance(drafted_at, str) else drafted_at
+    if moment.tzinfo is not None:
+        moment = moment.astimezone(timezone.utc)
+    return moment.date() + timedelta(days=int(close_days or 0))
+
+
+def offer_closing_date(close_days, drafted_at=None, generator_version=None) -> date:
     """Paragraph 9A closing date for an offer drafted at `drafted_at` (the
     offer's created_at; None = being drafted right now) with `close_days`
     to close: the Texas drafting date + close_days, moved forward off a
-    Saturday, Sunday or holiday -- a closing can't fund on a day title and
-    the lender are shut, and it's the same rule add_trec_days applies to
-    every other deadline (and co_filler.contract_dates to CBS1 closings).
-    An unreadable created_at falls back to now rather than crashing a page."""
+    Saturday, Sunday or federal holiday. 20-19 extends only 5A(2) deliveries
+    (earnest money, option fee, additional earnest money) past a Saturday,
+    Sunday or Legal Holiday. 9A and 5B are not extended. The 9A roll is
+    TxtAnOffer's drafting default so the printed date is a funding day
+    (co_filler.contract_dates does the same for CBS1 closings).
+
+    Pass the row's `generator_version`: an offer generated before
+    ROLLED_CLOSING_SINCE gets the date its PDF actually printed
+    (_legacy_closing_date). An unreadable created_at falls back to now
+    rather than crashing a page."""
+    if _is_legacy(generator_version) and drafted_at:
+        try:
+            return _legacy_closing_date(close_days, drafted_at)
+        except (TypeError, ValueError, AttributeError):
+            pass
     try:
         start = texas_date(drafted_at)
     except (TypeError, ValueError):
@@ -135,7 +249,7 @@ def roll_note(unrolled: date, business_day=None) -> str:
     """Why a date rolled off `unrolled`, for an SMS summary: "" when it isn't
     moved, else "moved off the weekend" / "moved off a holiday" / "moved off
     the weekend and a holiday". `business_day` defaults to is_business_day
-    (add_trec_days' rule); Colorado passes co_audit.is_business_day, which
+    (the 9A drafting roll); Colorado passes co_audit.is_business_day, which
     also knows Colorado holidays."""
     business_day = business_day or is_business_day
     d, weekend, holiday = unrolled, False, False
@@ -154,9 +268,12 @@ def roll_note(unrolled: date, business_day=None) -> str:
     return ""
 
 
-def closing_roll_note(close_days, drafted_at=None) -> str:
+def closing_roll_note(close_days, drafted_at=None, generator_version=None) -> str:
     """roll_note() for offer_closing_date(close_days, drafted_at). Without it
-    the SMS summary read "Nov 16 (21 days)" for a date 23 days out."""
+    the SMS summary read "Nov 16 (21 days)" for a date 23 days out. Legacy
+    offers were never rolled, so they never get a note."""
+    if _is_legacy(generator_version) and drafted_at:
+        return ""
     try:
         start = texas_date(drafted_at)
     except (TypeError, ValueError):
@@ -170,18 +287,29 @@ def fmt_closing_date(d: date) -> str:
     return f"{d:%B} {d.day}, {d.year}"
 
 
-def earnest_money_deadline(effective_date: date) -> date:
-    """Paragraph 5: earnest money and option fee due within 3 days of the
-    Effective Date."""
-    return add_trec_days(effective_date, 3)
+def earnest_money_deadline(effective_date: date, days: int = 3) -> date:
+    """Paragraph 5A: earnest money and option fee due within 3 days after
+    the Effective Date (additional earnest money: pass its own `days`),
+    extended per 5A(2) past a Saturday, Sunday or Texas Legal Holiday --
+    the one 20-19 deadline that is extended."""
+    return add_5a2_days(effective_date, days)
 
 
 def option_end_date(effective_date: date, option_days) -> date:
-    """The option period's unrestricted-termination deadline, or None if no
+    """Paragraph 5B: the option period's unrestricted-termination deadline,
+    Effective Date + option days, 5:00 PM local time where the property is.
+    Never moved for a weekend or holiday -- 5B isn't extended. None if no
     option period was specified on this offer."""
     if not option_days:
         return None
-    return add_trec_days(effective_date, option_days)
+    return effective_date + timedelta(days=int(option_days))
+
+
+def fmt_option_end(d: date) -> str:
+    """How every surface shows the 5B date, so none of them implies it moves:
+    '5:00 PM local time, Sat, Oct 31, 2026 (Par. 5B, not extended for
+    weekends/holidays)'."""
+    return f"5:00 PM local time, {d:%a}, {d:%b} {d.day}, {d.year} (Par. 5B, not extended for weekends/holidays)"
 
 
 def build_day_one_summary(address: str, effective_date: date, option_days, close_date) -> list:
@@ -195,7 +323,7 @@ def build_day_one_summary(address: str, effective_date: date, option_days, close
     ]
     end = option_end_date(effective_date, option_days)
     if end:
-        lines.append(f"Option period ends: {end.strftime('%b %d, %Y')}")
+        lines.append(f"Option period ends: {fmt_option_end(end)}")
     if close_date:
         lines.append(f"Closing on or before: {close_date.strftime('%b %d, %Y')}")
     lines.append("Share these dates with the buyer, lender, and title company.")

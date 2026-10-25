@@ -13,3 +13,8 @@ PyMuPDF==1.26.5
 # Twilio helper library (used for validating inbound webhook signatures)
 # Pin to a recent 8.x release that's compatible with RequestValidator
 twilio==8.4.0
+
+# IANA zone data for zoneinfo (America/Chicago, America/Denver): slim
+# container images can lack /usr/share/zoneinfo, and deadlines.py would fall
+# back to fixed UTC-6/UTC-7 offsets.
+tzdata==2026.5

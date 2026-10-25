@@ -15,7 +15,7 @@ import os
 import io
 import re
 from datetime import datetime, timedelta
-from deadlines import offer_closing_date, add_trec_days
+from deadlines import offer_closing_date, add_trec_days, roll_note
 from pypdf import PdfReader, PdfWriter
 from pypdf.generic import NameObject, BooleanObject
 
@@ -41,10 +41,33 @@ CO_AMEND_MESSAGE = ("Amendments for Colorado offers aren't supported yet -- use 
                     "Commission's Agreement to Amend/Extend Contract.")
 
 
+def amended_closing_date(original_offer: dict, days: int) -> tuple:
+    """(new Paragraph 9 date, roll note) for a "close +N" 39-11. The base is
+    whatever the 20-19 actually printed (deadlines.offer_closing_date, with
+    the row's generator_version so a pre-2026-10-24.1 offer starts from its
+    own unrolled date); + N days, then the same 9A drafting roll off a
+    weekend or federal holiday. fill_amendment_pdf prints this and the SMS
+    and /demo summaries say it, so they can't disagree. The note is
+    roll_note's "moved off a holiday" etc., or "" when the date didn't move."""
+    original_close = offer_closing_date(original_offer.get("close_days", 0), original_offer["created_at"],
+                                        original_offer.get("generator_version"))
+    unrolled = original_close + timedelta(days=int(days))
+    return add_trec_days(original_close, int(days)), roll_note(unrolled)
+
+
+def amended_closing_line(original_offer: dict, days: int) -> str:
+    """SMS/demo summary line: "New closing date (Paragraph 9): Fri, Nov 27,
+    2026 (10 days later, moved off a holiday)". It used to say "Closing
+    extended 10 days" while the PDF printed a rolled date 11 days later."""
+    d, note = amended_closing_date(original_offer, days)
+    later = f"{days} day{'s' if int(days) != 1 else ''} later"
+    return f"New closing date (Paragraph 9): {d:%a}, {d:%b} {d.day}, {d.year} ({later}{', ' + note if note else ''})"
+
+
 def fill_amendment_pdf(original_offer: dict, amendment: dict) -> str:
     """
     original_offer: a row from offers_db.get_offers_for_phone() -- has
-        address, price, close_days, created_at, filename.
+        address, price, close_days, created_at, filename, generator_version.
     amendment: {"field": "price"|"close", "value": int}
         price -> new total sales price in dollars
         close -> number of days to extend the ORIGINAL closing date by
@@ -73,11 +96,9 @@ def fill_amendment_pdf(original_offer: dict, amendment: dict) -> str:
         values[FIELD_MAP["price_total"]] = f"{amendment['value']:,}"
         suffix = f"price{amendment['value']}"
     else:
-        # The original is whatever the 20-19 actually printed
-        # (deadlines.offer_closing_date); the extended date gets the same
-        # move-off-the-weekend rule.
-        original_close = offer_closing_date(original_offer.get("close_days", 0), original_offer["created_at"])
-        new_close = add_trec_days(original_close, amendment["value"])
+        # amended_closing_date: the date the 20-19 printed + N, with the
+        # 9A drafting roll (the SMS line says the same date).
+        new_close, _ = amended_closing_date(original_offer, amendment["value"])
         checkboxes.append(FIELD_MAP["close_checkbox"])
         # Form pre-prints "20", so only the 2-digit year suffix is filled here.
         values[FIELD_MAP["close_date"]] = new_close.strftime("%B %d,")

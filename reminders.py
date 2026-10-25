@@ -29,7 +29,7 @@ import time
 import threading
 from datetime import datetime, timedelta
 
-from deadlines import earnest_money_deadline, option_end_date, offer_closing_date
+from deadlines import earnest_money_deadline, option_end_date, offer_closing_date, fmt_option_end
 
 DB_PATH = os.environ.get("DATABASE_PATH", "subscriptions.db")
 CLOSING_REMINDER_DAYS_BEFORE = int(os.environ.get("CLOSING_REMINDER_DAYS_BEFORE", 3))
@@ -86,7 +86,7 @@ def _due_offers():
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT id, phone, address, close_days, created_at, filename
+        SELECT id, phone, address, close_days, created_at, filename, generator_version
         FROM offers
         WHERE phone NOT LIKE '%demo%'
           AND id NOT IN (SELECT offer_id FROM reminders_sent WHERE kind = 'closing')
@@ -101,7 +101,7 @@ def _due_offers():
             created = datetime.fromisoformat(r["created_at"])
         except (ValueError, TypeError):
             continue
-        closing_date = offer_closing_date(r["close_days"], created)
+        closing_date = offer_closing_date(r["close_days"], created, r.get("generator_version"))
         co = _co_values(r.get("filename"))
         if co is not None:
             import co_audit
@@ -158,8 +158,9 @@ def _due_offers_co_deadlines():
 def _due_offers_option():
     """Accepted offers with a specified option period whose termination
     deadline (counted from the Effective Date, not from when the offer was
-    drafted -- see module docstring) is exactly OPTION_REMINDER_DAYS_BEFORE
-    days away and haven't already gotten one."""
+    drafted -- see module docstring; never moved off a weekend or holiday,
+    5B isn't extended) is exactly OPTION_REMINDER_DAYS_BEFORE days away and
+    haven't already gotten one."""
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
@@ -191,8 +192,8 @@ def _due_offers_option():
 
 def _due_offers_earnest_money():
     """Accepted offers whose Paragraph 5 earnest money / option fee
-    delivery deadline (3 days after the Effective Date, TREC day-counting
-    rule applied -- see deadlines.py) is exactly
+    delivery deadline (3 days after the Effective Date, extended per 5A(2)
+    past a Saturday, Sunday or Texas Legal Holiday -- see deadlines.py) is exactly
     EARNEST_MONEY_REMINDER_DAYS_BEFORE days away and haven't already gotten
     one."""
     conn = sqlite3.connect(DB_PATH)
@@ -259,7 +260,7 @@ def run_reminders_if_due(send_sms_fn):
             for offer in _due_offers_option():
                 body = (
                     f"Reminder: the option period on {offer['address']} ends "
-                    f"{offer['option_end_date'].strftime('%B %d, %Y')} "
+                    f"{fmt_option_end(offer['option_end_date'])} "
                     f"({OPTION_REMINDER_DAYS_BEFORE} days from now). "
                     f"Terminate before then if you're not moving forward. "
                     f"Text DASHBOARD to review."

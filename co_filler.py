@@ -30,6 +30,9 @@ import fitz  # PyMuPDF -- writes checkbox appearance streams that render in Safa
 
 from pdf_filler import OUTPUT_DIR, open_unique_output
 from co_audit import is_business_day
+# Denver's calendar date, not the host's (Railway is UTC, so datetime.now()
+# was already tomorrow for a 9 PM Mountain text).
+from deadlines import colorado_date
 
 TEMPLATE_PATH = os.environ.get("CBS1_TEMPLATE_PATH",
                                os.path.join(os.path.dirname(os.path.abspath(__file__)), "CBS1_2026.pdf"))
@@ -195,7 +198,7 @@ def compute_deadlines(mec: date, closing: date, financed: bool, has_hoa: bool = 
 def contract_dates(close_days: int, today: date = None) -> tuple:
     """(acceptance/MEC date, closing date). Acceptance is the next weekday;
     closing is close_days out, moved off a weekend or holiday to the next business day."""
-    today = today or datetime.now().date()
+    today = today or colorado_date()
     acceptance = today + timedelta(days=1)
     while not is_business_day(acceptance):
         acceptance += timedelta(days=1)
@@ -221,7 +224,7 @@ def build_values(parsed: dict, today: date = None) -> dict:
     city = parsed.get("city") or addr["city"]
 
     values = {
-        "Date": f"{(today or datetime.now().date()):%m/%d/%Y}",
+        "Date": f"{(today or colorado_date()):%m/%d/%Y}",
         "Street Address": addr["street"],
         "City": city,
         "State": "CO",
@@ -292,7 +295,7 @@ def fill_ae41(original_offer: dict, amendment: dict, today: date = None) -> str:
                (position-verified), never by field name alone."""
     import co_audit
     import co_forms
-    today = today or datetime.now().date()
+    today = today or colorado_date()
     contract = co_audit.read_contract(os.path.join(OUTPUT_DIR, original_offer["filename"]))
     if not contract:
         raise ValueError("Couldn't read the original Colorado contract for this offer.")
@@ -406,7 +409,7 @@ def fill_buyer_agreement(parsed: dict, agent: dict = None, today: date = None) -
     §7.1.1 Success Fee as the agent stated it. Left for the agent and buyer:
     §2.1/2.2 firm type, §3.4 property, §7.3 who pays (blank means §7.3.1
     applies, per the form), and signatures."""
-    today = today or datetime.now().date()
+    today = today or colorado_date()
     agent = agent or {}
     values = {
         "Date": f"{today:%m/%d/%Y}",

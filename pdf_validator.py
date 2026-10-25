@@ -201,9 +201,11 @@ def validate_offer_pdf(pdf_path: str, parsed: dict) -> dict:
     # at generation time, so re-deriving it from "now" at validation time
     # drifts a day later for every day that passes before this check runs,
     # producing a false mismatch against a PDF that was generated correctly.
-    # Computed by the same deadlines.offer_closing_date pdf_filler stamps with.
+    # Computed by the same deadlines.offer_closing_date pdf_filler stamps with;
+    # parsed["generator_version"] (the offer row's) keeps a PDF made before
+    # 2026-10-24.1 checked against the unrolled date it actually printed.
     if parsed.get("close_days") is not None:
-        close_dt = offer_closing_date(parsed["close_days"], parsed.get("created_at"))
+        close_dt = offer_closing_date(parsed["close_days"], parsed.get("created_at"), parsed.get("generator_version"))
         expected = close_dt.strftime("%B %d,")
         if expected not in text:
             blocking.append("Section 9: Closing Date")
