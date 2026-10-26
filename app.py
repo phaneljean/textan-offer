@@ -56,6 +56,7 @@ import transaction_tasks
 from drafts import save_draft, get_draft, clear_draft
 from tc_audit import check_tc_file, compare_contracts
 import first_screen
+import trec_forms
 from tc_report_pdf import generate_tc_report_pdf
 from rate_limit import check_and_increment
 from real_upload_alert import maybe_send_alert as maybe_send_real_upload_alert
@@ -4077,7 +4078,7 @@ function buildReportAddress(data) {
     : '<div class="rep-addr blank">Property address not filled in</div>';
   const bits = [];
   if (p.address) { if (p.city) bits.push(escapeHtml(p.city)); if (p.county) bits.push(escapeHtml(p.county) + ' County'); }
-  else bits.push('Section 2A is blank');
+  else bits.push(data.form === 'TREC 9-18' ? 'Section 2 is blank' : 'Section 2A is blank');  // 9-18 has no 2A
   if (data.files_line) bits.push(escapeHtml(data.files_line));
   html += '<div class="rep-sub">' + bits.join(' &middot; ') + '</div>';
   return html;
@@ -4172,7 +4173,7 @@ function buildNotChecked(data) {
   const msg = (data.issues && data.issues[0] && data.issues[0].message) || '';
   return '<div class="unreadable-box">' +
     '<p class="unreadable-title">' + escapeHtml(msg.replace(/ -- /g, ' \u2014 ')) + '</p>' +
-    '<p>TC Check checks TREC 20-19, TREC 25-17 and Colorado CBS1 contracts today.</p>' +
+    '<p>TC Check checks __CHECKED_CONTRACTS__ contracts today.</p>' +
     (data.free_report_not_used ? '<p class="unreadable-note">This check didn&rsquo;t use one of your free reports.</p>' : '') +
   '</div>';
 }
@@ -4368,7 +4369,8 @@ function escapeHtml(s) {
     html = first_screen.fill_tokens(html, src)
     html = (html.replace("__SITE_CHROME_CSS__", _SITE_CHROME_CSS)
                 .replace("__SITE_NAV__", _site_nav(cta_href="#check", active="tc"))
-                .replace("__SITE_FOOTER__", _SITE_FOOTER))
+                .replace("__SITE_FOOTER__", _SITE_FOOTER)
+                .replace("__CHECKED_CONTRACTS__", escape(trec_forms.checked_contracts_line())))
     site_state = _site_state()
     html = _apply_site_state(html.replace("__STATE_SWITCH_JS__", STATE_SWITCH_JS), site_state)
     resp = make_response(html)

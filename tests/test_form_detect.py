@@ -1,12 +1,15 @@
 """Form detection (2026-10-25): TC Check reads the printed TREC form number
-and edition stamp before it runs any 20-19 check. A 9-18 or 25-17 is
-recognized but not checked yet (they matched the 20-19 field names and got
-a fake 20-19 report before this), an outdated form gets one finding, and a
-current 20-19 report is byte-for-byte what it was.
+and edition stamp before it runs any 20-19 check. A 9-18 or 25-17 goes to
+its own rules (they matched the 20-19 field names and got a fake 20-19
+report before this), a form with no rules yet (23-20) is recognized but not
+checked, an outdated form gets one finding, and a current 20-19 report is
+byte-for-byte what it was.
 
 Fixtures are TREC's own blanks, downloaded 2026-10-25 from the PDF each
 form's trec.texas.gov page links:
   trec_25-17_blank.pdf  pdf-forms/25-17_4.pdf  sha256 91f945fe6e4067a5...
+  trec_9-18_blank.pdf   pdf-forms/9-18_2.pdf   sha256 b6e8542f94a698c2...
+  trec_9-16_flat.pdf    pdf-forms/9-16.pdf     sha256 cdd02e95a2474c29... (flat: TREC has no fillable 9-16)
   trec_20-18_blank.pdf  pdf-forms/20-18.pdf    sha256 52fa502f0824a55e...
   trec_40-10_blank.pdf  pdf-forms/40-10.pdf    sha256 66fc4539b507384e...
 tc_check_golden_20-19.json is check_tc_file() output captured on 7e56cf9
@@ -41,8 +44,8 @@ def fx(name):
 
 
 def text_only(form_id, edition):
-    """A one-page PDF with just a TREC footer stamp. 9-18 work is paused
-    (Phanel, 2026-10-25), so no 9-18 fixture; detection is text-only anyway."""
+    """A one-page PDF with just a TREC footer stamp, for forms TC Check has
+    no rules for (23-20) and editions TREC no longer serves (9-17)."""
     import fitz
     doc = fitz.open()
     doc.new_page().insert_text((72, 72), f"TREC NO. {form_id}   Page 1 of 11   {edition}")
@@ -57,6 +60,8 @@ class Detection(unittest.TestCase):
             SAMPLE: ("20-19", "05-04-2026"),
             fx("trec_20-19_planted_errors.pdf"): ("20-19", "05-04-2026"),
             fx("trec_25-17_blank.pdf"): ("25-17", "05-04-2026"),
+            fx("trec_9-18_blank.pdf"): ("9-18", "05-04-2026"),
+            fx("trec_9-16_flat.pdf"): ("9-16", "11-07-2022"),
             fx("trec_20-18_blank.pdf"): ("20-18", "11-04-2024"),
             fx("trec_40-10_blank.pdf"): ("40-10", "11-07-2022"),
             fx("trec_40-11_clean.pdf"): ("40-11", "11-04-2024"),
@@ -93,13 +98,32 @@ class NotChecked(unittest.TestCase):
         self.assertEqual(result["issues"][0]["key"], key)
         return result["issues"][0]
 
-    def test_9_18_recognized_nothing_checked(self):
-        r = check_tc_file([text_only("9-18", "05-04-2026")])
+    def test_23_20_recognized_nothing_checked(self):
+        r = check_tc_file([text_only("23-20", "05-04-2026")])
         issue = self._only(r, "form_not_supported")
-        self.assertEqual(issue["message"], "TREC 9-18 Unimproved Property Contract (05-04-2026) recognized. "
-                                           "TC Check doesn't check this form yet, so nothing was checked.")
+        self.assertEqual(issue["message"], "TREC 23-20 New Home Contract (Incomplete Construction) (05-04-2026) "
+                                           "recognized. TC Check doesn't check this form yet, so nothing was checked.")
         self.assertEqual(issue["severity"], "info")
-        self.assertEqual((r["form"], r["form_id"], r["edition"]), ("TREC 9-18", "9-18", "05-04-2026"))
+        self.assertEqual((r["form"], r["form_id"], r["edition"]), ("TREC 23-20", "23-20", "05-04-2026"))
+
+    def test_9_18_goes_to_its_own_rules(self):
+        # Since the 9-18 rules landed (trec_9_18.py); tests/test_9_18.py has them.
+        r = check_tc_file([fx("trec_9-18_blank.pdf")])
+        self.assertEqual(r["form"], "TREC 9-18")
+        self.assertNotIn("city", [i["key"] for i in r["issues"]])
+
+    def test_outdated_9_16_and_9_17(self):
+        # TREC serves 9-16 only flat and 9-17 not at all: no Effective Date
+        # can be read, so both are the must-fix wording.
+        issue = self._only(check_tc_file([fx("trec_9-16_flat.pdf")]), "outdated_form")
+        self.assertEqual(issue["message"], "This file is on TREC 9-16 (11-07-2022). TREC 9-18 (05-04-2026) is the "
+                                           "current Unimproved Property Contract, mandatory since 07/01/2026. TC Check "
+                                           "doesn't check replaced editions, so nothing else was checked. If this "
+                                           "contract isn't signed yet, write it on TREC 9-18.")
+        self.assertEqual(issue["severity"], "blocker")
+        issue = self._only(check_tc_file([text_only("9-17", "")]), "outdated_form")
+        self.assertTrue(issue["message"].startswith("This file is on TREC 9-17. TREC 9-18 (05-04-2026)"))
+        self.assertEqual(issue["severity"], "blocker")
 
     def test_25_17_goes_to_its_own_rules(self):
         # Since the 25-17 rules landed (trec_25_17.py); tests/test_25_17.py has them.
@@ -143,8 +167,8 @@ class NotChecked(unittest.TestCase):
 
     def test_registry_plugs_in(self):
         fake = {"recognized": True, "issues": []}
-        with mock.patch.dict("tc_audit.FORM_CHECKERS", {"9-18": lambda paths, det, pages: fake}):
-            self.assertIs(check_tc_file([text_only("9-18", "05-04-2026")]), fake)
+        with mock.patch.dict("tc_audit.FORM_CHECKERS", {"23-20": lambda paths, det, pages: fake}):
+            self.assertIs(check_tc_file([text_only("23-20", "05-04-2026")]), fake)
 
     def test_compare_refuses_other_forms(self):
         r = compare_contracts(fx("trec_20-18_blank.pdf"), fx("trec_20-19_planted_errors.pdf"))
@@ -173,7 +197,7 @@ class Routing(unittest.TestCase):
 
     def test_new_forms_never_reach_20_19_rules(self):
         trap = mock.Mock(side_effect=AssertionError("20-19 rules ran"))
-        for name in ("trec_25-17_blank.pdf", "trec_20-18_blank.pdf"):
+        for name in ("trec_25-17_blank.pdf", "trec_9-18_blank.pdf", "trec_20-18_blank.pdf"):
             path = _filled(fx(name))
             with self.subTest(name), mock.patch("tc_audit._consistency_issues", trap), \
                     mock.patch("tc_audit._contract_pages", trap):
@@ -182,7 +206,7 @@ class Routing(unittest.TestCase):
                 if name == "trec_20-18_blank.pdf":
                     self.assertEqual([i["key"] for i in r["issues"]], ["outdated_form"])
                 else:
-                    self.assertEqual(r["form"], "TREC 25-17")
+                    self.assertEqual(r["form"], "TREC " + name[5:-10])
 
     def test_20_19_still_routes_to_20_19_rules(self):
         r = check_tc_file([fx("trec_20-19_clean_two_parties.pdf")])
@@ -214,7 +238,7 @@ class TwentyNineteenUnchanged(unittest.TestCase):
 
 class Channels(unittest.TestCase):
     def setUp(self):
-        self.r = check_tc_file([text_only("9-18", "05-04-2026")])
+        self.r = check_tc_file([text_only("23-20", "05-04-2026")])
 
     def test_email_says_nothing_was_checked(self):
         body = tc_check_email.format_reply_body(self.r)
@@ -222,7 +246,7 @@ class Channels(unittest.TestCase):
         self.assertNotIn("couldn't read", body.lower())
         html = tc_check_email.format_reply_html(self.r)
         self.assertIn("Nothing was checked", html)
-        self.assertEqual(tc_check_email.subject_line(self.r), "TC File Check: TREC 9-18 recognized, not checked")
+        self.assertEqual(tc_check_email.subject_line(self.r), "TC File Check: TREC 23-20 recognized, not checked")
 
     def test_no_hand_review_reply_to(self):
         with mock.patch.dict(os.environ, {"HAND_REVIEW_EMAIL": "hand@example.com"}):
@@ -231,22 +255,23 @@ class Channels(unittest.TestCase):
 
     def test_alert_wording(self):
         subject, body = real_upload_alert.format_not_checked_alert(self.r, "web upload (tc_check_page)")
-        self.assertIn("TREC 9-18 recognized, not checked", subject)
+        self.assertIn("TREC 23-20 recognized, not checked", subject)
         self.assertNotIn("couldn't be read", body)
 
     def test_web_route(self):
         import app as app_module
         with mock.patch("app.maybe_send_unreadable_alert"), mock.patch("app.maybe_send_real_upload_alert"), \
                 mock.patch("app.track_event"), mock.patch.dict(os.environ, {"HAND_REVIEW_EMAIL": "hand@example.com"}):
-            with open(text_only("9-18", "05-04-2026"), "rb") as f:
-                data = {"file": (io.BytesIO(f.read()), "9-18.pdf"), "source_page": "claude_verify"}
+            with open(text_only("23-20", "05-04-2026"), "rb") as f:
+                data = {"file": (io.BytesIO(f.read()), "23-20.pdf"), "source_page": "claude_verify"}
             r = app_module.app.test_client().post("/v1/tc/check", data=data, content_type="multipart/form-data",
                                                   headers={"User-Agent": "Mozilla/5.0 test"}).get_json()
         self.assertTrue(r["unsupported"])
         self.assertFalse(r["recognized"])
         self.assertFalse(r["hand_review"])
-        self.assertEqual(r["display_issues"][0]["message"], "TREC 9-18 Unimproved Property Contract (05-04-2026) "
-                                                            "recognized. TC Check doesn't check this form yet, so nothing was checked.")
+        self.assertEqual(r["display_issues"][0]["message"], "TREC 23-20 New Home Contract (Incomplete Construction) "
+                                                            "(05-04-2026) recognized. TC Check doesn't check this form "
+                                                            "yet, so nothing was checked.")
 
     def test_upload_page_claims_no_new_forms(self):
         import app as app_module

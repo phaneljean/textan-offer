@@ -767,10 +767,14 @@ FORM_CHECKERS = {}
 
 def _builtin_checker(form_id: str):
     """Form modules that import this one, so they're loaded on first use.
-    25-17 since 2026-10-25 (txo-trec-qa spec_9-18_25-17.md)."""
+    25-17 and 9-18 since 2026-10-25 (txo-trec-qa spec_9-18_25-17.md).
+    Add a form here and to trec_forms.CHECKED_CONTRACTS together."""
     if form_id == "25-17":
         import trec_25_17
         return trec_25_17.check_25_17
+    if form_id == "9-18":
+        import trec_9_18
+        return trec_9_18.check_9_18
     return None
 
 
@@ -813,7 +817,11 @@ def _form_result(form_id: str, edition, pdf_paths, detections, page_count: int) 
         # Effective Date is read, to tell a contract legitimately signed on
         # the old form (info) from one that has to be redone (must-fix). Only
         # 25-16's is rect-verified (txo-trec-qa); every other old edition
-        # reads as blank, i.e. must-fix.
+        # reads as blank, i.e. must-fix. 9-16/9-17 stay that way on purpose
+        # (checked 2026-10-25): TREC serves 9-16 only as a flat print copy (0
+        # fields, so no rects to verify) and 9-17 is gone (404). And a 9-16
+        # was replaced by 9-17 before 9-18, so 9-18's 07/01/2026 date is not
+        # the cutoff that would make a 9-16 "legitimately signed".
         effective = None
         if form_id == "25-16":
             import trec_25_17

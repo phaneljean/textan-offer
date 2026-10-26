@@ -263,6 +263,39 @@ def _street_25_17(addr: str) -> str:
     return street.strip()
 
 
+def header_issues(f, header_fields, header_rect, total, para) -> list:
+    """The "Contract Concerning ___ (Address of Property)" header on each
+    page vs the contract's address, only when that address is filled.
+    Rural roads are written many ways ("County Road 210" / "CR 210"), and
+    land headers often carry the legal description instead of the address
+    (txo-trec-qa review, 2026-10-25). A different street number on a plain
+    street address is still a must-fix; anything else is a review. Shared
+    with trec_9_18 (para "Paragraph 2", 11 pages)."""
+    issues = []
+    street = _street_25_17(f.v("address"))
+    if not street:
+        return issues
+    for page_no, name in header_fields:
+        if page_no not in f.pages:
+            continue
+        header = f.values.get(name, "").strip() or A._text_in_rect(f.pages[page_no], header_rect)
+        if not header:
+            issues.append({"severity": "warning", "message": f"Page {page_no} of {total}: \"Address of Property\" header is blank",
+                           "key": "header_address_blank"})
+        elif _street_25_17(header) != street:
+            if _LEGAL_DESC_RE.search(header) or not header[:1].isdigit():
+                issues.append({"severity": "warning",
+                               "message": f'Page {page_no} of {total}: the header reads "{header}" and {para}\'s address '
+                                          f'is "{f.v("address")}". Confirm the header identifies this property.',
+                               "key": "header_address_differs"})
+            else:
+                issues.append({"severity": "blocker",
+                               "message": f'Page {page_no} of {total}: header address reads "{header}" but {para} says '
+                                          f'"{f.v("address")}"',
+                               "key": "header_address"})
+    return issues
+
+
 CORE_DRAFT = ["county", "escrow_agent", "earnest_money", "option_fee", "title_company", "description"]
 
 
@@ -270,33 +303,37 @@ def _name(role):
     return MAP[role][1]
 
 
-def contract_pages(reader) -> dict:
+def contract_pages(reader, form_id="25-17", total=12) -> dict:
     """{printed page number: page} for the 25-17 pages in a file, from each
-    page's own footer, so an addendum merged in front never shifts them."""
+    page's own footer, so an addendum merged in front never shifts them.
+    trec_9_18 calls it with ("9-18", 11)."""
+    base, ver = form_id.split("-")
     out = {}
     for page in reader.pages:
         text = page.extract_text() or ""
-        if not re.search(r"TREC\s*NO\.?\s*25\s*-\s*17", text):
+        if not re.search(rf"TREC\s*NO\.?\s*{base}\s*-\s*{ver}\b", text):
             continue
-        m = re.search(r"Page\s*(\d+)\s*of\s*12", text)
+        m = re.search(rf"Page\s*(\d+)\s*of\s*{total}\b", text)
         if m and int(m.group(1)) not in out:
             out[int(m.group(1))] = page
     return out
 
 
 class _Form:
-    def __init__(self, values, pages):
-        self.values, self.pages = values, pages
+    """A contract's values read by role. map_ is this module's MAP unless a
+    sibling form module (trec_9_18) passes its own -- never another form's."""
+    def __init__(self, values, pages, map_=None):
+        self.values, self.pages, self.map = values, pages, map_ or MAP
 
     def v(self, role):
-        return self.values.get(_name(role), "").strip()
+        return self.values.get(self.map[role][1], "").strip()
 
     def on(self, role):
-        return _is_checked(self.values, _name(role))
+        return _is_checked(self.values, self.map[role][1])
 
     def slot(self, role):
         """Field value, else text drawn inside the field's box."""
-        page_no, name, rect = MAP[role]
+        page_no, name, rect = self.map[role]
         val = self.values.get(name, "").strip()
         if val or page_no not in self.pages:
             return val
@@ -307,7 +344,8 @@ class _Form:
 
     def effective_date(self):
         """Page 10 'EXECUTED the 20 day of October, 20 26' in the 25-17's own
-        roles: day = 'BROKER FILL IN...', MONTH = '20_2', year = 'Effective Date'."""
+        roles: day = 'BROKER FILL IN...', MONTH = '20_2', year = 'Effective Date'.
+        (9-18 page 9: same roles, its own names -- see trec_9_18.MAP.)"""
         day = re.sub(r"\D", "", self.v("eff_day"))
         md = A._parse_month_day(f"{self.v('eff_month')} {day}")
         year = A._year(self.v("eff_year"))
@@ -548,25 +586,7 @@ def _issues(f: _Form) -> tuple:
             add("blocker", f"{label} says {A._fmt_money(got)}, but the {what} is {A._fmt_money(want)}", "receipt_mismatch")
 
     # --- Address header, pages 2-12 (only when 2A's address is filled) -----
-    # Rural roads are written many ways ("County Road 210" / "CR 210"), and
-    # land headers often carry the legal description instead of the address
-    # (txo-trec-qa review, 2026-10-25). A different street number on a plain
-    # street address is still a must-fix; anything else is a review.
-    street = _street_25_17(f.v("address"))
-    if street:
-        for page_no, name in HEADER_FIELDS:
-            if page_no not in f.pages:
-                continue
-            header = f.values.get(name, "").strip() or A._text_in_rect(f.pages[page_no], HEADER_RECT)
-            if not header:
-                add("warning", f"Page {page_no} of 12: \"Address of Property\" header is blank", "header_address_blank")
-            elif _street_25_17(header) != street:
-                if _LEGAL_DESC_RE.search(header) or not header[:1].isdigit():
-                    add("warning", f'Page {page_no} of 12: the header reads "{header}" and Paragraph 2A\'s address is '
-                                   f'"{f.v("address")}". Confirm the header identifies this property.', "header_address_differs")
-                else:
-                    add("blocker", f'Page {page_no} of 12: header address reads "{header}" but Paragraph 2A says '
-                                   f'"{f.v("address")}"', "header_address")
+    issues.extend(header_issues(f, HEADER_FIELDS, HEADER_RECT, 12, "Paragraph 2A"))
 
     # --- Paragraph 11 ------------------------------------------------------
     provisions = " ".join(f.v(r) for r in ("special_prov_1", "special_prov_2")).strip()
@@ -659,36 +679,28 @@ def _classify(pdf_paths, detections, all_values, main_index):
     return fa, la, amend, unknown
 
 
-def check_25_17(pdf_paths, detections, page_count) -> dict:
-    """tc_audit.FORM_CHECKERS["25-17"]. Same result shape as check_tc_file's
-    20-19 result, plus "form"."""
-    main_index = next(i for i, det in enumerate(detections) if any(fid == "25-17" for fid, _ in det))
-    main_path = pdf_paths[main_index]
-    all_values = [_read_values(p) for p in pdf_paths]
-    values = all_values[main_index]
-    if sum(1 for _, name, _ in MAP.values() if name in values) < A.MIN_MATCHED_FIELDS:
-        # Spec 1.5: the text says 25-17 but the fields are gone (a flattened
-        # e-sign export or a scan with a text layer). Reading it would call
-        # every blank "missing"; it's the unreadable path, naming the form.
-        return {
-            "recognized": False, "unreadable": True, "complete": False,
-            "issues": [{"severity": "info", "key": "unrecognized",
-                        "message": "We recognized TREC 25-17 but couldn't read its form fields. It may be scanned, "
-                                   "or flattened when it was signed or exported."}],
-            "looks_like_blank_draft": False, "page_count": page_count, "has_addendum": False,
-            "has_amendment": False, "has_loan_assumption": False,
-            "severity": {"level": "unreadable", "emoji": "\u26AA", "label": "Couldn't read the form fields", "issue_count": 0},
-        }
-    f = _Form(values, contract_pages(PdfReader(filecrypt.pdf_source(main_path))))
+def unreadable_result(form, page_count) -> dict:
+    """Spec 1.5: the text says this form but the fields are gone (a flattened
+    e-sign export or a scan with a text layer). Reading it would call every
+    blank "missing"; it's the unreadable path, naming the form."""
+    return {
+        "recognized": False, "unreadable": True, "complete": False,
+        "issues": [{"severity": "info", "key": "unrecognized",
+                    "message": f"We recognized {form} but couldn't read its form fields. It may be scanned, "
+                               "or flattened when it was signed or exported."}],
+        "looks_like_blank_draft": False, "page_count": page_count, "has_addendum": False,
+        "has_amendment": False, "has_loan_assumption": False,
+        "severity": {"level": "unreadable", "emoji": "\u26AA", "label": "Couldn't read the form fields", "issue_count": 0},
+    }
 
-    issues, core_missing = _issues(f)
 
-    buyers, sellers = A._party_names(f.v("buyer_name")), A._party_names(f.v("seller_name"))
-    initials = []
-    for page_label, buyer_boxes, seller_boxes in A._initials_by_position(f.pages):
-        initials.extend(A._check_initials_pair(page_label, buyer_boxes, seller_boxes, buyers, sellers))
-    issues.extend(initials)
-
+def attachment_issues(f, pdf_paths, detections, all_values, main_index, buyers, sellers) -> tuple:
+    """(issues, has_addendum, has_loan_assumption, has_amendment): the 40-11,
+    41-3 and 39-11 cross-checks plus outdated attachments. Read by role, so
+    it works on any form whose map has tpf_3b_box, p22_tpf, financing_3b,
+    la_3b_box, p22_loan_assumption, sf_3b_box, p22_release_va,
+    sales_price_3c and address (25-17 and 9-18, spec 3)."""
+    issues = []
     fa, la, amend, unknown = _classify(pdf_paths, detections, all_values, main_index)
     has_addendum, has_loan_assumption, has_amendment = fa is not None, la is not None, amend is not None
 
@@ -743,7 +755,7 @@ def check_25_17(pdf_paths, detections, page_count) -> dict:
         # _loan_assumption_issues reads the contract by 20-19 names; hand it
         # the 25-17 values under those names (never the raw 25-17 dict: the
         # 20-19 Release-of-Liability box name is the 25-17 3B dollar field).
-        shim = {FIELD_MAP_20_19["address"]: f.v("address"), A.RELEASE_22_BOX: values.get(_name("p22_release_va"), "")}
+        shim = {FIELD_MAP_20_19["address"]: f.v("address"), A.RELEASE_22_BOX: f.values.get(f.map["p22_release_va"][1], "")}
         issues.extend(A._loan_assumption_issues(la, shim))
         assumed = [A._money(la.get(A.LA_FIELDS[f"note{n}_balance"], "")) for n in A._la_notes(la)]
         fa_loan = A._fa_total(fa) if has_addendum else 0
@@ -771,6 +783,31 @@ def check_25_17(pdf_paths, detections, page_count) -> dict:
                            f"confirm this amendment belongs to this file", A.AMEND_ADDRESS_MISMATCH_KEY)
 
     issues.extend(A._outdated_attachment_issues(detections))
+    return issues, has_addendum, has_loan_assumption, has_amendment
+
+
+def check_25_17(pdf_paths, detections, page_count) -> dict:
+    """tc_audit.FORM_CHECKERS["25-17"]. Same result shape as check_tc_file's
+    20-19 result, plus "form"."""
+    main_index = next(i for i, det in enumerate(detections) if any(fid == "25-17" for fid, _ in det))
+    main_path = pdf_paths[main_index]
+    all_values = [_read_values(p) for p in pdf_paths]
+    values = all_values[main_index]
+    if sum(1 for _, name, _ in MAP.values() if name in values) < A.MIN_MATCHED_FIELDS:
+        return unreadable_result(FORM, page_count)
+    f = _Form(values, contract_pages(PdfReader(filecrypt.pdf_source(main_path))))
+
+    issues, core_missing = _issues(f)
+
+    buyers, sellers = A._party_names(f.v("buyer_name")), A._party_names(f.v("seller_name"))
+    initials = []
+    for page_label, buyer_boxes, seller_boxes in A._initials_by_position(f.pages):
+        initials.extend(A._check_initials_pair(page_label, buyer_boxes, seller_boxes, buyers, sellers))
+    issues.extend(initials)
+
+    more, has_addendum, has_loan_assumption, has_amendment = attachment_issues(
+        f, pdf_paths, detections, all_values, main_index, buyers, sellers)
+    issues.extend(more)
 
     blocking = [i for i in issues if i["severity"] == "blocker"]
     return {

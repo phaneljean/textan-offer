@@ -23,6 +23,8 @@ import os
 import re
 from html import escape
 
+import trec_forms
+
 MAX_ATTACHMENTS = 4  # contract + optional 40-11 addendum + optional 41-3 addendum + optional 39-11 amendment, same cap check_tc_file() expects
 
 # Same brand colors as the web TC Check page's .issue-tag.blocker/.warning
@@ -122,7 +124,10 @@ _CONSEQUENCE_TAGS = {
     "fee_agreement_incomplete": "REVIEW: FEE AGREEMENT UNCLEAR",
     "reservation_without_addendum": "REVIEW: RESERVATION ADDENDUM",
     "appraisal_without_tpf": "REVIEW: ADDENDUM MISMATCH",
-    "header_address_differs": "REVIEW: HEADER DIFFERS FROM 2A",
+    "header_address_differs": "REVIEW: HEADER DIFFERS FROM PARA 2",  # was "...FROM 2A"; 9-18 has no 2A
+    # TREC 9-18 (trec_9_18.py), 2026-10-25. Every other 9-18 key is shared
+    # with the 25-17/20-19 above. Proposed by txo-engineer, for txo-trec-qa.
+    "nrl_option_missing": "LEASE TERMS UNDEFINED",  # 4B "is" a party, neither (1) nor (2): "check one of the following"
     # Colorado CBS1 (co_audit.py)
     "co_street_blank": "PROPERTY NOT IDENTIFIED",
     "co_city_blank": "PROPERTY NOT IDENTIFIED",
@@ -362,6 +367,12 @@ def _status_headline(result: dict) -> tuple:
         return (f"NOT READY — {n} item{'s' if n != 1 else ''} will stop this deal", _BLOCKER_COLOR, _BLOCKER_BG)
     n = len(issues)
     return (f"{n} item{'s' if n != 1 else ''} to review", _WARNING_COLOR, _WARNING_BG)
+
+
+def _property_section(result: dict) -> str:
+    """Where a TREC contract's property description is: Section 2A on the
+    20-19 and 25-17, plain Section 2 on the 9-18 (it has no 2A)."""
+    return "Section 2" if result.get("form") == "TREC 9-18" else "Section 2A"
 
 
 def _property_line(result: dict) -> str:
@@ -650,7 +661,7 @@ def _archived_text(archived) -> str:
 # that nothing was checked. No hand-review offer: the file was read fine.
 def _not_checked_text(result: dict) -> str:
     return (_clean(result["issues"][0]["message"]) + "\n\n"
-            "TC Check checks TREC 20-19, TREC 25-17 and Colorado CBS1 contracts today. "
+            f"TC Check checks {trec_forms.checked_contracts_line()} contracts today. "
             "Upload at txtanoffer.com/tc-check or forward to tc@check.txtanoffer.com.\n\n"
             "-- TxtAnOffer TC Check")
 
@@ -674,7 +685,8 @@ def format_reply_body(result: dict, check_count: int = 0, archived: dict = None)
     warnings = [i for i in issues if i.get("severity") == "warning"]
     label, _, _ = _status_headline(result)
     prop = result.get("property") or {}
-    where = _property_line(result) or ("Property address not filled in (§2.4)" if _is_co(result) else "Property address not filled in (Section 2A)")
+    where = _property_line(result) or ("Property address not filled in (§2.4)" if _is_co(result)
+                                       else f"Property address not filled in ({_property_section(result)})")
     county = f" · {prop['county']} County" if prop.get("county") else ""
 
     body = (f"TC FILE CHECK REPORT\n{where}{county}\n"
@@ -853,7 +865,7 @@ def format_reply_html(result: dict, check_count: int = 0, archived: dict = None)
     if result.get("unsupported"):
         outdated = result["issues"][0]["key"] == "outdated_form"
         body = (f'<p style="{_P_STYLE}">{escape(_clean(result["issues"][0]["message"]))}</p>'
-                f'<p style="{_P_STYLE}">TC Check checks TREC 20-19, TREC 25-17 and Colorado CBS1 contracts today.</p>')
+                f'<p style="{_P_STYLE}">TC Check checks {escape(trec_forms.checked_contracts_line())} contracts today.</p>')
         return _email_shell("This is an outdated TREC form" if outdated else f"{escape(result.get('form') or 'Form')} recognized",
                             "Nothing else was checked" if outdated else "Nothing was checked", body)
     if not result["recognized"]:
@@ -876,7 +888,7 @@ def format_reply_html(result: dict, check_count: int = 0, archived: dict = None)
         sub_bits = [escape(x) for x in (prop.get("city", ""), f"{prop['county']} County" if prop.get("county") else "") if x]
     else:
         heading = '<span style="color:#b91c1c;">Property address not filled in</span>'
-        sub_bits = ["Section 2A is blank"]
+        sub_bits = [f"{_property_section(result)} is blank"]
     sub_bits.append(f"Checked {_checked_date()}")
     sub_bits.append(escape(_files_line(result)))
     subheading = " &middot; ".join(sub_bits)

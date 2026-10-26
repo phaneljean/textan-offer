@@ -49,6 +49,18 @@ CURRENT_FORMS = {
     "41-3": ("Loan Assumption Addendum", "11-07-2022", "addendum"),
     "61-0": ("Seller's Disclosure About Groundwater and Surface Water Rights", "05-04-2026", "notice"),
 }
+# What TC Check checks today, in the order the copy names them. Every "TC
+# Check checks ..." line (the web not-checked box and both report emails)
+# reads this, so the copy changes in one place: tests/test_9_18.py fails if
+# a form with a built-in checker in tc_audit isn't listed here, or the reverse.
+CHECKED_CONTRACTS = ["TREC 20-19", "TREC 25-17", "TREC 9-18", "Colorado CBS1"]
+
+
+def checked_contracts_line() -> str:
+    """'TREC 20-19, TREC 25-17, TREC 9-18 and Colorado CBS1'."""
+    return ", ".join(CHECKED_CONTRACTS[:-1]) + " and " + CHECKED_CONTRACTS[-1]
+
+
 # An outdated form is any LOWER version of a current form's number (TREC
 # keeps the base number and bumps the suffix: 20-18 -> 20-19). Not a
 # hardcoded list on purpose. Each current form's own footer names the one

@@ -66,8 +66,10 @@ class ConsequenceTags(unittest.TestCase):
         src = open(trec_25_17.__file__).read()
         # Keys close their add()/one_of() call at the end of a line; MAP
         # role names read the same way (f.v("closing_date")) and are dropped.
-        found = set(re.findall(r'"([a-z][a-z0-9_]+)"\)\s*$', src, re.M)) | set(re.findall(r'none_key="([a-z_]+)"', src))
+        found = (set(re.findall(r'"([a-z][a-z0-9_]+)"\)\s*$', src, re.M)) | set(re.findall(r'none_key="([a-z_]+)"', src))
+                 | set(re.findall(r'"key": "([a-z_]+)"', src)))   # header_issues builds its dicts directly
         found -= set(trec_25_17.MAP) - {"county", "buyer_name", "seller_name"}
+        found.discard("unrecognized")   # unreadable_result's info line: the unreadable path, never a tagged finding
         # Emitted through loops and shared tc_audit helpers.
         found |= {"escrow_agent_name", "earnest_money_amount", "option_fee_amount", "title_company", "initials_buyer",
                   "initials_seller", "initials_mismatch", "outdated_form", tc_audit.AMEND_PRICE_CHANGE_KEY,
