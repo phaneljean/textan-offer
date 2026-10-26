@@ -1009,7 +1009,8 @@ __SITE_NAV__
 <section class="text" id="text">
   <div class="eyebrow">Also from TxtAnOffer: Text an offer</div>
   <h2>Text the terms.<br>Get a filled draft back.</h2>
-  <p class="sub">Price, down payment, closing days, address. Reply YES and the TREC 20&#8209;19 comes back with your terms filled in, ready to review.</p>
+  <p class="sub" data-state="tx">Price, down payment, closing days, address. Reply YES and the TREC 20&#8209;19 comes back with your terms filled in, ready to review.</p>
+  <p class="sub" data-state="co">Price, down payment, closing days and a Colorado address. Reply YES and the CBS1 comes back with your terms filled in, ready to review.</p>
   <div class="ctas">
     <a class="btn solid" href="sms:+18338970333" data-evt="workflow_offer_sms">Text (833) 897-0333</a>
     <a class="btn ghost" href="/pricing">See pricing</a>
