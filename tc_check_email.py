@@ -97,6 +97,7 @@ _CONSEQUENCE_TAGS = {
     "la_release_not_listed": "REVIEW: SELLER RELEASE OF LIABILITY",
     "la_note_unchecked": "REVIEW: LOAN BOX UNCHECKED",
     "la_unreadable": "ATTACHMENT NOT VERIFIED",
+    "outdated_form": "OUTDATED TREC FORM",
     # Colorado CBS1 (co_audit.py)
     "co_street_blank": "PROPERTY NOT IDENTIFIED",
     "co_city_blank": "PROPERTY NOT IDENTIFIED",
@@ -345,6 +346,9 @@ def _property_line(result: dict) -> str:
 
 
 def subject_line(result: dict) -> str:
+    if result.get("unsupported"):
+        return ("TC File Check: outdated TREC form" if result["issues"][0]["key"] == "outdated_form"
+                else f"TC File Check: {result.get('form') or 'form'} recognized, not checked")
     if not result.get("recognized", True):
         return "TC File Check: file not recognized"
     issues = _display_issues(result.get("issues") or [])
@@ -540,7 +544,8 @@ def reply_to_for(result: dict):
     """Reply-To for the report email: the hand-review inbox on an unreadable
     file (so "reply with the file" reaches a person, not offers@), else
     None (the default From)."""
-    if result is not None and not result.get("recognized", True) and hand_review_email():
+    if (result is not None and not result.get("recognized", True) and not result.get("unsupported")
+            and hand_review_email()):
         return hand_review_email()
     return None
 
@@ -615,7 +620,19 @@ def _archived_text(archived) -> str:
             "View it: https://txtanoffer.com/broker/archive\n\n")
 
 
+# A TREC form TC Check recognized but has no checks for (a 9-18, 25-17,
+# an outdated 20-18 -- see tc_audit._form_gate): say which form it is and
+# that nothing was checked. No hand-review offer: the file was read fine.
+def _not_checked_text(result: dict) -> str:
+    return (_clean(result["issues"][0]["message"]) + "\n\n"
+            "TC Check checks TREC 20-19 and Colorado CBS1 contracts today. "
+            "Upload at txtanoffer.com/tc-check or forward to tc@check.txtanoffer.com.\n\n"
+            "-- TxtAnOffer TC Check")
+
+
 def format_reply_body(result: dict, check_count: int = 0, archived: dict = None) -> str:
+    if result.get("unsupported"):
+        return _not_checked_text(result)
     if not result["recognized"]:
         if hand_review_email():
             return _HAND_REVIEW_TEXT
@@ -808,6 +825,12 @@ def _archived_html(archived) -> str:
 
 
 def format_reply_html(result: dict, check_count: int = 0, archived: dict = None) -> str:
+    if result.get("unsupported"):
+        outdated = result["issues"][0]["key"] == "outdated_form"
+        body = (f'<p style="{_P_STYLE}">{escape(_clean(result["issues"][0]["message"]))}</p>'
+                f'<p style="{_P_STYLE}">TC Check checks TREC 20-19 and Colorado CBS1 contracts today.</p>')
+        return _email_shell("This is an outdated TREC form" if outdated else f"{escape(result.get('form') or 'Form')} recognized",
+                            "Nothing else was checked" if outdated else "Nothing was checked", body)
     if not result["recognized"]:
         if hand_review_email():
             return _hand_review_html()

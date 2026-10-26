@@ -229,6 +229,8 @@ def run_batch(batch_id: str, files: list, tier: str = "free", brokerage_name: st
             "complete": result["complete"],
             "issue_count": len(result["issues"]),
             "unreadable": False,
+            # A TREC form read fine but not checked (tc_audit._form_gate).
+            "not_checked": result.get("form") if result.get("unsupported") else "",
         })
 
     total = len(per_file)

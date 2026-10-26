@@ -38,6 +38,7 @@ from pdf_filler import FIELD_MAP
 from financing_addendum import FIELD_MAP as FA_FIELDS
 from amendment import FIELD_MAP as AMEND_FIELDS
 import co_audit
+import trec_forms
 
 # (FIELD_MAP key, message shown to the TC, blocking)
 # "blocking" mirrors the same product decision pdf_validator.py already
@@ -753,6 +754,113 @@ def _severity_summary(issues: list) -> dict:
     return {"level": "clear", "emoji": "\U0001F7E2", "label": "No issues detected", "issue_count": 0}
 
 
+# --- Which TREC form was uploaded (2026-10-25) ------------------------------
+# Everything above is rect-verified on the 20-19 (05-04-2026) only. A blank
+# 9-18 or 25-17 matched the 20-19 field fingerprint and got a full 20-19
+# report; an outdated 20-18 did too. trec_forms reads the printed form
+# number + edition stamp, and anything that isn't a current 20-19 is routed
+# here instead. Checks for another form plug into FORM_CHECKERS once
+# txo-trec-qa's render-verified field map for it exists:
+#   FORM_CHECKERS["9-18"] = check_9_18   # (pdf_paths, detections, page_count) -> result
+# Until then a recognized form gets an honest "nothing was checked" result.
+FORM_CHECKERS = {}
+
+# Read alongside a 20-19 by the code above; on their own there's nothing to
+# cross-check them against.
+CHECKED_WITH_20_19 = {"40-11", "39-11", "41-3"}
+
+
+def _not_checked_result(form_id: str, edition, page_count: int, message: str, key: str, outdated: bool) -> dict:
+    """Same keys as the unreadable result, so every caller handles it, plus
+    "unsupported" and the detected form. recognized stays False: no checks
+    ran, so it must not count as a checked file, use a free report or
+    trigger the real-upload alert."""
+    severity = "blocker" if outdated else "info"
+    return {
+        "recognized": False,
+        "unreadable": False,
+        "unsupported": True,
+        "form": trec_forms.label(form_id),
+        "form_id": form_id,
+        "edition": edition,
+        "complete": False,
+        "issues": [{"severity": severity, "message": message, "key": key}],
+        "looks_like_blank_draft": False,
+        "page_count": page_count,
+        "has_addendum": False,
+        "has_amendment": False,
+        "has_loan_assumption": False,
+        "severity": ({"level": "attention", "emoji": "\U0001F534", "label": "Outdated form", "issue_count": 1} if outdated
+                     else {"level": "not_checked", "emoji": "⚪", "label": "Not checked", "issue_count": 0}),
+    }
+
+
+def _form_result(form_id: str, edition, pdf_paths, detections, page_count: int) -> dict:
+    status = trec_forms.status(form_id, edition)
+    if status == "outdated" and trec_forms.kind(form_id) == "contract":
+        # No field rules on an old edition: its names and positions differ
+        # (25-16 shares 324 names with 25-17), so they'd misfire. The info
+        # wording needs the Effective Date, and no old edition's Effective
+        # Date fields are rect-verified yet, so it's read as blank (must-fix),
+        # per txo-trec-qa's spec.
+        return _not_checked_result(form_id, edition, page_count,
+                                   trec_forms.outdated_contract_message(form_id, edition),
+                                   "outdated_form", True)
+    if status == "outdated":
+        return _not_checked_result(form_id, edition, page_count,
+                                   trec_forms.outdated_message(form_id, edition)
+                                   + " TC Check only checks current forms, so nothing else was checked.",
+                                   "outdated_form", True)
+    if status == "current" and form_id in FORM_CHECKERS:
+        return FORM_CHECKERS[form_id](pdf_paths, detections, page_count)
+    stamp = f" ({edition})" if edition else ""
+    if status == "newer":
+        msg = f"This is a newer TREC edition ({form_id}) than TC Check knows; no checks were run."
+    elif form_id in CHECKED_WITH_20_19:
+        msg = (f"TREC {form_id} {trec_forms.CURRENT_FORMS[form_id][0]}{stamp} recognized -- TC Check checks it "
+               f"together with the TREC 20-19 it belongs to, so upload both. Nothing was checked.")
+    else:
+        msg = (f"TREC {form_id} {trec_forms.CURRENT_FORMS[form_id][0]}{stamp} recognized -- checks for this "
+               f"form are coming; nothing was checked.")
+    return _not_checked_result(form_id, edition, page_count, msg, "form_not_supported", False)
+
+
+def _form_gate(pdf_paths, detections, all_values, page_count: int):
+    """A result for an upload that isn't a current TREC 20-19, or None to
+    run the 20-19/CBS1 checks exactly as before. None whenever a file is a
+    current 20-19, or nothing TREC is readable (a scan, a CBS1)."""
+    mains = [d[0] for d in detections if d]
+    if any(fid == "20-19" and trec_forms.status(fid, ed) == "current" for fid, ed in mains):
+        return None
+    for path_detections in detections:
+        for fid, ed in path_detections:
+            if trec_forms.kind(fid) == "contract":
+                return _form_result(fid, ed, pdf_paths, detections, page_count)
+    # Addenda/notices with no contract. Only when the old checks wouldn't
+    # have read a file either (a 20-19 whose text can't be extracted still
+    # goes the old way).
+    if any(_matched_main(v) >= MIN_MATCHED_FIELDS or co_audit.is_cbs1(v) for v in all_values):
+        return None
+    for fid, ed in mains:
+        if trec_forms.kind(fid):
+            return _form_result(fid, ed, pdf_paths, detections, page_count)
+    return None
+
+
+def _outdated_attachment_issues(detections) -> list:
+    """One finding per outdated TREC form found among a 20-19's attachments
+    (e.g. a 40-10 uploaded with it). Never fires on a current packet, so a
+    current 20-19 report is unchanged."""
+    issues, seen = [], set()
+    for path_detections in detections:
+        for fid, ed in path_detections:
+            if fid not in seen and trec_forms.status(fid, ed) == "outdated":
+                seen.add(fid)
+                issues.append({"severity": "blocker", "message": trec_forms.outdated_message(fid, ed),
+                               "key": "outdated_form"})
+    return issues
+
+
 def check_tc_file(pdf_paths) -> dict:
     """Audits an uploaded TREC 20-19 AcroForm PDF for missing required
     fields, optionally cross-checked against its 40-11 Third Party
@@ -781,6 +889,13 @@ def check_tc_file(pdf_paths) -> dict:
     # threading a reader object through pdf_validator.py's private helper.
     page_count = sum(len(PdfReader(filecrypt.pdf_source(p)).pages) for p in pdf_paths)
     all_values = [_read_values(p) for p in pdf_paths]
+
+    # Not a current 20-19 (a 9-18, a 25-17, an outdated 20-18...): its own
+    # result, before the 20-19 field fingerprint below can claim it.
+    detections = [trec_forms.detect_forms(p) for p in pdf_paths]
+    gated = _form_gate(pdf_paths, detections, all_values, page_count)
+    if gated is not None:
+        return gated
 
     main_values = None
     main_path = None
@@ -1012,6 +1127,8 @@ def check_tc_file(pdf_paths) -> dict:
                 "key": AMEND_ADDRESS_MISMATCH_KEY,
             })
 
+    issues.extend(_outdated_attachment_issues(detections))
+
     blocking_issues = [i for i in issues if i["severity"] == "blocker"]
     return {
         "recognized": True,
@@ -1104,6 +1221,14 @@ def compare_contracts(original_path: str, updated_path: str) -> dict:
     callers should catch that and turn it into a 400, not a 500."""
     orig_values = _read_values(original_path)
     upd_values = _read_values(updated_path)
+
+    # A 9-18, 25-17 or outdated 20-18 matches the 20-19 field names; diffing
+    # it as a 20-19 would report fields that mean something else there.
+    for which, path in (("original", original_path), ("updated", updated_path)):
+        fid, ed = trec_forms.detect_form(path)
+        if fid and trec_forms.kind(fid) == "contract" and (fid, trec_forms.status(fid, ed)) != ("20-19", "current"):
+            return {"recognized": False,
+                    "message": f"The {which} file is a TREC {fid}, not a current TREC 20-19 -- compare only works on two 20-19s."}
 
     # Two Colorado CBS1s: compared by co_forms with the same result shape.
     o_co, u_co = co_audit.is_cbs1(orig_values), co_audit.is_cbs1(upd_values)

@@ -131,9 +131,32 @@ def format_unreadable_alert(source: str, src_tag: str = "", sender: str = "", ha
     return subject, "\n".join(lines)
 
 
+# A TREC form that was read but has no checks yet (9-18, 25-17, an outdated
+# 20-18 -- tc_audit._form_gate) is also "not recognized", but "couldn't be
+# read" would be wrong. Same exclusions; its own wording. Worth seeing: it's
+# the demand signal for which form to check next.
+def format_not_checked_alert(result: dict, source: str, src_tag: str = "", sender: str = "") -> tuple:
+    subject = f"TC Check: {result.get('form') or 'TREC form'} recognized, not checked ({source}): {sender or 'unknown sender'}"
+    lines = [
+        "An outside sender's file was read, but TC Check has no checks for that form (or it's outdated).",
+        "",
+        f"What they saw: {result['issues'][0]['message']}",
+        "",
+        f"Source: {source}",
+        f"src tag: {src_tag or 'direct'}",
+        f"Sender: {sender or 'unknown (no email given)'}",
+        "",
+        "No hand-check offer was shown. The file was not kept or attached.",
+    ]
+    return subject, "\n".join(lines)
+
+
 def maybe_send_unreadable_alert(result: dict, source: str, src_tag: str = "", sender: str = "",
                                 is_demo: bool = False, internal: bool = False, hand_review_on: bool = False) -> bool:
     if not should_alert_unreadable(result, sender, is_demo, internal):
         return False
-    _queue(*format_unreadable_alert(source, src_tag, sender, hand_review_on))
+    if result.get("unsupported"):
+        _queue(*format_not_checked_alert(result, source, src_tag, sender))
+    else:
+        _queue(*format_unreadable_alert(source, src_tag, sender, hand_review_on))
     return True

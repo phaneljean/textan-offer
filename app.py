@@ -3086,7 +3086,8 @@ def tc_check():
             payload["free_report_not_used"] = True
     # The page shows "Send it, we'll check it by hand." + a send button only
     # when there's an inbox to send it to (see tc_check_email.hand_review_email).
-    payload["hand_review"] = bool(not result.get("recognized") and not is_demo and hand_review_email())
+    payload["hand_review"] = bool(not result.get("recognized") and not result.get("unsupported")
+                                  and not is_demo and hand_review_email())
 
     resp = jsonify(payload)
 
@@ -3971,7 +3972,7 @@ function buildMetaBar(data, file) {
   html += '<span><strong>' + escapeHtml(file.name) + '</strong></span>';
   html += '<span>' + formatBytes(file.size) + '</span>';
   if (typeof data.page_count === 'number') html += '<span>' + data.page_count + ' page' + (data.page_count === 1 ? '' : 's') + '</span>';
-  html += '<span>' + (data.recognized ? (data.form ? escapeHtml(data.form) + ' detected' : 'TREC 20-19 AcroForm detected') : 'Form fields not readable') + '</span>';
+  html += '<span>' + ((data.recognized || data.unsupported) ? (data.form ? escapeHtml(data.form) + ' detected' : 'TREC 20-19 AcroForm detected') : 'Form fields not readable') + '</span>';
   if (data.has_addendum) html += '<span>40-11 addendum attached</span>';
   if (data.has_loan_assumption) html += '<span>41-3 addendum attached</span>';
   if (data.has_amendment) html += '<span>39-11 amendment attached</span>';
@@ -4164,8 +4165,26 @@ function sendHandReview() {
     });
 }
 
+// A TREC form that was read but isn't checked (a 9-18, 25-17, or an
+// outdated 20-18 -- tc_audit._form_gate): the one message, in the same
+// neutral grey box as an unreadable file. No count, no hand-check offer.
+function buildNotChecked(data) {
+  const msg = (data.issues && data.issues[0] && data.issues[0].message) || '';
+  return '<div class="unreadable-box">' +
+    '<p class="unreadable-title">' + escapeHtml(msg.replace(/ -- /g, ' \u2014 ')) + '</p>' +
+    '<p>TC Check checks TREC 20-19 and Colorado CBS1 contracts today.</p>' +
+    (data.free_report_not_used ? '<p class="unreadable-note">This check didn&rsquo;t use one of your free reports.</p>' : '') +
+  '</div>';
+}
+
 function renderResult(data, file, isDemo) {
   checkWrap.classList.add('has-result');
+  if (data.unsupported) {
+    resultEl.innerHTML = buildMetaBar(data, file) + buildNotChecked(data) + buildNextStepCta();
+    resultEl.classList.add('show');
+    resultEl.dataset.issues = '[]';
+    return;
+  }
   if (!data.recognized) {
     resultEl.innerHTML = buildMetaBar(data, file) + buildUnreadable(data, stateMode() === 'co' ? 'CBS1' : 'TREC 20-19') + buildNextStepCta();
     resultEl.classList.add('show');
@@ -4552,6 +4571,8 @@ def tc_check_bulk_results(batch_id):
     ) or '<p class="hint" style="margin:0;">No recurring issues found.</p>'
 
     def _badge(f):
+        if f.get("not_checked"):
+            return f'<span class="badge unread">{escape(f["not_checked"])}: not checked</span>'
         if f["unreadable"] or not f["recognized"]:
             return '<span class="badge unread">Couldn&rsquo;t read</span>'
         return '<span class="badge clean">Clean</span>' if f["complete"] else f'<span class="badge issues">{f["issue_count"]} issue(s)</span>'
