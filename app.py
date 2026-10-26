@@ -246,7 +246,8 @@ _MOBILE_UA_RE = re.compile(r"Mobi|Android|iPhone|iPad|iPod", re.I)
 # ("What brings you here?" card, removed 2026-10-09, 0 of 14 answered) were
 # dropped from this list 2026-10-14: nothing on the site sends them anymore
 # and their /analytics panel is gone. Past rows stay in the events table.
-_ENGAGEMENT_TYPES = ("js_ok", "hero_cta", "hero_sample", "hero_card", "dropzone_seen", "stay_10s", "stay_60s",
+_ENGAGEMENT_TYPES = ("js_ok", "upload_picked", "upload_failed_rejected", "upload_failed_network",
+                     "upload_failed_timeout", "upload_failed_server", "hero_cta", "hero_sample", "hero_card", "dropzone_seen", "stay_10s", "stay_60s",
                      "brokers_audit_cta", "brokers_email_cta", "brokers_plan_cta", "records_brokers_cta", "guide_check_cta", "guide_brokers_cta", "path_self_cta", "path_walkthrough_cta", "tc_trust_link", "tc_own_file_cta", "path_brokerage_cta", "guide_card_cta", "support_email_cta", "pricing_audit_cta", "tc_copy_agent_msg", "state_toggle_tx", "state_toggle_co", "states_tx_check", "states_tx_hub", "states_co_check", "states_co_hub", "states_co_tool", "states_request", "workflow_offer_sms", "footer_instagram", "footer_linkedin",
                      # path_walkthrough_cta / brokers_email_cta were the mailto
                      # "call" buttons until 2026-10-14; kept so old rows still parse.
@@ -276,6 +277,8 @@ _ENGAGEMENT_JS = """<script>
     try{ var f = new FormData(); f.append('type', t); f.append('page', page);
       if(!(navigator.sendBeacon && navigator.sendBeacon('/v1/evt', f))) fetch('/v1/evt', {method:'POST', body:f, keepalive:true}); }catch(e){}
   }
+  // The /tc-check upload reports its own picked/failed steps through this.
+  window.taEvt = evt;
   // Fires on load: most scanners/link-preview fetchers never run JS, so
   // page_view minus js_ok approximates "not a real browser".
   evt('js_ok');
@@ -2889,6 +2892,29 @@ def api_parse():
     })
 
 
+# Phones in an app's built-in browser (Facebook/Instagram on Android
+# especially) can hand the page a PDF named after its content-provider id
+# ("msf:1000034", "document:42") with no ".pdf" at all, and a file picked
+# straight from Google Drive/iCloud can arrive as 0 bytes. Found 2026-10-26
+# chasing ad visitors who touched the drop box and never got a report:
+# the name check alone turned a real contract away. So the bytes decide
+# (a PDF starts with "%PDF-", allowed anywhere in the first 1KB), and the
+# name is only a fallback for a file we can't peek at.
+TC_EMAIL_FALLBACK = "Or email the PDF to tc@check.txtanoffer.com and the report comes back by email."
+
+
+def _upload_kind(f) -> str:
+    """'pdf', 'empty' or 'other' for one uploaded FileStorage."""
+    try:
+        head = f.stream.read(1024)
+        f.stream.seek(0)
+    except Exception:
+        return "pdf" if f.filename.lower().endswith(".pdf") else "other"
+    if not head:
+        return "empty"
+    return "pdf" if b"%PDF-" in head else "other"
+
+
 @app.route("/v1/tc/check", methods=["POST"])
 def tc_check():
     """Transaction-coordinator file audit: upload a TREC 20-19 AcroForm PDF,
@@ -2975,8 +3001,12 @@ def tc_check():
         return jsonify({"error": "No file uploaded. Attach a PDF as 'file'."}), 400
     if len(uploads) > 4:
         return jsonify({"error": "Upload at most 4 files: the contract and, if you have them, the 40-11 and 41-3 addenda and/or 39-11 amendment."}), 400
-    if any(not f.filename.lower().endswith(".pdf") for f in uploads):
-        return jsonify({"error": "Only PDF files are supported."}), 400
+    kinds = [_upload_kind(f) for f in uploads]
+    if "empty" in kinds:
+        return jsonify({"error": "That file arrived empty (0 bytes). Files picked straight from Google Drive or iCloud "
+                                 "inside an app sometimes do: save it to your phone first and pick it again. " + TC_EMAIL_FALLBACK}), 400
+    if "other" in kinds:
+        return jsonify({"error": "Only PDF files are supported. " + TC_EMAIL_FALLBACK}), 400
 
     tmp_paths = []
     try:
@@ -2988,7 +3018,7 @@ def tc_check():
         try:
             result = check_tc_file(tmp_paths)
         except Exception:
-            return jsonify({"error": "Couldn't read that file as a PDF. Make sure it's not corrupted or password-protected."}), 400
+            return jsonify({"error": "Couldn't read that file as a PDF. Make sure it's not corrupted or password-protected. " + TC_EMAIL_FALLBACK}), 400
     finally:
         for p in tmp_paths:
             try:
@@ -3196,7 +3226,7 @@ def tc_check_hand_review():
     if "@" not in email or "." not in email.split("@")[-1] or len(email) > 254:
         return jsonify({"error": "Enter your email so Phanel can write back."}), 400
     uploads = [f for f in request.files.getlist("file") if f and f.filename]
-    if not uploads or len(uploads) > 4 or any(not f.filename.lower().endswith(".pdf") for f in uploads):
+    if not uploads or len(uploads) > 4 or any(_upload_kind(f) != "pdf" for f in uploads):
         return jsonify({"error": "Attach the PDF you just checked."}), 400
 
     raw_page = request.form.get("source_page") or ""
@@ -3488,6 +3518,8 @@ def tc_check_page():
   .has-result .dz-icon svg{width:18px;height:18px}
   .has-result .dz-title{font-size:17px}
   .has-result .dz-first,.has-result .dz-sub,.has-result .dz-meta,.has-result .pre-result{display:none}
+  .result-fallback{font-size:14px;color:var(--mute);margin-top:10px}
+  .result-fallback a{color:var(--green);text-decoration:underline}
   .has-result .dz-again{display:inline}
 
   /* result: same card language as the homepage hero report */
@@ -3637,7 +3669,7 @@ __SITE_NAV__
       <div class="dz-sub"><span class="dz-mouse">or <u>click to browse</u></span><span class="dz-touch"><u>Tap to browse files</u></span></div>
       <div class="dz-meta"><span data-state="tx">Fillable TREC 20-19 PDF</span><span data-state="co">Fillable CBS1 (2026) PDF</span> &middot; not scanned or flattened files &middot; flags likely issues, not legal advice</div>
     </div>
-    <input type="file" id="fileInput" accept="application/pdf">
+    <input type="file" id="fileInput" accept="application/pdf,.pdf">
 
     <!-- Uploading: #status, the same generic step labels as before (no fake stages) -->
     <div class="status" id="status"></div>
@@ -3658,7 +3690,7 @@ __SITE_NAV__
       </div>
       <div class="opts">
         <div class="addendum-toggle" id="addendumToggle"><span data-state="tx">+ Also have the 40-11, 41-3 or 39-11? Add up to 3 to cross-check them.</span><span data-state="co">+ Also have the buyer&rsquo;s Exclusive Right-to-Buy, an Amend/Extend, Counterproposal, Inspection Objection Notice or Source of Water Addendum? Add up to 3 to check them against the CBS1.</span></div>
-        <div class="addendum-row" id="addendumRow" hidden><input type="file" id="addendumInput" accept="application/pdf" multiple><span class="addendum-filename" id="addendumFileName"></span><button type="button" class="addendum-clear" id="addendumClear" title="Remove">&times;</button></div>
+        <div class="addendum-row" id="addendumRow" hidden><input type="file" id="addendumInput" accept="application/pdf,.pdf" multiple><span class="addendum-filename" id="addendumFileName"></span><button type="button" class="addendum-clear" id="addendumClear" title="Remove">&times;</button></div>
       </div>
       <button type="button" class="sample-btn demo-check-btn" id="demoBtn" data-evt="tc_sample_btn">__FS_TC_SAMPLE_BTN__</button>
     </div>
@@ -3956,12 +3988,29 @@ function uploadFile(file, email, isDemo) {
   if (email) formData.append('email', email);
   if (isDemo) formData.append('is_demo', '1');
 
-  fetch('/v1/tc/check', { method: 'POST', body: formData })
-    .then(r => r.json())
+  // Why an upload never became a report, as a beacon (window.taEvt, from
+  // _ENGAGEMENT_JS): a request that dies on a phone's network never reaches
+  // /v1/tc/check, so the server alone can't tell "never picked a file" from
+  // "picked one and it failed". Real files only, not the sample.
+  const beacon = t => { if (!isDemo && window.taEvt) window.taEvt(t); };
+  beacon('upload_picked');
+  // A stalled upload on a weak mobile connection otherwise spins forever.
+  const ctl = window.AbortController ? new AbortController() : null;
+  const killer = ctl ? setTimeout(() => ctl.abort(), 120000) : null;
+  let failReason = 'upload_failed_network';
+
+  fetch('/v1/tc/check', { method: 'POST', body: formData, signal: ctl ? ctl.signal : undefined })
+    .then(r => r.json().catch(() => {
+      // An HTML error page (proxy timeout, 413, 502) instead of our JSON.
+      failReason = 'upload_failed_server';
+      throw new Error('HTTP ' + r.status);
+    }))
     .then(data => {
+      clearTimeout(killer);
       statusTimers.forEach(clearTimeout);
       statusEl.classList.remove('show');
       if (data.error) {
+        beacon('upload_failed_rejected');
         renderError(data.error);
         if (isDemo) demoDone(false);
         revealResult();
@@ -3975,10 +4024,17 @@ function uploadFile(file, email, isDemo) {
         emailOptinConfirm.classList.add('show');
       }
     })
-    .catch(() => {
+    .catch(err => {
+      clearTimeout(killer);
       statusTimers.forEach(clearTimeout);
       statusEl.classList.remove('show');
-      renderError('Something went wrong checking that file. Try again.');
+      if (err && err.name === 'AbortError') failReason = 'upload_failed_timeout';
+      beacon(failReason);
+      renderError(failReason === 'upload_failed_timeout'
+        ? 'The upload timed out. A weak signal is the usual cause: try again on Wi-Fi.'
+        : failReason === 'upload_failed_server'
+          ? 'Something went wrong on our end checking that file. Try again.'
+          : 'The upload didn\u2019t go through. Check your connection and try again.', true);
       if (isDemo) demoDone(false);
       revealResult();
     });
@@ -4003,8 +4059,11 @@ function formatBytes(n) {
   return (n / (1024 * 1024)).toFixed(1) + ' MB';
 }
 
-function renderError(msg) {
-  resultEl.innerHTML = '<div class="result-banner incomplete">' + escapeHtml(msg) + '</div>';
+// withFallback: for a failure the server never explained (network, timeout,
+// our own 5xx). Server error messages already end with the email route.
+function renderError(msg, withFallback) {
+  resultEl.innerHTML = '<div class="result-banner incomplete">' + escapeHtml(msg) + '</div>'
+    + (withFallback ? '<p class="result-fallback">Still stuck? Email the PDF to <a href="mailto:tc@check.txtanoffer.com">tc@check.txtanoffer.com</a> and the report comes back by email.</p>' : '');
   resultEl.classList.add('show');
   checkWrap.classList.add('has-result');
 }
@@ -5623,7 +5682,10 @@ def analytics_dashboard():
         real_cell = (f"scanner <span class='dim'>({escape(v['scanner'])})</span>" if v["scanner"]
                      else '&#10003;' if real else '&mdash;')
         engaged = [label for key, label in (("stay_10s", "10s+"), ("stay_60s", "60s+"), ("dropzone_seen", "saw drop box"),
-                                            ("dropzone_interact", "used drop box"))
+                                            ("dropzone_interact", "used drop box"), ("upload_picked", "picked a file"),
+                                            ("upload_reached_server", "upload reached server"), ("sample_ran", "ran sample"),
+                                            ("upload_failed_rejected", "upload rejected"), ("upload_failed_network", "upload failed (network)"),
+                                            ("upload_failed_timeout", "upload failed (timeout)"), ("upload_failed_server", "upload failed (server)"))
                    if key in v["events"]]
         # Name the exact button: "clicked check (nav check cta)".
         engaged += ["clicked check (" + e.replace("_", " ") + ")" for e in sorted(v["events"] & set(CHECK_CTA_EVENTS))]

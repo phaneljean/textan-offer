@@ -662,8 +662,14 @@ def get_recent_visitors(hours: int = 48, limit: int = 150, source_prefix: str = 
     visitors = {}
     for event_type, metadata, created_at in timed:
         vid = metadata.get("visitor") or ""
-        # Uploads/sample runs only feed find_scanners above, as before.
-        if not vid or vid in internal or event_type not in ("page_view", "page_engagement"):
+        if not vid or vid in internal:
+            continue
+        # A file that reached /v1/tc/check (or the sample run) shows in the
+        # visitor's row, added 2026-10-26: without it a row reading "used drop
+        # box" couldn't say whether an upload followed.
+        if event_type in ("tc_check_attempted", "tc_check_demo_used"):
+            if vid in visitors:
+                visitors[vid]["events"].add("upload_reached_server" if event_type == "tc_check_attempted" else "sample_ran")
             continue
         v = visitors.setdefault(vid, {"visitor": vid, "first": created_at, "last": created_at, "pages": {},
                                       "referrers": set(), "sources": set(), "devices": set(), "ua": "", "events": set(),
