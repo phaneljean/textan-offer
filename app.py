@@ -981,25 +981,42 @@ __SITE_NAV__
   <div class="tiles">
     <div class="tile">
       <span class="tag b">MUST FIX</span>
-      <div class="big">3A + 3B <span class="neq">&ne;</span> 3C</div>
-      <p>A sales price that doesn&rsquo;t add up.</p>
+      <div class="big" data-state="tx">3A + 3B <span class="neq">&ne;</span> 3C</div>
+      <div class="big" data-state="co">&sect;4.1 <span class="neq">&ne;</span> Price</div>
+      <p data-state="tx">A sales price that doesn&rsquo;t add up.</p>
+      <p data-state="co">A &sect;4.1 price table that doesn&rsquo;t add up to the Purchase Price.</p>
     </div>
-    <div class="tile">
+    <div class="tile" data-state="tx">
       <span class="tag b">MUST FIX</span>
       <div class="big">November 31
         <svg class="ring" viewBox="0 0 300 80" preserveAspectRatio="none" aria-hidden="true"><path d="M60 6 C 180 -4, 296 6, 294 40 C 292 74, 160 80, 80 74 C 10 68, 0 30, 40 14" fill="none" stroke="#c62828" stroke-width="3" stroke-linecap="round"/></svg>
       </div>
       <p>A closing date that doesn&rsquo;t exist.</p>
     </div>
-    <div class="tile">
+    <div class="tile" data-state="tx">
       <span class="tag b">MUST FIX</span>
       <div class="big eff">Effective Date<span class="blank"></span></div>
       <p>The date the contract&rsquo;s deadlines count from, left blank.</p>
     </div>
-    <div class="tile">
+    <div class="tile" data-state="tx">
       <span class="tag w">REVIEW</span>
       <div class="mono">john.doe@gmail<span class="neq">com</span></div>
       <p>A notice email that would bounce.</p>
+    </div>
+    <div class="tile" data-state="co">
+      <span class="tag w">REVIEW</span>
+      <div class="big">&sect;3.1 N/A</div>
+      <p>A loan deadline marked N/A while &sect;4.1 still has a New Loan.</p>
+    </div>
+    <div class="tile" data-state="co">
+      <span class="tag w">REVIEW</span>
+      <div class="big">11/11 closing</div>
+      <p>A Closing Date that lands on a holiday, when banks may not fund.</p>
+    </div>
+    <div class="tile" data-state="co">
+      <span class="tag w">REVIEW</span>
+      <div class="big eff">Contract Date<span class="blank"></span></div>
+      <p>The contract Date on page 1 left blank.</p>
     </div>
   </div>
   <div class="ctas"><a class="link" href="/tc-check#what-it-checks" data-evt="home_check_link">See everything it checks</a></div>
