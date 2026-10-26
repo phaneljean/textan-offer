@@ -60,7 +60,7 @@ def format_alert(result: dict, source: str, src_tag: str = "", sender: str = "")
     blockers = sum(1 for i in issues if i.get("severity") == "blocker")
     subject = f"Real TC Check upload ({source}): {sender or 'unknown sender'}"
     lines = [
-        "An outside sender just checked a filled TREC 20-19.",
+        f"An outside sender just checked a filled {result.get('form') or 'TREC 20-19'}.",
         "",
         f"Source: {source}",
         f"src tag: {src_tag or 'direct'}",

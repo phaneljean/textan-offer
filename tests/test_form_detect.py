@@ -101,11 +101,11 @@ class NotChecked(unittest.TestCase):
         self.assertEqual(issue["severity"], "info")
         self.assertEqual((r["form"], r["form_id"], r["edition"]), ("TREC 9-18", "9-18", "05-04-2026"))
 
-    def test_25_17_recognized_nothing_checked(self):
+    def test_25_17_goes_to_its_own_rules(self):
+        # Since the 25-17 rules landed (trec_25_17.py); tests/test_25_17.py has them.
         r = check_tc_file([fx("trec_25-17_blank.pdf")])
-        issue = self._only(r, "form_not_supported")
-        self.assertEqual(issue["message"], "TREC 25-17 Farm and Ranch Contract (05-04-2026) recognized -- "
-                                           "checks for this form are coming; nothing was checked.")
+        self.assertEqual(r["form"], "TREC 25-17")
+        self.assertNotIn("city", [i["key"] for i in r["issues"]])
 
     def test_outdated_20_18_one_finding(self):
         # Before 2026-10-25 this blank 20-18 got 13 20-19 findings.
@@ -172,13 +172,13 @@ class Routing(unittest.TestCase):
         for name in ("trec_25-17_blank.pdf", "trec_20-18_blank.pdf"):
             path = _filled(fx(name))
             with self.subTest(name), mock.patch("tc_audit._consistency_issues", trap), \
-                    mock.patch("tc_audit._initials_by_position", trap):
+                    mock.patch("tc_audit._contract_pages", trap):
                 r = check_tc_file([path])
-                self.assertFalse(r["recognized"])
-                self.assertEqual(len(r["issues"]), 1)
-                self.assertIn(r["issues"][0]["key"], ("form_not_supported", "outdated_form"))
-                for key in ("city", "sales_price_math", "disclosure_box_missing", "title_company"):
-                    self.assertNotIn(key, [i["key"] for i in r["issues"]])
+                self.assertNotIn("city", [i["key"] for i in r["issues"]])   # 20-19-only rule
+                if name == "trec_20-18_blank.pdf":
+                    self.assertEqual([i["key"] for i in r["issues"]], ["outdated_form"])
+                else:
+                    self.assertEqual(r["form"], "TREC 25-17")
 
     def test_20_19_still_routes_to_20_19_rules(self):
         r = check_tc_file([fx("trec_20-19_clean_two_parties.pdf")])

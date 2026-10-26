@@ -765,6 +765,15 @@ def _severity_summary(issues: list) -> dict:
 # Until then a recognized form gets an honest "nothing was checked" result.
 FORM_CHECKERS = {}
 
+def _builtin_checker(form_id: str):
+    """Form modules that import this one, so they're loaded on first use.
+    25-17 since 2026-10-25 (txo-trec-qa spec_9-18_25-17.md)."""
+    if form_id == "25-17":
+        import trec_25_17
+        return trec_25_17.check_25_17
+    return None
+
+
 # Read alongside a 20-19 by the code above; on their own there's nothing to
 # cross-check them against.
 CHECKED_WITH_20_19 = {"40-11", "39-11", "41-3"}
@@ -811,8 +820,9 @@ def _form_result(form_id: str, edition, pdf_paths, detections, page_count: int) 
                                    trec_forms.outdated_message(form_id, edition)
                                    + " TC Check only checks current forms, so nothing else was checked.",
                                    "outdated_form", True)
-    if status == "current" and form_id in FORM_CHECKERS:
-        return FORM_CHECKERS[form_id](pdf_paths, detections, page_count)
+    checker = FORM_CHECKERS.get(form_id) or _builtin_checker(form_id)
+    if status == "current" and checker:
+        return checker(pdf_paths, detections, page_count)
     stamp = f" ({edition})" if edition else ""
     if status == "newer":
         msg = f"This is a newer TREC edition ({form_id}) than TC Check knows; no checks were run."
