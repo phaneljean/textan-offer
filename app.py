@@ -898,7 +898,10 @@ __SITE_NAV__
   <ul class="forms" data-state="tx" aria-label="Contracts TC Check reads">
     <li><b>20-19</b> Resale</li><li><b>30-18</b> Condo</li><li><b>9-18</b> Land</li><li><b>25-17</b> Farm &amp; Ranch</li><li><b>CBS1</b> Colorado</li>
   </ul>
-  <p class="sub" data-state="co">Drop a filled CBS1 and see what title would kick back in seconds &mdash; &sect;3.1 deadlines left blank that delete a contingency, &sect;4.1 price math that doesn&rsquo;t add up, deadlines that land after closing. Built for TCs, agents and brokerages.</p>
+  <p class="sub" data-state="co">Drop a filled CBS1 or Colorado Land contract and see what title would kick back in seconds &mdash; &sect;3.1 deadlines left blank that delete a contingency, &sect;4.1 price math that doesn&rsquo;t add up, deadlines that land after closing. Built for TCs, agents and brokerages.</p>
+  <ul class="forms" data-state="co" aria-label="Colorado contracts TC Check reads">
+    <li><b>CBS1</b> Residential</li><li><b>CO Land</b> Land &amp; acreage</li>
+  </ul>
   <div class="ctas" data-state="tx">
     <a class="btn solid" href="/tc-check" data-evt="hero_cta">Check a file free</a>
     <a class="btn ghost" href="/tc-check?demo=1" data-evt="hero_sample">See a sample report</a>
@@ -908,7 +911,7 @@ __SITE_NAV__
     <a class="btn ghost" href="/tc-check?demo=1&amp;state=co" data-evt="hero_sample">See a sample report</a>
   </div>
   <p class="fine" data-state="tx">3 free reports, no signup &middot; 4 Texas TREC contracts + the 40-11, 41-3 and 39-11 &middot; <a href="/?state=co" data-evt="state_toggle_co" style="text-decoration:underline">Colorado CBS1</a></p>
-  <p class="fine" data-state="co">3 free reports, no signup &middot; Colorado CBS1 &middot; <a href="/?state=tx" data-evt="state_toggle_tx" style="text-decoration:underline">Texas TREC resale, condo, land, farm &amp; ranch</a></p>
+  <p class="fine" data-state="co">3 free reports, no signup &middot; Colorado CBS1 &amp; Land &middot; <a href="/?state=tx" data-evt="state_toggle_tx" style="text-decoration:underline">Texas TREC resale, condo, land, farm &amp; ranch</a></p>
 
   <!-- Illustration only. Scrap values are the sample files' own fields;
        card counts and findings are the sample report's display_issues,
