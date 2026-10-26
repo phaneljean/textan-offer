@@ -451,9 +451,11 @@ def check_30_18(pdf_paths, detections, page_count) -> dict:
 
     # Spec 4.6: 36-11's title says "(NOT FOR USE WITH CONDOMINIUMS)". Any
     # page of any file stamped 36-N; that file isn't also "unrecognized".
-    if any(fid.startswith("36-") for det in detections for fid, _ in det):
+    poa_ids = sorted({fid for det in detections for fid, _ in det if fid and fid.startswith("36-")})
+    if poa_ids:
         issues.append({"severity": "warning",
-                       "message": "A TREC 36-11 owners association addendum is attached. Its title says \"(NOT FOR USE "
+                       "message": f"A TREC {poa_ids[0]} owners association addendum is attached. The current 36-11's "
+                                  "title says \"(NOT FOR USE "
                                   "WITH CONDOMINIUMS)\"; on a 30-18, Paragraph 2 covers the condominium Documents and "
                                   "Resale Certificate, and 12A(3) the Association transfer charges",
                        "key": "poa_addendum_on_condo"})
