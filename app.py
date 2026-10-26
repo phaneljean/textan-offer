@@ -8381,14 +8381,17 @@ _GUIDES = {
 """,
     },
     "broker-record-retention-texas": {
-        "title": "How Long Must Texas Brokers Keep Transaction Records? (22 TAC 535.2)",
-        "description": "Texas brokers must keep transaction records at least four years from closing or termination under TREC rule 22 TAC §535.2(h). What that means in practice and how to keep up with it.",
+        "title": "Texas Broker Record Retention: 4 Years From Closing (22 TAC 535.2)",
+        "description": "Short answer: at least 4 years from closing or termination, under TREC rule 22 TAC §535.2(h). When the clock starts, why files go missing when agents leave, and a 4-step setup to pull any file in a minute.",
         "kicker": "For managing brokers",
         "h1": "How long do Texas brokers have to keep transaction records?",
         "lede": "At least four years from the date of closing or termination of the contract. That's the TREC rule. The hard part isn't knowing it, it's being able to find a specific file three years later.",
         "body": """
 <h2>The rule</h2>
 <p>TREC requires a broker to keep transaction records for <strong>at least four years from the date of closing or termination</strong> of a contract, in a format that can be made readily available to the Commission. The rule is in the Texas Administrative Code, Title 22, <strong>§535.2(h)</strong>, and TREC summarizes it in its <a href="https://www.trec.texas.gov/node/413" rel="noopener" target="_blank">license holder FAQ</a>.</p>
+
+<h2>Before a file goes in the archive</h2>
+<p>Four years is a long time to keep a contract with a blank Effective Date, a missing initial or a 40-11 that doesn't match Section 3B. Those are easier to fix the week the contract is signed than when someone pulls the file later. <a href="/tc-check?src=seo_broker-record-retention-texas_bridge" data-evt="guide_bridge_cta">TC Check</a> reads an executed TREC contract in seconds and lists what's blank or mismatched, free.</p>
 
 <h2>Why it's harder than it sounds</h2>
 <ul>
@@ -8412,8 +8415,8 @@ _GUIDES = {
 """,
     },
     "40-11-loan-amount-mismatch": {
-        "title": "TREC 40-11 Loan Amount Doesn't Match the Contract (Section 3B)",
-        "description": "Why the loan amount on the TREC 40-11 Third Party Financing Addendum must match Section 3B of the TREC 20-19, and the checkbox mistakes that go with it.",
+        "title": "40-11 Loan Amount Doesn't Match 20-19 Section 3B? How to Catch It",
+        "description": "The loan amount on the TREC 40-11 Third Party Financing Addendum has to match Section 3B of the 20-19. Where the mismatch comes from (price changes, rounding, the wrong box) and how to catch it before title.",
         "kicker": "For transaction coordinators",
         "h1": "40-11 loan amount doesn't match the contract: how to catch it before title does",
         "lede": "When a deal is financed, the loan amount is written in two places: Section 3B of the TREC 20-19 and the TREC 40-11 Third Party Financing Addendum. If the two disagree, the file stops until someone fixes it.",
@@ -8483,8 +8486,8 @@ _GUIDES = {
 """,
     },
     "trec-39-11-amendment-mismatch": {
-        "title": "TREC 39-11 Amendment: Checking Price and Address Against the Contract",
-        "description": "Before a TREC 39-11 Amendment goes into the file, check that its sales price and property address match the contract it amends. Here's what to look for.",
+        "title": "TREC 39-11 Amendment Doesn't Match the Contract? Check Price and Address",
+        "description": "A 39-11 that changes the Sales Price needs Section 3 and the 40-11 loan amount to follow, and its address has to match the contract it amends. What to compare before it goes in the file.",
         "kicker": "For transaction coordinators",
         "h1": "TREC 39-11 amendment: check the price and address against the contract",
         "lede": "An amendment changes the deal, so it has to clearly belong to the right contract and say the right numbers. Two quick comparisons catch most of the problems.",
@@ -8514,7 +8517,7 @@ _GUIDES = {
 """,
     },
     "trec-deadline-calculator": {
-        "title": "TREC 20-19 Deadline Calculator: Option Period and Earnest Money",
+        "title": "Free TREC Deadline Calculator: Option Period and Earnest Money Dates",
         "description": "Free calculator for Texas TREC 20-19 deadlines: option period end (5:00 p.m., no weekend extension) and earnest money and option fee due dates with the Saturday, Sunday and Legal Holiday rule.",
         "kicker": "Free tool for TCs and agents",
         "h1": "TREC 20-19 deadline calculator",
@@ -8582,6 +8585,58 @@ _GUIDES = {
   [ed, opt, add].forEach(function(el){ el.addEventListener('input', run); el.addEventListener('change', run); });
 })();
 </script>
+""",
+    },
+    "trec-25-17-farm-and-ranch-contract": {
+        "title": "TREC 25-17 Farm and Ranch Contract: What to Check Before Title",
+        "description": "A paragraph-by-paragraph checklist for the TREC 25-17 Farm and Ranch Contract: acreage adjustment, leases, survey, water disclosure and the other blanks and conflicts to catch before the file goes to title.",
+        "kicker": "For TCs and agents",
+        "h1": "TREC 25-17 Farm and Ranch Contract: what to check before title",
+        "lede": "The 25-17 looks like the 20-19 but isn't. It has its own paragraphs for acreage, leases, water and reservations, and those are where farm and ranch files pick up blanks and conflicting boxes.",
+        "body": """
+<h2>Which contract is it?</h2>
+<p>TREC promulgates three purchase contracts agents mix up: the <strong>20-19</strong> One to Four Family Residential (Resale), the <strong>9-18</strong> Unimproved Property (land) and the <strong>25-17</strong> Farm and Ranch. The current Farm and Ranch edition is 25-17, which replaced 25-16. Check the "TREC NO." in the footer before anything else; an old template saved on a computer is a common source of problems.</p>
+
+<h2>Paragraph 3: price and acreage</h2>
+<ul>
+  <li><strong>3A + 3B = 3C.</strong> The cash portion plus the financing has to equal the Sales Price.</li>
+  <li><strong>3D acreage adjustment.</strong> If the price "will" be adjusted, the acres and the $ per acre both need to be filled in, one of 3A, 3B or "proportionately" checked, and the days to terminate after an adjustment over 10% filled in.</li>
+  <li><strong>3D and 6C have to agree.</strong> 3D adjusts based on the survey in Paragraph 6C, so "will be adjusted" with 6C(4) (no survey) is a conflict.</li>
+  <li><strong>"Will not" with acres filled in</strong> is worth a second look.</li>
+</ul>
+
+<h2>Paragraph 4: leases</h2>
+<ul>
+  <li><strong>4A Residential and 4B Fixture Leases.</strong> If checked, the matching addendum should be listed in Paragraph 22.</li>
+  <li><strong>4C Natural Resource Leases.</strong> Exactly one of 4C(1) (Seller has delivered) or 4C(2) (has not delivered) should be checked, and 4C(2) needs its days to terminate.</li>
+  <li><strong>4D Surface Leases.</strong> 4D(2) oral leases need the lease described; 4D(3) needs its days.</li>
+</ul>
+
+<h2>Paragraphs 5 and 6: option, title and survey</h2>
+<ul>
+  <li><strong>5B.</strong> An option fee with no option period days.</li>
+  <li><strong>6A.</strong> Title policy expense: Seller's or Buyer's, exactly one. 6A(6) shortages in area: (i) or (ii), and (ii) needs exactly one of Buyer or Seller.</li>
+  <li><strong>6C Survey.</strong> One box only, and 6C(1)-(3) need the number of days. 6C(1) also needs who pays for a new survey.</li>
+  <li><strong>6D.</strong> The days for Buyer to object to title.</li>
+</ul>
+
+<h2>Paragraph 7: disclosures and water</h2>
+<ul>
+  <li><strong>7B Seller's Disclosure Notice.</strong> One of 7B(1)-(3) checked; 7B(2) needs the delivery days.</li>
+  <li><strong>7H.</strong> Each item is "is" or "is not." If Seller is aware of any, the explanation line shouldn't be blank.</li>
+  <li><strong>7K Seller's Water Disclosure.</strong> Check one box only; 7K(2) needs the delivery days and 7K(3) should name the water provider.</li>
+</ul>
+
+<h2>Dates, provisions and addenda</h2>
+<ul>
+  <li><strong>9A Closing date</strong> before the Effective Date.</li>
+  <li><strong>Paragraph 11 Special Provisions</strong> that read like business terms. Paragraph 11 is for informational items; business terms go in a TREC addendum or are drafted by a party or attorney.</li>
+  <li><strong>Reservations (2F).</strong> Minerals, water or timber reserved in Paragraph 11 or 2E, with no reservation addendum listed in Paragraph 22.</li>
+  <li><strong>Financing.</strong> 3B has to match the 40-11 loan amount, and the Lender's Appraisal termination addendum (49-1) is only for use with the Third Party Financing Addendum.</li>
+  <li><strong>Every page header.</strong> "Address of Property" at the top of each page should match Paragraph 2.</li>
+</ul>
+
+<p><a href="/guides/trec-20-19-checklist">Working a resale file instead? See the TREC 20-19 checklist &rarr;</a></p>
 """,
     },
     "transaction-coordinator-software-texas": {
@@ -8660,6 +8715,12 @@ _GUIDE_CTA_TEXT = {
     "40-11-loan-amount-mismatch": "Cross-check your 20-19 against its 40-11",
     "trec-39-11-amendment-mismatch": "Check an amendment against its contract",
     "trec-20-19-checklist": "Run this checklist on your file",
+    "trec-25-17-farm-and-ranch-contract": "Check a 25-17 free",
+}
+
+# Contract named in the guide CTA; guides not listed are about the 20-19.
+_GUIDE_CTA_FORM = {
+    "trec-25-17-farm-and-ranch-contract": "TREC 25-17",
 }
 
 
@@ -8669,7 +8730,7 @@ def _guide_page(slug, g, body_html):
         """<div class="cta"><strong>See what your agents leave blank.</strong> Run your last 20 closed TREC 20-19s through TC Check, free.
   <a class="btn" href="/brokers?src=seo_""" + slug + """" data-evt="guide_brokers_cta">Free 20-file audit &rarr;</a></div>"""
         if cta_brokers else
-        """<div class="cta"><strong>Check a file in seconds.</strong> Drop a filled TREC 20-19 and get back exactly which of these are blank or mismatched. Your first 3 reports need no signup, and the file isn't kept.
+        """<div class="cta"><strong>Check a file in seconds.</strong> Drop a filled """ + _GUIDE_CTA_FORM.get(slug, "TREC 20-19") + """ and get back exactly which of these are blank or mismatched. Your first 3 reports need no signup, and the file isn't kept.
   <a class="btn" href="/tc-check?src=seo_""" + slug + """" data-evt="guide_check_cta">""" + _GUIDE_CTA_TEXT.get(slug, "Check a file free") + """ &rarr;</a></div>"""
     )
     others = "".join(
@@ -11772,7 +11833,8 @@ _SITEMAP_PATHS = ["/", "/tc-check", "/brokers", "/pricing", "/trec-changes", "/t
                   "/guides/trec-20-19-checklist", "/guides/trec-20-19-effective-date",
                   "/guides/broker-record-retention-texas", "/guides/40-11-loan-amount-mismatch",
                   "/guides/trec-20-19-initials", "/guides/trec-39-11-amendment-mismatch",
-                  "/guides/trec-deadline-calculator", "/guides/transaction-coordinator-software-texas", "/archive", "/tools/colorado-deadlines",
+                  "/guides/trec-deadline-calculator", "/guides/trec-25-17-farm-and-ranch-contract",
+                  "/guides/transaction-coordinator-software-texas", "/archive", "/tools/colorado-deadlines",
                   "/text-an-offer"]
 
 
