@@ -164,7 +164,15 @@ class HomepageFirstScreen(unittest.TestCase):
         self.assertIn('href="/tc-check/bulk" data-evt="hero_broker_cta"', m.group(2))
 
     def test_subhead_per_state(self):
-        self.assertIn('<p class="sub" data-state="tx">Upload a filled TREC 20-19 or 25-17', self.html)
+        self.assertIn('<p class="sub" data-state="tx">One checker for the Texas contracts you file most', self.html)
+
+    def test_hero_lists_every_checked_contract(self):
+        # Every contract TC Check reads must show in the hero's form row, so
+        # the homepage can't drift from trec_forms.CHECKED_CONTRACTS.
+        import trec_forms
+        row = self.html[self.html.find('<ul class="forms"'):self.html.find('</ul>', self.html.find('<ul class="forms"'))]
+        for c in trec_forms.CHECKED_CONTRACTS:
+            self.assertIn('<b>' + c.split()[-1] + '</b>', row)
         self.assertIn('<p class="sub" data-state="co">Drop a filled CBS1', self.html)
 
     def test_eyebrow_above_h1(self):
