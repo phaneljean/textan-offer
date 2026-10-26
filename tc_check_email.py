@@ -101,6 +101,8 @@ _CONSEQUENCE_TAGS = {
     "la_unreadable": "ATTACHMENT NOT VERIFIED",
     "outdated_form": "OUTDATED TREC FORM",
     "co_outdated_form": "OUTDATED CREC FORM",
+    "co_outdated_form_undated": "REVIEW: FORM EDITION",
+    "co_form_2027_not_checked": "ATTACHMENT NOT VERIFIED",
     # TREC 25-17 (trec_25_17.py), txo-trec-qa's tags, 2026-10-25
     "survey_days_blank": "DEADLINE UNDEFINED",
     "water_disclosure_days_blank": "DEADLINE UNDEFINED",

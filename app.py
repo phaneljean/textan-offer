@@ -1945,8 +1945,12 @@ def sms_reply():
         if "error" in ba:
             twilio_send_sms(agent_phone, ba["error"] + "\n\nReply STOP to unsubscribe, HELP for help.")
             return "", 200
+        from co_filler import EditionUnavailable
         try:
             pdf_path = fill_buyer_agreement(ba, get_agent_profile(agent_phone))
+        except EditionUnavailable as e:
+            twilio_send_sms(agent_phone, f"{e}\n\nReply STOP to unsubscribe, HELP for help.")
+            return "", 200
         except Exception as e:
             print(f"[SMS] BC60 ERROR: {e}")
             twilio_send_sms(agent_phone, "Couldn't create the buyer agreement. Please try again or contact support.")
@@ -1993,9 +1997,12 @@ def sms_reply():
             return "", 200
         if (offer.get("filename") or "").startswith("CBS1_"):
             # Colorado: an Agreement to Amend/Extend (AE41), never a TREC 39-11.
-            from co_filler import fill_ae41
+            from co_filler import fill_ae41, EditionUnavailable
             try:
                 pdf_path = fill_ae41(offer, amend)
+            except EditionUnavailable as e:
+                twilio_send_sms(agent_phone, str(e))
+                return "", 200
             except Exception as e:
                 print(f"[SMS] AE41 ERROR: {e}")
                 twilio_send_sms(agent_phone, "Couldn't create the Colorado Amend/Extend for that offer. Please try again or contact support.")

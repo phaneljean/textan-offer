@@ -202,3 +202,136 @@ class CoBuyerAgreement(unittest.TestCase):
         self.assertEqual(self.keys(path), [])   # the generated agreement passes its own check
         for bad in ("BUYER AGREEMENT Pat Buyer 90 days", "BUYER AGREEMENT Pat Buyer 2.5%", "BUYER AGREEMENT 2.5% 90 days"):
             self.assertIn("error", parse_buyer_agreement_sms(bad))
+
+
+def _synthetic_2027(path, title, both_markers=False):
+    """Header-only stand-in for a 2027 CREC form. The real 2027 PDFs say they
+    "may not be reproduced ... without the Commission's prior written
+    consent", so they stay out of the public repo (spec_co_2027.md §0.3)."""
+    import fitz
+    doc = fitz.open()
+    page = doc.new_page()
+    lines = [title, "Adoption Date: August 4, 2026", "Mandatory Use Date: January 1, 2027"]
+    if both_markers:
+        lines.append("Mandatory Use Date: January 1, 2026")
+    page.insert_text((72, 72), "\n".join(lines), fontsize=10)
+    doc.save(path)
+    doc.close()
+    return path
+
+
+class Co2027Editions(unittest.TestCase):
+    """spec_co_2027.md §5: 2027 editions of BC60, AE41, SWA35, CP40, RA33."""
+    @classmethod
+    def setUpClass(cls):
+        cls.tmp = tempfile.TemporaryDirectory()
+        cls.contract = fill(out=cls.p("contract.pdf"))
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.tmp.cleanup()
+
+    @classmethod
+    def p(cls, name):
+        return os.path.join(cls.tmp.name, name)
+
+    def issues(self, *files, today=None):
+        from unittest import mock
+        from datetime import date
+        with mock.patch("co_forms._today", return_value=today or date(2026, 10, 25)):
+            r = check_tc_file([self.contract] + list(files))
+        self.assertEqual(r["form"], "Colorado CBS1")
+        return [(i["key"], i["severity"]) for i in r["issues"]], r
+
+    def test_detect_edition(self):
+        from tests.co_fixtures import FORMS
+        from co_forms import detect_edition
+        for kind, path in FORMS.items():
+            if kind != "insp":
+                self.assertEqual(detect_edition(path), ("pre2027", kind), kind)   # AE41 not misread from "AE41-6-21"
+        ra = os.path.join(os.path.dirname(FORMS["ae41"]), "CO_RA33_blank.pdf")
+        self.assertEqual(detect_edition(ra), ("pre2027", "resadd"))
+        for title, kind in [("AE41 AGREEMENT TO AMEND/EXTEND CONTRACT", "ae41"),
+                            ("SWA35 SOURCE OF WATER ADDENDUM TO CONTRACT TO BUY AND SELL REAL ESTATE", "swa"),
+                            ("BC60 EXCLUSIVE RIGHT-TO-BUY LISTING CONTRACT", "ertb"),
+                            ("CP40 COUNTERPROPOSAL", "ctr"),
+                            ("RA33 RESIDENTIAL ADDENDUM TO CONTRACT TO BUY AND SELL REAL ESTATE", "resadd")]:
+            self.assertEqual(detect_edition(_synthetic_2027(self.p(f"{kind}27.pdf"), title)), ("2027", kind))
+        both = _synthetic_2027(self.p("both.pdf"), "BC60 EXCLUSIVE RIGHT-TO-BUY LISTING CONTRACT", both_markers=True)
+        self.assertEqual(detect_edition(both), ("2027", "ertb"))
+        self.assertEqual(detect_edition(FORMS["insp"])[0], "unknown")
+        self.assertEqual(detect_edition(os.path.join(os.path.dirname(FORMS["ae41"]), "CBS1_blank_2026.pdf"))[0], "unknown")
+        import fitz
+        blank = self.p("notext.pdf")
+        d = fitz.open(); d.new_page(); d.save(blank); d.close()
+        self.assertEqual(detect_edition(blank), ("unknown", None))
+
+    def test_old_ae41_dated_2027_is_must_fix(self):
+        ae = fill_form("ae41", {**HEADER, "Document Date": "01/05/2027", AE["Closing Date"]["new"]: "11/06/2026",
+                                AE["Possession Date"]["new"]: "11/06/2026"}, self.p("ae27.pdf"))
+        keys, r = self.issues(ae)
+        self.assertEqual(keys, [("co_outdated_form", "blocker")])
+        self.assertIn("(AE41-8-24) and is dated 01/05/2027", r["issues"][0]["message"])
+
+    def test_old_ae41_dated_2026_never_flagged(self):
+        from datetime import date
+        ae = fill_form("ae41", {**HEADER, "Document Date": "12/15/2026", AE["Closing Date"]["new"]: "11/06/2026",
+                                AE["Possession Date"]["new"]: "11/06/2026"}, self.p("ae26.pdf"))
+        for today in (date(2026, 10, 25), date(2027, 2, 1)):
+            self.assertEqual(self.issues(ae, today=today)[0], [])
+
+    def test_old_swa_blank_date(self):
+        from datetime import date
+        swa = fill_form("swa", {"Contract Date": "10/01/2026", "Street Address": "123 Main St"}, self.p("swa.pdf"))
+        self.assertEqual(self.issues(swa, today=date(2027, 1, 2))[0], [("co_outdated_form_undated", "warning")])
+        self.assertEqual(self.issues(swa, today=date(2026, 10, 25))[0], [])
+
+    def test_2027_swa_counts_as_attached(self):
+        c = fill({"Documents Part of the Contract": "Source of Water Addendum"}, out=self.p("c_swa.pdf"))
+        swa = _synthetic_2027(self.p("swa27.pdf"), "SWA35 SOURCE OF WATER ADDENDUM TO CONTRACT TO BUY AND SELL REAL ESTATE")
+        r = check_tc_file([c, swa])
+        self.assertEqual([(i["key"], i["severity"]) for i in r["issues"]], [("co_form_2027_not_checked", "info")])
+        self.assertEqual(r["co_attachments"], ["Source of Water Addendum (2027 edition)"])
+
+    def test_2027_bc60_counts_as_buyer_agreement(self):
+        c = fill({"Broker Working With Buyer Buyers Agent Checkbox": True}, out=self.p("c_agent.pdf"))
+        bc = _synthetic_2027(self.p("bc27.pdf"), "BC60 EXCLUSIVE RIGHT-TO-BUY LISTING CONTRACT")
+        keys = [i["key"] for i in check_tc_file([c, bc])["issues"]]
+        self.assertEqual(keys, ["co_form_2027_not_checked"])
+
+    def test_mixing_editions_is_fine(self):
+        ae = _synthetic_2027(self.p("ae27x.pdf"), "AE41 AGREEMENT TO AMEND/EXTEND CONTRACT")
+        keys, _ = self.issues(ae, today=__import__("datetime").date(2027, 2, 1))
+        self.assertEqual([k for k in keys if k[1] != "info"], [])
+
+    def test_2026_companions_unchanged_after_2027(self):
+        from datetime import date
+        ae = fill_form("ae41", {**HEADER, "Document Date": "10/10/2026", AE["Closing Date"]["new"]: "11/06/2026",
+                                AE["Possession Date"]["new"]: "11/06/2026"}, self.p("ae_c.pdf"))
+        swa = fill_form("swa", {"Date": "10/01/2026", "Contract Date": "10/01/2026", "Street Address": "9 Elm St"},
+                        self.p("swa_c.pdf"))
+        self.assertEqual(self.issues(ae, swa)[0], self.issues(ae, swa, today=date(2027, 2, 1))[0])
+        self.assertEqual(self.issues(ae, swa)[0], [("co_swa_address_mismatch", "warning")])
+
+    def test_email_labels_say_crec(self):
+        import tc_check_email
+        for key in ("co_outdated_form", "co_outdated_form_undated", "co_form_2027_not_checked"):
+            self.assertNotIn("TREC", tc_check_email._CONSEQUENCE_TAGS[key])
+        self.assertIn("CREC", tc_check_email._CONSEQUENCE_TAGS["co_outdated_form"])
+
+    def test_drafting_refused_from_2027(self):
+        from datetime import date
+        import co_filler
+        from co_filler import parse_buyer_agreement_sms, fill_buyer_agreement, fill_ae41, EditionUnavailable
+        parsed = parse_buyer_agreement_sms("BUYER AGREEMENT Pat Buyer 2.5% 90 days agency")
+        old = co_filler.OUTPUT_DIR
+        try:
+            co_filler.OUTPUT_DIR = self.tmp.name
+            with self.assertRaises(EditionUnavailable) as e:
+                fill_buyer_agreement(parsed, {}, today=date(2027, 1, 1))
+            self.assertIn("2027 edition of this form isn't available for drafting yet", str(e.exception))
+            with self.assertRaises(EditionUnavailable):
+                fill_ae41({"filename": "nope.pdf"}, {"field": "close", "value": 7}, today=date(2027, 1, 1))
+            self.assertTrue(os.path.exists(fill_buyer_agreement(parsed, {}, today=date(2026, 12, 31))))
+        finally:
+            co_filler.OUTPUT_DIR = old

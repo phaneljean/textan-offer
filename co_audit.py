@@ -529,16 +529,27 @@ def check_co_file(pdf_paths, page_count=None, all_values=None, summary=None, con
     values = all_values[contract_index] if contract_index is not None else next(v for v in all_values if is_cbs1(v))
     issues = audit_values(values)
     others, unknown, seen_contract = [], 0, False
-    for v in all_values:
+    new_2027, edition_issues = [], []
+    for path, v in zip(pdf_paths, all_values):
         if v is values and not seen_contract:
             seen_contract = True
             continue
         kind = co_forms.classify(v)
+        # 2027 CREC editions (co_forms.VERIFIED_2027_KINDS): recognized by
+        # their printed text, counted as attached, fields not read.
+        edition, text_kind = co_forms.detect_edition(path)
+        if edition == "2027" and text_kind and text_kind not in co_forms.VERIFIED_2027_KINDS:
+            new_2027.append(text_kind)
+            continue
         if kind and kind != "cbs1":
             others.append((kind, v))
+            if edition == "pre2027" and text_kind == kind:
+                edition_issues += co_forms.edition_issues(kind, v)
         else:
             unknown += 1
-    issues += co_forms.cross_check(values, others)
+    issues += co_forms.cross_check(values, others, also_attached=new_2027)
+    issues += edition_issues
+    issues += [co_forms.not_checked_2027(k) for k in new_2027]
     if unknown:
         issues.append(_issue("warning",
                              f"{unknown} attached file{'s' if unknown != 1 else ''} wasn't recognized as a Colorado form "
@@ -557,7 +568,8 @@ def check_co_file(pdf_paths, page_count=None, all_values=None, summary=None, con
         "has_addendum": False,
         "has_amendment": any(k == "ae41" for k, _ in others),
         "has_loan_assumption": False,
-        "co_attachments": [co_forms.FORM_NAMES[k] for k, _ in others],
+        "co_attachments": [co_forms.FORM_NAMES[k] for k, _ in others]
+                          + [f"{co_forms.FORM_NAMES[k]} (2027 edition)" for k in new_2027],
         "severity": summary(issues) if summary else None,
         "property": {
             "address": _v(values, F["street"]),

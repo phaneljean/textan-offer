@@ -145,6 +145,21 @@ class CoSmsFlow(unittest.TestCase):
         bad = self._sms("+15125559004", "BUYER AGREEMENT Pat Buyer 90 days")
         self.assertIn("%", bad[-1])
 
+    def test_2027_drafting_gate_by_text(self):
+        # spec_co_2027.md §0.1: from 2027-01-01 AE41/BC60 drafting refuses
+        # until the 2027 templates exist, instead of sending a replaced edition.
+        from datetime import date
+        from pdf_filler import OUTPUT_DIR
+        phone = "+15125559006"
+        self._sms(phone, "500k 20% 30day 77 Birch Ln, Boulder, CO 80302", "YES")
+        before = set(os.listdir(OUTPUT_DIR))
+        with mock.patch("co_filler.colorado_date", return_value=date(2027, 1, 1)):
+            amend = self._sms(phone, "AMEND 77 Birch Ln close +7")
+            ba = self._sms(phone, "BUYER AGREEMENT Pat Buyer 2.5% 90 days agency")
+        for sent in (amend, ba):
+            self.assertIn("2027 edition of this form isn't available for drafting yet", sent[-1])
+        self.assertEqual(set(os.listdir(OUTPUT_DIR)) - before, set())
+
     def test_co_confirmation_mentions_hb26(self):
         sent = self._sms("+15125559005", "500k 20% 30day 123 Main St, Denver, CO 80202")
         self.assertIn("HB26-1426", sent[0])

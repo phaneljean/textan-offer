@@ -22,6 +22,7 @@ amendment itself introduced are reported (e.g. an extended Inspection
 Resolution Deadline that now lands after the unchanged Closing Date).
 """
 import re
+from datetime import date
 import co_audit
 from co_audit import _v, _parse_date, _money, _fmt_money, _issue, _blank_or_na
 
@@ -64,6 +65,94 @@ CTR_PRICE_ALIASES = {"Private Balance": "Private Financing"}
 # Forms §31 might list that we can recognize when attached.
 LISTED_FORMS = [("swa", re.compile(r"source\s+of\s+water|\bSWA\s*35", re.I)),
                 ("resadd", re.compile(r"residential\s+addendum|\bRA\s*33", re.I))]
+
+
+# --- 2027 CREC editions (2026-10-26, txo-trec-qa spec_co_2027.md) --------
+# The Commission adopted 2027 editions of BC60, AE41, SWA35, CP40 and RA33
+# (mandatory January 1, 2027). Only "Clean (Education Purposes)" flat copies
+# are posted, so their field names and rects are unknown: a 2027 file is
+# recognized by its page-1 text and reported as not checked, never run
+# through the 2026 field maps (names that match can still sit on moved
+# rects -- BC60 went from 7 to 6 pages). Add a kind to VERIFIED_2027_KINDS
+# only after its 2027 fillable is rect-mapped.
+VERIFIED_2027_KINDS = set()
+EDITION_2027 = date(2027, 1, 1)
+# Matched on page-1 text with ALL whitespace removed: pypdf splits codes
+# ("(S WA35-8-10)", "(Mand atory 8-2 4)"). Never key on the page-header
+# code -- the current AE41-8-24 prints "AE41-6-21" in every header.
+_MARK_2027 = "MandatoryUseDate:January1,2027"
+_PRE2027_MARKS = [("ae41", "(AE41-8-24)"), ("swa", "(SWA35-8-10)"), ("ctr", "(CP40-8-24)"), ("resadd", "(RA33-8-24)")]
+_TITLES = [("swa", "SOURCEOFWATERADDENDUM"), ("resadd", "RESIDENTIALADDENDUM"),
+           ("ae41", "AGREEMENTTOAMEND/EXTENDCONTRACT"), ("ctr", "COUNTERPROPOSAL"),
+           ("ertb", "EXCLUSIVERIGHT-TO-BUYLISTINGCONTRACT")]
+# The edition each 2027 form replaces, as printed.
+OLD_EDITIONS = {"ae41": "AE41-8-24", "swa": "SWA35-8-10", "ctr": "CP40-8-24", "resadd": "RA33-8-24",
+                "ertb": "BC60, Mandatory Use Date January 1, 2026"}
+# The form's own top "Date:" (rect-checked on the 2026 fixtures: AE41 p1
+# [399,154,573,165], SWA35 p1 [399,171,573,188], BC60 p1 [399,271,573,281]).
+# CP40/RA33 have none verified, so they're never flagged on date.
+EDITION_DATE_FIELDS = {"ae41": "Document Date", "swa": "Date", "ertb": "Date"}
+
+
+def _page1_text(pdf_path) -> str:
+    from pypdf import PdfReader
+    import filecrypt
+    try:
+        pages = PdfReader(filecrypt.pdf_source(pdf_path)).pages
+        return re.sub(r"\s+", "", (pages[0].extract_text() or "") if pages else "")
+    except Exception:
+        return ""
+
+
+def detect_edition(pdf_path) -> tuple:
+    """("2027" | "pre2027" | "unknown", kind or None) from page 1's printed
+    text. The 2027 marker wins (the redlines carry both). Vendor reprints,
+    scans and flattened exports are "unknown", which never makes a finding."""
+    text = _page1_text(pdf_path)
+    hits = [(text.find(t), kind) for kind, t in _TITLES if t in text]
+    title_kind = min(hits)[1] if hits else None
+    if _MARK_2027 in text:
+        return "2027", title_kind
+    for kind, mark in _PRE2027_MARKS:
+        if mark in text:
+            return "pre2027", kind
+    if title_kind == "ertb" and "MandatoryUseDate:January1,2026" in text:
+        return "pre2027", "ertb"
+    return "unknown", title_kind
+
+
+def _today():
+    from deadlines import colorado_date
+    return colorado_date()
+
+
+def edition_issues(kind: str, values: dict, today: date = None) -> list:
+    """Transition rule for a pre-2027 edition, by the form's own Date: dated
+    on/after 2027-01-01 -> must-fix; blank and checked on/after 2027-01-01
+    -> review; anything else (or no verified Date field) -> nothing. Never
+    compared with the CBS1's date or edition: mixing editions is fine."""
+    name = EDITION_DATE_FIELDS.get(kind)
+    if not name:
+        return []
+    today = today or _today()
+    raw = _v(values, name)
+    signed = _parse_date(raw)
+    label, code = FORM_NAMES[kind], OLD_EDITIONS[kind]
+    if signed and signed >= EDITION_2027:
+        return [_issue("blocker", f"This {label} is on the replaced CREC edition ({code}) and is dated {signed:%m/%d/%Y}. "
+                                  f"The 2027 edition (Mandatory Use Date: January 1, 2027) is the current form for "
+                                  f"anything signed on or after that date. If it isn't signed yet, write it on the "
+                                  f"current edition.", "co_outdated_form")]
+    if not raw and today >= EDITION_2027:
+        return [_issue("warning", f"This {label} is on the replaced CREC edition ({code}) and its Date is blank. The 2027 "
+                                  f"edition is mandatory from January 1, 2027 -- confirm this one was signed before then.",
+                       "co_outdated_form_undated")]
+    return []
+
+
+def not_checked_2027(kind: str) -> dict:
+    return _issue("info", f"{FORM_NAMES[kind]} (2027 edition) recognized. TC Check can't read its fields yet, so it "
+                          f"wasn't checked.", "co_form_2027_not_checked")
 
 
 def _norm(s: str) -> str:
@@ -419,13 +508,15 @@ def _same_street(a: str, b: str) -> bool:
     return bool(na and nb) and (na in nb or nb in na)
 
 
-def cross_check(contract: dict, others: list) -> list:
+def cross_check(contract: dict, others: list, also_attached=()) -> list:
     """others: [(kind, values)] for every non-CBS1 file classify() knew.
+    also_attached: kinds recognized by text but not read (2027 editions) --
+    they count as attached, so no "isn't attached" finding fires on them.
     Returns issues in co_audit's format."""
     issues = []
     street = _v(contract, co_audit.F["street"])
     contract_date = _parse_date(_v(contract, co_audit.F["date"]))
-    attached = {k for k, _ in others}
+    attached = {k for k, _ in others} | set(also_attached)
 
     effective = dict(contract)          # contract as amended, in upload order
     base_keys = {i["key"] for i in co_audit.audit_values(contract)}

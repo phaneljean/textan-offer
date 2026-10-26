@@ -276,6 +276,28 @@ def fill_cbs1(parsed: dict, agent_phone: str = None, today: date = None) -> str:
     return out_path
 
 
+# --- 2027 drafting gate (2026-10-26, txo-trec-qa spec_co_2027.md §0.1) ----
+# The Commission's 2027 AE41 and BC60 are mandatory from January 1, 2027.
+# Only flat education copies are posted, so there is no 2027 template to
+# fill: from that date AMEND (AE41_2024.pdf) and BUYER AGREEMENT
+# (BC60_2026.pdf) would hand out a replaced edition -- the 36-10 mistake.
+# They refuse instead. Add the kind here when its 2027 template is swapped
+# in (form-currency skill §3).
+EDITION_2027 = date(2027, 1, 1)
+TEMPLATES_2027 = set()   # "ae41" / "ertb" once installed
+EDITION_2027_REFUSAL = ("The Colorado Real Estate Commission's 2027 edition of this form isn't available for drafting "
+                        "yet. Use your forms tool for this one.")
+
+
+class EditionUnavailable(Exception):
+    """Drafting refused: the template on hand is a replaced edition."""
+
+
+def _edition_gate(kind: str, today: date):
+    if today >= EDITION_2027 and kind not in TEMPLATES_2027:
+        raise EditionUnavailable(EDITION_2027_REFUSAL)
+
+
 # --- AMEND by text -> Agreement to Amend/Extend Contract (AE41) -------------
 AE41_TEMPLATE_PATH = os.environ.get("AE41_TEMPLATE_PATH",
                                     os.path.join(os.path.dirname(os.path.abspath(__file__)), "AE41_2024.pdf"))
@@ -296,6 +318,7 @@ def fill_ae41(original_offer: dict, amendment: dict, today: date = None) -> str:
     import co_audit
     import co_forms
     today = today or colorado_date()
+    _edition_gate("ae41", today)
     contract = co_audit.read_contract(os.path.join(OUTPUT_DIR, original_offer["filename"]))
     if not contract:
         raise ValueError("Couldn't read the original Colorado contract for this offer.")
@@ -410,6 +433,7 @@ def fill_buyer_agreement(parsed: dict, agent: dict = None, today: date = None) -
     §2.1/2.2 firm type, §3.4 property, §7.3 who pays (blank means §7.3.1
     applies, per the form), and signatures."""
     today = today or colorado_date()
+    _edition_gate("ertb", today)
     agent = agent or {}
     values = {
         "Date": f"{today:%m/%d/%Y}",
