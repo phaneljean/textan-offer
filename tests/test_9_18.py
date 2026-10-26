@@ -93,7 +93,8 @@ class CheckedFormsLine(unittest.TestCase):
 
     def test_line(self):
         import trec_forms
-        self.assertEqual(trec_forms.checked_contracts_line(), "TREC 20-19, TREC 25-17, TREC 9-18, TREC 30-18 and Colorado CBS1")
+        self.assertEqual(trec_forms.checked_contracts_line(), "TREC 20-19, TREC 25-17, TREC 9-18, TREC 30-18, Colorado CBS1 and "
+                                                            "Colorado Land")
 
     def test_every_built_in_checker_is_listed(self):
         import tc_audit
@@ -107,7 +108,8 @@ class CheckedFormsLine(unittest.TestCase):
         import app as app_module
         import tc_check_email
         r = check_tc_file([os.path.join(ROOT, "tests", "fixtures", "trec_9-16_flat.pdf")])
-        line = "TC Check checks TREC 20-19, TREC 25-17, TREC 9-18, TREC 30-18 and Colorado CBS1 contracts today."
+        line = ("TC Check checks TREC 20-19, TREC 25-17, TREC 9-18, TREC 30-18, Colorado CBS1 and Colorado Land "
+                "contracts today.")
         self.assertIn(line, tc_check_email.format_reply_body(r))
         self.assertIn(line, tc_check_email.format_reply_html(r))
         html = app_module.app.test_client().get("/tc-check", headers={"User-Agent": "Mozilla/5.0 test"}).get_data(as_text=True)

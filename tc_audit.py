@@ -897,6 +897,10 @@ def _co_contract_result(pdf_paths, all_values, page_count: int):
     if f["code"] == "CBS1" and not f["edition"]:
         return co_audit.check_co_file(pdf_paths, page_count=page_count, all_values=all_values,
                                       summary=_severity_summary, contract_index=idx)
+    if f["code"] == "CBS4" and not f["edition"]:
+        # Land rules since 2026-10-26 (txo-trec-qa spec_co_land.md).
+        import co_land
+        return co_land.check_land(pdf_paths, all_values, idx, page_count, _severity_summary)
     if f["edition"]:
         # A replaced edition: no field rules (CBS4-6-24 shares 53 names with
         # the 2026 Land contract), only its own Date, where rect-checked.

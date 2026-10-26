@@ -513,6 +513,34 @@ def audit_values(values: dict) -> list:
     return issues
 
 
+def companions(pdf_paths, all_values, contract: dict, skip=()) -> tuple:
+    """The files uploaded with a Colorado contract: (others [(kind, values)],
+    2027-edition kinds, edition findings, count not recognized). `skip`:
+    indexes the caller already handled (CBS4's SPD19L)."""
+    import co_forms
+    others, new_2027, edition_issues, unknown, seen_contract = [], [], [], 0, False
+    for n, (path, v) in enumerate(zip(pdf_paths, all_values)):
+        if v is contract and not seen_contract:
+            seen_contract = True
+            continue
+        if n in skip:
+            continue
+        kind = co_forms.classify(v)
+        # 2027 CREC editions (co_forms.VERIFIED_2027_KINDS): recognized by
+        # their printed text, counted as attached, fields not read.
+        edition, text_kind = co_forms.detect_edition(path)
+        if edition == "2027" and text_kind and text_kind not in co_forms.VERIFIED_2027_KINDS:
+            new_2027.append(text_kind)
+            continue
+        if kind and kind != "cbs1":
+            others.append((kind, v))
+            if edition == "pre2027" and text_kind == kind:
+                edition_issues += co_forms.edition_issues(kind, v)
+        else:
+            unknown += 1
+    return others, new_2027, edition_issues, unknown
+
+
 def check_co_file(pdf_paths, page_count=None, all_values=None, summary=None, contract_index=None) -> dict:
     """Same result shape as tc_audit.check_tc_file. `summary` is
     tc_audit._severity_summary, passed in to avoid a circular import. Up to
@@ -528,25 +556,7 @@ def check_co_file(pdf_paths, page_count=None, all_values=None, summary=None, con
         page_count = sum(len(PdfReader(filecrypt.pdf_source(p)).pages) for p in pdf_paths)
     values = all_values[contract_index] if contract_index is not None else next(v for v in all_values if is_cbs1(v))
     issues = audit_values(values)
-    others, unknown, seen_contract = [], 0, False
-    new_2027, edition_issues = [], []
-    for path, v in zip(pdf_paths, all_values):
-        if v is values and not seen_contract:
-            seen_contract = True
-            continue
-        kind = co_forms.classify(v)
-        # 2027 CREC editions (co_forms.VERIFIED_2027_KINDS): recognized by
-        # their printed text, counted as attached, fields not read.
-        edition, text_kind = co_forms.detect_edition(path)
-        if edition == "2027" and text_kind and text_kind not in co_forms.VERIFIED_2027_KINDS:
-            new_2027.append(text_kind)
-            continue
-        if kind and kind != "cbs1":
-            others.append((kind, v))
-            if edition == "pre2027" and text_kind == kind:
-                edition_issues += co_forms.edition_issues(kind, v)
-        else:
-            unknown += 1
+    others, new_2027, edition_issues, unknown = companions(pdf_paths, all_values, values)
     issues += co_forms.cross_check(values, others, also_attached=new_2027)
     issues += edition_issues
     issues += [co_forms.not_checked_2027(k) for k in new_2027]

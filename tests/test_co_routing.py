@@ -112,8 +112,14 @@ class ColoradoRouting(unittest.TestCase):
         self.assertNotIn("TREC", r["issues"][0]["message"])
 
     def test_land_is_not_audited_as_cbs1(self):
-        # Before: co_price_math ($310,000) and co_loan_type_missing, both false.
-        self.assert_not_checked(check_tc_file([self.land]), "Colorado CBS4 (Land)", "Land", "CBS4")
+        # Before: co_price_math ($310,000) and co_loan_type_missing, both
+        # false. Since the Land rules (co_land.py) it gets its own report.
+        r = check_tc_file([self.land])
+        self.assertEqual(r["form"], "Colorado CBS4 (Land)")
+        self.assertTrue(r["recognized"])
+        keys = [i["key"] for i in r["issues"]]
+        for cbs1_only in ("co_price_math", "co_loan_type_missing", "co_city_blank", "co_street_blank"):
+            self.assertNotIn(cbs1_only, keys)
 
     def test_commercial_is_not_audited_as_cbs1(self):
         self.assert_not_checked(check_tc_file([self.comm]), "Colorado CBS3 (Commercial)", "Commercial", "CBS3")

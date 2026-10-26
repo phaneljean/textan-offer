@@ -171,9 +171,23 @@ class HomepageFirstScreen(unittest.TestCase):
         # the homepage can't drift from trec_forms.CHECKED_CONTRACTS.
         import trec_forms
         row = self.html[self.html.find('<ul class="forms"'):self.html.find('</ul>', self.html.find('<ul class="forms"'))]
+        # The CBS1 chip sits in this (Texas) row; other Colorado contracts
+        # belong in a Colorado row -- see test_co_forms_row.
         for c in trec_forms.CHECKED_CONTRACTS:
-            self.assertIn('<b>' + c.split()[-1] + '</b>', row)
+            if not c.startswith("Colorado ") or c == "Colorado CBS1":
+                self.assertIn('<b>' + c.split()[-1] + '</b>', row)
         self.assertIn('<p class="sub" data-state="co">Drop a filled CBS1', self.html)
+
+    def test_co_forms_row(self):
+        # Colorado Land (CBS4) is checked since 2026-10-26 ("<b>CO Land</b>").
+        import trec_forms
+        start = self.html.find('<ul class="forms" data-state="co"')
+        if start < 0:
+            self.skipTest("no Colorado forms row on the homepage yet -- add one with a <b>CO Land</b> chip")
+        row = self.html[start:self.html.find('</ul>', start)]
+        for c in trec_forms.CHECKED_CONTRACTS:
+            if c.startswith("Colorado ") and c != "Colorado CBS1":
+                self.assertIn('<b>CO ' + c.split()[-1] + '</b>', row)
 
     def test_eyebrow_above_h1(self):
         self.assertLess(self.html.find('<div class="eyebrow">TC Check &middot; contract error-checker'), self.html.find("<h1>Catch it before"))
