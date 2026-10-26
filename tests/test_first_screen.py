@@ -164,11 +164,11 @@ class HomepageFirstScreen(unittest.TestCase):
         self.assertIn('href="/tc-check/bulk" data-evt="hero_broker_cta"', m.group(2))
 
     def test_subhead_per_state(self):
-        self.assertIn('<p class="sub" data-state="tx">Drop a filled TREC 20-19.', self.html)
+        self.assertIn('<p class="sub" data-state="tx">Upload a filled TREC 20-19 or 25-17', self.html)
         self.assertIn('<p class="sub" data-state="co">Drop a filled CBS1', self.html)
 
     def test_eyebrow_above_h1(self):
-        self.assertLess(self.html.find('<div class="eyebrow">TC Check</div>'), self.html.find("<h1>Catch it before"))
+        self.assertLess(self.html.find('<div class="eyebrow">TC Check &middot; contract error-checker'), self.html.find("<h1>Catch it before"))
 
     def test_what_it_checks_anchor_on_tc_check(self):
         # The homepage link lands on a wrapper holding both states' lists.

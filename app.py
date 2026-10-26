@@ -750,12 +750,12 @@ def index():
   <title>TxtAnOffer — Catch it before title does.</title>
   <meta name="description" content="For transaction coordinators and managing brokers in Texas and Colorado: drop a filled TREC 20-19 or CBS1 and see what's missing or inconsistent before title kicks it back. TxtAnOffer also drafts new offers by text message.">
   <meta property="og:title" content="TxtAnOffer — Catch it before title does.">
-  <meta property="og:description" content="Drop a filled TREC 20-19 or Colorado CBS1 and see what's blank, missing or doesn't add up before title kicks it back.">
+  <meta property="og:description" content="Contract error-checker for Texas & Colorado real estate. Upload a filled TREC 20-19, 25-17 or Colorado CBS1 and get a report of what's blank, missing or doesn't add up before title kicks it back.">
   <meta property="og:url" content="https://txtanoffer.com/">
   <meta property="og:type" content="website">
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="TxtAnOffer — Catch it before title does.">
-  <meta name="twitter:description" content="Drop a filled TREC 20-19 or Colorado CBS1 and see what's blank, missing or doesn't add up before title kicks it back.">
+  <meta name="twitter:description" content="Contract error-checker for Texas & Colorado real estate. Upload a filled TREC 20-19, 25-17 or Colorado CBS1 and get a report of what's blank, missing or doesn't add up before title kicks it back.">
   <link rel="icon" href="/static/favicon.ico?v=2" type="image/x-icon">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -888,10 +888,10 @@ __TEXT_DEMO_CSS__
 __SITE_NAV__
 <!-- 1. HERO: one idea, the product doing it -->
 <section class="hero">
-  <div class="eyebrow">TC Check</div>
+  <div class="eyebrow">TC Check &middot; contract error-checker for Texas &amp; Colorado real estate</div>
   <h1>Catch it before<br>title does.</h1>
-  <p class="sub" data-state="tx">Drop a filled TREC 20-19. TC Check flags what&rsquo;s blank, missing or doesn&rsquo;t add up.</p>
-  <p class="sub" data-state="co">Drop a filled CBS1 and see what title would kick back in seconds &mdash; &sect;3.1 deadlines left blank that delete a contingency, &sect;4.1 price math that doesn&rsquo;t add up, deadlines that land after closing.</p>
+  <p class="sub" data-state="tx">Upload a filled TREC 20-19 or 25-17 Farm and Ranch contract. In seconds you get a report flagging the blank fields, bad math and impossible dates title would kick back. Built for TCs, agents and brokerages.</p>
+  <p class="sub" data-state="co">Drop a filled CBS1 and see what title would kick back in seconds &mdash; &sect;3.1 deadlines left blank that delete a contingency, &sect;4.1 price math that doesn&rsquo;t add up, deadlines that land after closing. Built for TCs, agents and brokerages.</p>
   <div class="ctas" data-state="tx">
     <a class="btn solid" href="/tc-check" data-evt="hero_cta">Check a file free</a>
     <a class="btn ghost" href="/tc-check?demo=1" data-evt="hero_sample">See a sample report</a>
@@ -900,8 +900,8 @@ __SITE_NAV__
     <a class="btn solid" href="/tc-check?state=co" data-evt="hero_cta">Check a file free</a>
     <a class="btn ghost" href="/tc-check?demo=1&amp;state=co" data-evt="hero_sample">See a sample report</a>
   </div>
-  <p class="fine" data-state="tx">3 free reports, no signup &middot; Texas TREC 20-19 &middot; <a href="/?state=co" data-evt="state_toggle_co" style="text-decoration:underline">Colorado CBS1</a></p>
-  <p class="fine" data-state="co">3 free reports, no signup &middot; Colorado CBS1 &middot; <a href="/?state=tx" data-evt="state_toggle_tx" style="text-decoration:underline">Texas TREC 20-19</a></p>
+  <p class="fine" data-state="tx">3 free reports, no signup &middot; Texas TREC 20-19 &amp; 25-17 &middot; <a href="/?state=co" data-evt="state_toggle_co" style="text-decoration:underline">Colorado CBS1</a></p>
+  <p class="fine" data-state="co">3 free reports, no signup &middot; Colorado CBS1 &middot; <a href="/?state=tx" data-evt="state_toggle_tx" style="text-decoration:underline">Texas TREC 20-19 &amp; 25-17</a></p>
 
   <!-- Illustration only. Scrap values are the sample files' own fields;
        card counts and findings are the sample report's display_issues,
@@ -978,7 +978,7 @@ __SITE_NAV__
 
 <!-- 3. TEXT AN OFFER: the namesake product, played as a 3-step demo (text_demo.py) -->
 <section class="text" id="text">
-  <div class="eyebrow">Text an offer</div>
+  <div class="eyebrow">Also from TxtAnOffer: Text an offer</div>
   <h2>Text the terms.<br>Get a filled draft back.</h2>
   <p class="sub">Price, down payment, closing days, address. Reply YES and the TREC 20&#8209;19 comes back with your terms filled in, ready to review.</p>
   <div class="ctas">
