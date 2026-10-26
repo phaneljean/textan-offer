@@ -100,6 +100,7 @@ _CONSEQUENCE_TAGS = {
     "la_note_unchecked": "REVIEW: LOAN BOX UNCHECKED",
     "la_unreadable": "ATTACHMENT NOT VERIFIED",
     "outdated_form": "OUTDATED TREC FORM",
+    "co_outdated_form": "OUTDATED CREC FORM",
     # TREC 25-17 (trec_25_17.py), txo-trec-qa's tags, 2026-10-25
     "survey_days_blank": "DEADLINE UNDEFINED",
     "water_disclosure_days_blank": "DEADLINE UNDEFINED",
@@ -393,7 +394,10 @@ def _property_line(result: dict) -> str:
 
 def subject_line(result: dict) -> str:
     if result.get("unsupported"):
-        return ("TC File Check: outdated TREC form" if result["issues"][0]["key"] == "outdated_form"
+        key = result["issues"][0]["key"]
+        if key == "co_outdated_form" and result["issues"][0]["severity"] == "blocker":
+            return "TC File Check: outdated Colorado form"
+        return ("TC File Check: outdated TREC form" if key == "outdated_form"
                 else f"TC File Check: {result.get('form') or 'form'} recognized, not checked")
     if not result.get("recognized", True):
         return "TC File Check: file not recognized"
@@ -874,10 +878,12 @@ def _archived_html(archived) -> str:
 def format_reply_html(result: dict, check_count: int = 0, archived: dict = None) -> str:
     if result.get("unsupported"):
         outdated = result["issues"][0]["key"] == "outdated_form"
+        co_outdated = result["issues"][0]["key"] == "co_outdated_form" and result["issues"][0]["severity"] == "blocker"
         body = (f'<p style="{_P_STYLE}">{escape(_clean(result["issues"][0]["message"]))}</p>'
                 f'<p style="{_P_STYLE}">TC Check checks {escape(trec_forms.checked_contracts_line())} contracts today.</p>')
-        return _email_shell("This is an outdated TREC form" if outdated else f"{escape(result.get('form') or 'Form')} recognized",
-                            "Nothing else was checked" if outdated else "Nothing was checked", body)
+        return _email_shell("This is an outdated TREC form" if outdated else
+                            "This is an outdated Colorado form" if co_outdated else f"{escape(result.get('form') or 'Form')} recognized",
+                            "Nothing else was checked" if outdated or co_outdated else "Nothing was checked", body)
     if not result["recognized"]:
         if hand_review_email():
             return _hand_review_html()

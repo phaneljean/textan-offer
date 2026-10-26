@@ -787,7 +787,8 @@ def _builtin_checker(form_id: str):
 CHECKED_WITH_20_19 = {"40-11", "39-11", "41-3"}
 
 
-def _not_checked_result(form_id: str, edition, page_count: int, message: str, key: str, severity: str) -> dict:
+def _not_checked_result(form_id: str, edition, page_count: int, message: str, key: str, severity: str,
+                        label: str = None) -> dict:
     """Same keys as the unreadable result, so every caller handles it, plus
     "unsupported" and the detected form. recognized stays False: no checks
     ran, so it must not count as a checked file, use a free report or
@@ -798,7 +799,7 @@ def _not_checked_result(form_id: str, edition, page_count: int, message: str, ke
         "recognized": False,
         "unreadable": False,
         "unsupported": True,
-        "form": trec_forms.label(form_id),
+        "form": label or trec_forms.label(form_id),
         "form_id": form_id,
         "edition": edition,
         "complete": False,
@@ -882,6 +883,35 @@ def _form_gate(pdf_paths, detections, all_values, page_count: int):
     return None
 
 
+def _co_contract_result(pdf_paths, all_values, page_count: int):
+    """A Colorado contract identified by its printed page title (2026-10-26,
+    txo-trec-qa spec_co_land.md §0.1), or None when no file has one. Before
+    this the CBS1 field-name count claimed the Land (CBS4) and Commercial
+    (CBS3) contracts and ran CBS1 rules on them, with false must-fixes."""
+    found = [co_audit.detect_contract(p) for p in pdf_paths]
+    hits = [i for i, f in enumerate(found) if f]
+    if not hits:
+        return None
+    idx = next((i for i in hits if found[i]["code"] == "CBS1" and not found[i]["edition"]), hits[0])
+    f = found[idx]
+    if f["code"] == "CBS1" and not f["edition"]:
+        return co_audit.check_co_file(pdf_paths, page_count=page_count, all_values=all_values,
+                                      summary=_severity_summary, contract_index=idx)
+    if f["edition"]:
+        # A replaced edition: no field rules (CBS4-6-24 shares 53 names with
+        # the 2026 Land contract), only its own Date, where rect-checked.
+        date_field = co_audit.OLD_DATE_FIELDS.get(f"{f['code']}-{f['edition']}")
+        signed = co_audit._parse_date(co_audit._v(all_values[idx], date_field)) if date_field else None
+        message, severity = co_audit.outdated_message(f, signed)
+        result = _not_checked_result(f["code"], f["edition"], page_count, message, "co_outdated_form", severity,
+                                     label=co_audit.contract_label(f))
+    else:
+        result = _not_checked_result(f["code"], None, page_count, co_audit.not_checked_message(f),
+                                     "form_not_supported", "info", label=co_audit.contract_label(f))
+    result["state"] = "CO"
+    return result
+
+
 def _outdated_attachment_issues(detections) -> list:
     """One finding per outdated TREC form found among a 20-19's attachments
     (e.g. a 40-10 uploaded with it). Never fires on a current packet, so a
@@ -928,6 +958,10 @@ def check_tc_file(pdf_paths) -> dict:
     # Not a current 20-19 (a 9-18, a 25-17, an outdated 20-18...): its own
     # result, before the 20-19 field fingerprint below can claim it.
     detections = [trec_forms.detect_forms(p) for p in pdf_paths]
+    if not any(trec_forms.kind(fid) == "contract" for det in detections for fid, _ in det):
+        co_result = _co_contract_result(pdf_paths, all_values, page_count)
+        if co_result is not None:
+            return co_result
     gated = _form_gate(pdf_paths, detections, all_values, page_count)
     if gated is not None:
         return gated
@@ -1264,6 +1298,15 @@ def compare_contracts(original_path: str, updated_path: str) -> dict:
         if fid and trec_forms.kind(fid) == "contract" and (fid, trec_forms.status(fid, ed)) != ("20-19", "current"):
             return {"recognized": False,
                     "message": f"The {which} file is a TREC {fid}, not a current TREC 20-19 -- compare only works on two 20-19s."}
+
+    # A Colorado contract other than a current CBS1 (Land, Commercial, an old
+    # edition) can match CBS1 field names; it has no compare rules.
+    for which, path in (("original", original_path), ("updated", updated_path)):
+        f = co_audit.detect_contract(path)
+        if f and (f["code"], f["edition"]) != ("CBS1", None):
+            return {"recognized": False,
+                    "message": f"The {which} file is a {co_audit.contract_label(f)}, not a current Colorado CBS1 -- "
+                               f"compare only works on two TREC 20-19s or two CBS1s."}
 
     # Two Colorado CBS1s: compared by co_forms with the same result shape.
     o_co, u_co = co_audit.is_cbs1(orig_values), co_audit.is_cbs1(upd_values)

@@ -271,8 +271,84 @@ def matched(values: dict) -> int:
     return sum(1 for name in FINGERPRINT if name in values)
 
 
+# The count alone isn't enough (2026-10-26, txo-trec-qa spec_co_land.md
+# §0.1): the 2026 Land contract (CBS4) carries 8 of the 9 FINGERPRINT names
+# and the Commercial (CBS3) 6, so both got CBS1 rules and false must-fixes.
+# "Available Funds Does Checkbox" and "Bond Checkbox" are CBS1-only (Land
+# spells it "Available Fund Does", Commercial has no FHA/VA/Bond row);
+# "Case At Closing" (sic) is Land-only. This is the fallback for files
+# whose page title can't be read -- detect_contract() runs first.
+CBS1_ONLY = ("Available Funds Does Checkbox", "Bond Checkbox")
+NOT_CBS1 = ("Case At Closing",)
+
+
 def is_cbs1(values: dict) -> bool:
-    return matched(values) >= MIN_MATCHED
+    return (matched(values) >= MIN_MATCHED and all(n in values for n in CBS1_ONLY)
+            and not any(n in values for n in NOT_CBS1))
+
+
+# --- Which Colorado contract, by its printed page title (2026-10-26) -------
+# Every page footer reads e.g. "CBS4 CONTRACT TO BUY AND SELL REAL ESTATE
+# (LAND) Page 1 of 21". The 2026 set has no dated code; older editions do
+# ("CBS4-6-24.", which pypdf splits as "CBS 4-6-24."). Verified by txo-trec-qa
+# on CBS1/CBS2/CBS3/both CBS4 editions (every page) and RA33 (no match).
+CO_RE = re.compile(r"\bCBS\s*(F?)\s*(\d)(?:\s*-\s*(\d{1,2})\s*-\s*(\d{2}))?\.?\s+CONTRACT\s+TO\s+BUY\s+AND\s+SELL"
+                   r"\s+REAL\s+ESTATE\s*\(([^)]+)\)", re.I)
+CONTRACT_NAMES = {"CBS1": "Residential", "CBS2": "Income-Residential", "CBS3": "Commercial",
+                  "CBS4": "Land", "CBSF1": "Residential Foreclosure"}
+# Mandatory dates of replaced editions we've seen on the DRE site.
+OLD_MANDATORY = {"CBS4-6-24": "8-24"}
+# The 2026 set's mandatory use date: a contract dated before it was
+# legitimately written on the previous edition.
+CURRENT_MANDATORY = date(2026, 1, 1)
+# Top-of-page-1 "Date:" on a replaced edition, by name, rect-checked
+# (CBS4-6-24: "Document Date" at x435-573, y191-208 beside the printed
+# "Date:" at x410,y196). Editions not listed read as undated -> must-fix,
+# the same as TREC's unverified old editions.
+OLD_DATE_FIELDS = {"CBS4-6-24": "Document Date"}
+
+
+def detect_contract(pdf_path):
+    """{"code": "CBS4", "edition": "6-24" or None, "name": "Land"} for the
+    Colorado contract with the most pages in the file, or None when no
+    page carries a CBS title (a scan, a companion form, a TREC file)."""
+    from collections import Counter
+    pages = Counter()
+    for page in PdfReader(filecrypt.pdf_source(pdf_path)).pages:
+        m = CO_RE.search(page.extract_text() or "")
+        if m:
+            f, n, mo, yy, _ = m.groups()
+            pages[(f"CBS{f.upper()}{n}", f"{int(mo)}-{yy}" if mo else None)] += 1
+    if not pages:
+        return None
+    (code, edition), _ = pages.most_common(1)[0]
+    return {"code": code, "edition": edition, "name": CONTRACT_NAMES.get(code, "")}
+
+
+def contract_label(found: dict) -> str:
+    stamp = f"-{found['edition']}" if found["edition"] else ""
+    return f"Colorado {found['code']}{stamp}" + (f" ({found['name']})" if found["name"] else "")
+
+
+def not_checked_message(found: dict) -> str:
+    title = "Contract to Buy and Sell Real Estate" + (f" ({found['name']})" if found["name"] else "")
+    return (f"We recognized the Colorado {title}, {found['code']}. TC Check doesn't check this form yet, "
+            f"so nothing was checked.")
+
+
+def outdated_message(found: dict, signed) -> tuple:
+    """(message, severity) for a replaced, dated edition. Mirrors TREC's
+    outdated_contract_message: info when the contract's own Date is before
+    the current edition's mandatory date, must-fix otherwise (incl. blank)."""
+    code = f"{found['code']}-{found['edition']}"
+    mand = OLD_MANDATORY.get(code)
+    name = found["name"] or "contract"
+    if signed and signed < CURRENT_MANDATORY:
+        return (f"This file is on {code}, which was the current Colorado {name} contract when it was dated "
+                f"({signed:%m/%d/%Y}). TC Check only checks the current edition, so nothing was checked.", "info")
+    return (f"This file is on {code}" + (f" (mandatory {mand})" if mand else "") + f". The Commission's current "
+            f"{name} contract is {found['code']}, mandatory since January 1, 2026. TC Check only checks the current "
+            f"edition, so nothing else was checked.", "blocker")
 
 
 def _issue(severity: str, message: str, key: str) -> dict:
@@ -437,18 +513,20 @@ def audit_values(values: dict) -> list:
     return issues
 
 
-def check_co_file(pdf_paths, page_count=None, all_values=None, summary=None) -> dict:
+def check_co_file(pdf_paths, page_count=None, all_values=None, summary=None, contract_index=None) -> dict:
     """Same result shape as tc_audit.check_tc_file. `summary` is
     tc_audit._severity_summary, passed in to avoid a circular import. Up to
     4 files: the CBS1 plus any Amend/Extend, Counterproposal, Inspection
     Objection Notice, Source of Water or Residential Addendum, each
-    cross-checked against it by co_forms."""
+    cross-checked against it by co_forms. contract_index: the file whose
+    page title says CBS1 (tc_audit.check_tc_file); None = the first file
+    whose field names match."""
     import co_forms
     if all_values is None:
         all_values = [_read_values(p) for p in pdf_paths]
     if page_count is None:
         page_count = sum(len(PdfReader(filecrypt.pdf_source(p)).pages) for p in pdf_paths)
-    values = next(v for v in all_values if is_cbs1(v))
+    values = all_values[contract_index] if contract_index is not None else next(v for v in all_values if is_cbs1(v))
     issues = audit_values(values)
     others, unknown, seen_contract = [], 0, False
     for v in all_values:
