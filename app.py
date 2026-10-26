@@ -5103,9 +5103,9 @@ def pricing():
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pricing — TxtAnOffer</title>
-<meta name="description" content="TC File Check is free for Texas TCs and agents: drop a TREC 20-19 and see what title would kick back. Agent plan $40/mo for unlimited offers by text. Brokerage $349/mo covers your whole roster.">
+<meta name="description" content="TC Check is free for agents, TCs and brokers: drop a Texas resale, condo, land or farm and ranch contract, or a Colorado CBS1 or Land, and see what title would kick back. Agent plan $40/mo for unlimited offers by text. Brokerage $349/mo covers your whole roster.">
 <meta property="og:title" content="TxtAnOffer Pricing — Free to Check, Simple to Scale">
-<meta property="og:description" content="TC File Check is free. Agent plan $40/mo, Brokerage $349/mo for your whole roster.">
+<meta property="og:description" content="TC Check is free. Agent plan $40/mo, Brokerage $349/mo for your whole roster.">
 <meta property="og:url" content="https://txtanoffer.com/pricing">
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary">
@@ -5297,18 +5297,20 @@ def pricing():
 
 <div class="page-header">
   <h1>Free to check.<br><span class="gradient">Simple to scale.</span></h1>
-  <p>Check any TREC 20-19 free. Pay only to draft offers by text, or to cover your whole brokerage.</p>
+  <p>Check Texas and Colorado contracts free, whether you're an agent, a TC or a broker. Pay only to draft offers by text, or to cover your whole brokerage.</p>
 </div>
 
 <div class="pricing-grid" style="max-width:1000px;">
 
   <div class="pricing-card" id="tc-check">
-    <h2 class="plan-name">TC File Check</h2>
-    <p class="plan-desc">See what title would kick back on any TREC 20-19.</p>
+    <h2 class="plan-name">TC Check</h2>
+    <p class="plan-desc">For agents, TCs and brokers. See what title would kick back before the file goes.</p>
     <div class="price-row">
       <span class="price-current">Free</span>
     </div>
     <ul class="features">
+      <li><span class="check">&#10003;</span> Texas: TREC 20-19 Resale, 30-18 Condo, 9-18 Land, 25-17 Farm &amp; Ranch</li>
+      <li><span class="check">&#10003;</span> Colorado: CBS1 Residential and Land</li>
       <li><span class="check">&#10003;</span> Blanks, missing initials and mismatches, itemized</li>
       <li><span class="check">&#10003;</span> Results in seconds</li>
       <li><span class="check">&#10003;</span> 3 full reports with no signup, then just your email</li>
@@ -5320,7 +5322,7 @@ def pricing():
 
   <div class="pricing-card" id="individual">
     <h2 class="plan-name">Agent</h2>
-    <p class="plan-desc">Draft TREC 20-19 offers by text message.</p>
+    <p class="plan-desc">Draft offers by text message: a TREC 20-19 in Texas or a CBS1 in Colorado.</p>
     <div class="price-row">
       <span class="price-current">$40</span>
       <span class="price-period">/month</span>
@@ -5368,7 +5370,7 @@ def pricing():
   <h2 style="text-align:center;font-size:1.4rem;font-weight:800;margin-bottom:1.5rem;color:var(--text);">Questions</h2>
   <div class="value-grid">
     <div class="value-card">
-      <div class="value-title">Is TC File Check really free?</div>
+      <div class="value-title">Is TC Check really free?</div>
       <div class="value-text">Yes. Your first 3 full reports need nothing at all. After that, add your email to keep getting full reports, still free. No card, no trial.</div>
     </div>
     <div class="value-card">

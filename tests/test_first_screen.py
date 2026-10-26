@@ -214,3 +214,17 @@ class HomepageFirstScreen(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class PricingFormsTest(unittest.TestCase):
+    def test_pricing_lists_every_checked_contract(self):
+        # The free plan's contract bullets must not drift from what TC Check
+        # reads (the page said "any TREC 20-19" for weeks after 9-18/25-17/30-18 shipped).
+        import trec_forms
+        html = _get("/pricing")
+        start = html.find('id="tc-check"')
+        card = html[start:html.find('</ul>', start)]
+        for c in trec_forms.CHECKED_CONTRACTS:
+            num = c.split()[-1]
+            self.assertIn({"CBS1": "CBS1 Residential", "Land": "Land"}.get(num, num), card, c)
+        self.assertNotIn("any TREC 20-19", html)
