@@ -835,9 +835,19 @@ def index():
 
   /* ---------- 3. text an offer: dark, phone ---------- */
   .text{background:var(--green-deep);color:#fff}
-  .forms{list-style:none;display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin:18px auto 0;padding:0;max-width:640px}
-  .forms li{font-size:14px;padding:6px 12px;border-radius:999px;background:#E7F3F1;color:#0a3f3a;white-space:nowrap}
-  .forms b{font-weight:700;margin-right:4px}
+  /* Contract row: a quiet spec strip (name over form number, hairline
+     dividers) instead of pills -- Phanel 2026-10-26: the pills read as clutter. */
+  .forms{list-style:none;display:flex;justify-content:center;margin:26px auto 4px;padding:0;max-width:640px}
+  .forms li{flex:1 1 0;padding:2px 14px;border-left:1px solid var(--line);display:flex;flex-direction:column;gap:3px;align-items:center}
+  .forms li:first-child{border-left:0}
+  .forms span{font-size:16px;font-weight:600;color:var(--ink);letter-spacing:-.01em;white-space:nowrap}
+  .forms small{font-size:12px;font-weight:500;color:var(--mute);letter-spacing:.04em;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .forms small b{font-weight:600;color:var(--green)}
+  .forms[data-state="co"]{max-width:340px}
+  @media (max-width:520px){
+    .forms{display:grid;grid-template-columns:1fr 1fr;row-gap:14px;max-width:320px}
+    .forms li:nth-child(odd){border-left:0}
+  }
   /* Texas | Colorado switch: the /tc-check .state-switch look, above the h1.
      The Colorado addenda on the CO fine line are the ones co_audit
      cross-checks against the CBS1 (co_forms). */
@@ -915,11 +925,11 @@ __SITE_NAV__
   <h1>Catch it before<br>title does.</h1>
   <p class="sub" data-state="tx">One checker for the Texas contracts you file most: resale, condo, land, and farm and ranch. Upload a filled TREC contract and in seconds you get a report flagging the blank fields, bad math and impossible dates title would kick back. Built for TCs, agents and brokerages.</p>
   <ul class="forms" data-state="tx" aria-label="Contracts TC Check reads">
-    <li><b>20-19</b> Resale</li><li><b>30-18</b> Condo</li><li><b>9-18</b> Land</li><li><b>25-17</b> Farm &amp; Ranch</li>
+    <li><span>Resale</span><small>TREC <b>20-19</b></small></li><li><span>Condo</span><small>TREC <b>30-18</b></small></li><li><span>Land</span><small>TREC <b>9-18</b></small></li><li><span>Farm &amp; Ranch</span><small>TREC <b>25-17</b></small></li>
   </ul>
   <p class="sub" data-state="co">Drop a filled CBS1 or Colorado Land contract and see what title would kick back in seconds &mdash; &sect;3.1 deadlines left blank that delete a contingency, &sect;4.1 price math that doesn&rsquo;t add up, deadlines that land after closing. Built for TCs, agents and brokerages.</p>
   <ul class="forms" data-state="co" aria-label="Colorado contracts TC Check reads">
-    <li><b>CBS1</b> Residential</li><li><b>CO Land</b> Land &amp; acreage</li>
+    <li><span>Residential</span><small><b>CBS1</b></small></li><li><span>Land</span><small><b>CBS4</b></small></li>
   </ul>
   <div class="ctas" data-state="tx">
     <a class="btn solid" href="/tc-check" data-evt="hero_cta">Check a file free</a>

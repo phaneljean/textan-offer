@@ -180,17 +180,17 @@ class HomepageFirstScreen(unittest.TestCase):
         self.assertIn('<p class="sub" data-state="co">Drop a filled CBS1', self.html)
 
     def test_co_forms_row(self):
-        # Colorado Land (CBS4) is checked since 2026-10-26 ("<b>CO Land</b>").
+        # Colorado Land (CBS4) is checked since 2026-10-26 ("<b>CBS4</b>").
         import trec_forms
         start = self.html.find('<ul class="forms" data-state="co"')
         if start < 0:
-            self.skipTest("no Colorado forms row on the homepage yet -- add one with a <b>CO Land</b> chip")
+            self.skipTest("no Colorado forms row on the homepage yet -- add one with a <b>CBS4</b> item")
         row = self.html[start:self.html.find('</ul>', start)]
         for c in trec_forms.CHECKED_CONTRACTS:
             if c == "Colorado CBS1":
                 self.assertIn('<b>CBS1</b>', row)
             elif c.startswith("Colorado "):
-                self.assertIn('<b>CO ' + c.split()[-1] + '</b>', row)
+                self.assertIn({"Colorado Land": "<b>CBS4</b>"}[c], row)
 
     def test_co_auto_select(self):
         # ?state=co and a Colorado campaign src both open the Colorado view.
