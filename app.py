@@ -7584,6 +7584,13 @@ def trec_changes():
     <div class="handled"><b>How TxtAnOffer handles it:</b> Included with every generated contract, with your saved brokerage details filled in automatically from your profile.</div>
   </div>
 
+  <div class="change-card">
+    <span class="tag">TREC 25-17 &middot; 9-18 &middot; 30-18</span>
+    <h2>Farm and ranch, land and condo contracts</h2>
+    <p>The 20-19 isn't TREC's only purchase contract. Farm and ranch property goes on the <b>TREC 25-17 Farm and Ranch Contract</b>, unimproved land on the <b>9-18</b>, and condominiums on the <b>30-18</b>. The 25-17 replaced the 25-16, which still downloads from TREC's site, so check the "TREC NO." in the footer before you use a saved copy.</p>
+    <div class="handled"><b>How TxtAnOffer handles it:</b> TC Check reads all three, and flags a replaced edition. Offers by text are drafted on the 20-19 only. For the 25-17's own paragraphs (acreage adjustment, leases, water disclosure), see the <a href="/guides/trec-25-17-farm-and-ranch-contract">TREC 25-17 farm and ranch contract checklist</a>.</div>
+  </div>
+
   <div class="sources-box">
     <h3>Verify this yourself</h3>
     <p>The forms above are TREC's promulgated contract forms. The Commission's separate rules of conduct and licensing rules -- the ones that govern how brokers and agents operate, not the forms themselves -- live in Texas Administrative Code Title 22, Part 23. Neither TREC's own courtesy copy nor this page is the official legal text; both are conveniences.</p>
