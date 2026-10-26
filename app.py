@@ -838,6 +838,14 @@ def index():
   .forms{list-style:none;display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin:18px auto 0;padding:0;max-width:640px}
   .forms li{font-size:14px;padding:6px 12px;border-radius:999px;background:#E7F3F1;color:#0a3f3a;white-space:nowrap}
   .forms b{font-weight:700;margin-right:4px}
+  /* Texas | Colorado switch: the /tc-check .state-switch look, above the h1.
+     The Colorado addenda on the CO fine line are the ones co_audit
+     cross-checks against the CBS1 (co_forms). */
+  .hero .state-switch{display:inline-flex;background:#ececf0;border-radius:980px;padding:4px;margin:4px 0 22px;white-space:nowrap}
+  .hero .state-switch button{border:0;background:none;font:600 15px Inter,sans-serif;color:#424245;padding:9px 20px;border-radius:980px;cursor:pointer}
+  .hero .state-switch button small{font-weight:500;color:var(--mute);margin-left:4px}
+  .hero .state-switch button[aria-pressed="true"]{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+  .hero .state-switch button:focus-visible{outline:3px solid #f5c242;outline-offset:2px}
   .text .eyebrow{color:#9fd4c9}
   .text .sub{color:#b9d3ce}
   .text .btn.solid{background:#fff;color:var(--green-deep);border-color:#fff}
@@ -868,6 +876,8 @@ __TEXT_DEMO_CSS__
     .hero{padding-top:52px}
     .eyebrow{font-size:17px}
     h1{font-size:46px}
+    .hero .state-switch{margin-bottom:16px}
+    .hero .state-switch button{padding:8px 14px;font-size:14px}
     h2{font-size:36px}
     .sub{font-size:19px}
     .btn{font-size:16px;padding:12px 22px}
@@ -896,10 +906,16 @@ __SITE_NAV__
 <!-- 1. HERO: one idea, the product doing it -->
 <section class="hero">
   <div class="eyebrow">TC Check &middot; contract error-checker for Texas &amp; Colorado real estate</div>
+  <!-- Texas | Colorado switch (2026-10-26): same buttons and STATE_SWITCH_JS
+       as /tc-check, so Colorado isn't hidden behind a fine-print link. -->
+  <div class="state-switch" role="group" aria-label="Which state's contracts">
+    <button type="button" data-set-state="tx" aria-pressed="__TX_PRESSED__" data-evt="state_toggle_tx">Texas <small>TREC</small></button>
+    <button type="button" data-set-state="co" aria-pressed="__CO_PRESSED__" data-evt="state_toggle_co">Colorado <small>CBS1 &amp; Land</small></button>
+  </div>
   <h1>Catch it before<br>title does.</h1>
   <p class="sub" data-state="tx">One checker for the Texas contracts you file most: resale, condo, land, and farm and ranch. Upload a filled TREC contract and in seconds you get a report flagging the blank fields, bad math and impossible dates title would kick back. Built for TCs, agents and brokerages.</p>
   <ul class="forms" data-state="tx" aria-label="Contracts TC Check reads">
-    <li><b>20-19</b> Resale</li><li><b>30-18</b> Condo</li><li><b>9-18</b> Land</li><li><b>25-17</b> Farm &amp; Ranch</li><li><b>CBS1</b> Colorado</li>
+    <li><b>20-19</b> Resale</li><li><b>30-18</b> Condo</li><li><b>9-18</b> Land</li><li><b>25-17</b> Farm &amp; Ranch</li>
   </ul>
   <p class="sub" data-state="co">Drop a filled CBS1 or Colorado Land contract and see what title would kick back in seconds &mdash; &sect;3.1 deadlines left blank that delete a contingency, &sect;4.1 price math that doesn&rsquo;t add up, deadlines that land after closing. Built for TCs, agents and brokerages.</p>
   <ul class="forms" data-state="co" aria-label="Colorado contracts TC Check reads">
@@ -913,8 +929,8 @@ __SITE_NAV__
     <a class="btn solid" href="/tc-check?state=co" data-evt="hero_cta">Check a file free</a>
     <a class="btn ghost" href="/tc-check?demo=1&amp;state=co" data-evt="hero_sample">See a sample report</a>
   </div>
-  <p class="fine" data-state="tx">3 free reports, no signup &middot; 4 Texas TREC contracts + the 40-11, 41-3 and 39-11 &middot; <a href="/?state=co" data-evt="state_toggle_co" style="text-decoration:underline">Colorado CBS1</a></p>
-  <p class="fine" data-state="co">3 free reports, no signup &middot; Colorado CBS1 &amp; Land &middot; <a href="/?state=tx" data-evt="state_toggle_tx" style="text-decoration:underline">Texas TREC resale, condo, land, farm &amp; ranch</a></p>
+  <p class="fine" data-state="tx">3 free reports, no signup &middot; 4 Texas TREC contracts + the 40-11, 41-3 and 39-11</p>
+  <p class="fine" data-state="co">3 free reports, no signup &middot; Colorado CBS1 &amp; Land + Amend/Extend and Counterproposal</p>
 
   <!-- Illustration only. Scrap values are the sample files' own fields;
        card counts and findings are the sample report's display_issues,
@@ -1018,7 +1034,8 @@ __TEXT_DEMO__
 __HOME_TRUST__
 
 __SITE_FOOTER__
-__TEXT_DEMO_JS__</body>
+__TEXT_DEMO_JS__
+__STATE_SWITCH_JS__</body>
 </html>
 """
     html = (html.replace("__SITE_CHROME_CSS__", _SITE_CHROME_CSS)
@@ -1029,7 +1046,8 @@ __TEXT_DEMO_JS__</body>
                 .replace("__TEXT_DEMO__", text_demo.HTML)
                 .replace("__TEXT_DEMO_JS__", text_demo.JS)
                 .replace("__HOME_FINDINGS_TX__", _home_findings("tx"))
-                .replace("__HOME_FINDINGS_CO__", _home_findings("co")))
+                .replace("__HOME_FINDINGS_CO__", _home_findings("co"))
+                .replace("__STATE_SWITCH_JS__", STATE_SWITCH_JS))
     # Carry ?src=name (e.g. from a Direct Reach email) onto every /tc-check
     # link on the page, so a click through to TC Check still attributes
     # correctly even though it lands on the homepage first -- see

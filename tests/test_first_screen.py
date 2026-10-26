@@ -171,11 +171,12 @@ class HomepageFirstScreen(unittest.TestCase):
         # the homepage can't drift from trec_forms.CHECKED_CONTRACTS.
         import trec_forms
         row = self.html[self.html.find('<ul class="forms"'):self.html.find('</ul>', self.html.find('<ul class="forms"'))]
-        # The CBS1 chip sits in this (Texas) row; other Colorado contracts
-        # belong in a Colorado row -- see test_co_forms_row.
+        # This is the Texas row; Colorado contracts are in the Colorado row
+        # (test_co_forms_row) behind the Texas | Colorado switch.
         for c in trec_forms.CHECKED_CONTRACTS:
-            if not c.startswith("Colorado ") or c == "Colorado CBS1":
+            if not c.startswith("Colorado "):
                 self.assertIn('<b>' + c.split()[-1] + '</b>', row)
+        self.assertNotIn('<b>CBS1</b>', row)
         self.assertIn('<p class="sub" data-state="co">Drop a filled CBS1', self.html)
 
     def test_co_forms_row(self):
@@ -186,8 +187,18 @@ class HomepageFirstScreen(unittest.TestCase):
             self.skipTest("no Colorado forms row on the homepage yet -- add one with a <b>CO Land</b> chip")
         row = self.html[start:self.html.find('</ul>', start)]
         for c in trec_forms.CHECKED_CONTRACTS:
-            if c.startswith("Colorado ") and c != "Colorado CBS1":
+            if c == "Colorado CBS1":
+                self.assertIn('<b>CBS1</b>', row)
+            elif c.startswith("Colorado "):
                 self.assertIn('<b>CO ' + c.split()[-1] + '</b>', row)
+
+    def test_co_auto_select(self):
+        # ?state=co and a Colorado campaign src both open the Colorado view.
+        for q in ("/?state=co", "/?src=co_ti_elevated", "/?src=co1013_x"):
+            html = _get(q)
+            self.assertIn('class="state-co"', html, q)
+            self.assertIn('data-set-state="co" aria-pressed="true"', html, q)
+        self.assertIn('class="state-tx"', _get("/?src=cold_x"))
 
     def test_eyebrow_above_h1(self):
         self.assertLess(self.html.find('<div class="eyebrow">TC Check &middot; contract error-checker'), self.html.find("<h1>Catch it before"))

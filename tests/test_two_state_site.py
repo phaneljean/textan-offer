@@ -41,12 +41,9 @@ class TwoStatePages(unittest.TestCase):
             self.assertIn('data-state="tx"', html, path)
             self.assertIn('data-state="co"', html, path)
             self.assertIn('data-evt="state_toggle_co"', html, path)
-            # The homepage switches state with plain /?state= links since
-            # 2026-10-23; /tc-check keeps the in-page toggle.
-            if path == "/tc-check":
-                self.assertIn('data-set-state="co"', html, path)
-            else:
-                self.assertIn('href="/?state=co" data-evt="state_toggle_co"', html)
+            # Both pages use the in-page Texas | Colorado switch (the
+            # homepage's came back above the h1 2026-10-26).
+            self.assertIn('data-set-state="co"', html, path)
             self.assertNotIn("__STATE_", html, path)
             self.assertNotIn("__TX_PRESSED__", html, path)
             # track_page_view still finds a bare <body> to tag

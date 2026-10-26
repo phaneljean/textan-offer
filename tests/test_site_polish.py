@@ -79,11 +79,16 @@ class HeroCardMatchesSample(unittest.TestCase):
 
     def test_hero_keeps_tracking_hooks(self):
         # Simplified homepage (2026-10-23): no in-page drop box, so the hero
-        # buttons go to /tc-check; the state links are plain /?state= links.
+        # buttons go to /tc-check. The state is a Texas | Colorado switch
+        # above the h1 (2026-10-26), same buttons and JS as /tc-check.
         for hook in ('data-evt="hero_sample"', 'data-evt="hero_cta"', 'href="/tc-check?demo=1"',
-                     'href="/?state=co" data-evt="state_toggle_co"', 'href="/?state=tx" data-evt="state_toggle_tx"'):
+                     'data-set-state="tx" aria-pressed="true" data-evt="state_toggle_tx"',
+                     'data-set-state="co" aria-pressed="false" data-evt="state_toggle_co"',
+                     "window.taState = function()"):
             self.assertIn(hook, self.html)
         self.assertNotIn("home-hero.jpg", self.html)
+        self.assertLess(self.html.find('class="state-switch"'), self.html.find("<h1>Catch it before"))
+        self.assertLess(self.html.find('class="eyebrow"'), self.html.find('class="state-switch"'))
 
 
 class NavCta(unittest.TestCase):
