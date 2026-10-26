@@ -24,6 +24,7 @@ check_trec_forms.py; when TREC replaces a form, change both in one commit.
 """
 import re
 from collections import Counter
+from datetime import date
 
 from pypdf import PdfReader
 
@@ -173,16 +174,28 @@ MANDATORY_SINCE = {"20-19": "07/01/2026", "9-18": "07/01/2026", "25-17": "07/01/
                    "23-20": "07/01/2026", "24-20": "07/01/2026", "30-18": "07/01/2026"}
 
 
-def outdated_contract_message(form_id: str, edition=None, signed_before_mandatory: bool = False) -> str:
-    """txo-trec-qa's wording (spec_9-18_25-17.md section 1, 2026-10-25) for
-    an outdated main contract. A contract signed before the successor's
-    mandatory date was legitimate on the old form, so it gets the info
-    wording; everything else (incl. an unreadable Effective Date) must-fix."""
+def signed_before_mandatory(form_id: str, effective) -> bool:
+    """True when an outdated contract's Effective Date (a date, or None if
+    blank/unreadable) is before its successor became mandatory -- it was
+    legitimately written on the old form."""
+    if effective is None:
+        return False
+    mm, dd, yyyy = MANDATORY_SINCE[current_for(form_id)].split("/")
+    return effective < date(int(yyyy), int(mm), int(dd))
+
+
+def outdated_contract_message(form_id: str, edition=None, effective=None) -> str:
+    """txo-trec-qa's wording (review of bd80632, 2026-10-25) for an outdated
+    main contract. Signed before the successor's mandatory date: info
+    wording. Everything else, incl. a blank or unreadable Effective Date:
+    the must-fix wording."""
     cur = current_for(form_id)
     title, cur_edition, _ = CURRENT_FORMS[cur]
-    if signed_before_mandatory:
-        return (f"This contract is on TREC {form_id}, which was current when it was signed. "
-                f"TC Check reads only the current {cur}, so no other checks were run.")
+    if signed_before_mandatory(form_id, effective):
+        return (f"This contract is on TREC {form_id}, and its Effective Date ({effective:%B %-d, %Y}) is before "
+                f"TREC {cur} became mandatory on {MANDATORY_SINCE[cur]}. TC Check doesn't check replaced editions, "
+                f"so nothing else was checked.")
     stamp = f" ({edition})" if edition else ""
     return (f"This file is on TREC {form_id}{stamp}. TREC {cur} ({cur_edition}) is the current {title}, "
-            f"mandatory since {MANDATORY_SINCE[cur]}. TC Check reads {cur} only. Redo the contract on {cur}.")
+            f"mandatory since {MANDATORY_SINCE[cur]}. TC Check doesn't check replaced editions, so nothing else "
+            f"was checked. If this contract isn't signed yet, write it on TREC {cur}.")

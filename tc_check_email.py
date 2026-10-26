@@ -98,6 +98,31 @@ _CONSEQUENCE_TAGS = {
     "la_note_unchecked": "REVIEW: LOAN BOX UNCHECKED",
     "la_unreadable": "ATTACHMENT NOT VERIFIED",
     "outdated_form": "OUTDATED TREC FORM",
+    # TREC 25-17 (trec_25_17.py), txo-trec-qa's tags, 2026-10-25
+    "survey_days_blank": "DEADLINE UNDEFINED",
+    "water_disclosure_days_blank": "DEADLINE UNDEFINED",
+    "water_disclosure_box_missing": "DISCLOSURE TERMS UNDEFINED",
+    "acreage_adjustment_incomplete": "PRICE ADJUSTMENT INCOMPLETE",
+    "acreage_adjustment_review": "REVIEW: PRICE ADJUSTMENT",
+    "acreage_adjustment_no_survey": "REVIEW: ADJUSTMENT WITHOUT SURVEY",
+    "acreage_adjustment_conflict": "REVIEW: ADJUSTMENT TERMS DIFFER",
+    "property_description_blank": "REVIEW: EXHIBIT NOT VERIFIED",
+    "lease_addendum_not_listed": "REVIEW: ADDENDUM NOT LISTED",
+    "lease_incomplete": "REVIEW: LEASE TERMS INCOMPLETE",
+    "lease_conflict": "REVIEW: CONFLICTING LEASE BOXES",
+    "title_expense_blank": "REVIEW: TITLE POLICY PAYER UNMARKED",
+    "survey_box_missing": "REVIEW: NO SURVEY OPTION CHECKED",
+    "survey_expense_blank": "REVIEW: SURVEY PAYER UNMARKED",
+    "objection_days_blank": "REVIEW: OBJECTION DEADLINE BLANK",
+    "disclosure_incomplete": "REVIEW: FLOODPLAIN EXTENT UNMARKED",
+    "disclosure_explain_blank": "REVIEW: NO EXPLANATION",
+    "water_provider_blank": "REVIEW: WATER PROVIDER NOT NAMED",
+    "possession_lease_not_listed": "REVIEW: LEASE NOT LISTED",
+    "fee_agreement_with_12b": "REVIEW: FEE AGREEMENT AND 12B",
+    "fee_agreement_incomplete": "REVIEW: FEE AGREEMENT UNCLEAR",
+    "reservation_without_addendum": "REVIEW: RESERVATION ADDENDUM",
+    "appraisal_without_tpf": "REVIEW: ADDENDUM MISMATCH",
+    "header_address_differs": "REVIEW: HEADER DIFFERS FROM 2A",
     # Colorado CBS1 (co_audit.py)
     "co_street_blank": "PROPERTY NOT IDENTIFIED",
     "co_city_blank": "PROPERTY NOT IDENTIFIED",
@@ -625,7 +650,7 @@ def _archived_text(archived) -> str:
 # that nothing was checked. No hand-review offer: the file was read fine.
 def _not_checked_text(result: dict) -> str:
     return (_clean(result["issues"][0]["message"]) + "\n\n"
-            "TC Check checks TREC 20-19 and Colorado CBS1 contracts today. "
+            "TC Check checks TREC 20-19, TREC 25-17 and Colorado CBS1 contracts today. "
             "Upload at txtanoffer.com/tc-check or forward to tc@check.txtanoffer.com.\n\n"
             "-- TxtAnOffer TC Check")
 
@@ -828,7 +853,7 @@ def format_reply_html(result: dict, check_count: int = 0, archived: dict = None)
     if result.get("unsupported"):
         outdated = result["issues"][0]["key"] == "outdated_form"
         body = (f'<p style="{_P_STYLE}">{escape(_clean(result["issues"][0]["message"]))}</p>'
-                f'<p style="{_P_STYLE}">TC Check checks TREC 20-19 and Colorado CBS1 contracts today.</p>')
+                f'<p style="{_P_STYLE}">TC Check checks TREC 20-19, TREC 25-17 and Colorado CBS1 contracts today.</p>')
         return _email_shell("This is an outdated TREC form" if outdated else f"{escape(result.get('form') or 'Form')} recognized",
                             "Nothing else was checked" if outdated else "Nothing was checked", body)
     if not result["recognized"]:

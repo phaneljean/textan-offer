@@ -779,12 +779,13 @@ def _builtin_checker(form_id: str):
 CHECKED_WITH_20_19 = {"40-11", "39-11", "41-3"}
 
 
-def _not_checked_result(form_id: str, edition, page_count: int, message: str, key: str, outdated: bool) -> dict:
+def _not_checked_result(form_id: str, edition, page_count: int, message: str, key: str, severity: str) -> dict:
     """Same keys as the unreadable result, so every caller handles it, plus
     "unsupported" and the detected form. recognized stays False: no checks
     ran, so it must not count as a checked file, use a free report or
-    trigger the real-upload alert."""
-    severity = "blocker" if outdated else "info"
+    trigger the real-upload alert. severity "blocker" = an outdated form
+    that has to be redone; "info" = nothing wrong found, just not checked."""
+    outdated = severity == "blocker"
     return {
         "recognized": False,
         "unreadable": False,
@@ -808,18 +809,24 @@ def _form_result(form_id: str, edition, pdf_paths, detections, page_count: int) 
     status = trec_forms.status(form_id, edition)
     if status == "outdated" and trec_forms.kind(form_id) == "contract":
         # No field rules on an old edition: its names and positions differ
-        # (25-16 shares 324 names with 25-17), so they'd misfire. The info
-        # wording needs the Effective Date, and no old edition's Effective
-        # Date fields are rect-verified yet, so it's read as blank (must-fix),
-        # per txo-trec-qa's spec.
+        # (25-16 shares 324 names with 25-17), so they'd misfire. Only its
+        # Effective Date is read, to tell a contract legitimately signed on
+        # the old form (info) from one that has to be redone (must-fix). Only
+        # 25-16's is rect-verified (txo-trec-qa); every other old edition
+        # reads as blank, i.e. must-fix.
+        effective = None
+        if form_id == "25-16":
+            import trec_25_17
+            path = next(p for p, det in zip(pdf_paths, detections) if any(fid == form_id for fid, _ in det))
+            effective = trec_25_17.effective_date_25_16(path)
         return _not_checked_result(form_id, edition, page_count,
-                                   trec_forms.outdated_contract_message(form_id, edition),
-                                   "outdated_form", True)
+                                   trec_forms.outdated_contract_message(form_id, edition, effective), "outdated_form",
+                                   "info" if trec_forms.signed_before_mandatory(form_id, effective) else "blocker")
     if status == "outdated":
         return _not_checked_result(form_id, edition, page_count,
                                    trec_forms.outdated_message(form_id, edition)
                                    + " TC Check only checks current forms, so nothing else was checked.",
-                                   "outdated_form", True)
+                                   "outdated_form", "blocker")
     checker = FORM_CHECKERS.get(form_id) or _builtin_checker(form_id)
     if status == "current" and checker:
         return checker(pdf_paths, detections, page_count)
@@ -830,9 +837,9 @@ def _form_result(form_id: str, edition, pdf_paths, detections, page_count: int) 
         msg = (f"TREC {form_id} {trec_forms.CURRENT_FORMS[form_id][0]}{stamp} recognized -- TC Check checks it "
                f"together with the TREC 20-19 it belongs to, so upload both. Nothing was checked.")
     else:
-        msg = (f"TREC {form_id} {trec_forms.CURRENT_FORMS[form_id][0]}{stamp} recognized -- checks for this "
-               f"form are coming; nothing was checked.")
-    return _not_checked_result(form_id, edition, page_count, msg, "form_not_supported", False)
+        msg = (f"TREC {form_id} {trec_forms.CURRENT_FORMS[form_id][0]}{stamp} recognized. TC Check doesn't check "
+               f"this form yet, so nothing was checked.")
+    return _not_checked_result(form_id, edition, page_count, msg, "form_not_supported", "info")
 
 
 def _form_gate(pdf_paths, detections, all_values, page_count: int):

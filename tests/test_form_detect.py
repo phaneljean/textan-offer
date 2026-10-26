@@ -96,8 +96,8 @@ class NotChecked(unittest.TestCase):
     def test_9_18_recognized_nothing_checked(self):
         r = check_tc_file([text_only("9-18", "05-04-2026")])
         issue = self._only(r, "form_not_supported")
-        self.assertEqual(issue["message"], "TREC 9-18 Unimproved Property Contract (05-04-2026) recognized -- "
-                                           "checks for this form are coming; nothing was checked.")
+        self.assertEqual(issue["message"], "TREC 9-18 Unimproved Property Contract (05-04-2026) recognized. "
+                                           "TC Check doesn't check this form yet, so nothing was checked.")
         self.assertEqual(issue["severity"], "info")
         self.assertEqual((r["form"], r["form_id"], r["edition"]), ("TREC 9-18", "9-18", "05-04-2026"))
 
@@ -110,17 +110,21 @@ class NotChecked(unittest.TestCase):
     def test_outdated_20_18_one_finding(self):
         # Before 2026-10-25 this blank 20-18 got 13 20-19 findings.
         issue = self._only(check_tc_file([fx("trec_20-18_blank.pdf")]), "outdated_form")
-        # txo-trec-qa's wording (spec_9-18_25-17.md section 1). Old editions'
-        # Effective Date isn't rect-verified, so it's read as blank: must-fix.
+        # txo-trec-qa's wording (review of bd80632). Only 25-16's Effective
+        # Date is rect-verified; a 20-18's reads as blank: must-fix.
         self.assertEqual(issue["message"], "This file is on TREC 20-18 (11-04-2024). TREC 20-19 (05-04-2026) is the "
                                            "current One to Four Family Residential Contract (Resale), mandatory since "
-                                           "07/01/2026. TC Check reads 20-19 only. Redo the contract on 20-19.")
+                                           "07/01/2026. TC Check doesn't check replaced editions, so nothing else was "
+                                           "checked. If this contract isn't signed yet, write it on TREC 20-19.")
         self.assertEqual(issue["severity"], "blocker")
 
     def test_signed_before_mandatory_wording(self):
-        self.assertEqual(trec_forms.outdated_contract_message("25-16", "11-04-2024", signed_before_mandatory=True),
-                         "This contract is on TREC 25-16, which was current when it was signed. TC Check reads "
-                         "only the current 25-17, so no other checks were run.")
+        from datetime import date
+        self.assertEqual(trec_forms.outdated_contract_message("20-18", "11-04-2024", date(2026, 6, 30)),
+                         "This contract is on TREC 20-18, and its Effective Date (June 30, 2026) is before TREC 20-19 "
+                         "became mandatory on 07/01/2026. TC Check doesn't check replaced editions, so nothing else "
+                         "was checked.")
+        self.assertFalse(trec_forms.signed_before_mandatory("20-18", date(2026, 7, 1)))
 
     def test_newer_edition(self):
         import fitz
@@ -242,7 +246,7 @@ class Channels(unittest.TestCase):
         self.assertFalse(r["recognized"])
         self.assertFalse(r["hand_review"])
         self.assertEqual(r["display_issues"][0]["message"], "TREC 9-18 Unimproved Property Contract (05-04-2026) "
-                                                            "recognized — checks for this form are coming; nothing was checked.")
+                                                            "recognized. TC Check doesn't check this form yet, so nothing was checked.")
 
     def test_upload_page_claims_no_new_forms(self):
         import app as app_module

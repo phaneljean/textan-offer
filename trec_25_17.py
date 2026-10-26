@@ -246,6 +246,23 @@ NOTICE_EMAILS = [("Buyer's notice email (Paragraph 21)", "n_buyer_email"),
 # ordinary items ("propane gas tank", "water well", "timber fence").
 _RESERVATION_RE = re.compile(r"\breserv(e|es|ed|ing|ation|ations)\b|\bmineral(s)?\b|\broyalt(y|ies)\b", re.I)
 
+# Rural road names, longest first (txo-trec-qa, 2026-10-25). Applied after
+# tc_audit._street, which already turns ROAD into RD and HIGHWAY into HWY.
+_RURAL_ROADS = [("FARM TO MARKET RD", "FM"), ("FARM TO MARKET", "FM"), ("RANCH TO MARKET RD", "RM"),
+                ("RANCH TO MARKET", "RM"), ("COUNTY RD", "CR"), ("CO RD", "CR"), ("RANCH RD", "RR"),
+                ("PRIVATE RD", "PR"), ("STATE HWY", "SH")]
+_LEGAL_DESC_RE = re.compile(r"\b(AC|ACS|ACRE|ACRES|ABSTRACT|ABS|SURVEY|TRACT|TR|LOT|BLK|BLOCK|EXHIBIT|SECTION)\b", re.I)
+
+
+def _street_25_17(addr: str) -> str:
+    """tc_audit._street, plus Texas rural road names folded to one form.
+    Only used here, so the 20-19's header check is unchanged."""
+    street = f" {A._street(addr)} "
+    for long, short in _RURAL_ROADS:
+        street = street.replace(f" {long} ", f" {short} ")
+    return street.strip()
+
+
 CORE_DRAFT = ["county", "escrow_agent", "earnest_money", "option_fee", "title_company", "description"]
 
 
@@ -376,10 +393,10 @@ def _issues(f: _Form) -> tuple:
                            "-- the adjustment the parties chose can't be applied", "acreage_adjustment_incomplete")
         if not adj_to:
             add("warning", "Paragraph 3D: the Sales Price \"will\" be adjusted, but none of 3A, 3B or proportionately "
-                           "is checked", "acreage_adjustment_incomplete")
+                           "is checked", "acreage_adjustment_review")
         if not f.v("adj_term_days"):
             add("warning", "Paragraph 3D: the Sales Price \"will\" be adjusted, but the number of days to terminate "
-                           "after an adjustment of more than 10% is blank", "acreage_adjustment_incomplete")
+                           "after an adjustment of more than 10% is blank", "acreage_adjustment_review")
         if f.on("survey_4"):
             add("warning", "Paragraph 3D adjusts the Sales Price \"based on the survey required by Paragraph 6C\", but "
                            "6C(4) says no survey is required", "acreage_adjustment_no_survey")
@@ -531,7 +548,11 @@ def _issues(f: _Form) -> tuple:
             add("blocker", f"{label} says {A._fmt_money(got)}, but the {what} is {A._fmt_money(want)}", "receipt_mismatch")
 
     # --- Address header, pages 2-12 (only when 2A's address is filled) -----
-    street = A._street(f.v("address"))
+    # Rural roads are written many ways ("County Road 210" / "CR 210"), and
+    # land headers often carry the legal description instead of the address
+    # (txo-trec-qa review, 2026-10-25). A different street number on a plain
+    # street address is still a must-fix; anything else is a review.
+    street = _street_25_17(f.v("address"))
     if street:
         for page_no, name in HEADER_FIELDS:
             if page_no not in f.pages:
@@ -539,9 +560,13 @@ def _issues(f: _Form) -> tuple:
             header = f.values.get(name, "").strip() or A._text_in_rect(f.pages[page_no], HEADER_RECT)
             if not header:
                 add("warning", f"Page {page_no} of 12: \"Address of Property\" header is blank", "header_address_blank")
-            elif A._street(header) != street:
-                add("blocker", f'Page {page_no} of 12: header address reads "{header}" but Paragraph 2A says "{f.v("address")}"',
-                    "header_address")
+            elif _street_25_17(header) != street:
+                if _LEGAL_DESC_RE.search(header) or not header[:1].isdigit():
+                    add("warning", f'Page {page_no} of 12: the header reads "{header}" and Paragraph 2A\'s address is '
+                                   f'"{f.v("address")}". Confirm the header identifies this property.', "header_address_differs")
+                else:
+                    add("blocker", f'Page {page_no} of 12: header address reads "{header}" but Paragraph 2A says '
+                                   f'"{f.v("address")}"', "header_address")
 
     # --- Paragraph 11 ------------------------------------------------------
     provisions = " ".join(f.v(r) for r in ("special_prov_1", "special_prov_2")).strip()
@@ -562,7 +587,7 @@ def _issues(f: _Form) -> tuple:
                 snippet = text if len(text) <= 90 else text[:87] + "..."
                 add("warning", f"Paragraph 2F says any reservation of minerals, water, timber or other interests is made "
                                f'by an attached addendum. {where} mentions "{snippet}", but no reservation addendum is '
-                               f"listed in Paragraph 22.", "reservation_without_addendum")
+                               f"listed in Paragraph 22. If nothing is being reserved, this doesn't apply.", "reservation_without_addendum")
                 break
 
     # --- Lender's Appraisal (spec 4.9) -------------------------------------
@@ -577,6 +602,40 @@ def _issues(f: _Form) -> tuple:
         if val and not A.EMAIL_RE.match(val):
             add("warning", f'{label} "{val}" is not a valid email address -- notices sent there will bounce', "email_invalid")
     return issues, core_missing
+
+
+# TREC 25-16 (11-04-2024) Effective Date, printed page 9 of 11. Rects from
+# txo-trec-qa's review of bd80632 (2026-10-25); same role swap as 25-17:
+# day, MONTH ("20_2"), year ("Effective Date"). Used only to word the
+# outdated-form finding (signed before 25-17 was mandatory = info).
+EFFECTIVE_25_16 = {
+    "day": ("BROKER FILL IN THE DATE OF FINAL ACCEPTANCE", (146.7, 496.9, 192.7, 510.9)),
+    "month": ("20_2", (233.0, 496.9, 400.4, 509.8)),
+    "year": ("Effective Date", (422.3, 496.9, 455.9, 510.3)),
+}
+
+
+def effective_date_25_16(path):
+    """date, or None when blank/unreadable. Read only from widgets on the
+    page that says "TREC NO. 25-16" and "Page 9 of 11", by name AND rect
+    (within 1pt), so a merged 25-17 or addendum page can't supply it."""
+    for page in PdfReader(filecrypt.pdf_source(path)).pages:
+        text = page.extract_text() or ""
+        if not (re.search(r"TREC\s*NO\.?\s*25\s*-\s*16", text) and re.search(r"Page\s*9\s*of\s*11", text)):
+            continue
+        got = {}
+        for name, value, _ft, rect in A._widget_rows(page):
+            for part, (want, want_rect) in EFFECTIVE_25_16.items():
+                if name == want and all(abs(a - b) <= 1.0 for a, b in zip(rect, want_rect)):
+                    got[part] = value.strip()
+        day = re.sub(r"\D", "", got.get("day", ""))
+        md = A._parse_month_day(f"{got.get('month', '')} {day}")
+        year = A._year(got.get("year", ""))
+        try:
+            return date(year, *md) if md and year else None
+        except ValueError:
+            return None
+    return None
 
 
 def _classify(pdf_paths, detections, all_values, main_index):

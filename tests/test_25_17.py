@@ -21,6 +21,11 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SPEC = os.path.expanduser("~/txtanoffer-team/work/txo-trec-qa/spec_9-18_25-17.md")
 
 
+MUST_FIX_25_16 = ("This file is on TREC 25-16 (11-04-2024). TREC 25-17 (05-04-2026) is the current Farm and Ranch "
+                  "Contract, mandatory since 07/01/2026. TC Check doesn't check replaced editions, so nothing else was "
+                  "checked. If this contract isn't signed yet, write it on TREC 25-17.")
+
+
 def keys(result):
     return [i["key"] for i in result["issues"]]
 
@@ -50,6 +55,25 @@ class FieldMap(unittest.TestCase):
         rows = re.findall(r"^\| `(\w+)` \| \d+ \| (\d+) \| [\d., ]+ \| `([^`]+)` \|", sec, re.M)
         self.assertEqual({r: (int(p), n) for r, p, n in rows},
                          {r: (p, n) for r, (p, n, _) in trec_25_17.MAP.items()})
+
+
+class ConsequenceTags(unittest.TestCase):
+    def test_every_25_17_key_has_a_tag(self):
+        """Every finding key trec_25_17 can emit shows a consequence tag in
+        the report, not a bare MUST FIX / WARNING (txo-trec-qa M2)."""
+        import tc_audit
+        import tc_check_email
+        src = open(trec_25_17.__file__).read()
+        # Keys close their add()/one_of() call at the end of a line; MAP
+        # role names read the same way (f.v("closing_date")) and are dropped.
+        found = set(re.findall(r'"([a-z][a-z0-9_]+)"\)\s*$', src, re.M)) | set(re.findall(r'none_key="([a-z_]+)"', src))
+        found -= set(trec_25_17.MAP) - {"county", "buyer_name", "seller_name"}
+        # Emitted through loops and shared tc_audit helpers.
+        found |= {"escrow_agent_name", "earnest_money_amount", "option_fee_amount", "title_company", "initials_buyer",
+                  "initials_seller", "initials_mismatch", "outdated_form", tc_audit.AMEND_PRICE_CHANGE_KEY,
+                  tc_audit.AMEND_ADDRESS_MISMATCH_KEY}
+        self.assertIn("header_address_differs", found)
+        self.assertEqual(sorted(k for k in found if k not in tc_check_email._CONSEQUENCE_TAGS), [])
 
 
 class Controls(unittest.TestCase):
@@ -130,11 +154,26 @@ class Planted(unittest.TestCase):
         self.check([("property_description_blank", "warning")], legal_desc_1=" ", address=" ", county=" ",
                    **{f"header_p{p}": " " for p in range(2, 13)})
 
+    def test_rural_road_spelled_two_ways(self):
+        addr = "4501 County Road 210, Giddings, TX 78942"
+        self.check([], address=addr, **{f"header_p{p}": "4501 CR 210, Giddings, TX 78942" for p in range(2, 13)})
+
+    def test_legal_description_headers_are_review_only(self):
+        r = self.check([("header_address_differs", "warning")] * 11,
+                       **{f"header_p{p}": "40 ac, Abstract 12, Lee County" for p in range(2, 13)})
+        self.assertEqual(r["issues"][0]["message"],
+                         'Page 2 of 12: the header reads "40 ac, Abstract 12, Lee County" and Paragraph 2A\'s address '
+                         'is "123 Main St, Giddings, TX 78942". Confirm the header identifies this property.')
+
     def test_county_blank(self):
         self.check([("county", "blocker")], county=" ")
 
     def test_14_3d_will_and_will_not(self):
         self.check([("check_one_conflict", "blocker")], adj_will=True)
+
+    def test_3d_will_without_target_or_days(self):
+        self.check([("acreage_adjustment_review", "warning")] * 2, adj_will_not=False, adj_will=True, adj_acres="40",
+                   adj_per_acre="5,000")
 
     def test_15_3d_will_acres_blank(self):
         self.check([("acreage_adjustment_incomplete", "blocker")], adj_will_not=False, adj_will=True,
@@ -268,9 +307,33 @@ class Routing(unittest.TestCase):
         with mock.patch("trec_25_17._issues", trap), mock.patch("tc_audit._consistency_issues", trap):
             r = check_tc_file([path])
         self.assertEqual([(i["key"], i["severity"]) for i in r["issues"]], [("outdated_form", "blocker")])
-        self.assertEqual(r["issues"][0]["message"],
-                         "This file is on TREC 25-16 (11-04-2024). TREC 25-17 (05-04-2026) is the current Farm and "
-                         "Ranch Contract, mandatory since 07/01/2026. TC Check reads 25-17 only. Redo the contract on 25-17.")
+        self.assertEqual(r["issues"][0]["message"], MUST_FIX_25_16)
+
+    def _25_16(self, day, month, year):
+        """TREC's fillable 25-16 with only its page-9 Effective Date filled
+        (rects from txo-trec-qa's review: day, MONTH '20_2', year)."""
+        doc = fitz.open(os.path.join(ROOT, "tests", "fixtures", "trec_25-16_blank.pdf"))
+        want = dict(zip(("BROKER FILL IN THE DATE OF FINAL ACCEPTANCE", "20_2", "Effective Date"), (day, month, year)))
+        for page in doc:
+            for w in page.widgets():
+                if w.field_name in want:
+                    w.field_value = want[w.field_name]
+                    w.update()
+        path = os.path.join(os.path.dirname(build("tmp")), f"25-16_{month or 'blank'}.pdf")
+        doc.save(path)
+        return [(i["key"], i["severity"], i["message"]) for i in check_tc_file([path])["issues"]]
+
+    def test_25_16_signed_before_mandatory_is_info(self):
+        self.assertEqual(self._25_16("15", "May", "26"), [(
+            "outdated_form", "info",
+            "This contract is on TREC 25-16, and its Effective Date (May 15, 2026) is before TREC 25-17 became "
+            "mandatory on 07/01/2026. TC Check doesn't check replaced editions, so nothing else was checked.")])
+
+    def test_25_16_signed_after_mandatory_is_must_fix(self):
+        self.assertEqual(self._25_16("20", "October", "26"), [("outdated_form", "blocker", MUST_FIX_25_16)])
+
+    def test_25_16_blank_date_is_must_fix(self):
+        self.assertEqual(self._25_16(" ", " ", " "), [("outdated_form", "blocker", MUST_FIX_25_16)])
 
 
 if __name__ == "__main__":

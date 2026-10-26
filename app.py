@@ -4172,7 +4172,7 @@ function buildNotChecked(data) {
   const msg = (data.issues && data.issues[0] && data.issues[0].message) || '';
   return '<div class="unreadable-box">' +
     '<p class="unreadable-title">' + escapeHtml(msg.replace(/ -- /g, ' \u2014 ')) + '</p>' +
-    '<p>TC Check checks TREC 20-19 and Colorado CBS1 contracts today.</p>' +
+    '<p>TC Check checks TREC 20-19, TREC 25-17 and Colorado CBS1 contracts today.</p>' +
     (data.free_report_not_used ? '<p class="unreadable-note">This check didn&rsquo;t use one of your free reports.</p>' : '') +
   '</div>';
 }
