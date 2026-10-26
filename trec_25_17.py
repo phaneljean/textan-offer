@@ -342,6 +342,10 @@ class _Form:
     def money(self, role):
         return A._money(self.v(role))
 
+    def address(self):
+        """Paragraph 2's address as one string (30-18 joins two lines)."""
+        return self.v("address")
+
     def effective_date(self):
         """Page 10 'EXECUTED the 20 day of October, 20 26' in the 25-17's own
         roles: day = 'BROKER FILL IN...', MONTH = '20_2', year = 'Effective Date'.
@@ -658,13 +662,13 @@ def effective_date_25_16(path):
     return None
 
 
-def _classify(pdf_paths, detections, all_values, main_index):
+def _classify(pdf_paths, detections, all_values, main_index, handled=()):
     """Extra files: by their printed TREC number first, then by the same
     field fingerprints check_tc_file uses (a 40-11 filled by another tool)."""
     fa = la = amend = None
     unknown = 0
     for i, (det, values) in enumerate(zip(detections, all_values)):
-        if i == main_index:
+        if i == main_index or (handled and det and all(fid.startswith(handled) for fid, _ in det)):
             continue
         fid = det[0][0] if det else None
         if fid == "40-11" or (fid is None and A._matched_fa(values) >= A.MIN_MATCHED_FIELDS_FA
@@ -677,6 +681,17 @@ def _classify(pdf_paths, detections, all_values, main_index):
         else:
             unknown += 1
     return fa, la, amend, unknown
+
+
+def fields_readable(map_, pages) -> bool:
+    """True when at least MIN_MATCHED_FIELDS of the form's own field names
+    are WIDGETS on its own pages. Counting names in get_fields() isn't
+    enough: a partly flattened export keeps orphaned /AcroForm /Fields
+    entries with no widget on any page, and then every blank reads as
+    missing (txo-trec-qa spec_30-18.md 0.2: a clean 25-17 with its widgets
+    deleted got 13 false findings, 6 must-fix)."""
+    on_pages = {row[0] for page in pages.values() for row in A._widget_rows(page)}
+    return len({name for _, name, _ in map_.values()} & on_pages) >= A.MIN_MATCHED_FIELDS
 
 
 def unreadable_result(form, page_count) -> dict:
@@ -694,14 +709,16 @@ def unreadable_result(form, page_count) -> dict:
     }
 
 
-def attachment_issues(f, pdf_paths, detections, all_values, main_index, buyers, sellers) -> tuple:
+def attachment_issues(f, pdf_paths, detections, all_values, main_index, buyers, sellers, handled=()) -> tuple:
     """(issues, has_addendum, has_loan_assumption, has_amendment): the 40-11,
     41-3 and 39-11 cross-checks plus outdated attachments. Read by role, so
     it works on any form whose map has tpf_3b_box, p22_tpf, financing_3b,
     la_3b_box, p22_loan_assumption, sf_3b_box, p22_release_va,
-    sales_price_3c and address (25-17 and 9-18, spec 3)."""
+    sales_price_3c and address (25-17, 9-18, 30-18). handled: form-number
+    prefixes ("36-") whose files the caller reports itself, so they aren't
+    "unrecognized"."""
     issues = []
-    fa, la, amend, unknown = _classify(pdf_paths, detections, all_values, main_index)
+    fa, la, amend, unknown = _classify(pdf_paths, detections, all_values, main_index, handled)
     has_addendum, has_loan_assumption, has_amendment = fa is not None, la is not None, amend is not None
 
     def add(sev, msg, key):
@@ -755,7 +772,7 @@ def attachment_issues(f, pdf_paths, detections, all_values, main_index, buyers, 
         # _loan_assumption_issues reads the contract by 20-19 names; hand it
         # the 25-17 values under those names (never the raw 25-17 dict: the
         # 20-19 Release-of-Liability box name is the 25-17 3B dollar field).
-        shim = {FIELD_MAP_20_19["address"]: f.v("address"), A.RELEASE_22_BOX: f.values.get(f.map["p22_release_va"][1], "")}
+        shim = {FIELD_MAP_20_19["address"]: f.address(), A.RELEASE_22_BOX: f.values.get(f.map["p22_release_va"][1], "")}
         issues.extend(A._loan_assumption_issues(la, shim))
         assumed = [A._money(la.get(A.LA_FIELDS[f"note{n}_balance"], "")) for n in A._la_notes(la)]
         fa_loan = A._fa_total(fa) if has_addendum else 0
@@ -777,7 +794,7 @@ def attachment_issues(f, pdf_paths, detections, all_values, main_index, buyers, 
         if _is_checked(amend, AMEND_FIELDS["price_checkbox"]) and old is not None and new is not None and abs(old - new) > 0.5:
             add("warning", f"39-11 box (1) changes the Sales Price from {A._fmt_money(old)} to {A._fmt_money(new)} -- "
                            f"confirm Paragraph 3B and the 40-11 loan amount reflect the new terms", A.AMEND_PRICE_CHANGE_KEY)
-        amend_addr, main_addr = amend.get(AMEND_FIELDS["address"], "").strip(), f.v("address")
+        amend_addr, main_addr = amend.get(AMEND_FIELDS["address"], "").strip(), f.address()
         if amend_addr and main_addr and A._normalized_address(amend_addr) != A._normalized_address(main_addr):
             add("warning", f"Amendment's property address ({amend_addr}) doesn't match the contract's ({main_addr}) -- "
                            f"confirm this amendment belongs to this file", A.AMEND_ADDRESS_MISMATCH_KEY)
@@ -793,9 +810,10 @@ def check_25_17(pdf_paths, detections, page_count) -> dict:
     main_path = pdf_paths[main_index]
     all_values = [_read_values(p) for p in pdf_paths]
     values = all_values[main_index]
-    if sum(1 for _, name, _ in MAP.values() if name in values) < A.MIN_MATCHED_FIELDS:
+    pages = contract_pages(PdfReader(filecrypt.pdf_source(main_path)))
+    if not fields_readable(MAP, pages):
         return unreadable_result(FORM, page_count)
-    f = _Form(values, contract_pages(PdfReader(filecrypt.pdf_source(main_path))))
+    f = _Form(values, pages)
 
     issues, core_missing = _issues(f)
 

@@ -93,7 +93,7 @@ class CheckedFormsLine(unittest.TestCase):
 
     def test_line(self):
         import trec_forms
-        self.assertEqual(trec_forms.checked_contracts_line(), "TREC 20-19, TREC 25-17, TREC 9-18 and Colorado CBS1")
+        self.assertEqual(trec_forms.checked_contracts_line(), "TREC 20-19, TREC 25-17, TREC 9-18, TREC 30-18 and Colorado CBS1")
 
     def test_every_built_in_checker_is_listed(self):
         import tc_audit
@@ -107,7 +107,7 @@ class CheckedFormsLine(unittest.TestCase):
         import app as app_module
         import tc_check_email
         r = check_tc_file([os.path.join(ROOT, "tests", "fixtures", "trec_9-16_flat.pdf")])
-        line = "TC Check checks TREC 20-19, TREC 25-17, TREC 9-18 and Colorado CBS1 contracts today."
+        line = "TC Check checks TREC 20-19, TREC 25-17, TREC 9-18, TREC 30-18 and Colorado CBS1 contracts today."
         self.assertIn(line, tc_check_email.format_reply_body(r))
         self.assertIn(line, tc_check_email.format_reply_html(r))
         html = app_module.app.test_client().get("/tc-check", headers={"User-Agent": "Mozilla/5.0 test"}).get_data(as_text=True)
@@ -378,6 +378,17 @@ class Flattened(unittest.TestCase):
         self.assertEqual(keys(r), ["unrecognized"])
         self.assertIn("TREC 9-18", r["issues"][0]["message"])
 
+
+class WidgetsStripped(unittest.TestCase):
+    def test_names_without_widgets_is_unreadable(self):
+        # spec_30-18.md 0.2: a partly flattened export keeps /Fields names
+        # with no widgets on the pages. Counting names (the old guard) read
+        # every blank as missing: 13 false findings on a 25-17, 6 must-fix.
+        from tests.trec_30_18_fixtures import strip_widgets
+        r = check_tc_file([strip_widgets(build("strip"), "9-18")])
+        self.assertTrue(r["unreadable"])
+        self.assertEqual(keys(r), ["unrecognized"])
+        self.assertIn("TREC 9-18", r["issues"][0]["message"])
 
 class Routing(unittest.TestCase):
     def test_9_18_never_reaches_20_19_or_25_17_rules(self):

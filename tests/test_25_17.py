@@ -284,6 +284,17 @@ class Flattened(unittest.TestCase):
         self.assertIn("TREC 25-17", r["issues"][0]["message"])
 
 
+class WidgetsStripped(unittest.TestCase):
+    def test_names_without_widgets_is_unreadable(self):
+        # spec_30-18.md 0.2: a partly flattened export keeps /Fields names
+        # with no widgets on the pages. Counting names (the old guard) read
+        # every blank as missing: 13 false findings on a 25-17, 6 must-fix.
+        from tests.trec_30_18_fixtures import strip_widgets
+        r = check_tc_file([strip_widgets(build("strip"), "25-17")])
+        self.assertTrue(r["unreadable"])
+        self.assertEqual(keys(r), ["unrecognized"])
+        self.assertIn("TREC 25-17", r["issues"][0]["message"])
+
 class Routing(unittest.TestCase):
     def test_25_17_never_reaches_20_19_rules(self):
         trap = mock.Mock(side_effect=AssertionError("20-19 rules ran"))

@@ -456,9 +456,10 @@ def check_9_18(pdf_paths, detections, page_count) -> dict:
     main_path = pdf_paths[main_index]
     all_values = [_read_values(p) for p in pdf_paths]
     values = all_values[main_index]
-    if sum(1 for _, name, _ in MAP.values() if name in values) < A.MIN_MATCHED_FIELDS:
+    pages = F.contract_pages(PdfReader(filecrypt.pdf_source(main_path)), "9-18", PAGES)
+    if not F.fields_readable(MAP, pages):
         return F.unreadable_result(FORM, page_count)
-    f = F._Form(values, F.contract_pages(PdfReader(filecrypt.pdf_source(main_path)), "9-18", PAGES), MAP)
+    f = F._Form(values, pages, MAP)
 
     issues, core_missing = _issues(f)
 

@@ -767,7 +767,8 @@ FORM_CHECKERS = {}
 
 def _builtin_checker(form_id: str):
     """Form modules that import this one, so they're loaded on first use.
-    25-17 and 9-18 since 2026-10-25 (txo-trec-qa spec_9-18_25-17.md).
+    25-17 and 9-18 since 2026-10-25 (txo-trec-qa spec_9-18_25-17.md), 30-18
+    the same day (spec_30-18.md).
     Add a form here and to trec_forms.CHECKED_CONTRACTS together."""
     if form_id == "25-17":
         import trec_25_17
@@ -775,6 +776,9 @@ def _builtin_checker(form_id: str):
     if form_id == "9-18":
         import trec_9_18
         return trec_9_18.check_9_18
+    if form_id == "30-18":
+        import trec_30_18
+        return trec_30_18.check_30_18
     return None
 
 
@@ -816,7 +820,7 @@ def _form_result(form_id: str, edition, pdf_paths, detections, page_count: int) 
         # (25-16 shares 324 names with 25-17), so they'd misfire. Only its
         # Effective Date is read, to tell a contract legitimately signed on
         # the old form (info) from one that has to be redone (must-fix). Only
-        # 25-16's is rect-verified (txo-trec-qa); every other old edition
+        # 25-16's and 30-17's are rect-verified (txo-trec-qa); every other old edition
         # reads as blank, i.e. must-fix. 9-16/9-17 stay that way on purpose
         # (checked 2026-10-25): TREC serves 9-16 only as a flat print copy (0
         # fields, so no rects to verify) and 9-17 is gone (404). And a 9-16
@@ -827,6 +831,12 @@ def _form_result(form_id: str, edition, pdf_paths, detections, page_count: int) 
             import trec_25_17
             path = next(p for p, det in zip(pdf_paths, detections) if any(fid == form_id for fid, _ in det))
             effective = trec_25_17.effective_date_25_16(path)
+        if form_id == "30-17":
+            # Rects from an archive.org copy of 30-17 (TREC no longer serves
+            # it); see trec_30_18.EFFECTIVE_30_17.
+            import trec_30_18
+            path = next(p for p, det in zip(pdf_paths, detections) if any(fid == form_id for fid, _ in det))
+            effective = trec_30_18.effective_date_30_17(path)
         return _not_checked_result(form_id, edition, page_count,
                                    trec_forms.outdated_contract_message(form_id, edition, effective), "outdated_form",
                                    "info" if trec_forms.signed_before_mandatory(form_id, effective) else "blocker")

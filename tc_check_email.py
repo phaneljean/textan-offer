@@ -128,6 +128,16 @@ _CONSEQUENCE_TAGS = {
     # TREC 9-18 (trec_9_18.py), 2026-10-25. Every other 9-18 key is shared
     # with the 25-17/20-19 above. Proposed by txo-engineer, for txo-trec-qa.
     "nrl_option_missing": "LEASE TERMS UNDEFINED",  # 4B "is" a party, neither (1) nor (2): "check one of the following"
+    # TREC 30-18 (trec_30_18.py), txo-trec-qa's tags (spec_30-18.md section 4)
+    "condo_docs_box_missing": "DISCLOSURE TERMS UNDEFINED",
+    "condo_docs_days_blank": "DEADLINE UNDEFINED",
+    "resale_cert_box_missing": "DISCLOSURE TERMS UNDEFINED",
+    "resale_cert_days_blank": "DEADLINE UNDEFINED",
+    "condo_unit_blank": "REVIEW: UNIT NOT IDENTIFIED",
+    "condo_project_blank": "REVIEW: CONDO PROJECT NOT NAMED",
+    "condo_city_blank": "REVIEW: CITY BLANK",
+    "assoc_fee_cap_blank": "REVIEW: ASSOCIATION FEE CAP BLANK",
+    "poa_addendum_on_condo": "REVIEW: HOA ADDENDUM ON A CONDO",
     # Colorado CBS1 (co_audit.py)
     "co_street_blank": "PROPERTY NOT IDENTIFIED",
     "co_city_blank": "PROPERTY NOT IDENTIFIED",
