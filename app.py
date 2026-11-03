@@ -757,9 +757,27 @@ def index():
   <meta property="og:description" content="Contract error-checker for Texas & Colorado real estate. Upload a filled TREC resale (20-19), condo (30-18), land (9-18) or farm and ranch (25-17) contract, or a Colorado CBS1, and get a report of what's blank, missing or doesn't add up before title kicks it back.">
   <meta property="og:url" content="https://txtanoffer.com/">
   <meta property="og:type" content="website">
-  <meta name="twitter:card" content="summary">
+  <meta property="og:image" content="https://txtanoffer.com/static/og-home.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://txtanoffer.com/static/og-home.png">
   <meta name="twitter:title" content="TxtAnOffer — Catch it before title does.">
   <meta name="twitter:description" content="Contract error-checker for Texas & Colorado real estate. Upload a filled TREC resale (20-19), condo (30-18), land (9-18) or farm and ranch (25-17) contract, or a Colorado CBS1, and get a report of what's blank, missing or doesn't add up before title kicks it back.">
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@graph":[
+    {"@type":"Organization","@id":"https://txtanoffer.com/#org","name":"TxtAnOffer","url":"https://txtanoffer.com/","logo":"https://txtanoffer.com/static/og-home.png","email":"support@txtanoffer.com"},
+    {"@type":"WebSite","@id":"https://txtanoffer.com/#site","url":"https://txtanoffer.com/","name":"TxtAnOffer","publisher":{"@id":"https://txtanoffer.com/#org"}},
+    {"@type":"SoftwareApplication","name":"TC Check by TxtAnOffer","applicationCategory":"BusinessApplication","operatingSystem":"Web","url":"https://txtanoffer.com/tc-check","offers":[{"@type":"Offer","name":"TC Check","price":"0","priceCurrency":"USD"},{"@type":"Offer","name":"Agent","price":"40","priceCurrency":"USD"},{"@type":"Offer","name":"Brokerage","price":"349","priceCurrency":"USD"}],"publisher":{"@id":"https://txtanoffer.com/#org"}},
+    {"@type":"FAQPage","mainEntity":[
+      {"@type":"Question","name":"Is TC Check really free?","acceptedAnswer":{"@type":"Answer","text":"Yes. Your first 3 full reports need nothing at all. After that, add your email to keep getting full reports, still free. No card, no trial."}},
+      {"@type":"Question","name":"Do you keep my client's file?","acceptedAnswer":{"@type":"Answer","text":"No. A file you check is read for the report, then deleted. We keep short issue codes, not the file."}},
+      {"@type":"Question","name":"Does AI read my contract?","acceptedAnswer":{"@type":"Answer","text":"No. TC Check runs fixed checks on the published TREC and Colorado forms - blanks, math, dates and mismatches. No AI reads your contract."}},
+      {"@type":"Question","name":"Is this legal advice?","acceptedAnswer":{"@type":"Answer","text":"No. TC Check flags issues to review before a file goes to title. It is general information, not legal advice, and TxtAnOffer is not affiliated with TREC."}},
+      {"@type":"Question","name":"Which contracts does TC Check read?","acceptedAnswer":{"@type":"Answer","text":"Texas TREC 20-19 Resale, 30-18 Condo, 9-18 Land and 25-17 Farm and Ranch contracts, plus the 40-11, 41-3 and 39-11 addenda, and Colorado CBS1 Residential and Land contracts."}}
+    ]}
+  ]}
+  </script>
   <link rel="icon" href="/static/favicon.ico?v=2" type="image/x-icon">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -908,6 +926,26 @@ __TEXT_DEMO_CSS__
     .num{font-size:150px}
     .facts{flex-direction:column;align-items:center;gap:16px}
   }
+  /* --- homepage funnel additions (2026-11-03): trust line, capture, pricing, faq --- */
+  .trust-line{font-weight:600;color:var(--green)}
+  .tools-row{margin-top:14px}
+  .capture-form{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:32px}
+  .capture-input{font:16px Inter,sans-serif;padding:13px 20px;border:1.5px solid var(--line);border-radius:980px;width:300px;background:#fff}
+  .capture-input:focus{outline:none;border-color:var(--green)}
+  .capture-form .btn{font-family:inherit;cursor:pointer}
+  .capture-hp{position:absolute;left:-9999px;top:auto;width:1px;height:1px;opacity:0}
+  .tiles-3{grid-template-columns:1fr 1fr 1fr}
+  .tile.price{min-height:0;padding:44px 30px 40px}
+  .tile .big small{font-size:22px;color:var(--mute);font-weight:600}
+  .tag.g{background:#e6f2f0;color:var(--green)}
+  .faq-list{max-width:760px;margin:44px auto 0;text-align:left}
+  .faq-item{border-top:1px solid var(--line);padding:24px 4px}
+  .faq-item h3{font-size:21px;font-weight:700;margin-bottom:8px}
+  .faq-item p{font-size:18px;line-height:1.55;color:var(--mute);font-weight:500}
+  @media (max-width:734px){
+    .tiles-3{grid-template-columns:1fr}
+    .capture-input{width:100%}
+  }
   </style>
 </head>
 <body>
@@ -941,6 +979,7 @@ __SITE_NAV__
   </div>
   <p class="fine" data-state="tx">3 free reports, no signup &middot; 4 Texas TREC contracts + the 40-11, 41-3 and 39-11</p>
   <p class="fine" data-state="co">3 free reports, no signup &middot; Colorado CBS1 &amp; Land + Amend/Extend and Counterproposal</p>
+  <p class="fine trust-line">&#10003; Read for the report, then deleted &middot; No AI reads your contract</p>
 
   <!-- Illustration only. Scrap values are the sample files' own fields;
        card counts and findings are the sample report's display_issues,
@@ -1030,6 +1069,20 @@ __SITE_NAV__
     </div>
   </div>
   <div class="ctas"><a class="link" href="/tc-check#what-it-checks" data-evt="home_check_link">See everything it checks</a></div>
+  <div class="ctas tools-row"><a class="link" href="/guides/trec-deadline-calculator" data-evt="home_calc_link">Free TREC deadline calculator</a><a class="link" href="/guides" data-evt="home_guides_link">Browse the guides</a></div>
+</section>
+
+<!-- 2b. SAMPLE + CHECKLIST BY EMAIL: the homepage's one ask (2026-11-03). -->
+<section class="capture">
+  <div class="eyebrow">Free, by email</div>
+  <h2>Start with the<br>sample report.</h2>
+  <p class="sub">See a filled TREC 20&#8209;19 the way title would &mdash; 16 findings, 12 of them must&#8209;fix &mdash; plus the 6&#8209;point checklist to run before any file goes to title. Both links, one email.</p>
+  <form class="capture-form" id="homeCaptureForm" novalidate>
+    <input type="email" id="homeEmailOptinInput" class="capture-input" placeholder="work email" autocomplete="email" aria-label="Email address">
+    <input type="text" id="homeCaptureHp" class="capture-hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+    <button type="submit" class="btn solid" id="homeCaptureBtn">Email me both</button>
+  </form>
+  <p class="fine" id="homeCaptureMsg">One email with both links. Form&#8209;change updates only when they matter &mdash; unsubscribe anytime.</p>
 </section>
 
 <!-- 3. TEXT AN OFFER: the namesake product, played as a 3-step demo (text_demo.py) -->
@@ -1058,12 +1111,72 @@ __TEXT_DEMO__
   </div>
 </section>
 
+<!-- 4b. PRICING: the three plans from /pricing, one line each (2026-11-03). -->
+<section class="pricing-strip">
+  <div class="eyebrow">Pricing</div>
+  <h2>Free to check.<br>Simple to scale.</h2>
+  <div class="tiles tiles-3">
+    <div class="tile price">
+      <span class="tag g">TC CHECK</span>
+      <div class="big">Free</div>
+      <p>3 full reports with no signup, then just your email. Your file isn&rsquo;t kept.</p>
+    </div>
+    <div class="tile price">
+      <span class="tag g">AGENT</span>
+      <div class="big">$40<small>/mo</small></div>
+      <p>Draft offers by text message. First 3 offers free, then unlimited.</p>
+    </div>
+    <div class="tile price">
+      <span class="tag g">BROKERAGE</span>
+      <div class="big">$349<small>/mo</small></div>
+      <p>Every agent on your roster, covered. Start with a free 20&#8209;file audit.</p>
+    </div>
+  </div>
+  <div class="ctas"><a class="link" href="/pricing">See full pricing</a></div>
+</section>
+
+<!-- 4c. FAQ: the standing objections, in the site's own answers (2026-11-03). -->
+<section class="faq">
+  <h2>Questions.</h2>
+  <div class="faq-list">
+    <div class="faq-item"><h3>Is TC Check really free?</h3><p>Yes. Your first 3 full reports need nothing at all. After that, add your email to keep getting full reports, still free. No card, no trial.</p></div>
+    <div class="faq-item"><h3>Do you keep my client&rsquo;s file?</h3><p>No. A file you check is read for the report, then deleted. We keep short issue codes, not the file.</p></div>
+    <div class="faq-item"><h3>Does AI read my contract?</h3><p>No. TC Check runs fixed checks on the published TREC and Colorado forms &mdash; blanks, math, dates and mismatches. No AI reads your contract.</p></div>
+    <div class="faq-item"><h3>Is this legal advice?</h3><p>No. TC Check flags issues to review before a file goes to title. It is general information, not legal advice, and TxtAnOffer is not affiliated with TREC.</p></div>
+    <div class="faq-item"><h3>Which contracts does TC Check read?</h3><p>Texas TREC 20&#8209;19 Resale, 30&#8209;18 Condo, 9&#8209;18 Land and 25&#8209;17 Farm and Ranch contracts, plus the 40&#8209;11, 41&#8209;3 and 39&#8209;11 addenda, and Colorado CBS1 Residential and Land contracts.</p></div>
+  </div>
+</section>
+
 <!-- 5. TRUST: one promise, then what's protected (see _home_trust) -->
 __HOME_TRUST__
 
 __SITE_FOOTER__
 __TEXT_DEMO_JS__
-__STATE_SWITCH_JS__</body>
+__STATE_SWITCH_JS__
+<script>
+(function(){
+  var form = document.getElementById('homeCaptureForm');
+  if(!form) return;
+  var msg = document.getElementById('homeCaptureMsg');
+  var btn = document.getElementById('homeCaptureBtn');
+  form.addEventListener('submit', function(e){
+    e.preventDefault();
+    var email = document.getElementById('homeEmailOptinInput').value.trim();
+    if(!/^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(email)){ msg.textContent = 'That email doesn\u2019t look right \u2014 check it and try again.'; return; }
+    btn.disabled = true; btn.textContent = 'Sending\u2026';
+    var src = '';
+    try { src = new URLSearchParams(location.search).get('src') || ''; } catch(err) {}
+    fetch('/api/home-guide', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({email: email, hp: document.getElementById('homeCaptureHp').value, src: src})})
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        if(d && d.ok){ form.style.display = 'none'; msg.textContent = 'Sent \u2014 the sample report and the checklist are on their way to ' + email + '.'; msg.style.color = 'var(--green)'; msg.style.fontWeight = '600'; }
+        else { btn.disabled = false; btn.textContent = 'Email me both'; msg.textContent = 'Something went wrong \u2014 try again, or check a file free above.'; }
+      })
+      .catch(function(){ btn.disabled = false; btn.textContent = 'Email me both'; msg.textContent = 'Something went wrong \u2014 try again, or check a file free above.'; });
+  });
+})();
+</script>
+</body>
 </html>
 """
     html = (html.replace("__SITE_CHROME_CSS__", _SITE_CHROME_CSS)
@@ -8905,6 +9018,50 @@ _INDEXNOW_KEY = "b0adf48e18da399865af718518feac4c"
 @app.route("/" + _INDEXNOW_KEY + ".txt")
 def indexnow_key_file():
     return Response(_INDEXNOW_KEY, mimetype="text/plain")
+
+
+@app.route("/api/home-guide", methods=["POST"])
+def home_guide_signup():
+    """Homepage lead capture (2026-11-03): the 'sample report + checklist by
+    email' form. Records a lead_capture event for /analytics and sends one
+    email carrying both links. The honeypot field 'hp' silently accepts bots
+    so the form can't be probed. The event is recorded before the send so a
+    mail failure never loses the lead."""
+    data = request.get_json(silent=True) or {}
+    if (data.get("hp") or "").strip():
+        return {"ok": True}
+    email = (data.get("email") or "").strip().lower()
+    if len(email) > 254 or not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
+        return {"ok": False, "error": "bad_email"}, 400
+    src = re.sub(r"[^a-zA-Z0-9_-]", "", (data.get("src") or ""))[:60] or "homepage"
+    try:
+        track_event("lead_capture", None,
+                    {"email": email, "source": src, "kind": "sample_and_checklist"})
+    except Exception:
+        pass
+    body = (
+        "Hi - thanks for asking. Here are both links:\n\n"
+        "1) The sample report - a filled TREC 20-19 that came back with 16 "
+        "findings (12 must fix, 4 to review):\n"
+        "https://txtanoffer.com/tc-check?demo=1&src=email_sample\n\n"
+        "2) The pre-title checklist - the 6 checks to run before a file goes "
+        "to title:\n"
+        "https://txtanoffer.com/guides/trec-20-19-checklist\n\n"
+        "Bonus, the free TREC deadline calculator:\n"
+        "https://txtanoffer.com/guides/trec-deadline-calculator\n\n"
+        "When you're ready to run one of your own files: your first 3 full "
+        "reports are free at txtanoffer.com/tc-check - no signup.\n\n"
+        "- Phanel Jean-Baptiste, Founder, TxtAnOffer\n"
+        "General information, not legal advice. TxtAnOffer is not affiliated "
+        "with TREC."
+    )
+    try:
+        send_plain_email(email,
+                         "Your sample report + pre-title checklist (TxtAnOffer)",
+                         body)
+    except Exception as e:
+        print(f"[HOME-GUIDE] send failed for {email}: {e}")
+    return {"ok": True}
 
 
 @app.route("/guides")
