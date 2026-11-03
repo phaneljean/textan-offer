@@ -8317,8 +8317,8 @@ def about():
 
 _GUIDES = {
     "trec-20-19-checklist": {
-        "title": "TREC 20-19 Checklist: What to Check Before Sending to Title",
-        "description": "A field-by-field checklist for the TREC 20-19 One to Four Family Residential Contract: the blanks and mismatches to check before a Texas file goes to title.",
+        "title": "TREC 20-19 Checklist (Current Form): 6 Checks Before the File Goes to Title",
+        "description": "The pre-title checklist for a filled TREC 20-19: party names and county, escrow and money blanks, 3B vs. the 40-11, initials on every page, the Effective Date, and amendments. Read it \u2014 or run all six checks on your file automatically, free.",
         "kicker": "For transaction coordinators",
         "h1": "TREC 20-19 checklist: what to check before you send the file to title",
         "lede": "Title problems like these usually aren't legal puzzles. They're blanks and mismatches that were easy to fix before the file left your desk. Here's the order to check them in.",
@@ -8356,6 +8356,14 @@ _GUIDES = {
 <h2>Make sure you're on the current form</h2>
 <p>The current TREC 20-19 has been mandatory since July 1, 2026. An old template saved on someone's computer is a quiet source of problems. <a href="/trec-changes">See what's on the current version &rarr;</a></p>
 """,
+        "faq": [
+            ("What should I check on a TREC 20-19 before sending it to title?",
+             "Six things, in order: property and party details (Sections 1 and 2), the money blanks and escrow amount, Section 3B against the TREC 40-11 loan amount, buyer and seller initials on every page that carries the initials line, the Effective Date on the signature page, and any TREC 39-11 amendment against the contract it amends."),
+            ("What is the current version of the TREC 20-19?",
+             "The 20-19 edition, mandatory since July 1, 2026. Check the form number in the footer before you work a file \u2014 an older template saved on someone's computer is a common source of findings."),
+            ("Can software run this checklist for me?",
+             "Yes \u2014 TC Check reads a filled 20-19 and flags the blanks and mismatches on this list before the file goes to title. The first 3 reports are free and need no signup."),
+        ],
     },
     "trec-20-19-effective-date": {
         "title": "TREC 20-19 Effective Date Left Blank: Why It Matters",
@@ -8422,6 +8430,14 @@ _GUIDES = {
 
 <p class="note">This is general information, not legal advice. Confirm your brokerage's obligations against the current rule text or with a Texas real estate attorney. TxtAnOffer is not affiliated with TREC.</p>
 """,
+        "faq": [
+            ("How long must a Texas broker keep transaction records?",
+             "At least four years, counted from the date of closing or termination of the contract \u2014 22 TAC \u00a7535.2(h). Four years is a minimum, not a maximum; after it, the records may be destroyed."),
+            ("Which records does the retention rule cover?",
+             "Any document a broker or agent receives or prepares in a transaction: contracts, leases and listing agreements, addenda and amendments, correspondence, and any other communication from a principal. An item you are unsure about is safest treated as a record."),
+            ("Can the records be kept electronically?",
+             "Yes. Electronic storage is fine as long as the broker can produce any complete file within 48 hours of a request from TREC."),
+        ],
     },
     "40-11-loan-amount-mismatch": {
         "title": "40-11 Loan Amount Doesn't Match 20-19 Section 3B? How to Catch It",
@@ -8493,6 +8509,14 @@ _GUIDES = {
 <p class="note">General information about the form, not legal advice.</p>
 <p><a href="/guides/trec-20-19-checklist">See the full TREC 20-19 pre-title checklist &rarr;</a></p>
 """,
+        "faq": [
+            ("Which pages of the TREC 20-19 need initials?",
+             "Pages 1 through 9 of 12 \u2014 each carries an identification line at the bottom for the buyers' and sellers' initials, so each party initials up to nine times. The TREC 40-11 financing addendum has an initials line on its first page too."),
+            ("Is a missing initial a legal problem?",
+             "Initials evidence that both parties saw and identified each page; they are not what makes the contract binding. In practice the issue is the title company: a page without initials comes back as an exception to clear before closing."),
+            ("Why do e-sign initials land on the wrong pages?",
+             "Most initials-on-the-wrong-page findings are a stale template: the form changed and the e-sign fields did not. Rebuilding the template on the current form (mandatory since July 1, 2026) fixes the pattern."),
+        ],
     },
     "trec-39-11-amendment-mismatch": {
         "title": "TREC 39-11 Amendment Doesn't Match the Contract? Check Price and Address",
@@ -8604,7 +8628,7 @@ _GUIDES = {
         "lede": "The 25-17 looks like the 20-19 but isn't. It has its own paragraphs for acreage, leases, water and reservations, and those are where farm and ranch files pick up blanks and conflicting boxes.",
         "body": """
 <h2>Which contract is it?</h2>
-<p>TREC promulgates three purchase contracts agents mix up: the <strong>20-19</strong> One to Four Family Residential (Resale), the <strong>9-18</strong> Unimproved Property (land) and the <strong>25-17</strong> Farm and Ranch. The current Farm and Ranch edition is 25-17, which replaced 25-16. Check the "TREC NO." in the footer before anything else; an old template saved on a computer is a common source of problems.</p>
+<p>TREC promulgates three purchase contracts agents mix up: the <strong>20-19</strong> One to Four Family Residential (Resale), the <strong>9-18</strong> Unimproved Property (land) and the <strong>25-17</strong> Farm and Ranch. The current Farm and Ranch edition is 25-17, which replaced the 25-16 effective July 1, 2026. Check the "TREC NO." in the footer before anything else; an old template saved on a computer is a common source of problems.</p>
 
 <h2>Paragraph 3: price and acreage</h2>
 <ul>
@@ -8647,6 +8671,16 @@ _GUIDES = {
 
 <p><a href="/guides/trec-20-19-checklist">Working a resale file instead? See the TREC 20-19 checklist &rarr;</a></p>
 """,
+        "faq": [
+            ("What is the current Texas farm and ranch contract?",
+             "The TREC 25-17, current since July 1, 2026. It replaced the 25-16."),
+            ("A signed 25-16 \u2014 is the file wrong?",
+             "If it was signed before July 1, 2026, it is an information note, not a must-fix. Signed on or after that date, the parties used a superseded form."),
+            ("Does \u201cCounty Road 210\u201d vs. \u201cCR 210\u201d matter?",
+             "They are the same road. What matters is that every document in the file means the same road in the same county \u2014 confirm it rather than assuming a mismatch. TC Check treats the two renderings as a match."),
+            ("Can TC Check check a 25-17 with addenda?",
+             "Yes \u2014 TC Check identifies the contract from its printed form number and checks the 25-17 together with the 40-11 financing addendum when one is attached."),
+        ],
     },
     "transaction-coordinator-software-texas": {
         "title": "Transaction Coordinator Software for Texas: Where a Free TREC File Check Fits",
@@ -8734,6 +8768,27 @@ _GUIDE_CTA_FORM = {
 
 
 def _guide_page(slug, g, body_html):
+    import json as _json
+    _faq = g.get("faq") or []
+    _faq_html = ""
+    _faq_ld = ""
+    if _faq:
+        _faq_html = '<h2>Common questions</h2>' + "".join(
+            f'<p><strong>{escape(q)}</strong><br>{a}</p>' for q, a in _faq
+        )
+        _faq_ld = (
+            '<script type="application/ld+json">'
+            + _json.dumps({
+                "@context": "https://schema.org",
+                "@type": "FAQPage",
+                "mainEntity": [
+                    {"@type": "Question", "name": q,
+                     "acceptedAnswer": {"@type": "Answer", "text": a}}
+                    for q, a in _faq
+                ],
+            })
+            + "</script>\n"
+        )
     cta_brokers = g["kicker"] == "For managing brokers"
     cta = (
         """<div class="cta"><strong>See what your agents leave blank.</strong> Run your last 20 closed TREC 20-19s through TC Check, free.
@@ -8756,7 +8811,7 @@ def _guide_page(slug, g, body_html):
 <meta property="og:title" content=\"""" + escape(g["title"]) + """\">
 <meta property="og:description" content=\"""" + escape(g["description"]) + """\">
 <meta property="og:type" content="article">
-<link rel="icon" href="/static/favicon.ico?v=2" type="image/x-icon">
+""" + _faq_ld + """<link rel="icon" href="/static/favicon.ico?v=2" type="image/x-icon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -8805,12 +8860,51 @@ def _guide_page(slug, g, body_html):
   <h1>""" + g["h1"] + """</h1>
   <p class="lede">""" + g["lede"] + """</p>
   <div class="byline">By Phanel Jean Baptiste, builder of TxtAnOffer (a software builder, not a licensed agent) &middot; Last reviewed October 2026</div>
-""" + body_html + cta + """
+""" + body_html + _faq_html + cta + """
 """ + ('<div class="more"><h3>More guides</h3><ul>' + others + '</ul></div>' if others else '') + """
   <p class="foot">General information only, not legal advice. TxtAnOffer is an independent tool and is not affiliated with or endorsed by the Texas Real Estate Commission (TREC). <a href="/terms">Terms</a> &middot; <a href="/privacy">Privacy</a></p>
 </main>
 </body>
 </html>"""
+
+
+
+# --- Legacy URL redirects (2026-11-03) --------------------------------------
+# Pre-restructure URLs Google still ranks (Search Console Oct 2026: ~420
+# impressions landing on 404s). 301 them to the live equivalents, keeping
+# any query string so ?src= attribution survives.
+_LEGACY_REDIRECTS = {
+    "/tools/texas-broker-record-retention": "/guides/broker-record-retention-texas",
+    "/tools/trec-deadline-calculator": "/guides/trec-deadline-calculator",
+    "/tools/transaction-coordinator-software-texas": "/guides/transaction-coordinator-software-texas",
+    "/tools/tc-hub/colorado-deadlines": "/tools/colorado-deadlines",
+    "/tools/texas-brokers": "/guides/broker-record-retention-texas",
+    "/guides/trec-changes": "/trec-changes",
+    "/guides/trec-25-17-lender-required-repair-amendment": "/guides/trec-25-17-farm-and-ranch-contract",
+}
+
+
+def _legacy_redirect():
+    target = _LEGACY_REDIRECTS[request.path]
+    qs = request.query_string.decode("utf-8", "ignore")
+    return redirect(target + (f"?{qs}" if qs else ""), code=301)
+
+
+for _legacy_path in _LEGACY_REDIRECTS:
+    app.add_url_rule(
+        _legacy_path,
+        endpoint="legacy_" + _legacy_path.strip("/").replace("/", "_").replace("-", "_"),
+        view_func=_legacy_redirect,
+    )
+
+
+# --- IndexNow key file (2026-11-03) ------------------------------------------
+_INDEXNOW_KEY = "b0adf48e18da399865af718518feac4c"
+
+
+@app.route("/" + _INDEXNOW_KEY + ".txt")
+def indexnow_key_file():
+    return Response(_INDEXNOW_KEY, mimetype="text/plain")
 
 
 @app.route("/guides")
