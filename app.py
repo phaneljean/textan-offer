@@ -257,7 +257,9 @@ _ENGAGEMENT_TYPES = ("js_ok", "upload_picked", "upload_failed_rejected", "upload
                      # first_screen.py, 2026-10-23
                      "hero_broker_cta", "tc_title_copy_link",
                      # homepage Text an offer -> /text-an-offer, 2026-10-24
-                     "text_learn_more") \
+                     "text_learn_more",
+                     # homepage catches-section tools row, 2026-11-03
+                     "home_calc_link", "home_guides_link") \
     + CHECK_CTA_EVENTS + SAMPLE_CTA_EVENTS + BOOK_CALL_EVENTS + (DROPZONE_INTERACT_EVENT,)
 # Pages whose beacons /v1/evt accepts: the ones with their own
 # track_page_view() call, plus _BEACON_ONLY_PAGES below.
@@ -3275,13 +3277,17 @@ def tc_check():
     # folded into one line, each with its consequence tag -- the exact list
     # the emailed report shows, so the on-screen report and the downloaded
     # PDF match it. Empty while gated, same as "issues".
-    from tc_check_email import _display_issues, _consequence_tag, _clean, _files_line, _finding_page, _why_it_matters
+    from tc_check_email import _display_issues, _consequence_tag, _clean, _files_line, _finding_page, _why_it_matters, _finding_group, _short_title, _next_step, _triage_rank
+    # Report redesign (2026-11-04): every report -- not just the sample --
+    # carries each finding's form page, "Why it matters" and "Next step"
+    # lines, its topical group, a short title and a triage rank. The lines
+    # exist only for catalogued keys (tc_check_email); a finding without one
+    # simply renders its message, as before.
     payload["display_issues"] = sorted(
         ({"severity": i.get("severity"), "tag": _consequence_tag(i), "message": _clean(i.get("message", "")),
-          # The sample report (2026-10-25) also shows each finding's form
-          # page and a "Why it matters" line; real reports don't yet, since
-          # only the sample's finding keys have a line written.
-          **({"page": _finding_page(i), "why": _why_it_matters(i)} if is_demo else {})}
+          "page": _finding_page(i), "why": _why_it_matters(i),
+          "group": _finding_group(i), "title": _short_title(i),
+          "next": _next_step(i), "rank": _triage_rank(i)}
          for i in _display_issues(payload.get("issues") or [])),
         key=lambda i: i["severity"] != "blocker",  # must-fix first, same order as the email/PDF
     )
@@ -3710,6 +3716,18 @@ def tc_check_page():
   .issue-page{display:block;margin-top:4px;font-size:12px;font-weight:700;color:var(--mute)}
   .issue-why{display:block;margin-top:4px;font-size:13px;color:var(--mute)}
   .issue-why b{color:var(--ink)}
+  .issue-title{display:block;font-weight:700;font-size:15px}
+  .issue-det{display:block;margin-top:2px}
+  .issue-next{display:block;margin-top:4px;font-size:13px;color:var(--mute)}
+  .issue-next b{color:var(--ink)}
+  .grp-cnt{text-transform:none;letter-spacing:0;font-weight:600}
+  .triage{background:var(--gray);border-radius:12px;padding:13px 16px;margin:12px 0 4px}
+  .triage-head{font-weight:800;font-size:14px}
+  .triage ol{margin:7px 0 2px 18px;font-size:14px;line-height:1.5}
+  .issue-page-inline{font-size:12px;font-weight:700;color:var(--mute)}
+  .howto{background:var(--gray);border-radius:12px;padding:12px 15px;margin:12px 0 4px;font-size:13px;color:var(--mute);line-height:1.5}
+  .howto b{color:var(--ink)}
+  .rep-counts .pages{color:var(--mute)}
   .issue-tag{font-size:10.5px;font-weight:800;letter-spacing:.04em;padding:4px 8px;border-radius:6px;height:fit-content;width:fit-content}
   .issue-tag.blocker{background:#fdecec;color:var(--red)}
   .issue-tag.warning,.issue-tag.info{background:#fff4dc;color:var(--amber)}
@@ -4319,19 +4337,61 @@ function buildReportAddress(data) {
   return html;
 }
 
+function truncateWhy(text, max) {
+  if (!text || text.length <= max) return text || '';
+  const cut = text.slice(0, max);
+  const sp = cut.lastIndexOf(' ');
+  return (sp > 40 ? cut.slice(0, sp) : cut) + '…';
+}
+
+// Report redesign (2026-11-04): when a file has enough findings to bury
+// the urgent ones, lead with the three most likely to stall the closing
+// (server-ranked in tc_check_email._TRIAGE_RANKS).
+function buildTriage(issues) {
+  const blockers = issues.filter(i => i.severity === 'blocker');
+  if (blockers.length < 3 || issues.length < 6) return '';
+  const top = blockers.slice().sort((a, b) => (a.rank || 50) - (b.rank || 50)).slice(0, 3);
+  let html = '<div class="triage"><div class="triage-head">Fix first &mdash; these can stall the closing</div><ol>';
+  for (const i of top) {
+    html += '<li><b>' + escapeHtml(i.title || i.message) + '</b>';
+    if (i.title && i.why) html += ' &mdash; ' + escapeHtml(truncateWhy(i.why, 110));
+    if (i.page) html += ' <span class="issue-page-inline">' + escapeHtml(i.page) + '</span>';
+    html += '</li>';
+  }
+  return html + '</ol></div>';
+}
+
+function buildHowToRead() {
+  return '<div class="howto"><b>How to read this report.</b> &ldquo;Missing&rdquo; or &ldquo;blank&rdquo; means the checker read the field and it was empty. &ldquo;Not detected&rdquo; means it couldn&rsquo;t be read &mdash; handwriting, a stamp or a scan can do that &mdash; so verify those by eye. This report flags likely issues; it is not legal advice.</div>';
+}
+
+// Findings render grouped by what they block (server-assigned in
+// tc_check_email._finding_group), must-fix first inside each group --
+// not as one severity-sorted log. A finding with a catalogued short
+// title leads with it and demotes its message to the detail line.
+const GROUP_ORDER = ['Price & money', 'Dates & deadlines', 'Initials', 'Property & parties', 'Escrow & title', 'Boxes & addenda', 'Terms & notices', 'Amendment checks', 'More findings'];
 function buildIssueGroups(issues) {
-  const groups = [['Must fix', issues.filter(i => i.severity === 'blocker')],
-                  ['To review', issues.filter(i => i.severity !== 'blocker')]];
+  const byGroup = {};
+  for (const issue of issues) {
+    const g = issue.group || 'More findings';
+    (byGroup[g] = byGroup[g] || []).push(issue);
+  }
   let html = '';
-  for (const [label, list] of groups) {
-    if (!list.length) continue;
-    html += '<div class="grp">' + label + '</div><ul class="issue-list">';
+  for (const label of GROUP_ORDER) {
+    const list = byGroup[label];
+    if (!list || !list.length) continue;
+    const nb = list.filter(i => i.severity === 'blocker').length;
+    const nw = list.length - nb;
+    const cnt = (nb ? nb + ' must fix' : '') + (nb && nw ? ' &middot; ' : '') + (nw ? nw + ' to review' : '');
+    html += '<div class="grp">' + label + (cnt ? ' <span class="grp-cnt">' + cnt + '</span>' : '') + '</div><ul class="issue-list">';
     for (const issue of list) {
-      // page/why come only on the sample report (see /tc-check's payload).
-      let extra = '';
-      if (issue.page) extra += '<span class="issue-page">' + label + ' &middot; ' + escapeHtml(issue.page) + '</span>';
-      if (issue.why) extra += '<span class="issue-why"><b>Why it matters:</b> ' + escapeHtml(issue.why) + '</span>';
-      html += '<li class="issue-item"><span class="issue-tag ' + issue.severity + '">' + escapeHtml(issue.tag || issue.severity) + '</span><span>' + escapeHtml(issue.message) + extra + '</span></li>';
+      let inner = '';
+      if (issue.title) inner += '<span class="issue-title">' + escapeHtml(issue.title) + '</span><span class="issue-det">' + escapeHtml(issue.message) + '</span>';
+      else inner += '<span>' + escapeHtml(issue.message) + '</span>';
+      if (issue.why) inner += '<span class="issue-why"><b>Why it matters:</b> ' + escapeHtml(issue.why) + '</span>';
+      if (issue.next) inner += '<span class="issue-next"><b>Next step:</b> ' + escapeHtml(issue.next) + '</span>';
+      if (issue.page) inner += '<span class="issue-page">' + escapeHtml(issue.page) + '</span>';
+      html += '<li class="issue-item"><span class="issue-tag ' + issue.severity + '">' + escapeHtml(issue.tag || issue.severity) + '</span><span class="issue-main">' + inner + '</span></li>';
     }
     html += '</ul>';
   }
@@ -4448,11 +4508,8 @@ function renderResult(data, file, isDemo) {
   } else {
     const nb = issues.filter(i => i.severity === 'blocker').length;
     const nw = issues.length - nb;
-    const counts = '<div class="rep-counts">' + (nb ? '<span class="must">' + nb + ' must fix</span>' : '') + (nw ? '<span class="review">' + nw + ' to review</span>' : '') + '</div>';
+    const counts = '<div class="rep-counts">' + (nb ? '<span class="must">' + nb + ' must fix</span>' : '') + (nw ? '<span class="review">' + nw + ' to review</span>' : '') + (typeof data.page_count === 'number' ? '<span class="pages">' + data.page_count + ' pages read</span>' : '') + '</div>';
     html += '<div class="result-banner incomplete">' + (nb ? 'Not ready &mdash; fix before this goes to title' : nw + ' item' + (nw === 1 ? '' : 's') + ' to review') + counts + '</div>';
-  }
-  if (data.looks_like_blank_draft) {
-    html += '<div class="fixit-cta"><p>This looks like an essentially blank draft &mdash; more gaps than a quick fix. It may be faster to generate a clean one from scratch.</p><a href="/demo">Generate a clean offer &rarr;</a></div>';
   }
   if (data.gated) {
     // The server sends no findings while gated; these rows only suggest a
@@ -4461,7 +4518,12 @@ function renderResult(data, file, isDemo) {
       + '<li class="issue-item"><span class="issue-tag blocker">MUST FIX</span><span>&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;</span></li>'
       + '<li class="issue-item"><span class="issue-tag blocker">MUST FIX</span><span>&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;&#9608;</span></li></ul>';
   } else {
+    html += buildTriage(issues);
     html += buildIssueGroups(issues);
+    html += buildHowToRead();
+    if (data.looks_like_blank_draft) {
+      html += '<div class="fixit-cta"><p>This looks like an essentially blank draft &mdash; more gaps than a quick fix. If it hasn&rsquo;t been signed yet, generating a clean one from scratch may be faster than patching every field.</p><a href="/demo">Generate a clean offer &rarr;</a></div>';
+    }
   }
   html += '</div>';
   if (!data.gated && issues.length) {
