@@ -937,6 +937,8 @@ __TEXT_DEMO_CSS__
   .capture-form .btn{font-family:inherit;cursor:pointer}
   .capture-hp{position:absolute;left:-9999px;top:auto;width:1px;height:1px;opacity:0}
   .pricing-strip{background:var(--gray);padding-bottom:110px}
+  .partner-line{text-align:center;margin-top:18px;font-size:15px;color:#3d4a47}
+  .partner-line a{color:var(--green);font-weight:700}
   .tiles-3{grid-template-columns:1fr 1fr 1fr}
   .tile.price{min-height:0;padding:44px 30px 40px}
   .tile .big small{font-size:22px;color:var(--mute);font-weight:600}
@@ -1136,6 +1138,7 @@ __TEXT_DEMO__
     </div>
   </div>
   <div class="ctas"><a class="link" href="/pricing">See full pricing</a></div>
+  <p class="partner-line">Title company? <strong>TC Check is free for your agents</strong> &mdash; <a href="mailto:support@txtanoffer.com?subject=Title%20partner%20placement">ask about a partner placement</a>.</p>
 </section>
 
 <!-- 4c. FAQ: the standing objections, in the site's own answers (2026-11-03). -->
@@ -5539,6 +5542,8 @@ def pricing():
   </div>
 
 </div>
+
+<p style="text-align:center;font-size:0.9rem;color:var(--text-muted);padding:0 1rem 0.4rem;">Title company? <b>TC Check is free for your agents</b> &mdash; <a href="mailto:support@txtanoffer.com?subject=Title%20partner%20placement" style="color:var(--accent-dark);font-weight:600;">ask about a partner placement</a>.</p>
 
 <p style="text-align:center;font-size:0.9rem;color:var(--text-muted);padding:0 1rem 2.5rem;">Multi-office brokerage or franchise? <a href="mailto:support@txtanoffer.com?subject=Multi-office%20pricing" style="color:var(--accent-dark);font-weight:600;">Contact us</a> for custom terms.</p>
 
