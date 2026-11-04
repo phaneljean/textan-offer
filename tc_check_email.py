@@ -321,6 +321,141 @@ _PAGES_IN_MESSAGE_RE = re.compile(r"\b[Pp]ages? (\d+(?:(?:, | and )\d+)*) of (\d
 def _why_it_matters(issue: dict) -> str:
     return _WHY_IT_MATTERS.get(issue.get("key") or "", "")
 
+# Report redesign (2026-11-04, Phanel-approved prototype): the on-screen
+# report groups findings by what they block, leads with a "fix first"
+# triage, and gives each catalogued finding a short title and a next step.
+# Same authoring rules as _WHY_IT_MATTERS: true for every message a key can
+# produce, "can/may" where the outcome depends on title, the lender or the
+# other side, never a legal conclusion. A key with no entry renders as
+# before (message only, "More findings" group, no triage priority).
+_FINDING_GROUPS = {
+    "sales_price_math": "Price & money",
+    "receipt_mismatch": "Price & money",
+    "broker_contribution_incomplete": "Price & money",
+    "earnest_money_amount": "Price & money",
+    "loan_amount_mismatch": "Price & money",
+    "co_price_math": "Price & money",
+    "closing_date_invalid": "Dates & deadlines",
+    "option_days_blank": "Dates & deadlines",
+    "effective_date": "Dates & deadlines",
+    "co_closing_holiday": "Dates & deadlines",
+    "initials_buyer": "Initials",
+    "initials_seller": "Initials",
+    "initials_mismatch": "Initials",
+    "address": "Property & parties",
+    "city": "Property & parties",
+    "county": "Property & parties",
+    "buyer_name": "Property & parties",
+    "seller_name": "Property & parties",
+    "header_address": "Property & parties",
+    "header_address_blank": "Property & parties",
+    "escrow_agent_name": "Escrow & title",
+    "title_company": "Escrow & title",
+    "check_one_conflict": "Boxes & addenda",
+    "addendum_checkbox_mismatch": "Boxes & addenda",
+    "poa_addendum_missing": "Boxes & addenda",
+    "financing_addendum_missing": "Boxes & addenda",
+    "extra_file_unrecognized": "Boxes & addenda",
+    "special_provisions_business_term": "Terms & notices",
+    "email_invalid": "Terms & notices",
+    "disclosure_days_blank": "Terms & notices",
+}
+
+_GROUP_PREFIXES = [
+    ("amendment_", "Amendment checks"),
+    ("co_closing", "Dates & deadlines"),
+    ("co_loan", "Dates & deadlines"),
+    ("co_deadline", "Dates & deadlines"),
+]
+
+
+def _finding_group(issue: dict) -> str:
+    key = issue.get("key") or ""
+    if key in _FINDING_GROUPS:
+        return _FINDING_GROUPS[key]
+    # Amendment-introduced problems group with the problem itself.
+    if key.startswith("co_amend_"):
+        inner = _finding_group({"key": key[len("co_amend_"):]})
+        if inner:
+            return inner
+    for prefix, group in _GROUP_PREFIXES:
+        if key.startswith(prefix):
+            return group
+    return ""
+
+
+_SHORT_TITLES = {
+    "initials_buyer": "Buyer initials missing",
+    "initials_seller": "Seller initials missing",
+    "initials_mismatch": "Initials don't match a named party",
+    "sales_price_math": "Sales price doesn't add up",
+    "closing_date_invalid": "Closing date doesn't exist",
+    "option_days_blank": "Option period length is blank",
+    "check_one_conflict": "Conflicting boxes checked",
+    "disclosure_days_blank": "Seller's Disclosure delivery days blank",
+    "broker_contribution_incomplete": "Broker contribution amount missing",
+    "poa_addendum_missing": "Owners Association Addendum may be missing",
+    "receipt_mismatch": "Receipt doesn't match the contract",
+    "header_address_blank": "Page address header not detected",
+    "header_address": "Page header names a different address",
+    "special_provisions_business_term": "Business term in Special Provisions",
+    "email_invalid": "Notice email will bounce",
+    "financing_addendum_missing": "Financing addendum missing",
+    "co_price_math": "Price table doesn't add up",
+    "co_loan_avail_deleted": "Loan deadline N/A — protection deleted",
+    "co_closing_holiday": "Closing date is a holiday",
+}
+
+
+def _short_title(issue: dict) -> str:
+    return _SHORT_TITLES.get(issue.get("key") or "", "")
+
+
+_NEXT_STEPS = {
+    "initials_buyer": "Have the buyer initial every page listed, then re-check the file.",
+    "initials_seller": "Have the seller initial every page listed, then re-check the file.",
+    "initials_mismatch": "Confirm who initialed; if it wasn't the named party, have that party re-initial.",
+    "sales_price_math": "Confirm the intended price, correct 3A, 3B or 3C so they agree, and re-check the file.",
+    "closing_date_invalid": "Agree on a real calendar date, correct it, and have the change initialed or amended.",
+    "option_days_blank": "Enter the agreed number of option days in 5B.",
+    "check_one_conflict": "Confirm which option applies and uncheck the other box.",
+    "disclosure_days_blank": "Enter the agreed delivery days in 7B(2).",
+    "broker_contribution_incomplete": "Enter the agreed $ or % amount, or uncheck the box.",
+    "poa_addendum_missing": "Attach the Owners Association Addendum, or correct the paragraph that says the property is subject to one.",
+    "receipt_mismatch": "Verify the amount actually delivered and correct the receipt or Paragraph 5A to match it.",
+    "header_address_blank": "Look at the page directly and fill in the header if it's empty.",
+    "header_address": "Confirm the correct address and make the page header agree with Paragraph 2A.",
+    "special_provisions_business_term": "Move the term to a TREC addendum or have a party's attorney draft it.",
+    "email_invalid": "Correct the address in Paragraph 21 and confirm it with the party.",
+    "financing_addendum_missing": "Complete and attach the 40-11, and list it in Paragraph 22.",
+    "co_price_math": "Confirm the intended price and correct the \u00a74.1 table so it adds up to the Purchase Price.",
+    "co_loan_avail_deleted": "If the buyer needs the loan-availability protection, replace N/A with a real deadline date.",
+    "co_closing_holiday": "Confirm the closing company can fund that day, or move the closing date and check the \u00a73.3.3 box that applies.",
+}
+
+
+def _next_step(issue: dict) -> str:
+    return _NEXT_STEPS.get(issue.get("key") or "", "")
+
+
+# "Fix first" triage order: the findings most likely to stall a closing go
+# first. Anything unlisted sorts behind every listed blocker.
+_TRIAGE_RANKS = {
+    "sales_price_math": 1, "co_price_math": 1,
+    "closing_date_invalid": 2,
+    "effective_date": 3,
+    "receipt_mismatch": 4,
+    "initials_mismatch": 5,
+    "financing_addendum_missing": 6,
+    "header_address": 7,
+    "option_days_blank": 8, "disclosure_days_blank": 8,
+}
+
+
+def _triage_rank(issue: dict) -> int:
+    return _TRIAGE_RANKS.get(issue.get("key") or "", 50)
+
+
 
 def _finding_page(issue: dict) -> str:
     """'Page 6 of 12' / 'Pages 3 and 9 of 12' for a finding, or '' when
