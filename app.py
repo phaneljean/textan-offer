@@ -934,6 +934,7 @@ __TEXT_DEMO_CSS__
   .capture-input:focus{outline:none;border-color:var(--green)}
   .capture-form .btn{font-family:inherit;cursor:pointer}
   .capture-hp{position:absolute;left:-9999px;top:auto;width:1px;height:1px;opacity:0}
+  .pricing-strip{background:var(--gray);padding-bottom:110px}
   .tiles-3{grid-template-columns:1fr 1fr 1fr}
   .tile.price{min-height:0;padding:44px 30px 40px}
   .tile .big small{font-size:22px;color:var(--mute);font-weight:600}
