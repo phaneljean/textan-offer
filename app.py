@@ -757,7 +757,7 @@ def index():
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TxtAnOffer — Catch it before title does.</title>
-  <meta name="description" content="For transaction coordinators and managing brokers in Texas and Colorado: drop a filled TREC 20-19 or CBS1 and see what's missing or inconsistent before title kicks it back. TxtAnOffer also drafts new offers by text message.">
+  <meta name="description" content="For transaction coordinators and managing brokers in Texas and Colorado: drop a filled TREC 20-19 or CBS1 and see what's missing or inconsistent before title kicks it back. New: Deadline Autopilot puts every contract deadline in your calendar. TxtAnOffer also drafts new offers by text message.">
   <meta property="og:title" content="TxtAnOffer — Catch it before title does.">
   <meta property="og:description" content="Contract error-checker for Texas & Colorado real estate. Upload a filled TREC resale (20-19), condo (30-18), land (9-18) or farm and ranch (25-17) contract, or a Colorado CBS1, and get a report of what's blank, missing or doesn't add up before title kicks it back.">
   <meta property="og:url" content="https://txtanoffer.com/">
@@ -773,7 +773,7 @@ def index():
   {"@context":"https://schema.org","@graph":[
     {"@type":"Organization","@id":"https://txtanoffer.com/#org","name":"TxtAnOffer","url":"https://txtanoffer.com/","logo":"https://txtanoffer.com/static/og-home.png","email":"support@txtanoffer.com"},
     {"@type":"WebSite","@id":"https://txtanoffer.com/#site","url":"https://txtanoffer.com/","name":"TxtAnOffer","publisher":{"@id":"https://txtanoffer.com/#org"}},
-    {"@type":"SoftwareApplication","name":"TC Check by TxtAnOffer","applicationCategory":"BusinessApplication","operatingSystem":"Web","url":"https://txtanoffer.com/tc-check","offers":[{"@type":"Offer","name":"TC Check","price":"0","priceCurrency":"USD"},{"@type":"Offer","name":"Agent","price":"40","priceCurrency":"USD"},{"@type":"Offer","name":"Brokerage","price":"349","priceCurrency":"USD"}],"publisher":{"@id":"https://txtanoffer.com/#org"}},
+    {"@type":"SoftwareApplication","name":"TC Check by TxtAnOffer","applicationCategory":"BusinessApplication","operatingSystem":"Web","url":"https://txtanoffer.com/tc-check","description":"Checks filled Texas TREC and Colorado CBS1 real estate contracts for blanks, math errors and mismatches before title, and includes Deadline Autopilot: every contract deadline (earnest money, option period, seller's disclosure, closing) computed from the contract as written, delivered as a deadline sheet plus a calendar (.ics) file with reminders.","featureList":["Contract error check for TREC 20-19, 30-18, 9-18, 25-17 and Colorado CBS1","Deadline Autopilot: deadline sheet and calendar file with every contract deadline","Forward a filled contract by email and get the full report back by email","Text an offer by SMS and get a filled TREC 20-19 draft back"],"offers":[{"@type":"Offer","name":"TC Check","price":"0","priceCurrency":"USD"},{"@type":"Offer","name":"Agent","price":"40","priceCurrency":"USD"},{"@type":"Offer","name":"Brokerage","price":"349","priceCurrency":"USD"}],"publisher":{"@id":"https://txtanoffer.com/#org"}},
     {"@type":"FAQPage","mainEntity":[
       {"@type":"Question","name":"Is TC Check really free?","acceptedAnswer":{"@type":"Answer","text":"Yes. Your first 3 full reports need nothing at all. After that, add your email to keep getting full reports, still free. No card, no trial."}},
       {"@type":"Question","name":"Do you keep my client's file?","acceptedAnswer":{"@type":"Answer","text":"No. A file you check is read for the report, then deleted. We keep short issue codes, not the file."}},
@@ -3705,7 +3705,7 @@ def tc_check_page():
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TC File Check — TxtAnOffer</title>
-<meta name="description" content="Drop a filled Texas TREC 20-19 or Colorado CBS1 PDF and see what's missing before title kicks it back.">
+<meta name="description" content="Drop a filled Texas TREC 20-19 or Colorado CBS1 PDF and see what's missing before title kicks it back. Every report includes Deadline Autopilot: your earnest money, option period, disclosure and closing deadlines as a sheet plus a calendar file.">
 <link rel="icon" href="/static/favicon.ico?v=2" type="image/x-icon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
