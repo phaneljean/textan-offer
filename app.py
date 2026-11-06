@@ -8688,6 +8688,7 @@ _GUIDES = {
 
 <h2>Make sure you're on the current form</h2>
 <p>The current TREC 20-19 has been mandatory since July 1, 2026. An old template saved on someone's computer is a quiet source of problems. <a href="/trec-changes">See what's on the current version &rarr;</a></p>
+<p>Working a different form? See the <a href="/guides/trec-25-17-farm-and-ranch-contract">TREC 25-17 Farm and Ranch checklist</a>, the <a href="/guides/trec-39-11-amendment-mismatch">39-11 amendment guide</a> and the <a href="/guides/40-11-loan-amount-mismatch">40-11 loan amount guide</a>. Counting days on the file? The free <a href="/guides/trec-deadline-calculator">TREC deadline calculator</a> works out the option period and earnest money dates.</p>
 """,
         "faq": [
             ("What should I check on a TREC 20-19 before sending it to title?",
@@ -8922,6 +8923,11 @@ _GUIDES = {
 </ul>
 <p class="note">This calculator applies the standard TREC 20-19 language. Special provisions, addenda or amendments can change deadlines. Check the actual contract, and when a deadline is close, confirm it with the broker or a Texas real estate attorney. Not legal advice. Sources: TREC 20-19 Paragraph 5; Texas Government Code &sect;662.003; <a href="https://trerc.tamu.edu/article/Option-Period-Basics-2360/" target="_blank" rel="noopener">Texas A&amp;M Real Estate Center, &ldquo;Option Period Basics&rdquo;</a>.</p>
 
+<div class="res" style="background:var(--tint);border-radius:0.8rem;padding:1rem 1.1rem;margin:1rem 0;">
+  <div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--accent-dark);">New: Deadline Autopilot</div>
+  <p style="margin:0.35rem 0 0;">Skip the hand math on the next file. Forward the signed contract to <strong>tc@check.txtanoffer.com</strong> (or <a href="/tc-check?src=seo_trec-deadline-calculator_autopilot" data-evt="guide_check_cta">check it free here</a>) and the report comes back with a deadline sheet plus a calendar file: earnest money, option period end, seller&rsquo;s disclosure and closing, already computed from the contract as written.</p>
+</div>
+
 <script src="/static/trec-deadlines.js?v=1"></script>
 <script>
 (function(){
@@ -8952,6 +8958,16 @@ _GUIDES = {
 })();
 </script>
 """,
+        "faq": [
+            ("How do you count the option period in a TREC contract?",
+             "The Effective Date is day 0 and the option period runs in calendar days, ending at 5:00 p.m. local time where the property is located on the last day (Paragraph 5B). It is not extended when the last day falls on a Saturday, Sunday or holiday."),
+            ("When is earnest money due on a Texas TREC contract?",
+             "Within 3 days after the Effective Date (Paragraph 5A), together with the option fee. If the third day falls on a Saturday, Sunday or Texas Legal Holiday, the deadline extends to the end of the next day that is none of those (Paragraph 5A(2))."),
+            ("What is the Effective Date on a TREC 20-19?",
+             "The date of final acceptance, written on the last page of the contract when the broker acknowledges execution. Every Paragraph 5 deadline counts from it, which is why a blank Effective Date breaks the whole deadline chain."),
+            ("Can software calculate TREC deadlines automatically?",
+             "Yes. Deadline Autopilot, free with every TC Check report, reads the signed contract and attaches a deadline sheet and a calendar file with the earnest money, option period, disclosure and closing dates already computed from the contract as written."),
+        ],
     },
     "trec-25-17-farm-and-ranch-contract": {
         "title": "TREC 25-17 Farm and Ranch Contract: What to Check Before Title",
@@ -9016,10 +9032,10 @@ _GUIDES = {
         ],
     },
     "transaction-coordinator-software-texas": {
-        "title": "Transaction Coordinator Software for Texas: Where a Free TREC File Check Fits",
-        "description": "What TC platforms do, what a pre-file check on a TREC 20-19 does, and why you might run both. Listed pricing for three TC platforms, with the date checked.",
+        "title": "Texas Real Estate Contract Software for Transaction Coordinators: Where a Free TREC File Check Fits",
+        "description": "Comparing Texas real estate contract software? What transaction coordinator platforms do, what a pre-file check on a TREC 20-19 does, and why you might run both. Listed pricing for three TC platforms, with the date checked.",
         "kicker": "For transaction coordinators",
-        "h1": "Transaction coordinator software for Texas, and where a free TREC contract check fits",
+        "h1": "Texas real estate contract software, and where a free TREC contract check fits",
         "lede": "A blank option period, a 3B loan amount that doesn't match the 40-11, a missing set of initials on page 6. None of those is a task-tracking problem. Here's how TC platforms and a contract check split the work, and what a free file check adds.",
         "body": """
 <p class="note"><strong>Read this first:</strong> TxtAnOffer makes TC Check, the free tool described below, so treat this page as written by an interested party. Competitor details come from each company's own website, checked on October 17, 2026, and are listed with sources at the end. Prices and plans change; check their sites for current pricing.</p>
@@ -9079,6 +9095,14 @@ _GUIDES = {
 <h2>Sources and dates</h2>
 <p class="note">Competitor details are from each company's own site, checked October 17, 2026: <a href="https://www.docjacket.com/" rel="nofollow noopener" target="_blank">docjacket.com</a> and <a href="https://www.docjacket.com/pricing" rel="nofollow noopener" target="_blank">its pricing page</a>; <a href="https://www.listedkit.com/" rel="nofollow noopener" target="_blank">listedkit.com</a> and <a href="https://www.listedkit.com/pricing" rel="nofollow noopener" target="_blank">its pricing page</a>; <a href="https://www.opentoclose.com/" rel="nofollow noopener" target="_blank">opentoclose.com</a> and <a href="https://www.opentoclose.com/v2/pricing" rel="nofollow noopener" target="_blank">its pricing page</a>. Prices are as listed on that date; check their sites for current pricing. Spot an error? Email us and we'll fix it.</p>
 """,
+        "faq": [
+            ("What is the best transaction coordinator software for Texas?",
+             "It depends on the job. Platforms like DocJacket, ListedKit and Open To Close run the file: tasks, deadlines, documents and portals. None of them is a pre-file check of the contract itself. Many Texas coordinators run a platform for the workflow and a checker like TC Check on the filled TREC forms before the file goes to title."),
+            ("Is there free real estate contract software for Texas agents?",
+             "TC Check is free: the first 3 full reports on filled TREC 20-19, 30-18, 9-18 and 25-17 contracts and Colorado CBS1 need no signup, and reports stay free with an email after that. It checks blanks, math and mismatches, and includes a deadline sheet and calendar file with every report."),
+            ("What should contract software check on a TREC 20-19?",
+             "The blanks that get files kicked back: Paragraph 2A county, 5A escrow agent, 5B option days when an option fee is entered, the Paragraph 3 price math against the 40-11 loan amount, one set of initials per party on pages 1 to 9, and the Effective Date on the signature page."),
+        ],
     },
 }
 
@@ -12384,6 +12408,7 @@ _SITEMAP_PATHS = ["/", "/tc-check", "/brokers", "/pricing", "/trec-changes", "/t
                   "/guides/broker-record-retention-texas", "/guides/40-11-loan-amount-mismatch",
                   "/guides/trec-20-19-initials", "/guides/trec-39-11-amendment-mismatch",
                   "/guides/trec-deadline-calculator", "/guides/trec-25-17-farm-and-ranch-contract",
+                  "/guides/trec-25-17-lender-required-repair-amendment",
                   "/guides/transaction-coordinator-software-texas", "/archive", "/tools/colorado-deadlines",
                   "/text-an-offer"]
 
