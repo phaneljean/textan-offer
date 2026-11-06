@@ -889,6 +889,11 @@ __TEXT_DEMO_CSS__
 
   /* ---------- 4. brokers: one oversized number ---------- */
   .brokers{padding-bottom:110px}
+.founder{background:var(--gray);margin-top:110px;padding-bottom:110px}
+.founder .avatar{width:104px;height:104px;border-radius:50%;object-fit:cover;display:block;margin:0 auto 26px;border:3px solid #fff;box-shadow:0 4px 18px rgba(10,63,58,.18)}
+.founder .story{font-size:21px;line-height:1.55;color:var(--ink);max-width:640px;margin:26px auto 0}
+.founder .sig{margin-top:32px;font-size:19px;font-weight:700;color:var(--green-deep)}
+.founder .sig span{display:block;font-weight:500;color:var(--mute);font-size:16px;margin-top:2px}
   .num{font-size:220px;font-weight:800;letter-spacing:-.06em;line-height:.9;color:var(--green);margin-bottom:10px}
 
   /* ---------- 5. trust ---------- */
@@ -1121,6 +1126,15 @@ __SITE_NAV__
     <button type="submit" class="btn solid" id="homeCaptureBtn">Email me both</button>
   </form>
   <p class="fine" id="homeCaptureMsg">One email with both links. Form&#8209;change updates only when they matter &mdash; unsubscribe anytime.</p>
+</section>
+
+<!-- 2c. FOUNDER: the human behind the checker (added 2026-11-06). -->
+<section class="founder">
+  <img class="avatar" src="/static/founder.jpg" alt="Phanel Jean-Baptiste, founder of TxtAnOffer" width="104" height="104" loading="lazy">
+  <div class="eyebrow">From the founder</div>
+  <h2>Built by someone who read<br>the fine print for a living.</h2>
+  <p class="story">I am Phanel Jean-Baptiste. Before TxtAnOffer, I reviewed group benefits claims at Sun Life Canada, checking files against policy wording line by line and deciding what the contract actually covered. The expensive mistakes were never in the big print. They were in a blank field on page seven, a date that does not exist, numbers that do not add up. So I built the check I wished every file had before it reached my desk. TxtAnOffer reads a filled contract the same way, flags what title would flag, and deletes your file when it is done.</p>
+  <p class="sig">Phanel Jean-Baptiste<span>Founder, TxtAnOffer</span></p>
 </section>
 
 <!-- 3. TEXT AN OFFER: the namesake product, played as a 3-step demo (text_demo.py) -->
