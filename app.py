@@ -1078,6 +1078,21 @@ __SITE_NAV__
   <div class="ctas tools-row"><a class="link" href="/guides/trec-deadline-calculator" data-evt="home_calc_link">Free TREC deadline calculator</a><a class="link" href="/guides" data-evt="home_guides_link">Browse the guides</a></div>
 </section>
 
+<!-- 2a2. DEADLINE AUTOPILOT: free with every TC Check report (2026-11-05). Texas-only today, like the sheet itself. -->
+<section class="deadlines" data-state="tx">
+  <div class="eyebrow">New: Deadline Autopilot, free with every check</div>
+  <h2>Every deadline.<br>In your calendar.</h2>
+  <p class="sub">Every report now ends with the dates that run the deal, counted from the contract as written, plus a calendar file that adds them to your calendar.</p>
+  <div class="protect">
+    <div><span class="ptag">Par. 5A</span><b>Earnest money due</b><p>Three days after the Effective Date, extended past a Saturday, Sunday or Texas legal holiday, the way 5A(2) actually reads.</p></div>
+    <div><span class="ptag">Par. 5B</span><b>Option period ends</b><p>The day, and the 5:00 PM cutoff. Never rolled to Monday, because 5B is not extended.</p></div>
+    <div><span class="ptag">Par. 7B(2)</span><b>Disclosure due</b><p>When the Seller&rsquo;s Disclosure Notice is due from the seller, counted as written.</p></div>
+    <div><span class="ptag">Par. 9A</span><b>Closing</b><p>The date written on the contract, on the sheet and in the calendar, with the earnest money on the line.</p></div>
+  </div>
+  <div class="ctas"><a class="link" href="/tc-check" data-evt="home_deadlines_link">Check a contract free</a></div>
+  <p class="partner-line">Forward a filled contract to <strong>tc@check.txtanoffer.com</strong> and the report comes back with the deadline sheet and the calendar file attached.</p>
+</section>
+
 <!-- 2b. SAMPLE + CHECKLIST BY EMAIL: the homepage's one ask (2026-11-03). -->
 <section class="capture">
   <div class="eyebrow">Free, by email</div>
@@ -1125,7 +1140,7 @@ __TEXT_DEMO__
     <div class="tile price">
       <span class="tag g">TC CHECK</span>
       <div class="big">Free</div>
-      <p>3 full reports with no signup, then just your email. Your file isn&rsquo;t kept.</p>
+      <p>3 full reports with no signup, then just your email. Deadline sheet + calendar file included with every report. Your file isn&rsquo;t kept.</p>
     </div>
     <div class="tile price">
       <span class="tag g">AGENT</span>
