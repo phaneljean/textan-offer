@@ -11712,6 +11712,52 @@ def verify_wins_signature(phone, sig):
     return hmac.compare_digest(sig or "", expected)
 
 
+def _offer_deadline_items(offer):
+    """Deadline Autopilot items for one ACCEPTED dashboard offer, in
+    tc_deadlines' item shape (plus a "short" label for the card strip).
+    Texas: the Par. 5A/5B/9A dates counted from the accept click (the
+    Effective Date proxy -- see deadlines.py's header) and the closing
+    date printed on the generated contract. Colorado: the Sec. 3.1 dates
+    as written on the stored CBS1, when its PDF is still on disk.
+    Anything unreadable returns [] -- the card simply shows no strip."""
+    try:
+        effective_date = datetime.fromisoformat(offer.get("thread_responded_at") or "").date()
+    except (ValueError, TypeError):
+        return []
+    filename = offer.get("filename") or ""
+    if transaction_tasks.is_co(filename):
+        try:
+            import co_audit
+            values = co_audit.read_contract(os.path.join(OUTPUT_DIR, filename)) or {}
+            items = [{"key": f"co_{d['key']}", "label": d["label"], "short": d["label"],
+                      "date": d["date"], "time_label": None,
+                      "basis": "CBS1 Sec. 3.1: the date written on the contract",
+                      "detail": "", "pending_reason": None}
+                     for d in co_audit.contract_deadlines(values) if d.get("date")]
+            return sorted(items, key=lambda i: i["date"])
+        except Exception:
+            return []
+    items = [{"key": "earnest_money", "label": "Earnest money + option fee due to the escrow agent",
+              "short": "Earnest money + option fee due",
+              "date": earnest_money_deadline(effective_date), "time_label": None,
+              "basis": "Par. 5A: within 3 days after the Effective Date (the accept date), "
+                       "extended past a Saturday, Sunday or Texas Legal Holiday per Par. 5A(2)",
+              "detail": "", "pending_reason": None}]
+    end = option_end_date(effective_date, offer.get("option_days"))
+    if end:
+        items.append({"key": "option_end", "label": "Option period ends", "short": "Option period ends",
+                      "date": end, "time_label": "5:00 PM",
+                      "basis": "Par. 5B: 5:00 PM local time, not extended for weekends or holidays",
+                      "detail": "", "pending_reason": None})
+    items.append({"key": "closing", "label": "Closing (on or before)", "short": "Closing",
+                  "date": offer_closing_date(offer.get("close_days"), offer.get("created_at"),
+                                             offer.get("generator_version")),
+                  "time_label": None,
+                  "basis": "Par. 9A: the closing date printed on the contract",
+                  "detail": "", "pending_reason": None})
+    return sorted(items, key=lambda i: i["date"])
+
+
 @app.route("/dashboard")
 def dashboard():
     phone = request.args.get("phone", "")
@@ -11777,6 +11823,23 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
             accepted_volume += o["price"]
             accepted_count += 1
 
+        # Deadline Autopilot on the dashboard (2026-11-05): every accepted
+        # offer carries its deadline strip + a calendar download, counted
+        # with the same rules as the TC Check sheet (deadlines.py).
+        dl_html = ""
+        if status == "accepted":
+            import tc_deadlines as _tcd
+            _dl_items = _offer_deadline_items(o)
+            if _dl_items:
+                _rows = "".join(
+                    f'<div class="dl-item"><span>{escape(i["short"])}</span>'
+                    f'<b>{escape(_tcd.fmt_day(i["date"]) + (", " + i["time_label"] if i.get("time_label") else ""))}</b></div>'
+                    for i in _dl_items)
+                _ics_url = (f"/dashboard/deadlines.ics?phone={_urlquote(phone, safe='')}"
+                            f"&expires={expires}&sig={sig}&offer={o['id']}")
+                dl_html = (f'<div class="dl-strip"><div class="dl-strip-title">Deadline Autopilot</div>'
+                           f'{_rows}<a class="dl-ics" href="{_ics_url}">Add deadlines to my calendar (.ics)</a></div>')
+
         if not pdf_exists:
             keep_html = '<div class="keep-line gone">PDF no longer stored'+ (' (free-trial PDFs are kept 30 days)' if not archived_plan else '') +'</div>'
         elif archived_plan:
@@ -11813,6 +11876,7 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
               <div class="pill"><span class="pill-val">{o['close_days']}d</span><span class="pill-label">Close</span></div>
             </div>
             {f'<div class="amend-list">{amend_html}</div>' if amend_html else ''}
+            {dl_html}
             {keep_html}
             {f'<a href="{pdf_link}" target="_blank" class="btn-primary">View PDF</a>' if pdf_exists else '<span class="btn-primary disabled">PDF expired</span>'}
             {f'<a href="{sign_transaction_url(o["filename"], request.host_url.rstrip("/"))}" target="_blank" class="btn-primary" style="margin-top:0.5rem;background:linear-gradient(135deg,var(--accent),#0a3a33);">Transaction &rarr;</a>' if status == "accepted" else ''}
@@ -12062,6 +12126,12 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
   .btn-primary:hover {{background:var(--accent-dark);}}
   .btn-primary.disabled {{background:#e5e8eb;color:#8a9aa9;box-shadow:none;cursor:default;}}
   .keep-line {{font-size:0.78rem;font-weight:600;color:var(--accent);margin:-0.3rem 0 0.8rem;}}
+  .dl-strip {{background:var(--accent-tint);border:1px solid rgba(11,93,82,0.25);border-radius:var(--radius-sm);padding:0.8rem 0.95rem;margin:0 0 0.8rem;}}
+  .dl-strip-title {{font-size:0.72rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:var(--accent);margin-bottom:0.45rem;}}
+  .dl-item {{display:flex;justify-content:space-between;gap:0.75rem;font-size:0.83rem;padding:0.28rem 0;border-top:1px solid rgba(11,93,82,0.12);}}
+  .dl-item span {{color:var(--text-muted);}}
+  .dl-item b {{font-weight:700;white-space:nowrap;}}
+  .dl-ics {{display:inline-block;margin-top:0.55rem;font-size:0.82rem;font-weight:700;color:var(--accent);text-decoration:underline;}}
   .keep-line.trial {{color:#b45309;font-weight:500;}}
   .keep-line.trial a {{color:#0b5d52;font-weight:700;text-decoration:underline;}}
   .keep-line.gone {{color:var(--text-dim);font-weight:500;}}
@@ -12342,6 +12412,31 @@ def robots_txt():
         "Sitemap: https://txtanoffer.com/sitemap.xml\n"
     )
     return Response(body, mimetype="text/plain")
+
+
+@app.route("/dashboard/deadlines.ics")
+def dashboard_deadlines_ics():
+    """Deadline Autopilot calendar for one accepted offer on the caller's
+    own dashboard. Gated by the same signed link as /dashboard
+    (phone+expires+sig), and the offer must belong to that phone."""
+    phone = request.args.get("phone", "")
+    if not verify_dashboard_signature(phone, request.args.get("expires", ""), request.args.get("sig", "")):
+        return "Link expired or invalid.", 403
+    try:
+        offer_id = int(request.args.get("offer", ""))
+    except (TypeError, ValueError):
+        return "Unknown offer.", 400
+    offer = next((o for o in get_offers_for_phone(phone) if o.get("id") == offer_id), None)
+    if offer is None or offer.get("thread_status") != "accept":
+        return "No accepted offer found for that link.", 404
+    items = _offer_deadline_items(offer)
+    if not items:
+        return "No deadlines could be computed for this offer.", 404
+    import tc_deadlines
+    resp = make_response(tc_deadlines.build_ics(items, offer.get("address") or ""))
+    resp.headers["Content-Type"] = "text/calendar; charset=utf-8"
+    resp.headers["Content-Disposition"] = 'attachment; filename="txtanoffer-deadlines.ics"'
+    return resp
 
 
 @app.route("/sitemap.xml")
