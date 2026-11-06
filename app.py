@@ -256,11 +256,13 @@ _ENGAGEMENT_TYPES = ("js_ok", "upload_picked", "upload_failed_rejected", "upload
                      "tool_calc_run", "tool_ics", "tool_copy_text", "tool_embed_copy", "hub_tool_link",
                      "guide_trec_official",
                      # first_screen.py, 2026-10-23
-                     "hero_broker_cta", "tc_title_copy_link",
+                     "hero_broker_cta", "tc_title_copy_link", "tc_download_ics",
                      # homepage Text an offer -> /text-an-offer, 2026-10-24
                      "text_learn_more",
                      # homepage catches-section tools row, 2026-11-03
-                     "home_calc_link", "home_guides_link") \
+                     "home_calc_link", "home_guides_link",
+                     # homepage Deadline Autopilot example calendar download, 2026-11-05
+                     "home_sample_ics", "home_deadlines_link") \
     + CHECK_CTA_EVENTS + SAMPLE_CTA_EVENTS + BOOK_CALL_EVENTS + (DROPZONE_INTERACT_EVENT,)
 # Pages whose beacons /v1/evt accepts: the ones with their own
 # track_page_view() call, plus _BEACON_ONLY_PAGES below.
@@ -939,6 +941,13 @@ __TEXT_DEMO_CSS__
   .capture-hp{position:absolute;left:-9999px;top:auto;width:1px;height:1px;opacity:0}
   .pricing-strip{background:var(--gray);padding-bottom:110px}
   .partner-line{text-align:center;margin-top:18px;font-size:15px;color:#3d4a47}
+  .dl-sample{max-width:760px;margin:44px auto 0;background:#E7F3F1;border:1px solid var(--green);border-radius:18px;padding:26px 28px;text-align:left}
+  .dl-sample-head{font-weight:700;font-size:16px;margin:0 0 8px}
+  .dl-sample .dl-row{display:flex;gap:12px;flex-wrap:wrap;font-size:15.5px;padding:8px 0;border-top:1px solid rgba(11,93,82,.15)}
+  .dl-sample .dl-when{font-weight:700;min-width:225px}
+  .dl-sample .dl-par{color:var(--green);font-weight:700;font-size:13px}
+  .dl-sample .ctas{justify-content:flex-start}
+  .dl-sample .fine{font-size:13px;color:#5b6b67;margin:12px 0 0}
   .partner-line a{color:var(--green);font-weight:700}
   .tiles-3{grid-template-columns:1fr 1fr 1fr}
   .tile.price{min-height:0;padding:44px 30px 40px}
@@ -1088,6 +1097,14 @@ __SITE_NAV__
     <div><span class="ptag">Par. 5B</span><b>Option period ends</b><p>The day, and the 5:00 PM cutoff. Never rolled to Monday, because 5B is not extended.</p></div>
     <div><span class="ptag">Par. 7B(2)</span><b>Disclosure due</b><p>When the Seller&rsquo;s Disclosure Notice is due from the seller, counted as written.</p></div>
     <div><span class="ptag">Par. 9A</span><b>Closing</b><p>The date written on the contract, on the sheet and in the calendar, with the earnest money on the line.</p></div>
+  </div>
+  <div class="dl-sample">
+    <p class="dl-sample-head">The sheet, on an example contract executed Tue, Nov 10, 2026:</p>
+    <div class="dl-row"><span class="dl-when">Fri, Nov 13, 2026</span><span>Earnest money + option fee due to the escrow agent <span class="dl-par">Par. 5A</span></span></div>
+    <div class="dl-row"><span class="dl-when">Tue, Nov 17, 2026, 5:00 PM</span><span>Option period ends <span class="dl-par">Par. 5B</span></span></div>
+    <div class="dl-row"><span class="dl-when">Thu, Dec 10, 2026</span><span>Closing (on or before) <span class="dl-par">Par. 9A</span></span></div>
+    <div class="ctas"><a class="btn solid" href="/static/example-deadlines.ics" download data-evt="home_sample_ics">Add these deadlines to my calendar</a></div>
+    <p class="fine">Example dates. Yours are computed from your contract as written, and the calendar file comes attached to your report.</p>
   </div>
   <div class="ctas"><a class="link" href="/tc-check" data-evt="home_deadlines_link">Check a contract free</a></div>
   <p class="partner-line">Forward a filled contract to <strong>tc@check.txtanoffer.com</strong> and the report comes back with the deadline sheet and the calendar file attached.</p>
@@ -3311,6 +3328,23 @@ def tc_check():
         key=lambda i: i["severity"] != "blocker",  # must-fix first, same order as the email/PDF
     )
     payload["files_line"] = _files_line(result) if result.get("recognized") else ""
+    # Deadline Autopilot on the web report (2026-11-05): the same sheet the
+    # report email carries, display-ready, plus the key_dates already in
+    # this payload for the /tc-check/deadlines.ics download. Shown only
+    # when the full report is shown (never behind the email gate).
+    payload["deadlines"] = []
+    if result.get("recognized") and not payload.get("gated"):
+        try:
+            import tc_deadlines as _tcd
+            _dl_items = _tcd.compute_deadlines(result.get("key_dates") or {})
+            payload["deadlines"] = [
+                {"label": i["label"],
+                 "when": (_tcd.fmt_day(i["date"]) + (f", {i['time_label']}" if i.get("time_label") else "")) if i["date"] else "",
+                 "basis": i["basis"], "detail": i.get("detail") or "",
+                 "pending": i.get("pending_reason") or ""}
+                for i in _dl_items]
+        except Exception:
+            payload["deadlines"] = []
     if not is_demo and not client["email"]:
         if result.get("recognized"):
             payload["free_reports_left"] = max(TC_FREE_FULL_REPORTS - client["use_count"] - 1, 0)
@@ -3345,6 +3379,56 @@ def tc_check():
         threading.Thread(target=_send_report, daemon=True).start()
 
     resp.set_cookie("tc_cid", cid, max_age=365 * 24 * 3600, httponly=True, samesite="Lax")
+    return resp
+
+
+@app.route("/tc-check/deadlines.ics", methods=["POST"])
+def tc_check_deadlines_ics():
+    """The Deadline Autopilot calendar file for a report the browser
+    already rendered -- same contract as /tc-check/report.pdf: takes only
+    the key_dates the check itself returned in its payload, recomputes the
+    deadlines server-side (tc_deadlines), and never re-reads the uploaded
+    file. Every value is re-validated here; the client is never trusted
+    for a date."""
+    from datetime import date as _date
+    import tc_deadlines
+    data = request.get_json(silent=True) or {}
+    raw = data.get("key_dates") if isinstance(data.get("key_dates"), dict) else {}
+
+    def _iso(key):
+        v = raw.get(key)
+        if isinstance(v, str):
+            try:
+                return _date.fromisoformat(v.strip()).isoformat()
+            except ValueError:
+                return None
+        return None
+
+    def _days(key):
+        try:
+            v = int(raw.get(key))
+        except (TypeError, ValueError):
+            return None
+        return v if 0 < v <= 366 else None
+
+    def _amt(key):
+        try:
+            v = float(raw.get(key))
+        except (TypeError, ValueError):
+            return None
+        return v if 0 <= v <= 100_000_000 else None
+
+    key_dates = {"effective_date": _iso("effective_date"), "closing_date": _iso("closing_date"),
+                 "option_days": _days("option_days"), "disclosure_days": _days("disclosure_days"),
+                 "earnest_money": _amt("earnest_money"), "option_fee": _amt("option_fee")}
+    items = tc_deadlines.compute_deadlines(key_dates)
+    if not any(i["date"] is not None for i in items):
+        return jsonify({"error": "No deadlines could be computed from this contract's dates."}), 400
+    prop = data.get("property") if isinstance(data.get("property"), dict) else {}
+    label = str(prop.get("address") or "")[:120]
+    resp = make_response(tc_deadlines.build_ics(items, label))
+    resp.headers["Content-Type"] = "text/calendar; charset=utf-8"
+    resp.headers["Content-Disposition"] = 'attachment; filename="txtanoffer-deadlines.ics"'
     return resp
 
 
@@ -3752,6 +3836,14 @@ def tc_check_page():
   .issue-tag.blocker{background:#fdecec;color:var(--red)}
   .issue-tag.warning,.issue-tag.info{background:#fff4dc;color:var(--amber)}
   .rep-actions{display:flex;flex-wrap:wrap;gap:10px;padding:16px 22px 20px;border-top:1px solid var(--line)}
+  .deadlines-box{background:#E7F3F1;border:1px solid var(--green);border-radius:12px;padding:14px 15px;margin:12px 0 4px}
+  .deadlines-box h3{font-size:15px;font-weight:800;color:var(--green-deep,#0a3f3a);margin:0 0 2px}
+  .dl-sub{font-size:13px;color:var(--mute);margin:0 0 10px}
+  .dl-row{display:flex;gap:10px;flex-wrap:wrap;font-size:14px;padding:5px 0;border-top:1px solid rgba(11,93,82,.15)}
+  .dl-when{font-weight:700;min-width:190px}
+  .dl-row.pending{color:var(--amber);font-size:13px}
+  .deadlines-box .pill{margin-top:10px}
+  .dl-note{font-size:12px;color:var(--mute);margin:8px 0 0}
   .pill{font:600 14px Inter,sans-serif;padding:9px 16px;border-radius:980px;border:1.5px solid #d2d2d7;background:#fff;color:var(--ink);cursor:pointer}
   .pill.solid{background:var(--green);border-color:var(--green);color:#fff}
   .pill:disabled{opacity:.7}
@@ -4541,6 +4633,7 @@ function renderResult(data, file, isDemo) {
     html += buildTriage(issues);
     html += buildIssueGroups(issues);
     html += buildHowToRead();
+    html += buildDeadlines(data);
     if (data.looks_like_blank_draft) {
       html += '<div class="fixit-cta"><p>This looks like an essentially blank draft &mdash; more gaps than a quick fix. If it hasn&rsquo;t been signed yet, generating a clean one from scratch may be faster than patching every field.</p><a href="/demo">Generate a clean offer &rarr;</a></div>';
     }
@@ -4581,6 +4674,7 @@ function renderResult(data, file, isDemo) {
   resultEl.dataset.filename = file.name;
   resultEl.dataset.property = JSON.stringify(data.property || {});
   resultEl.dataset.filesLine = data.files_line || '';
+  resultEl.dataset.keyDates = JSON.stringify(data.key_dates || {});
 }
 
 function unlockGate() {
@@ -4637,6 +4731,47 @@ function agentMessageText() {
 
 function copyAgentMessage() {
   navigator.clipboard.writeText(agentMessageText());
+}
+
+function buildDeadlines(data) {
+  const items = data.deadlines || [];
+  if (!items.length) return '';
+  let html = '<div class="deadlines-box"><h3>Deadline Autopilot</h3><p class="dl-sub">The dates in this contract, counted as written. Free with every check.</p>';
+  items.forEach(i => {
+    if (i.when) {
+      html += '<div class="dl-row"><span class="dl-when">' + escapeHtml(i.when) + '</span><span>' + escapeHtml(i.label) + '</span></div>';
+    } else if (i.pending) {
+      html += '<div class="dl-row pending"><span>' + escapeHtml(i.label) + ': ' + escapeHtml(i.pending) + '</span></div>';
+    }
+  });
+  html += '<button class="pill solid" onclick="downloadDeadlines(this)" data-evt="tc_download_ics">Add deadlines to my calendar</button>';
+  html += '<p class="dl-note">Downloads a calendar file (.ics) for Google Calendar, Apple Calendar or Outlook. Computed from the contract as written &mdash; verify against the executed copy.</p></div>';
+  return html;
+}
+
+function downloadDeadlines(btn) {
+  const key_dates = JSON.parse(resultEl.dataset.keyDates || '{}');
+  const property = JSON.parse(resultEl.dataset.property || '{}');
+  const original = btn ? btn.textContent : null;
+  if (btn) { btn.disabled = true; btn.textContent = 'Preparing calendar...'; }
+  fetch('/tc-check/deadlines.ics', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ key_dates, property })
+  })
+    .then(r => { if (!r.ok) throw new Error('bad'); return r.blob(); })
+    .then(blob => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'txtanoffer-deadlines.ics';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    })
+    .catch(() => { alert('Could not build the calendar file. Try again.'); })
+    .finally(() => { if (btn) { btn.disabled = false; btn.textContent = original; } });
 }
 
 function downloadReport(btn) {

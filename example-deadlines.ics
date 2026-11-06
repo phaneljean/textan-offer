@@ -1,0 +1,63 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//TxtAnOffer//Deadline Autopilot//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+X-WR-CALNAME:TxtAnOffer deadlines
+BEGIN:VEVENT
+UID:earnest_money-20261113@txtanoffer.com
+DTSTAMP:20261106T070243Z
+DTSTART;VALUE=DATE:20261113
+DTEND;VALUE=DATE:20261114
+SUMMARY:Earnest money + option fee due to the escrow agent -- Example con
+ tract
+DESCRIPTION:Par. 5A: within 3 days after the Effective Date\, extended pa
+ st a Saturday\, Sunday or Texas Legal Holiday per Par. 5A(2). Deliver: $
+ 4\,250 earnest money + $250 option fee. Computed by TxtAnOffer TC Check 
+ from the contract as written. Verify against the executed copy. General 
+ information\, not legal advice.
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:Earnest money + option fee due to the escrow agent
+TRIGGER:-P1D
+END:VALARM
+END:VEVENT
+BEGIN:VEVENT
+UID:option_end-20261117@txtanoffer.com
+DTSTAMP:20261106T070243Z
+DTSTART;TZID=America/Chicago:20261117T170000
+DTEND;TZID=America/Chicago:20261117T173000
+SUMMARY:Option period ends -- Example contract
+DESCRIPTION:Par. 5B: Effective Date + 7 days\, 5:00 PM local time\, not e
+ xtended for weekends or holidays. The $250 option fee buys the unrestric
+ ted right to terminate until this moment\; after it\, that right is gone
+ . Computed by TxtAnOffer TC Check from the contract as written. Verify a
+ gainst the executed copy. General information\, not legal advice.
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:Option period ends
+TRIGGER:-P1D
+END:VALARM
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:Option period ends
+TRIGGER:-PT3H
+END:VALARM
+END:VEVENT
+BEGIN:VEVENT
+UID:closing-20261210@txtanoffer.com
+DTSTAMP:20261106T070243Z
+DTSTART;VALUE=DATE:20261210
+DTEND;VALUE=DATE:20261211
+SUMMARY:Closing (on or before) -- Example contract
+DESCRIPTION:Par. 9A: the date written on the contract. $4\,250 earnest mo
+ ney is on the line at closing. Computed by TxtAnOffer TC Check from the 
+ contract as written. Verify against the executed copy. General informati
+ on\, not legal advice.
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:Closing (on or before)
+TRIGGER:-P1D
+END:VALARM
+END:VEVENT
+END:VCALENDAR
