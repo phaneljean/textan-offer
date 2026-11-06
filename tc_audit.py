@@ -598,6 +598,41 @@ def _effective_date(values: dict):
         return None
 
 
+def _key_dates(values: dict, pages: dict) -> dict:
+    """The contract's own dates and Par. 5 amounts, as written on the form,
+    for Deadline Autopilot (tc_deadlines.py). Dates are ISO strings or None;
+    a value the form left blank or unreadable stays None -- never guessed.
+    disclosure_days is only set when 7B(2) is the box checked (7B(1) means
+    the notice was already delivered, so there is no deadline to count)."""
+    def _days(slot_key):
+        raw = re.sub(r"\D", "", _slot(values, pages, slot_key) or "")
+        try:
+            return int(raw) if raw else None
+        except ValueError:
+            return None
+
+    eff = _effective_date(values)
+    closing = None
+    md = _parse_month_day(_slot(values, pages, "closing_date"))
+    year = _year(_slot(values, pages, "closing_year"))
+    if md and year:
+        try:
+            closing = date(year, *md)
+        except ValueError:
+            closing = None  # not a real date -- already a finding above
+    disclosure_days = None
+    if _is_checked(values, DISCLOSURE_BOXES[1][1]):
+        disclosure_days = _days("disclosure_days")
+    return {
+        "effective_date": eff.isoformat() if eff else None,
+        "closing_date": closing.isoformat() if closing else None,
+        "option_days": _days("option_days"),
+        "disclosure_days": disclosure_days,
+        "earnest_money": _money(values.get(FIELD_MAP["earnest_money_amount"], "")),
+        "option_fee": _money(values.get(FIELD_MAP["option_fee_amount"], "")),
+    }
+
+
 def _closing_date_problem(text: str, year_suffix: str):
     """Message if the 9A date can't exist (e.g. 'November 31'); None if
     fine or unparseable (an unreadable date is not proof of an error)."""
@@ -1220,6 +1255,8 @@ def check_tc_file(pdf_paths) -> dict:
             "city": values.get(FIELD_MAP["city"], "").strip(),
             "county": values.get(FIELD_MAP["county"], "").strip(),
         },
+        # The dates/amounts Deadline Autopilot counts from (tc_deadlines.py).
+        "key_dates": _key_dates(values, pages),
     }
 
 

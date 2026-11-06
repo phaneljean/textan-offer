@@ -19,10 +19,13 @@ SendGrid Inbound Parse posts multipart/form-data with (among other fields):
   attachment1..attachmentN (files), attachment-info (JSON metadata)
 Docs: https://www.twilio.com/docs/sendgrid/for-developers/parsing-email/setting-up-the-inbound-parse-webhook
 """
+import base64
 import os
 import re
+from datetime import date
 from html import escape
 
+import tc_deadlines
 import trec_forms
 
 MAX_ATTACHMENTS = 4  # contract + optional 40-11 addendum + optional 41-3 addendum + optional 39-11 amendment, same cap check_tc_file() expects
@@ -847,6 +850,92 @@ def _not_checked_text(result: dict) -> str:
             "-- TxtAnOffer TC Check")
 
 
+def _deadline_items(result: dict) -> list:
+    """Deadline Autopilot sheet for this result ([] when the contract has
+    no Effective Date to count from, or on any error -- the report email
+    must never fail because the deadline sheet did)."""
+    try:
+        return tc_deadlines.compute_deadlines(result.get("key_dates") or {})
+    except Exception:
+        return []
+
+
+def _deadline_text(result: dict) -> str:
+    items = _deadline_items(result)
+    if not items:
+        return ""
+    kd = result.get("key_dates") or {}
+    try:
+        eff = date.fromisoformat(kd.get("effective_date") or "")
+        eff_line = f"Effective date: {eff:%A}, {eff:%B} {eff.day}, {eff.year}\n"
+    except ValueError:
+        eff_line = ""
+    lines = ["DEADLINE AUTOPILOT: THE DATES IN THIS CONTRACT\n" + eff_line]
+    for item in items:
+        if item["date"] is not None:
+            when = tc_deadlines.fmt_day(item["date"])
+            if item.get("time_label"):
+                when += f", {item['time_label']}"
+            lines.append(f"{when} - {item['label']}")
+            extra = item["basis"].rstrip(".") + (f". {item['detail']}" if item.get("detail") else "")
+            lines.append(f"  {extra}")
+        else:
+            lines.append(f"{item['label']}: {item['pending_reason']}")
+    lines.append("The attached file (txtanoffer-deadlines.ics) adds these dates to your "
+                 "calendar: open it in Google Calendar, Apple Calendar or Outlook.")
+    lines.append("Computed from the contract as written. Verify against the executed "
+                 "copy before relying on them.")
+    return "\n".join(lines) + "\n\n"
+
+
+def _deadline_html(result: dict) -> str:
+    items = _deadline_items(result)
+    if not items:
+        return ""
+    kd = result.get("key_dates") or {}
+    try:
+        eff = date.fromisoformat(kd.get("effective_date") or "")
+        eff_line = f'<p style="{_P_STYLE}margin:0 0 10px;">Effective date: <strong>{eff:%A}, {eff:%B} {eff.day}, {eff.year}</strong></p>'
+    except ValueError:
+        eff_line = ""
+    rows = ""
+    for item in items:
+        if item["date"] is not None:
+            when = tc_deadlines.fmt_day(item["date"])
+            if item.get("time_label"):
+                when += f", {item['time_label']}"
+            extra = escape(item["basis"].rstrip(".")) + (f". {escape(item['detail'])}" if item.get("detail") else "")
+            rows += (f'<p style="{_P_STYLE}margin:0 0 10px;"><strong>{escape(when)}</strong> - '
+                     f'{escape(item["label"])}<br><span style="color:#475569;font-size:13px;">{extra}</span></p>')
+        else:
+            rows += (f'<p style="{_P_STYLE}margin:0 0 10px;color:#b45309;"><strong>{escape(item["label"])}:</strong> '
+                     f'{escape(item["pending_reason"] or "")}</p>')
+    return (
+        f'<div style="margin-top:22px;background:{_GREEN_TINT};border:1px solid {_GREEN};border-radius:10px;padding:16px 18px;">'
+        f'<p style="{_P_STYLE}margin:0 0 10px;color:{_GREEN_DARK};"><strong>Deadline Autopilot</strong> - the dates in this contract</p>'
+        + eff_line + rows +
+        f'<p style="{_P_STYLE}margin:10px 0 0;">The attached calendar file (<strong>txtanoffer-deadlines.ics</strong>) adds these dates to your calendar: open it in Google Calendar, Apple Calendar or Outlook.</p>'
+        f'<p style="{_P_STYLE}margin:8px 0 0;font-size:12px;color:#64748b;">Computed from the contract as written. Verify against the executed copy before relying on them.</p>'
+        "</div>"
+    )
+
+
+def deadline_attachment(result: dict) -> list:
+    """The Deadline Autopilot .ics for this result, as a send_html_email
+    attachments list ([] when no deadline could be computed)."""
+    items = _deadline_items(result)
+    if not any(i["date"] is not None for i in items):
+        return []
+    try:
+        prop = result.get("property") or {}
+        ics = tc_deadlines.build_ics(items, prop.get("address") or "")
+        return [{"filename": "txtanoffer-deadlines.ics",
+                 "content": base64.b64encode(ics.encode("utf-8")).decode("ascii"),
+                 "type": "text/calendar"}]
+    except Exception:
+        return []
+
+
 def format_reply_body(result: dict, check_count: int = 0, archived: dict = None) -> str:
     if result.get("unsupported"):
         return _not_checked_text(result)
@@ -884,6 +973,7 @@ def format_reply_body(result: dict, check_count: int = 0, archived: dict = None)
                  "2. Check it again: forward the corrected file to tc@check.txtanoffer.com, "
                  "or upload it at txtanoffer.com/tc-check.\n"
                  "3. Share this with your agent: just forward this email.\n\n")
+    body += _deadline_text(result)
     body += (_ARCHIVE_TEXT_CO if _is_co(result) else _ARCHIVE_TEXT) + "\n\n" + _UPSELL_TEXT + "\n\n"
     body += f"{_booking_question(bool(issues))} Book a free 15-min call: {BOOKING_URL}\n\n"
     body += ("---\n"
@@ -1083,6 +1173,7 @@ def format_reply_html(result: dict, check_count: int = 0, archived: dict = None)
         body += _issue_group_html(blockers, "Fix before this goes to title")
         body += _issue_group_html(warnings, "Worth fixing")
         body += _next_steps_html()
+    body += _deadline_html(result)
     body += _archive_html(_is_co(result))
     body += _upsell_html()
     body += _booking_html(bool(issues))

@@ -211,7 +211,7 @@ def _send_email(to_email: str, subject: str, content: list, reply_to: str = None
         payload["reply_to"] = {"email": reply_to}
     if attachments:
         payload["attachments"] = [{"content": a["content"], "filename": a["filename"],
-                                   "type": "application/pdf", "disposition": "attachment"} for a in attachments]
+                                   "type": a.get("type") or "application/pdf", "disposition": "attachment"} for a in attachments]
 
     data = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(
