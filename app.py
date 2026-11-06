@@ -9104,6 +9104,173 @@ _GUIDES = {
              "The blanks that get files kicked back: Paragraph 2A county, 5A escrow agent, 5B option days when an option fee is entered, the Paragraph 3 price math against the 40-11 loan amount, one set of initials per party on pages 1 to 9, and the Effective Date on the signature page."),
         ],
     },
+    "trec-30-18-condo-checklist": {
+        "title": "TREC 30-18 Condo Contract Checklist: What to Check Before Title",
+        "description": "A paragraph-by-paragraph checklist for the TREC 30-18 condominium contract: the Paragraph 2 Documents and Resale Certificate boxes and their delivery clocks, unit and project name, price math, disclosures and the blanks title kicks back.",
+        "kicker": "For TCs and agents",
+        "h1": "TREC 30-18 condo contract: what to check before title",
+        "lede": "The 30-18 is the 20-19's condo sibling, and Paragraph 2 is where it bites: the condominium Documents and the Resale Certificate each carry a delivery clock, and the buyer's termination right runs 7 days from delivery.",
+        "body": """
+<h2>Which contract is it?</h2>
+<p>The <strong>30-18</strong> is TREC's One to Four Family Residential Contract (Condominium), 10 pages. If the property is a condo unit, this is the form, not the 20-19. Check the "TREC NO." in the footer before anything else; an old template saved on a computer is a common source of problems.</p>
+
+<h2>Paragraph 2A(1): the unit itself</h2>
+<ul>
+  <li><strong>County</strong> blank is a must-fix; title kicks the file back without it.</li>
+  <li><strong>Unit number</strong> blank, with no unit in the address either. The form identifies the property as a unit described in the Condominium Declaration.</li>
+  <li><strong>Condominium project name</strong> ("of ___, a condominium project") blank.</li>
+  <li><strong>City</strong> can legitimately be blank if the project isn't inside a city's limits; otherwise it should be filled in.</li>
+</ul>
+
+<h2>Paragraph 2B: the condominium Documents</h2>
+<ul>
+  <li><strong>Exactly one box:</strong> 2B(1) Buyer has received the Declaration, Bylaws and Rules, or 2B(2) Seller will deliver them. No box checked is a must-fix.</li>
+  <li><strong>2B(2) needs its days.</strong> The buyer's 7-day termination right runs from delivery of the Documents, so a blank days line leaves the clock undefined.</li>
+</ul>
+
+<h2>Paragraph 2C: the Resale Certificate</h2>
+<ul>
+  <li><strong>Exactly one of three boxes:</strong> 2C(1) received, 2C(2) Seller will deliver it, or 2C(3) the Association did not provide it.</li>
+  <li><strong>2C(2) needs its days</strong> for the same reason: the 7-day termination right runs from delivery.</li>
+  <li><strong>The 36-11 trap:</strong> an Owners Association addendum attached to a 30-18. The current 36-11 is titled "(NOT FOR USE WITH CONDOMINIUMS)". On a condo contract, Paragraph 2 covers the Documents and Resale Certificate, and association transfer charges are handled at 12A(3).</li>
+</ul>
+
+<h2>Money, dates and the shared traps</h2>
+<ul>
+  <li><strong>Paragraph 3:</strong> 3A cash + 3B financing has to equal the 3C Sales Price, and 3B has to match the 40-11 loan amount when one is attached.</li>
+  <li><strong>5A:</strong> escrow agent and earnest money blank are must-fixes. <strong>5D:</strong> no option fee means no termination option; confirm that's intended.</li>
+  <li><strong>5B:</strong> an option fee with the option period days blank.</li>
+  <li><strong>6A:</strong> title company named, and who pays for the title policy, exactly one box. <strong>6C:</strong> the days for Buyer to object to title filled in.</li>
+  <li><strong>7B Seller's Disclosure:</strong> one of 7B(1), (2) or (3); 7B(2) needs its delivery days. <strong>7D:</strong> one acceptance-of-condition box.</li>
+  <li><strong>Paragraph 4 leases</strong> checked but the addendum not listed in Paragraph 22.</li>
+  <li><strong>9A closing date</strong> that isn't a real date, or falls before the Effective Date (page 8 of 10). One set of initials per buyer and seller at the foot of pages 1 through 9.</li>
+</ul>
+<p>Counting days on the file? The free <a href="/guides/trec-deadline-calculator">TREC deadline calculator</a> works out the option period and earnest money dates. Working a house instead? See the <a href="/guides/trec-20-19-checklist">20-19 checklist</a>.</p>
+""",
+        "faq": [
+            ("What is the TREC 30-18 used for?",
+             "It is TREC's One to Four Family Residential Contract (Condominium): the promulgated form for buying a condominium unit in Texas. Use it instead of the 20-19 when the property is a unit described in a condominium declaration."),
+            ("What is the Resale Certificate in Paragraph 2C?",
+             "A certificate from the condominium association covering assessments, fees and the association's position. Paragraph 2C says whether the buyer has received it, the seller will deliver it within a set number of days, or the association did not provide it. The buyer's termination right runs 7 days from receiving it."),
+            ("Can I attach the TREC 36-11 HOA addendum to a 30-18?",
+             "No. The current 36-11 is titled '(NOT FOR USE WITH CONDOMINIUMS)'. On a condo contract, Paragraph 2 handles the condominium Documents and Resale Certificate, and Paragraph 12A(3) covers association transfer charges."),
+            ("Does TC Check read the 30-18?",
+             "Yes. TC Check reads a filled 30-18 and flags the Paragraph 2 boxes and delivery days, unit and project blanks, price math, disclosure boxes, initials and dates before the file goes to title. The first 3 reports are free and need no signup."),
+        ],
+    },
+    "trec-9-18-land-checklist": {
+        "title": "TREC 9-18 Unimproved Property (Land) Contract: What to Check Before Title",
+        "description": "A paragraph-by-paragraph checklist for the TREC 9-18 Unimproved Property Contract: the Paragraph 2 description or exhibit, 3D acreage adjustment, 4B natural resource leases, 7F water disclosure and the blanks title kicks back.",
+        "kicker": "For TCs and agents",
+        "h1": "TREC 9-18 land contract: what to check before title",
+        "lede": "The 9-18 is the land contract: no house, no improvements, and its own traps in Paragraph 2's description, 3D's acreage adjustment and 4B's natural resource leases.",
+        "body": """
+<h2>Which contract is it?</h2>
+<p>The <strong>9-18</strong> is TREC's Unimproved Property Contract, 11 pages, for land with no residential improvements. A farm or ranch operation goes on the <a href="/guides/trec-25-17-farm-and-ranch-contract">25-17</a> instead, and land with a home on it goes on the 20-19. Check the "TREC NO." in the footer before anything else.</p>
+
+<h2>Paragraph 2: describing land</h2>
+<ul>
+  <li><strong>Lot, Block, Addition and address</strong> filled in, or the property described on an attached exhibit. If the exhibit route is used, confirm the exhibit is actually attached.</li>
+  <li><strong>County</strong> blank is a must-fix; title kicks the file back without it.</li>
+  <li><strong>City</strong> is different from the 20-19: land outside a city's limits legitimately leaves "City of" blank.</li>
+</ul>
+
+<h2>Paragraph 3D: the acreage adjustment</h2>
+<ul>
+  <li><strong>"Will" be adjusted</strong> needs the acres, the $ per acre, one of 3A, 3B or "proportionately" checked, and the days to terminate if the adjustment tops 10%.</li>
+  <li><strong>"Will not" with acres filled in</strong> is worth a second look; the two halves of 3D disagree.</li>
+  <li>3D keys off the survey in Paragraph 6C, so the two have to be read together.</li>
+</ul>
+
+<h2>Paragraph 4B: natural resource leases</h2>
+<ul>
+  <li><strong>Is / is not:</strong> exactly one box for whether Seller is a party to a Natural Resource Lease.</li>
+  <li>If Seller <strong>is</strong> a party, one of 4B(1) (leases delivered) or 4B(2) (not delivered) must be checked, and 4B(2) needs its days for Buyer to terminate.</li>
+  <li>"Is not" checked with 4B(1) or (2) also checked is a conflict.</li>
+</ul>
+
+<h2>Title, survey and water</h2>
+<ul>
+  <li><strong>6A:</strong> who pays for the title policy, exactly one box; 6A(8) shortages in area (i) or (ii), and (ii) needs exactly one of Buyer or Seller.</li>
+  <li><strong>6C Survey:</strong> one of 6C(1), (2) or (3), each with its days filled in. 6C(1) also needs who pays for a new survey. Unlike the 25-17, the 9-18's 6C has no "no survey required" option.</li>
+  <li><strong>6D:</strong> the days for Buyer to object to title. <strong>6E(2):</strong> owners association "is / is not", and if it is, the addendum listed in Paragraph 22. <strong>6E(8):</strong> Texas Agricultural Development District, is or is not.</li>
+  <li><strong>7B is As-Is acceptance</strong>, not a disclosure notice: the 9-18 has no Seller's Disclosure Notice paragraph. <strong>7E:</strong> each disclosure item (1) through (8) is "is" or "is not", 7E(7) needs "wholly" or "partly", and an "is" with a blank explanation line is a flag.</li>
+  <li><strong>7F Seller's Water Disclosure:</strong> exactly one of 7F(1), (2) or (3) must be checked; no box is a must-fix. 7F(3) should name the water provider.</li>
+</ul>
+
+<h2>Money and dates</h2>
+<ul>
+  <li><strong>Paragraph 3:</strong> 3A + 3B = 3C, and 3B against the 40-11 when attached. <strong>5A:</strong> escrow agent and earnest money. <strong>5D:</strong> no option fee means no termination option. <strong>5B:</strong> fee entered, days blank.</li>
+  <li><strong>9A closing date</strong> real and not before the Effective Date (page 9 of 11). <strong>12B:</strong> a broker contribution row checked needs exactly one of the $ or % boxes, with the amount filled in. Initials at the foot of pages 1 through 8.</li>
+</ul>
+<p>Working a farm or ranch instead? See the <a href="/guides/trec-25-17-farm-and-ranch-contract">25-17 checklist</a>. Counting days? The free <a href="/guides/trec-deadline-calculator">TREC deadline calculator</a> works out option and earnest money dates.</p>
+""",
+        "faq": [
+            ("When do you use the TREC 9-18?",
+             "For unimproved property: land with no house on it, where the transaction isn't a farm or ranch operation. Farm and ranch sales use the 25-17; land with a residence uses the 20-19, or the 30-18 for a condominium."),
+            ("Does the 9-18 have an option period?",
+             "Yes. Paragraph 5 works like the other TREC contracts: the option fee in 5A buys the unrestricted termination right for the number of days in 5B. Under 5D, no option fee means no termination option."),
+            ("What is the Paragraph 3D acreage adjustment?",
+             "The parties can agree the Sales Price will be adjusted after survey based on the actual acres at a stated price per acre, applied to 3A, 3B or proportionately, with a right to terminate within the stated days if the adjustment is more than 10%."),
+            ("Does TC Check read the 9-18?",
+             "Yes. TC Check reads a filled 9-18 and flags the Paragraph 2 description, 3D acreage blanks, 4B lease boxes, 7F water disclosure, price math, initials and dates before the file goes to title. The first 3 reports are free and need no signup."),
+        ],
+    },
+    "colorado-cbs1-checklist": {
+        "title": "Colorado CBS1 Contract Checklist: Dates, Money and the Boxes Title Catches",
+        "description": "A section-by-section checklist for the Colorado CBS1 Contract to Buy and Sell Real Estate: the Sec. 3.1 Dates and Deadlines table, Sec. 3.2 applicability, Sec. 4.1 price math, the earnest money holder and the Sec. 15 cost boxes.",
+        "kicker": "For Colorado TCs and agents",
+        "h1": "Colorado CBS1: what to check before it goes to title",
+        "lede": "The CBS1 runs on its Dates and Deadlines table. A blank in Sec. 3.1 is not a neutral blank: read with Sec. 3.2, it can delete the provision from the contract entirely.",
+        "body": """
+<h2>The form</h2>
+<p>The <strong>CBS1</strong> is the Colorado Real Estate Commission's Contract to Buy and Sell Real Estate (Residential). Almost every deadline lives in one table, Sec. 3.1, not in the sections that use it, which is why CBS1 files fail differently from Texas files. TC Check also reads the CBS4 land contract.</p>
+
+<h2>Sec. 2: parties, property, inclusions</h2>
+<ul>
+  <li><strong>2.1 / 2.3:</strong> Buyer and Seller names blank. <strong>2.4:</strong> street address, city, county and legal description; the title commitment and deed need the county and legal description.</li>
+  <li><strong>2.5 inclusions:</strong> leased items (2.5.4) and a solar power plan (2.5.5) change what the buyer must arrange at closing; encumbered inclusions sit at 2.5.2.</li>
+</ul>
+
+<h2>Sec. 3.1: the Dates and Deadlines table</h2>
+<ul>
+  <li><strong>Item 39, Closing Date:</strong> blank, or landing on a weekend or holiday (Sec. 3.3.3 moves deadlines that fall on one, but a closing date set there invites a funding problem).</li>
+  <li><strong>Item 42, Acceptance Deadline,</strong> and Sec. 27: an acceptance deadline after the Closing Date makes the offer timeline impossible.</li>
+  <li><strong>Items 30 and 31:</strong> Inspection Objection and Inspection Termination deadlines blank. <strong>Item 23:</strong> Appraisal Objection Deadline. <strong>Item 4:</strong> Record Title Objection Deadline. Each blank has to be read with Sec. 3.2 before assuming it's harmless.</li>
+  <li><strong>Items 12 and 38:</strong> Lead-Based Paint deadlines, required on pre-1978 housing. <strong>Items 20 and 21:</strong> Loan Transfer Approval and Seller or Private Financing deadlines, needed when Sec. 4.1 lists that financing. <strong>Items 40 and 41:</strong> Possession Date and Time.</li>
+  <li><strong>Order:</strong> a deadline dated after the Closing Date, or an objection deadline dated before the deadline it depends on.</li>
+</ul>
+
+<h2>Sec. 3.2: applicability of terms</h2>
+<ul>
+  <li>This is the Colorado trap with no Texas equivalent. For many provisions, a blank Sec. 3.1 date combined with the Sec. 3.2 election means the provision is <strong>deleted</strong> from the contract. A missing Inspection Objection Deadline can mean the buyer has no inspection objection right at all, not an open-ended one.</li>
+</ul>
+
+<h2>Sec. 4: the money</h2>
+<ul>
+  <li><strong>4.1:</strong> earnest money + new loan + cash at closing has to equal the Purchase Price, and both TOTAL columns have to agree with it.</li>
+  <li><strong>4.3:</strong> Earnest Money Holder blank; someone has to be named to hold the deposit.</li>
+  <li><strong>4.4.3:</strong> Available Funds, neither "Does" nor "Does Not" checked. <strong>4.5.3:</strong> a new loan amount listed with no loan type box (Conventional, FHA, VA...) checked.</li>
+</ul>
+
+<h2>Costs, water, possession, compensation</h2>
+<ul>
+  <li><strong>Sec. 15:</strong> one box per row: Closing Services Fee (15.1), Record Change Fee (15.2.1), Reserves and Working Capital (15.2.3), other fees (15.2.4), Local Transfer Tax (15.3), Sales and Use Tax (15.4), Private Transfer Fee (15.5) and Utility Transfer Fees (15.7). Two boxes in one row, or none, is a flag.</li>
+  <li><strong>10.10:</strong> source of potable water. <strong>Sec. 14:</strong> closing instructions. <strong>Sec. 17:</strong> a Possession Date before the Closing Date. <strong>Sec. 29:</strong> a compensation line checked with both the % and $ amounts blank.</li>
+</ul>
+<p>Working the dates by hand? The free <a href="/tools/colorado-deadlines">Colorado deadline tool</a> builds the Sec. 3.1 schedule. On the TxtAnOffer dashboard, accepted Colorado offers carry their Sec. 3.1 dates as a calendar download. Texas file instead? Start with the <a href="/guides/trec-20-19-checklist">20-19 checklist</a>.</p>
+""",
+        "faq": [
+            ("What happens if a Sec. 3.1 deadline is left blank on a CBS1?",
+             "It depends on Sec. 3.2, the Applicability of Terms. For many provisions, a blank date combined with the Sec. 3.2 election deletes that provision from the contract, which can quietly remove a buyer's inspection or objection right instead of leaving it open."),
+            ("What is the Sec. 3.1 Dates and Deadlines table?",
+             "The CBS1's master deadline list: more than 40 dated items, from the Acceptance Deadline and earnest money through inspection, appraisal, title objection and the Closing Date. Nearly every deadline in the contract is set there, not in the sections that use it."),
+            ("What if the CBS1 Closing Date falls on a weekend or holiday?",
+             "Sec. 3.3.3 moves a deadline that falls on a Saturday, Sunday or legal holiday to the next business day. A Closing Date set on one is still worth fixing, because funding and recording may not be available that day."),
+            ("Does TC Check read the Colorado CBS1?",
+             "Yes. TC Check reads a filled CBS1, and the CBS4 land contract, and flags Sec. 3.1 blanks and out-of-order dates, Sec. 4.1 math, a missing earnest money holder and Sec. 15 box conflicts before the file goes to title. The first 3 reports are free and need no signup."),
+        ],
+    },
 }
 
 
@@ -9116,11 +9283,17 @@ _GUIDE_CTA_TEXT = {
     "trec-39-11-amendment-mismatch": "Check an amendment against its contract",
     "trec-20-19-checklist": "Run this checklist on your file",
     "trec-25-17-farm-and-ranch-contract": "Check a 25-17 free",
+    "trec-30-18-condo-checklist": "Check a 30-18 free",
+    "trec-9-18-land-checklist": "Check a 9-18 free",
+    "colorado-cbs1-checklist": "Check a CBS1 free",
 }
 
 # Contract named in the guide CTA; guides not listed are about the 20-19.
 _GUIDE_CTA_FORM = {
     "trec-25-17-farm-and-ranch-contract": "TREC 25-17",
+    "trec-30-18-condo-checklist": "TREC 30-18",
+    "trec-9-18-land-checklist": "TREC 9-18",
+    "colorado-cbs1-checklist": "Colorado CBS1",
 }
 
 
@@ -12409,6 +12582,8 @@ _SITEMAP_PATHS = ["/", "/tc-check", "/brokers", "/pricing", "/trec-changes", "/t
                   "/guides/trec-20-19-initials", "/guides/trec-39-11-amendment-mismatch",
                   "/guides/trec-deadline-calculator", "/guides/trec-25-17-farm-and-ranch-contract",
                   "/guides/trec-25-17-lender-required-repair-amendment",
+                  "/guides/trec-30-18-condo-checklist", "/guides/trec-9-18-land-checklist",
+                  "/guides/colorado-cbs1-checklist",
                   "/guides/transaction-coordinator-software-texas", "/archive", "/tools/colorado-deadlines",
                   "/text-an-offer"]
 
