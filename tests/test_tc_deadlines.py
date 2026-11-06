@@ -189,5 +189,48 @@ class WebSurface(unittest.TestCase):
         self.assertIn("/tc-check/deadlines.ics", html)
 
 
+class DashboardSurface(unittest.TestCase):
+    """The calendar also lives on the agent dashboard: every accepted
+    offer carries the deadline strip, and /dashboard/deadlines.ics serves
+    that offer's file behind the dashboard's own signed link."""
+
+    OFFER = {"id": 42, "phone": "+15145550123", "address": "123 Main St, Austin, TX 78704",
+             "price": 425000, "down_pct": 0.2, "close_days": 30, "filename": "offer1.pdf",
+             "created_at": "2026-11-08T15:00:00", "thread_status": "accept",
+             "thread_responded_at": "2026-11-10T14:30:00", "option_days": 7,
+             "generator_version": "2026-10-24.1", "mls_json": None,
+             "financing_type": "conventional", "email_sent_at": None, "email_sent_to": None,
+             "docusign_envelope_id": None, "docusign_sent_at": None}
+
+    def test_offer_deadline_items(self):
+        import app
+        items = app._offer_deadline_items(self.OFFER)
+        # Effective = accept date Nov 10; closing = drafted Nov 8 + 30 days
+        # via offer_closing_date (the date printed on the contract).
+        self.assertEqual([str(i["date"]) for i in items],
+                         ["2026-11-13", "2026-11-17", "2026-12-08"])
+        self.assertEqual(items[1]["time_label"], "5:00 PM")
+
+    def test_dashboard_ics_route_and_page(self):
+        from unittest import mock
+        from urllib.parse import urlparse
+        import app
+        client = app.app.test_client()
+        query = urlparse(app.sign_dashboard_url("+15145550123", "http://localhost")).query
+        with mock.patch.object(app, "get_offers_for_phone", return_value=[self.OFFER]), \
+             mock.patch.object(app, "get_user", return_value={"is_subscribed": True, "offer_count": 1, "brokerage_id": None}):
+            r = client.get("/dashboard/deadlines.ics?" + query + "&offer=42")
+            self.assertEqual(r.status_code, 200)
+            self.assertEqual(r.get_data(as_text=True).count("BEGIN:VEVENT"), 3)
+            self.assertEqual(client.get("/dashboard/deadlines.ics?" + query + "&offer=99").status_code, 404)
+            page = client.get("/dashboard?" + query)
+            html = page.get_data(as_text=True)
+            self.assertIn("Deadline Autopilot", html)
+            self.assertIn("/dashboard/deadlines.ics", html)
+            self.assertIn("Tue, Nov 17, 2026, 5:00 PM", html)
+        bad = client.get("/dashboard/deadlines.ics?phone=%2B15145550123&expires=9999999999&sig=bad&offer=42")
+        self.assertEqual(bad.status_code, 403)
+
+
 if __name__ == "__main__":
     unittest.main()
