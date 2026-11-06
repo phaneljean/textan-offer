@@ -69,6 +69,7 @@ from tc_check_email import (
     format_no_pdf_reply, format_no_pdf_html,
     format_unreadable_reply, format_unreadable_html,
     hand_review_email, reply_to_for, format_hand_review_request,
+    deadline_attachment,
 )
 from tc_bulk import (
     extract_pdfs_from_zip, create_batch, get_batch, process_batch,
@@ -3322,7 +3323,7 @@ def tc_check():
         def _send_report(to_email=submitted_email, res=result, count=check_count):
             try:
                 send_html_email(to_email, subject_line(res), format_reply_body(res, count), format_reply_html(res, count),
-                                reply_to=reply_to_for(res))
+                                reply_to=reply_to_for(res), attachments=deadline_attachment(res))
             except Exception as e:
                 print(f"[tc_check] report email failed for {to_email}: {e}")
 
@@ -3530,7 +3531,8 @@ def tc_check_email_inbound(token):
     # Reply-To is the hand-review inbox on an unreadable file, so "reply
     # with the file attached" reaches a person (tc_check_email.reply_to_for).
     send_html_email(sender, subject_line(result), format_reply_body(result, check_count, archived),
-                    format_reply_html(result, check_count, archived), reply_to=reply_to_for(result))
+                    format_reply_html(result, check_count, archived), reply_to=reply_to_for(result),
+                    attachments=deadline_attachment(result))
     return "", 200
 
 
