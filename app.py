@@ -873,6 +873,15 @@ def index():
      does and what the public sample shows. */
   .proofbar{border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin-top:64px;padding:26px 22px 30px}
   .faq .final-cta{margin-top:56px}
+  /* Public sample findings (2026-11-10): the sample section shows its top
+     findings on the page, in the hero card's .finding idiom; the email
+     form below it only sends the full PDF + the checklist. */
+  .sample-findings{max-width:760px;margin:38px auto 0;text-align:left}
+  .sample-verdict{max-width:760px;margin:16px auto 0;background:var(--green-deep);color:#fff;border-radius:14px;
+    padding:15px 20px;font-size:15px;display:flex;gap:8px 24px;flex-wrap:wrap;justify-content:center}
+  .sample-verdict b{font-size:18px}
+  .sample-watch{margin-top:16px;font-size:15px}
+  .sample-watch a{color:var(--green);font-weight:700}
 
   /* ---------- 2. what it catches: 2x2 tiles ---------- */
   .catches{background:var(--gray);padding-bottom:110px;margin-top:110px}
@@ -1154,7 +1163,31 @@ __SITE_NAV__
   <div class="ctas tools-row"><a class="link" href="/guides/trec-deadline-calculator" data-evt="home_calc_link">Free TREC deadline calculator</a><a class="link" href="/guides" data-evt="home_guides_link">Browse the guides</a></div>
 </section>
 
-<!-- 2a2. DEADLINE AUTOPILOT: free with every TC Check report (2026-11-05). Texas-only today, like the sheet itself. -->
+<!-- 2b. SAMPLE REPORT: findings public on the page (2026-11-10 rearrangement:
+     moved above Deadline Autopilot; the email ask below it now only sends
+     the full PDF + the checklist). -->
+<section class="capture">
+  <div class="eyebrow">Free, and public</div>
+  <h2>Start with the<br>sample report.</h2>
+  <p class="sub">A filled TREC 20&#8209;19, checked the way title would check it. The findings are right here &mdash; no email needed to look.</p>
+  <div class="sample-findings">
+    <div class="finding"><span class="tag b">MUST FIX</span><div><b>Price doesn&rsquo;t add up</b><span>Paragraph 3: Cash portion (3A) $85,000 + financing (3B) $340,000 = $425,000, but the Sales Price (3C) says $435,000</span></div></div>
+    <div class="finding"><span class="tag b">MUST FIX</span><div><b>Impossible closing date</b><span>Paragraph 9A: Closing date &ldquo;November 31&rdquo; is not a real date</span></div></div>
+    <div class="finding"><span class="tag w">REVIEW</span><div><b>Notices will bounce</b><span>Buyer&rsquo;s notice email (Paragraph 21) &ldquo;john.doe@gmailcom&rdquo; is not a valid email address</span></div></div>
+  </div>
+  <div class="sample-verdict"><span><b>16</b> findings</span><span><b>12</b> must fix</span><span><b>4</b> review</span><span><b>12</b> pages read</span><span>Verdict: not ready for title</span></div>
+  <p class="sample-watch">or <a href="/tc-check?demo=1" data-evt="home_sample_findings">watch the full sample run</a></p>
+  <form class="capture-form" id="homeCaptureForm" novalidate>
+    <input type="email" id="homeEmailOptinInput" class="capture-input" placeholder="work email" autocomplete="email" aria-label="Email address">
+    <input type="text" id="homeCaptureHp" class="capture-hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+    <button type="submit" class="btn solid" id="homeCaptureBtn">Email me the full report + checklist</button>
+  </form>
+  <p class="fine" id="homeCaptureMsg">The full sample PDF and the 6&#8209;point checklist, one email. Form&#8209;change updates only when they matter &mdash; unsubscribe anytime.</p>
+</section>
+
+<!-- 2c. DEADLINE AUTOPILOT: free with every TC Check report (2026-11-05).
+     Texas-only today, like the sheet itself. Sits after the sample report
+     since 2026-11-10: it is a feature of the report. -->
 <section class="deadlines" data-state="tx">
   <div class="eyebrow">New: Deadline Autopilot, free with every check</div>
   <h2>Every deadline.<br>In your calendar.</h2>
@@ -1175,44 +1208,6 @@ __SITE_NAV__
   </div>
   <div class="ctas"><a class="link" href="/tc-check" data-evt="home_deadlines_link">Check a contract free</a></div>
   <p class="partner-line">Forward a filled contract to <strong>tc@check.txtanoffer.com</strong> and the report comes back with the deadline sheet and the calendar file attached.</p>
-</section>
-
-<!-- 2b. SAMPLE + CHECKLIST BY EMAIL: the homepage's one ask (2026-11-03). -->
-<section class="capture">
-  <div class="eyebrow">Free, by email</div>
-  <h2>Start with the<br>sample report.</h2>
-  <p class="sub">See a filled TREC 20&#8209;19 the way title would &mdash; 16 findings, 12 of them must&#8209;fix &mdash; plus the 6&#8209;point checklist to run before any file goes to title. Both links, one email.</p>
-  <form class="capture-form" id="homeCaptureForm" novalidate>
-    <input type="email" id="homeEmailOptinInput" class="capture-input" placeholder="work email" autocomplete="email" aria-label="Email address">
-    <input type="text" id="homeCaptureHp" class="capture-hp" tabindex="-1" autocomplete="off" aria-hidden="true">
-    <button type="submit" class="btn solid" id="homeCaptureBtn">Email me both</button>
-  </form>
-  <p class="fine" id="homeCaptureMsg">One email with both links. Form&#8209;change updates only when they matter &mdash; unsubscribe anytime.</p>
-  <p class="partner-line">The sample&rsquo;s top findings are already public: <a href="/tc-check?demo=1" data-evt="home_sample_findings">watch the full sample run</a>, no email needed.</p>
-</section>
-
-<!-- 2c. FOUNDER: the human behind the checker (added 2026-11-06). -->
-<section class="founder">
-  <img class="avatar" src="/static/founder.jpg" alt="Phanel Jean-Baptiste, founder of TxtAnOffer" width="104" height="104" loading="lazy">
-  <div class="eyebrow">From the founder</div>
-  <h2>Built by someone who read<br>the fine print for a living.</h2>
-  <p class="story">I am Phanel Jean-Baptiste. Before TxtAnOffer, I reviewed group benefits claims at Sun Life Canada, checking files against policy wording line by line and deciding what the contract actually covered. The expensive mistakes were never in the big print. They were in a blank field on page seven, a date that does not exist, numbers that do not add up. So I built the check I wished every file had before it reached my desk. TxtAnOffer reads a filled contract the same way, flags what title would flag, and deletes your file when it is done.</p>
-  <p class="sig">Phanel Jean-Baptiste<span>Founder, TxtAnOffer</span></p>
-</section>
-
-<!-- 3. TEXT AN OFFER: the namesake product, played as a 3-step demo (text_demo.py) -->
-<section class="text" id="text">
-  <div class="eyebrow">Also from TxtAnOffer: Text an offer</div>
-  <h2>Text the terms.<br>Get a filled draft back.</h2>
-  <p class="sub" data-state="tx">Price, down payment, closing days, address. Reply YES and the TREC 20&#8209;19 comes back with your terms filled in, ready to review.</p>
-  <p class="sub" data-state="co">Price, down payment, closing days and a Colorado address. Reply YES and the CBS1 comes back with your terms filled in, ready to review.</p>
-  <div class="ctas">
-    <a class="btn solid" href="sms:+18338970333" data-evt="workflow_offer_sms">Text (833) 897-0333</a>
-    <a class="btn ghost" href="/pricing">See pricing</a>
-    <a class="btn ghost" href="/text-an-offer" data-evt="text_learn_more">Learn more</a>
-  </div>
-  <p class="fine">By texting, you agree to receive SMS replies and reminders about your offers, plus up to 2 tips on the free trial. Reply STOP to opt out, HELP for help. Msg frequency varies. Msg &amp; data rates may apply. <a href="/privacy">Privacy</a> &middot; <a href="/terms">Terms</a></p>
-__TEXT_DEMO__
 </section>
 
 <!-- 4. BROKERS: one number. Texas only: /tc-check/bulk checks TREC 20-19s. -->
@@ -1249,6 +1244,30 @@ __TEXT_DEMO__
   </div>
   <div class="ctas"><a class="link" href="/pricing">See full pricing</a></div>
   <p class="partner-line">Title company? <strong>TC Check is free for your agents</strong> &mdash; <a href="mailto:support@txtanoffer.com?subject=Title%20partner%20placement">ask about a partner placement</a>.</p>
+</section>
+
+<!-- 2c. FOUNDER: the human behind the checker (added 2026-11-06). -->
+<section class="founder">
+  <img class="avatar" src="/static/founder.jpg" alt="Phanel Jean-Baptiste, founder of TxtAnOffer" width="104" height="104" loading="lazy">
+  <div class="eyebrow">From the founder</div>
+  <h2>Built by someone who read<br>the fine print for a living.</h2>
+  <p class="story">I am Phanel Jean-Baptiste. Before TxtAnOffer, I reviewed group benefits claims at Sun Life Canada, checking files against policy wording line by line and deciding what the contract actually covered. The expensive mistakes were never in the big print. They were in a blank field on page seven, a date that does not exist, numbers that do not add up. So I built the check I wished every file had before it reached my desk. TxtAnOffer reads a filled contract the same way, flags what title would flag, and deletes your file when it is done.</p>
+  <p class="sig">Phanel Jean-Baptiste<span>Founder, TxtAnOffer</span></p>
+</section>
+
+<!-- 3. TEXT AN OFFER: the namesake product, played as a 3-step demo (text_demo.py) -->
+<section class="text" id="text">
+  <div class="eyebrow">Also from TxtAnOffer: Text an offer</div>
+  <h2>Text the terms.<br>Get a filled draft back.</h2>
+  <p class="sub" data-state="tx">Price, down payment, closing days, address. Reply YES and the TREC 20&#8209;19 comes back with your terms filled in, ready to review.</p>
+  <p class="sub" data-state="co">Price, down payment, closing days and a Colorado address. Reply YES and the CBS1 comes back with your terms filled in, ready to review.</p>
+  <div class="ctas">
+    <a class="btn solid" href="sms:+18338970333" data-evt="workflow_offer_sms">Text (833) 897-0333</a>
+    <a class="btn ghost" href="/pricing">See pricing</a>
+    <a class="btn ghost" href="/text-an-offer" data-evt="text_learn_more">Learn more</a>
+  </div>
+  <p class="fine">By texting, you agree to receive SMS replies and reminders about your offers, plus up to 2 tips on the free trial. Reply STOP to opt out, HELP for help. Msg frequency varies. Msg &amp; data rates may apply. <a href="/privacy">Privacy</a> &middot; <a href="/terms">Terms</a></p>
+__TEXT_DEMO__
 </section>
 
 <!-- 4c. FAQ: the standing objections, in the site's own answers (2026-11-03). -->
@@ -1295,9 +1314,9 @@ __HOME_SAMPLE_JS__
       .then(function(r){ return r.json(); })
       .then(function(d){
         if(d && d.ok){ form.style.display = 'none'; msg.textContent = 'Sent \u2014 the sample report and the checklist are on their way to ' + email + '.'; msg.style.color = 'var(--green)'; msg.style.fontWeight = '600'; }
-        else { btn.disabled = false; btn.textContent = 'Email me both'; msg.textContent = 'Something went wrong \u2014 try again, or check a file free above.'; }
+        else { btn.disabled = false; btn.textContent = 'Email me the full report + checklist'; msg.textContent = 'Something went wrong \u2014 try again, or check a file free above.'; }
       })
-      .catch(function(){ btn.disabled = false; btn.textContent = 'Email me both'; msg.textContent = 'Something went wrong \u2014 try again, or check a file free above.'; });
+      .catch(function(){ btn.disabled = false; btn.textContent = 'Email me the full report + checklist'; msg.textContent = 'Something went wrong \u2014 try again, or check a file free above.'; });
   });
 })();
 </script>
