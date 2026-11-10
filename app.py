@@ -842,6 +842,37 @@ def index():
   .tag.w{background:#fff4dc;color:var(--amber)}
   .finding b{display:block;font-size:15px}
   .finding span{font-size:13px;color:var(--mute);line-height:1.4}
+  /* Interactive public sample (2026-11-10): the hero card runs the check
+     on the public sample. The paper scrap's circled row pulses while the
+     card "reads", then the card swaps to its report; the final resting
+     state is the report itself, identical to the pre-animation card.
+     No-JS and reduced-motion visitors just see the report (the .run
+     starting states are only applied by the script). */
+  .stage.live .paper .circ b{animation:circpulse 1.1s ease-in-out infinite}
+  @keyframes circpulse{0%,100%{opacity:1}50%{opacity:.35}}
+  .scanbox{padding:2px 0 6px}
+  .scan-top{display:flex;justify-content:space-between;font-size:13px;color:var(--mute);margin-bottom:8px}
+  .scan-top b{color:var(--ink);font-weight:600}
+  .scanbar{height:6px;background:#eeeef0;border-radius:99px;overflow:hidden}
+  .scanbar i{display:block;height:100%;width:0;background:var(--green);border-radius:99px}
+  .scan-row{display:flex;justify-content:space-between;gap:12px;font-size:14px;padding:10px 0 0;color:#3a3a3c}
+  .scan-row .k{color:var(--mute)}
+  .scan-row .ok{color:var(--green);font-weight:700}
+  .scan-status{font-size:13px;color:var(--mute);margin-top:12px}
+  .scan-count{display:flex;align-items:baseline;gap:10px;margin-top:10px}
+  .scan-count .n{font-size:34px;font-weight:800;letter-spacing:-.02em}
+  .scan-count .s{font-size:13.5px;color:var(--mute)}
+  .scan-count .s .r{color:var(--red);font-weight:700}
+  .scan-count .s .a{color:var(--amber);font-weight:700}
+  .card .replay{position:absolute;top:58px;right:14px;z-index:3;border:1px solid var(--line);background:#fff;color:var(--green);
+    font:600 12px Inter,sans-serif;padding:6px 12px;border-radius:980px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+  .card .replay:hover{border-color:var(--green)}
+  .card .scan-note{padding:10px 22px 16px;font-size:12.5px;color:var(--mute);border-top:1px solid var(--line)}
+  /* Proof bar (2026-11-10): product facts only, in the .facts idiom.
+     No customer counts exist to claim; the bar states what the product
+     does and what the public sample shows. */
+  .proofbar{border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin-top:64px;padding:26px 22px 30px}
+  .faq .final-cta{margin-top:56px}
 
   /* ---------- 2. what it catches: 2x2 tiles ---------- */
   .catches{background:var(--gray);padding-bottom:110px;margin-top:110px}
@@ -997,15 +1028,18 @@ __SITE_NAV__
     <a class="btn solid" href="/tc-check?state=co" data-evt="hero_cta">Check a file free</a>
     <a class="btn ghost" href="/tc-check?demo=1&amp;state=co" data-evt="hero_sample">See a sample report</a>
   </div>
-  <p class="fine" data-state="tx">3 free reports, no signup &middot; 4 Texas TREC contracts + the 40-11, 41-3 and 39-11</p>
-  <p class="fine" data-state="co">3 free reports, no signup &middot; Colorado CBS1 &amp; Land + Amend/Extend and Counterproposal</p>
+  <p class="fine" data-state="tx">3 free reports, no signup, no credit card &middot; 4 Texas TREC contracts + the 40-11, 41-3 and 39-11</p>
+  <p class="fine" data-state="co">3 free reports, no signup, no credit card &middot; Colorado CBS1 &amp; Land + Amend/Extend and Counterproposal</p>
   <p class="fine trust-line">&#10003; Read for the report, then deleted &middot; No AI reads your contract</p>
 
-  <!-- Illustration only. Scrap values are the sample files' own fields;
-       card counts and findings are the sample report's display_issues,
-       with the full message text from first_screen.SAMPLE_ROWS
-       (tests/test_site_polish.py and test_first_screen.py check both). -->
-  <div class="stage" aria-hidden="true">
+  <!-- The hero visual IS the public sample, run live (2026-11-10): the
+       card animates the check on the sample files (reading, cross-check,
+       verdict), then rests on the report below. Scrap values are the
+       sample files' own fields; card counts and findings are the sample
+       report's display_issues, with the full message text from
+       first_screen.SAMPLE_ROWS (tests/test_site_polish.py and
+       test_first_screen.py check both). No-JS: the report simply shows. -->
+  <div class="stage" id="heroStage" aria-hidden="true">
     <div class="paper" data-state="tx">
       <div class="ph"><span>Contract concerning 123 Main St</span><span>Page 1 of 12</span></div>
       <p style="font-weight:700;margin-bottom:6px">3. SALES PRICE:</p>
@@ -1032,14 +1066,42 @@ __SITE_NAV__
         <div class="addr-sub">Sample TREC 20-19 with planted mistakes</div>
         <div class="banner">Not ready &mdash; fix before this goes to title<small>12 must fix &middot; 4 to review</small></div>
         __HOME_FINDINGS_TX__
+        <div class="scanbox" data-scan="tx" hidden>
+          <div class="scan-top"><span><b>Reading contract</b></span><span data-scan-page>Page 1 of 12</span></div>
+          <div class="scanbar"><i data-scan-bar></i></div>
+          <div class="scan-row"><span class="k">&para;3 Sales price</span><span>$435,000</span></div>
+          <div class="scan-row"><span class="k">3A + 3B</span><span>$425,000 &mdash; &ne; 3C</span></div>
+          <div class="scan-row"><span class="k">&para;9A Closing date</span><span>November 31</span></div>
+          <div class="scan-status" data-scan-status>Reading page 1&hellip;</div>
+          <div class="scan-count"><span class="n" data-scan-count>0</span><span class="s">findings &middot; <span class="r">12 must fix</span> &middot; <span class="a">4 review</span></span></div>
+        </div>
       </div>
       <div class="card-b" data-state="co">
         <div class="addr">123 Main St, Denver, CO</div>
         <div class="addr-sub">Sample CBS1 with planted mistakes</div>
         <div class="banner">Not ready &mdash; fix before this goes to title<small>1 must fix &middot; 2 to review</small></div>
         __HOME_FINDINGS_CO__
+        <div class="scanbox" data-scan="co" hidden>
+          <div class="scan-top"><span><b>Reading contract</b></span><span data-scan-page>Page 1 of 29</span></div>
+          <div class="scanbar"><i data-scan-bar></i></div>
+          <div class="scan-row"><span class="k">&sect;4.1 Purchase Price</span><span>$500,000</span></div>
+          <div class="scan-row"><span class="k">Earnest + loan + cash</span><span>$490,000 &mdash; &ne; price</span></div>
+          <div class="scan-row"><span class="k">&sect;3.1 item 39</span><span>Closing 11/11/2026</span></div>
+          <div class="scan-status" data-scan-status>Reading page 1&hellip;</div>
+          <div class="scan-count"><span class="n" data-scan-count>0</span><span class="s">findings &middot; <span class="r">1 must fix</span> &middot; <span class="a">2 review</span></span></div>
+        </div>
       </div>
+      <button type="button" class="replay" id="heroReplay" hidden aria-hidden="true" tabindex="-1">&#8635; Replay the check</button>
+      <div class="scan-note">Public sample with planted mistakes &middot; a live run of the same checks &middot; your file is read, then deleted</div>
     </div><!-- /heroReportCard -->
+  </div>
+  <div class="proofbar">
+    <div class="facts facts4">
+      <span><i>&#10003;</i>5 forms checked: 4 TREC + Colorado CBS1</span>
+      <span><i>&#10003;</i>12 pages read on the sample report</span>
+      <span><i>&#10003;</i>16 findings: 12 must fix, 4 review</span>
+      <span><i>&#10003;</i>Deadline sheet + calendar file in every report</span>
+    </div>
   </div>
 </section>
 
@@ -1126,6 +1188,7 @@ __SITE_NAV__
     <button type="submit" class="btn solid" id="homeCaptureBtn">Email me both</button>
   </form>
   <p class="fine" id="homeCaptureMsg">One email with both links. Form&#8209;change updates only when they matter &mdash; unsubscribe anytime.</p>
+  <p class="partner-line">The sample&rsquo;s top findings are already public: <a href="/tc-check?demo=1" data-evt="home_sample_findings">watch the full sample run</a>, no email needed.</p>
 </section>
 
 <!-- 2c. FOUNDER: the human behind the checker (added 2026-11-06). -->
@@ -1198,6 +1261,14 @@ __TEXT_DEMO__
     <div class="faq-item"><h3>Is this legal advice?</h3><p>No. TC Check flags issues to review before a file goes to title. It is general information, not legal advice, and TxtAnOffer is not affiliated with TREC.</p></div>
     <div class="faq-item"><h3>Which contracts does TC Check read?</h3><p>Texas TREC 20&#8209;19 Resale, 30&#8209;18 Condo, 9&#8209;18 Land and 25&#8209;17 Farm and Ranch contracts, plus the 40&#8209;11, 41&#8209;3 and 39&#8209;11 addenda, and Colorado CBS1 Residential and Land contracts.</p></div>
   </div>
+  <div class="final-cta">
+    <h2>Drop in one filled contract.<br>See what title would catch.</h2>
+    <div class="ctas">
+      <a class="btn solid" href="/tc-check" data-evt="home_final_cta">Check a file free</a>
+      <a class="btn ghost" href="/tc-check?demo=1" data-evt="home_final_sample">See the sample run</a>
+    </div>
+    <p class="partner-line">or forward it to <strong>tc@check.txtanoffer.com</strong> and get the report back by email</p>
+  </div>
 </section>
 
 <!-- 5. TRUST: one promise, then what's protected (see _home_trust) -->
@@ -1206,6 +1277,7 @@ __HOME_TRUST__
 __SITE_FOOTER__
 __TEXT_DEMO_JS__
 __STATE_SWITCH_JS__
+__HOME_SAMPLE_JS__
 <script>
 (function(){
   var form = document.getElementById('homeCaptureForm');
@@ -1239,6 +1311,7 @@ __STATE_SWITCH_JS__
                 .replace("__TEXT_DEMO_CSS__", text_demo.CSS)
                 .replace("__TEXT_DEMO__", text_demo.HTML)
                 .replace("__TEXT_DEMO_JS__", text_demo.JS)
+                .replace("__HOME_SAMPLE_JS__", HOME_SAMPLE_JS)
                 .replace("__HOME_FINDINGS_TX__", _home_findings("tx"))
                 .replace("__HOME_FINDINGS_CO__", _home_findings("co"))
                 .replace("__STATE_SWITCH_JS__", STATE_SWITCH_JS))
@@ -1280,6 +1353,99 @@ __STATE_SWITCH_JS__
         track_event("landing_visit", None, {"source": src})
     track_page_view(resp, "homepage")
     return resp
+
+
+# --- Interactive public sample (2026-11-10) -------------------------------
+# The hero card runs the check on the public sample files, in the page's
+# own design: the paper scrap pulses on its circled row while the card
+# "reads", the scan panel counts up to the sample's real display totals
+# (TX 16 findings / 12 must fix / 4 review over 12 pages; CO 3 / 1 / 2
+# over 29 pages), then the card rests on the report itself. Counts come
+# from the samples' display_issues; tests/test_site_polish.py keeps the
+# card honest against them. The script only ever ENHANCES: every starting
+# state is applied from JS, so no-JS and reduced-motion visitors see the
+# finished report exactly as before. It replays when the Texas/Colorado
+# switch is toggled, and from the card's replay button.
+HOME_SAMPLE_JS = """<script>
+(function(){
+  var stage = document.getElementById('heroStage');
+  var card = document.getElementById('heroReportCard');
+  if(!stage || !card) return;
+  if(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  var DATA = {
+    tx: { pages: 12, total: 16, steps: [[0,'Reading page 1\\u2026'],[1500,'Cross-checking \\u00a73 math\\u2026'],[2800,'Checking \\u00a79A against the calendar\\u2026'],[4100,'Report ready']] },
+    co: { pages: 29, total: 3,  steps: [[0,'Reading page 1\\u2026'],[1500,'Cross-checking \\u00a74.1 math\\u2026'],[2800,'Checking \\u00a73.1 deadlines\\u2026'],[4100,'Report ready']] }
+  };
+  var timers = [], raf = 0, current = null;
+  function clearAll(){
+    timers.forEach(function(t){ clearTimeout(t); });
+    timers = [];
+    if(raf) cancelAnimationFrame(raf);
+    raf = 0;
+  }
+  function state(){ return (window.taState ? window.taState() : 'tx'); }
+  function run(){
+    var s = state(), d = DATA[s];
+    if(!d) return;
+    current = s;
+    clearAll();
+    stage.querySelectorAll('.card-b').forEach(function(b){
+      var on = b.getAttribute('data-state') === s;
+      b.querySelectorAll('.addr,.addr-sub,.banner,.finding').forEach(function(el){ el.style.display = on ? 'none' : ''; });
+      var box = b.querySelector('.scanbox');
+      if(box){ box.hidden = !on; }
+    });
+    var body = card.querySelector('.card-b[data-state="' + s + '"]');
+    var box = body ? body.querySelector('.scanbox') : null;
+    var replay = document.getElementById('heroReplay');
+    if(replay) replay.hidden = true;
+    if(!box){ finish(s); return; }
+    var bar = box.querySelector('[data-scan-bar]'),
+        pageEl = box.querySelector('[data-scan-page]'),
+        statusEl = box.querySelector('[data-scan-status]'),
+        countEl = box.querySelector('[data-scan-count]');
+    stage.classList.add('live');
+    var DUR = 4600, t0 = null;
+    function frame(ts){
+      if(!t0) t0 = ts;
+      var p = Math.min(1, (ts - t0) / DUR);
+      if(bar) bar.style.width = (p * 100).toFixed(1) + '%';
+      if(pageEl) pageEl.textContent = 'Page ' + Math.max(1, Math.round(p * d.pages)) + ' of ' + d.pages;
+      if(statusEl){
+        var txt = d.steps[0][1];
+        d.steps.forEach(function(st){ if(p * DUR >= st[0]) txt = st[1]; });
+        if(statusEl.textContent !== txt) statusEl.textContent = txt;
+      }
+      if(countEl) countEl.textContent = Math.round(p * d.total);
+      if(p < 1){ raf = requestAnimationFrame(frame); }
+    }
+    raf = requestAnimationFrame(frame);
+    timers.push(setTimeout(function(){ finish(s); }, DUR + 60));
+  }
+  function finish(s){
+    clearAll();
+    stage.classList.remove('live');
+    stage.querySelectorAll('.card-b').forEach(function(b){
+      b.querySelectorAll('.addr,.addr-sub,.banner,.finding').forEach(function(el){ el.style.display = ''; });
+      var box = b.querySelector('.scanbox');
+      if(box) box.hidden = true;
+    });
+    var replay = document.getElementById('heroReplay');
+    if(replay) replay.hidden = false;
+  }
+  var replayBtn = document.getElementById('heroReplay');
+  if(replayBtn) replayBtn.addEventListener('click', function(){ run(); });
+  document.addEventListener('ta:state', function(){ run(); });
+  if('IntersectionObserver' in window){
+    var started = false;
+    var io = new IntersectionObserver(function(en){
+      if(en[0].isIntersecting && !started){ started = true; run(); io.disconnect(); }
+    }, {threshold: 0.25});
+    io.observe(stage);
+    timers.push(setTimeout(function(){ if(!started){ started = true; run(); } }, 2500));
+  } else { run(); }
+})();
+</script>"""
 
 
 # Bold one-line titles for the homepage sample card; the line under each is
