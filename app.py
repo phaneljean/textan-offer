@@ -2255,6 +2255,40 @@ def _notify_brokerage_tc(user: dict, draft: dict, pdf_path: str, pdf_url: str):
         print(f"[BROKERAGE_TC] notify failed for brokerage {brokerage_id}: {e}")
 
 
+def _draft_check_line(pdf_path):
+    """Auto TC Check on a just-generated SMS draft (added 2026-11-11):
+    runs the same check_tc_file the web checker uses on the filled PDF
+    and returns one terse line for the agent's own reply text, or ""
+    when the check cannot run or does not recognize the file. A failed
+    check must never block or delay the draft link, so every failure
+    path returns "". (_notify_brokerage_tc above already audits drafts
+    for brokerage-linked agents; this is the same read for the agent
+    themselves, on every finalized offer.) Plain ASCII only, so the
+    reply stays GSM-7 -- see the segment-cost note in that function."""
+    try:
+        audit = check_tc_file([pdf_path])
+    except Exception as e:
+        print(f"[SMS] draft auto-check failed: {e}")
+        return ""
+    if not audit or not audit.get("recognized"):
+        return ""
+    issues = audit.get("issues") or []
+    if not issues:
+        return "TC Check on this draft: nothing flagged on the fields it verifies."
+    blockers = [i for i in issues if i.get("severity") == "blocker"]
+    review = len(issues) - len(blockers)
+    parts = []
+    if blockers:
+        labels = [_SMS_SHORT_FIELD_LABELS.get(i.get("key"), i.get("key", "field"))
+                  for i in blockers]
+        shown, extra = labels[:3], len(labels) - 3
+        parts.append(f"{len(blockers)} must-fix: " + ", ".join(shown)
+                     + (f" +{extra} more" if extra > 0 else ""))
+    if review:
+        parts.append(f"{review} to review")
+    return "TC Check on this draft: " + "; ".join(parts) + "."
+
+
 def _day_one_lines(filename, address, effective_date, option_days, close_date):
     """Texas Paragraph 5/option summary, or for a Colorado CBS1 the §3.1
     dates printed on that contract (Colorado has no option period)."""
@@ -2307,6 +2341,8 @@ def finalize_offer_sms(agent_phone: str, draft: dict):
     filename = os.path.basename(pdf_path)
     pdf_url = sign_pdf_url(filename, request.host_url.rstrip("/"))
     record_offer(agent_phone, draft, filename)
+    check_line = _draft_check_line(pdf_path)
+    check_para = f"\n\n{check_line}" if check_line else ""
     fire_webhook(agent_phone, draft, pdf_url)
     _notify_brokerage_tc(user, draft, pdf_path, pdf_url)
 
@@ -2326,6 +2362,7 @@ def finalize_offer_sms(agent_phone: str, draft: dict):
             f"Review and email it: {pdf_url}\n\n"
             f"Deadlines are standard defaults, and Earnest Money Holder, title selection and lead-paint "
             f"rows are yours to fill. Draft only: review every page before signing."
+            f"{check_para}"
             f"{status_line}\n\n"
             f"Reply STOP to unsubscribe, HELP for help."))
         return
@@ -2359,7 +2396,7 @@ def finalize_offer_sms(agent_phone: str, draft: dict):
     reply = (
         f"Your TREC draft for {draft['address']} is ready.\n\n"
         f"Review and email it: {pdf_url}\n\n"
-        f"Includes {includes}. Draft only: review every page before signing.\n\n"
+        f"Includes {includes}. Draft only: review every page before signing.{check_para}\n\n"
         f"To change terms, just text the new offer. Reply DASHBOARD for all your offers."
         f"{status_line}"
         f"{profile_nudge}\n\n"
