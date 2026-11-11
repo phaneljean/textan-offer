@@ -262,7 +262,13 @@ _ENGAGEMENT_TYPES = ("js_ok", "upload_picked", "upload_failed_rejected", "upload
                      # homepage catches-section tools row, 2026-11-03
                      "home_calc_link", "home_guides_link",
                      # homepage Deadline Autopilot example calendar download, 2026-11-05
-                     "home_sample_ics", "home_deadlines_link") \
+                     "home_sample_ics", "home_deadlines_link",
+                     # homepage 4-year retention interactive, 2026-11-10
+                     "home_retention_run", "home_retention_guide", "home_retention_archive",
+                     # homepage final CTA + sample findings link, shipped
+                     # 2026-11-10 without being added here; /v1/evt dropped
+                     # them until now (found 2026-11-10 by test_tracking).
+                     "home_final_cta", "home_final_sample", "home_sample_findings") \
     + CHECK_CTA_EVENTS + SAMPLE_CTA_EVENTS + BOOK_CALL_EVENTS + (DROPZONE_INTERACT_EVENT,)
 # Pages whose beacons /v1/evt accepts: the ones with their own
 # track_page_view() call, plus _BEACON_ONLY_PAGES below.
@@ -994,6 +1000,22 @@ __TEXT_DEMO_CSS__
   .dl-sample .ctas{justify-content:flex-start}
   .dl-sample .fine{font-size:13px;color:#5b6b67;margin:12px 0 0}
   .partner-line a{color:var(--green);font-weight:700}
+  /* ---------- 4a. retention: the 4-year rule, interactive ---------- */
+  .ret-box{max-width:760px;margin:44px auto 0;background:#fff;border:1px solid var(--line);border-radius:18px;padding:26px 28px;text-align:left}
+  .ret-controls{display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+  .ret-toggle{display:inline-flex;background:var(--gray);border:1px solid var(--line);border-radius:999px;padding:4px}
+  .ret-seg{border:0;background:transparent;font:inherit;font-size:15px;font-weight:600;color:var(--mute);padding:8px 18px;border-radius:999px;cursor:pointer}
+  .ret-seg.on{background:var(--green);color:#fff}
+  .ret-date{font:inherit;font-size:16px;font-weight:600;color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:9px 14px;background:#fff}
+  .ret-result{margin-top:22px}
+  .ret-line{font-size:19px;color:var(--ink)}
+  .ret-line b{font-weight:800}
+  .ret-status{display:inline-block;margin-top:12px;font-size:14.5px;font-weight:700;padding:7px 14px;border-radius:999px;background:#FBEAEA;color:var(--red)}
+  .ret-status.free{background:#E7F3F1;color:var(--green-deep)}
+  .ret-bar{margin-top:18px;height:12px;border-radius:999px;background:var(--gray);border:1px solid var(--line);overflow:hidden}
+  .ret-fill{height:100%;width:0;background:var(--green);border-radius:999px;transition:width .5s ease}
+  .ret-scale{display:flex;justify-content:space-between;margin-top:8px;font-size:13px;color:var(--mute)}
+  .ret-box .fine{font-size:13px;color:#5b6b67;margin:16px 0 0}
   .tiles-3{grid-template-columns:1fr 1fr 1fr}
   .tile.price{min-height:0;padding:44px 30px 40px}
   .tile .big small{font-size:22px;color:var(--mute);font-weight:600}
@@ -1221,6 +1243,34 @@ __SITE_NAV__
   </div>
 </section>
 
+<!-- 4a. RETENTION: the 4-year rule, interactive (2026-11-10). Texas only:
+     the rule is TREC's. Math is RETENTION_JS: pick a closing or termination
+     date, see the keep-until date, the time left, and where today sits on
+     the 4-year line. Static defaults below match the pre-filled example
+     (closed Fri, Mar 10, 2023) as closely as a no-JS page can state them. -->
+<section class="retention" data-state="tx">
+  <div class="eyebrow">For brokers: 22 TAC &sect;535.2</div>
+  <h2>The 4-year rule.<br>Try it on a closing.</h2>
+  <p class="sub">Texas brokers keep every transaction file at least 4 years from closing or termination. Pick a date and see when that file is actually free to go.</p>
+  <div class="ret-box">
+    <div class="ret-controls">
+      <div class="ret-toggle" role="group" aria-label="Which date">
+        <button type="button" class="ret-seg on" data-ret-kind="closing">It closed</button>
+        <button type="button" class="ret-seg" data-ret-kind="termination">It terminated</button>
+      </div>
+      <input type="date" class="ret-date" id="retDate" value="2023-03-10" aria-label="Closing or termination date">
+    </div>
+    <div class="ret-result">
+      <div class="ret-line">Keep this file until <b id="retUntil">Mar 10, 2027</b><span id="retKindNote">, counted from closing.</span></div>
+      <div><span class="ret-status" id="retStatus">Still locked: TREC can still ask for this file.</span></div>
+      <div class="ret-bar"><div class="ret-fill" id="retFill"></div></div>
+      <div class="ret-scale"><span id="retStartLbl">Mar 10, 2023</span><span>Today</span><span id="retEndLbl">Mar 10, 2027</span></div>
+    </div>
+    <p class="fine">Counted the way &sect;535.2(h) reads: at least 4 years from the closing or termination date. Four years is the floor, not the ceiling.</p>
+  </div>
+  <p class="partner-line">On the Brokerage plan, every executed contract forwarded or uploaded is checked and kept <strong>5 years</strong>, searchable by address. <a href="/guides/broker-record-retention-texas" data-evt="home_retention_guide">The full retention guide</a> &middot; <a href="/archive" data-evt="home_retention_archive">How the archive works</a></p>
+</section>
+
 <!-- 4b. PRICING: the three plans from /pricing, one line each (2026-11-03). -->
 <section class="pricing-strip">
   <div class="eyebrow">Pricing</div>
@@ -1297,6 +1347,7 @@ __SITE_FOOTER__
 __TEXT_DEMO_JS__
 __STATE_SWITCH_JS__
 __HOME_SAMPLE_JS__
+__RETENTION_JS__
 <script>
 (function(){
   var form = document.getElementById('homeCaptureForm');
@@ -1331,6 +1382,7 @@ __HOME_SAMPLE_JS__
                 .replace("__TEXT_DEMO__", text_demo.HTML)
                 .replace("__TEXT_DEMO_JS__", text_demo.JS)
                 .replace("__HOME_SAMPLE_JS__", HOME_SAMPLE_JS)
+                .replace("__RETENTION_JS__", RETENTION_JS)
                 .replace("__HOME_FINDINGS_TX__", _home_findings("tx"))
                 .replace("__HOME_FINDINGS_CO__", _home_findings("co"))
                 .replace("__STATE_SWITCH_JS__", STATE_SWITCH_JS))
@@ -1385,6 +1437,71 @@ __HOME_SAMPLE_JS__
 # state is applied from JS, so no-JS and reduced-motion visitors see the
 # finished report exactly as before. It replays when the Texas/Colorado
 # switch is toggled, and from the card's replay button.
+RETENTION_JS = """<script>
+(function(){
+  var input = document.getElementById('retDate');
+  if(!input) return;
+  var untilEl = document.getElementById('retUntil'),
+      statusEl = document.getElementById('retStatus'),
+      fillEl = document.getElementById('retFill'),
+      startLbl = document.getElementById('retStartLbl'),
+      endLbl = document.getElementById('retEndLbl'),
+      kindNote = document.getElementById('retKindNote'),
+      segs = document.querySelectorAll('.ret-seg'),
+      kind = 'closing', fired = false;
+  function fmt(d){
+    return d.toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'});
+  }
+  function humanLeft(from, to){
+    var y = to.getFullYear() - from.getFullYear(),
+        m = to.getMonth() - from.getMonth(),
+        d = to.getDate() - from.getDate();
+    if(d < 0){ m--; d += new Date(to.getFullYear(), to.getMonth(), 0).getDate(); }
+    if(m < 0){ y--; m += 12; }
+    var parts = [];
+    if(y) parts.push(y + (y === 1 ? ' year' : ' years'));
+    if(m) parts.push(m + (m === 1 ? ' month' : ' months'));
+    if(d && parts.length < 2) parts.push(d + (d === 1 ? ' day' : ' days'));
+    return parts.length ? parts.join(', ') : 'less than a day';
+  }
+  function update(){
+    var v = input.value;
+    if(!v) return;
+    var p = v.split('-');
+    var start = new Date(+p[0], +p[1] - 1, +p[2]);
+    if(isNaN(start)) return;
+    var until = new Date(start.getFullYear() + 4, start.getMonth(), start.getDate());
+    var now = new Date(); now.setHours(0, 0, 0, 0);
+    untilEl.textContent = fmt(until);
+    startLbl.textContent = fmt(start);
+    endLbl.textContent = fmt(until);
+    kindNote.textContent = kind === 'closing' ? ', counted from closing.' : ', counted from termination.';
+    var pct = (now - start) / (until - start) * 100;
+    fillEl.style.width = Math.max(0, Math.min(100, pct)).toFixed(1) + '%';
+    if(now < until){
+      statusEl.textContent = 'Still locked: TREC can ask for this file for ' + humanLeft(now, until) + ' more.';
+      statusEl.classList.remove('free');
+    } else {
+      statusEl.textContent = 'Free to go: the 4 years ran out on ' + fmt(until) + '.';
+      statusEl.classList.add('free');
+    }
+    if(!fired){ fired = true; if(window.taEvt) window.taEvt('home_retention_run'); }
+  }
+  input.addEventListener('change', update);
+  input.addEventListener('input', update);
+  segs.forEach(function(b){
+    b.addEventListener('click', function(){
+      segs.forEach(function(x){ x.classList.remove('on'); });
+      b.classList.add('on');
+      kind = b.getAttribute('data-ret-kind');
+      update();
+    });
+  });
+  update();
+})();
+</script>
+"""
+
 HOME_SAMPLE_JS = """<script>
 (function(){
   var stage = document.getElementById('heroStage');
