@@ -1062,8 +1062,6 @@ __TEXT_DEMO_CSS__
   .np-notes:focus{outline:none;border-color:var(--green);background:#fff}
   .np-run{font-family:inherit;cursor:pointer;margin-top:14px}
   .np-hint{font-size:13px;color:var(--mute);margin-top:12px}
-  .np-dl-row{margin-top:16px;text-align:left}
-  .np-dl{font-family:inherit;cursor:pointer;font-size:15px;padding:10px 20px}
   .np-row{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:10px 0;border-bottom:1px solid var(--line)}
   .np-row:last-child{border-bottom:none}
   .np-k{font-size:14px;font-weight:600;color:var(--mute);flex:none}
@@ -1096,41 +1094,6 @@ __TEXT_DEMO_CSS__
   .npw-reply{font-size:14.5px;color:var(--ink);margin:10px 0 0;line-height:1.55;white-space:pre-line}
   .npw-fine{font-size:13px;color:var(--mute);margin:10px 0 0;line-height:1.5}
   @media (max-width:734px){ .npw-grid{grid-template-columns:1fr} }
-  /* ---------- 4a2b. notepad demo pop-up: public twin of the member widget ---------- */
-  .npd-pill{position:fixed;right:20px;bottom:20px;z-index:990;background:var(--green);color:#fff;
-  border:none;cursor:pointer;padding:12px 22px;border-radius:999px;font-size:15px;
-  font-weight:700;font-family:inherit;box-shadow:0 6px 20px rgba(10,63,58,.35)}
-  .npd-pill:hover{background:var(--green-deep)}
-  .npd-pill[hidden]{display:none}
-  .npd-panel{position:fixed;right:20px;bottom:20px;z-index:991;width:380px;max-width:92vw;
-  max-height:72vh;overflow-y:auto;background:#fff;border:1px solid var(--line);
-  border-radius:16px;box-shadow:0 16px 44px rgba(29,29,31,.22);
-  padding:20px 22px 18px;text-align:left;color:var(--ink);line-height:1.5}
-  .npd-panel[hidden]{display:none}
-  .npd-head{display:flex;align-items:center;gap:10px;margin-bottom:12px}
-  .npd-title{font-size:17px;font-weight:800;letter-spacing:-.01em}
-  .npd-sample{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
-  color:var(--mute);background:var(--gray);border:1px solid var(--line);padding:3px 8px;border-radius:999px}
-  .npd-close{margin-left:auto;background:none;border:none;cursor:pointer;font-size:24px;line-height:1;
-  color:var(--mute);padding:2px 6px;font-family:inherit}
-  .npd-close:hover{color:var(--ink)}
-  .npd-notes{width:100%;box-sizing:border-box;font:inherit;font-size:15px;line-height:1.55;color:var(--ink);
-  border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:var(--gray);resize:vertical;min-height:150px}
-  .npd-notes:focus{outline:none;border-color:var(--green);background:#fff}
-  .npd-run{font-family:inherit;cursor:pointer;margin-top:12px}
-  .npd-rows{margin-top:14px}
-  .npd-dl-row{margin-top:14px;text-align:left}
-  .npd-dl{font-family:inherit;cursor:pointer;font-size:14.5px;padding:9px 18px}
-  .npd-foot{margin:16px 0 0;padding-top:12px;border-top:1px solid var(--line);font-size:13.5px;color:var(--mute);line-height:1.55}
-  .npd-foot a{color:var(--green);font-weight:600;text-decoration:none}
-  .npd-foot a:hover{text-decoration:underline}
-  .npd-next{margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
-  .npd-next[hidden]{display:none}
-  .npd-next-h{font-size:13px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--green);margin-bottom:8px}
-  .npd-next .npw-rem-item{font-size:14.5px}
-  .npd-rem{font-size:14.5px;color:var(--ink);margin:10px 0 0;line-height:1.5}
-  .npd-draft{font-family:inherit;cursor:pointer;margin-top:12px;font-size:14.5px;padding:9px 18px}
-  @media (max-width:600px){ .npd-panel{left:12px;right:12px;width:auto} }
   .tiles-3{grid-template-columns:1fr 1fr 1fr}
   .tile.price{min-height:0;padding:44px 30px 40px}
   .tile .big small{font-size:22px;color:var(--mute);font-weight:600}
@@ -1281,7 +1244,6 @@ __SITE_NAV__
         <div class="np-row" data-np-row="inclusions"><span class="np-k">Inclusions</span><span class="np-v miss">Run Clean it up</span></div>
         <div class="np-row" data-np-row="survey"><span class="np-k">Survey</span><span class="np-v miss">Run Clean it up</span></div>
       </div>
-      <div class="np-dl-row"><button type="button" class="btn ghost np-dl" id="npDownload">Download notes + Deal Sheet</button></div>
     </div>
   </div>
   <!-- Workflow (4a2a2): what the product does with the sheet next. Empty
@@ -1312,49 +1274,6 @@ __SITE_NAV__
   </div>
   <p class="partner-line">In the product, the notepad lives in your dashboard on the Agent plan. Your notes are saved so the deal stays in one place. Contract files are still checked, then deleted. <a href="#pricing">See the plans</a></p>
 </section>
-
-<!-- 4a2b. NOTEPAD DEMO POP-UP: the public twin of the member pop-up widget.
-     Same pill and panel a member gets on their dashboard, but demo-only:
-     it runs the same in-page parser (NOTEPAD_JS) on the sample note and
-     saves nothing anywhere. No network calls; closing is ESC or the x. -->
-<div class="npd-root">
-  <button type="button" class="npd-pill" id="npdPill" aria-haspopup="dialog" aria-expanded="false">&#9998; Notepad</button>
-  <div class="npd-panel" id="npdPanel" role="dialog" aria-label="Deal Notepad demo" hidden>
-    <div class="npd-head">
-      <span class="npd-title">Deal Notepad</span>
-      <span class="npd-sample">Sample</span>
-      <button type="button" class="npd-close" id="npdClose" aria-label="Close notepad demo">&times;</button>
-    </div>
-    <textarea class="npd-notes" id="npdNotes" rows="7" aria-label="Sample deal notes">Elm Creek Dr house, Austin. Buyers John &amp; Jane Doe. Sellers fine with Dec 18 close. $685k. Earnest maybe 7k?? 10 days option, $350 fee. Conventional, 20% down. Fridge + washer stay. Asked 5k seller credit for the roof, not agreed yet. Old survey from 2019. HOA docs still pending.</textarea>
-    <button type="button" class="btn solid npd-run" id="npdRun">Clean it up</button>
-    <div class="npd-rows" id="npdRows">
-      <div class="np-row" data-np-row="property"><span class="np-k">Property</span><span class="np-v miss">Run Clean it up</span></div>
-      <div class="np-row" data-np-row="buyers"><span class="np-k">Buyers</span><span class="np-v miss">Run Clean it up</span></div>
-      <div class="np-row" data-np-row="price"><span class="np-k">Price</span><span class="np-v miss">Run Clean it up</span></div>
-      <div class="np-row" data-np-row="earnest"><span class="np-k">Earnest money</span><span class="np-v miss">Run Clean it up</span></div>
-      <div class="np-row" data-np-row="option"><span class="np-k">Option period</span><span class="np-v miss">Run Clean it up</span></div>
-      <div class="np-row" data-np-row="closing"><span class="np-k">Closing date</span><span class="np-v miss">Run Clean it up</span></div>
-      <div class="np-row" data-np-row="financing"><span class="np-k">Financing</span><span class="np-v miss">Run Clean it up</span></div>
-      <div class="np-row" data-np-row="credit"><span class="np-k">Seller credit</span><span class="np-v miss">Run Clean it up</span></div>
-      <div class="np-row" data-np-row="inclusions"><span class="np-k">Inclusions</span><span class="np-v miss">Run Clean it up</span></div>
-      <div class="np-row" data-np-row="survey"><span class="np-k">Survey</span><span class="np-v miss">Run Clean it up</span></div>
-    </div>
-    <div class="npd-next" id="npdNext" hidden>
-      <div class="npd-next-h">Next steps</div>
-      <ul class="npw-list" id="npdActions"></ul>
-      <p class="npd-rem" id="npdReminder"></p>
-      <button type="button" class="btn solid npd-draft" id="npdDraft">Create draft</button>
-      <div class="npw-out" id="npdDraftOut" hidden>
-        <p class="npw-out-label">You text to (833) 897-0333</p>
-        <p class="npw-text" id="npdDraftText"></p>
-        <p class="npw-reply" id="npdDraftReply"></p>
-        <p class="npw-fine">Sample flow. In the product, the draft is a real filled PDF and the check runs on it.</p>
-      </div>
-    </div>
-    <div class="npd-dl-row"><button type="button" class="btn ghost npd-dl" id="npdDownload">Download notes + Deal Sheet</button></div>
-    <p class="npd-foot">Demo with a sample deal. Members save real deals to their dashboard, on the Agent plan. <a href="#pricing">See the plans</a></p>
-  </div>
-</div>
 
 <!-- 2. WHAT IT CATCHES: one finding per tile, huge type -->
 <section class="catches">
@@ -1740,7 +1659,6 @@ NOTEPAD_JS = """<script>
   var ta = document.getElementById('npNotes');
   var btn = document.getElementById('npRun');
   var rowsEl = document.getElementById('npRows');
-  var dlBtn = document.getElementById('npDownload');
   var wfEl = document.getElementById('npWorkflow');
   var actEl = document.getElementById('npActions');
   var remEl = document.getElementById('npReminders');
@@ -1936,21 +1854,8 @@ NOTEPAD_JS = """<script>
   var LABELS = {property: 'Property', buyers: 'Buyers', price: 'Price', earnest: 'Earnest money',
                 option: 'Option period', closing: 'Closing date', financing: 'Financing',
                 credit: 'Seller credit', inclusions: 'Inclusions', survey: 'Survey'};
-  function docText(noteText, res){
-    var lines = ['TxtAnOffer - Deal Sheet (homepage sample)', '', 'MY NOTES (verbatim)', noteText, '', 'DEAL SHEET'];
-    FIELDS.forEach(function(key){
-      var f = res ? res[key] : null;
-      if(!f) lines.push(LABELS[key] + ': Not in your notes');
-      else lines.push(LABELS[key] + ': ' + f.v + ' [' + (f.s === 'confirm' ? 'Confirm' : 'Found') + ']');
-    });
-    lines.push('', 'Generated on txtanoffer.com. In the product, the Deal Notepad lives in your dashboard on the Agent plan. Notes are saved; contract files are checked, then deleted.');
-    return lines.join('\\n');
-  }
-  function buildDoc(){
-    return docText(ta.value, lastRes);
-  }
   /* Workflow generators (4a2a2): one implementation feeding the section
-     cards and the pop-up panel's Next steps block. Everything derives
+     cards. Everything derives
      from the parse of the note on screen; nothing is invented, so a
      term that is not in the note produces no item and no date. */
   function buildActions(res, noteText){
@@ -2044,90 +1949,6 @@ NOTEPAD_JS = """<script>
       }
       showDraft(lastRes, draftOut, draftTextEl, draftReplyEl);
     });
-  }
-  function downloadText(text){
-    var blob = new Blob([text], {type: 'text/plain'});
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement('a');
-    a.href = url;
-    a.download = 'txtanoffer-deal-sheet.txt';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
-  }
-  if(dlBtn){
-    dlBtn.addEventListener('click', function(){
-      if(!lastRes){
-        render(parse(ta.value));
-        if(!fired){ fired = true; if(window.taEvt) window.taEvt('home_notepad_run'); }
-      }
-      downloadText(buildDoc());
-    });
-  }
-  /* Demo pop-up (4a2b): the member widget's public twin. Same parser,
-     same rows, same download document, but everything stays in the
-     page: no fetch, no save, nothing leaves the browser. */
-  var dPill = document.getElementById('npdPill');
-  var dPanel = document.getElementById('npdPanel');
-  var dClose = document.getElementById('npdClose');
-  var dTa = document.getElementById('npdNotes');
-  var dBtn = document.getElementById('npdRun');
-  var dRowsEl = document.getElementById('npdRows');
-  var dDlBtn = document.getElementById('npdDownload');
-  var dNext = document.getElementById('npdNext');
-  var dActEl = document.getElementById('npdActions');
-  var dRemEl = document.getElementById('npdReminder');
-  var dDraftBtn = document.getElementById('npdDraft');
-  var dDraftOut = document.getElementById('npdDraftOut');
-  var dDraftTextEl = document.getElementById('npdDraftText');
-  var dDraftReplyEl = document.getElementById('npdDraftReply');
-  if(dPill && dPanel && dTa && dBtn && dRowsEl){
-    var dRes = null;
-    function fireRun(){
-      if(!fired){ fired = true; if(window.taEvt) window.taEvt('home_notepad_run'); }
-    }
-    function populatePanelNext(res){
-      if(!dNext) return;
-      dNext.hidden = false;
-      fillList(dActEl, buildActions(res, dTa.value), false);
-      if(dRemEl) dRemEl.textContent = closingLine(res);
-      if(dDraftOut) dDraftOut.hidden = true;
-    }
-    function runPanelParse(){
-      dRes = parse(dTa.value);
-      renderRows(dRowsEl, dRes);
-      populatePanelNext(dRes);
-      fireRun();
-    }
-    function openDemo(){
-      dPanel.hidden = false;
-      dPill.hidden = true;
-      dPill.setAttribute('aria-expanded', 'true');
-    }
-    function closeDemo(){
-      dPanel.hidden = true;
-      dPill.hidden = false;
-      dPill.setAttribute('aria-expanded', 'false');
-    }
-    dPill.addEventListener('click', openDemo);
-    if(dClose) dClose.addEventListener('click', closeDemo);
-    document.addEventListener('keydown', function(e){
-      if((e.key === 'Escape' || e.keyCode === 27) && !dPanel.hidden) closeDemo();
-    });
-    dBtn.addEventListener('click', runPanelParse);
-    if(dDraftBtn){
-      dDraftBtn.addEventListener('click', function(){
-        if(!dRes) runPanelParse();
-        showDraft(dRes, dDraftOut, dDraftTextEl, dDraftReplyEl);
-      });
-    }
-    if(dDlBtn){
-      dDlBtn.addEventListener('click', function(){
-        if(!dRes) runPanelParse();
-        downloadText(docText(dTa.value, dRes));
-      });
-    }
   }
 })();
 </script>
