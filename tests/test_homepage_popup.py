@@ -207,14 +207,14 @@ class AppWindowAndDesk(unittest.TestCase):
                       app_module.PWA_JS)
 
     def test_desktop_download_buttons_live(self):
-        # The desktop v0.1.0 release is public, so the desk block now
+        # The desktop v0.1.1 release is public, so the desk block now
         # links the real installers, Windows first, each click tracked
         # with its own registered engagement type, plus the fine print
         # and a link to the release page for Linux / all versions.
         win = ("https://github.com/phaneljean/txtanoffer-notepad/releases/"
-               "download/v0.1.0/TxtAnOffer.Notepad_0.1.0_x64-setup.exe")
+               "download/v0.1.1/TxtAnOffer.Notepad_0.1.1_x64-setup.exe")
         mac = ("https://github.com/phaneljean/txtanoffer-notepad/releases/"
-               "download/v0.1.0/TxtAnOffer.Notepad_0.1.0_aarch64.dmg")
+               "download/v0.1.1/TxtAnOffer.Notepad_0.1.1_aarch64.dmg")
         self.assertIn(win, self.sec)
         self.assertIn(mac, self.sec)
         self.assertLess(self.sec.index(win), self.sec.index(mac))
