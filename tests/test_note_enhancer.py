@@ -85,6 +85,62 @@ class DeterministicExtraction(unittest.TestCase):
         self.assertIn("more than one price", fields["price"]["note"])
 
 
+class LiveNoteRegressions(unittest.TestCase):
+    """Baptiste's own live test note (2026-11-11) -- the four misses the
+    mechanical enhancer made on real phrasing: the address swallowed the
+    note, sentence-initial "Buyers" found no buyer, "Dec 18 close" found
+    no closing date, and "10 days option" became close_days."""
+
+    NOTE = ("123 Main St, Elm Creek Dr house, Austin. Buyers John & Jane Doe. "
+            "Sellers fine with Dec 18 close. $685k. Earnest maybe 7k?? "
+            "10 days option, $350 fee. Conventional, 20% down. "
+            "Fridge + washer stay. Asked 5k seller credit for the roof, "
+            "not agreed yet. Old survey from 2019. HOA docs still pending.")
+
+    def setUp(self):
+        self.fields = note_enhancer.enhance_note(self.NOTE, "TX", None)["fields"]
+
+    def test_address_is_bounded_to_the_address(self):
+        value = self.fields["address"]["value"]
+        self.assertIn("123 Main St", value)
+        self.assertNotIn("Buyers", value)
+        self.assertNotIn("Doe", value)
+        self.assertNotIn("Earnest", value)
+
+    def test_sentence_initial_buyers_found(self):
+        self.assertEqual(self.fields["buyer_name"]["value"], "John & Jane Doe")
+
+    def test_date_first_closing_date_found(self):
+        value = self.fields["closing_date"]["value"]
+        _year, month, day = (int(p) for p in value.split("-"))
+        self.assertEqual((month, day), (12, 18))
+
+    def test_option_days_bind_and_close_days_absent(self):
+        self.assertEqual(self.fields["option_days"]["value"], 10)
+        self.assertNotIn("close_days", self.fields)
+
+    def test_working_extractions_not_regressed(self):
+        f = self.fields
+        self.assertEqual(f["price"]["value"], 685000)
+        self.assertEqual(f["earnest_money_amount"]["value"], 7000)
+        self.assertIn("hedge", f["earnest_money_amount"]["note"])
+        self.assertEqual(f["down_payment_pct"]["value"], 0.2)
+        self.assertEqual(f["financing_type"]["value"], "conventional")
+        self.assertEqual(f["inclusions"]["value"], "Fridge + washer stay")
+        self.assertEqual(f["hoa"]["value"], "HOA docs still pending")
+        self.assertIn("seller credit", f["seller_concessions"]["value"])
+
+    def test_every_span_is_an_exact_substring(self):
+        for key, field in self.fields.items():
+            self.assertIn(_norm(field["span"]), _norm(self.NOTE), key)
+
+    def test_option_period_phrasing_and_real_close_phrase_coexist(self):
+        fields = note_enhancer.enhance_note(
+            "7 day option period, close in 30 days, 500k", "TX", None)["fields"]
+        self.assertEqual(fields["option_days"]["value"], 7)
+        self.assertEqual(fields["close_days"]["value"], 30)
+
+
 class ValidationGate(unittest.TestCase):
     def test_invented_money_field_is_dropped(self):
         fields, warnings = note_enhancer.validate_proposal(
