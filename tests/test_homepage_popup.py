@@ -82,6 +82,67 @@ class DemoMarkup(unittest.TestCase):
                           "panel row missing: %s" % key)
 
 
+def _section_segment(html):
+    """The notepad section markup: from its comment banner up to the
+    demo pop-up root that follows it."""
+    start = html.index("<!-- 4a2. NOTEPAD:")
+    end = html.index('class="npd-root"', start)
+    return html[start:end]
+
+
+class WorkflowMarkup(unittest.TestCase):
+    """The homepage demo also shows the product's workflow (action
+    items, reminders, draft + TC Check), populated client-side from
+    the same parse. The containers render empty/hidden in the static
+    HTML; the generators live in NOTEPAD_JS."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.html = _home_html()
+        cls.sec = _section_segment(cls.html)
+        cls.seg = _demo_segment(cls.html)
+        cls.js = app_module.NOTEPAD_JS
+
+    def test_section_workflow_containers(self):
+        self.assertIn('id="npWorkflow" hidden', self.sec)
+        self.assertIn('id="npActions"', self.sec)
+        self.assertIn('id="npReminders"', self.sec)
+        self.assertIn("Counted from the contract once it is signed.", self.sec)
+        self.assertIn('id="npDraft"', self.sec)
+        self.assertIn("Create draft", self.sec)
+        self.assertIn('id="npDraftOut" hidden', self.sec)
+        self.assertIn('id="npDraftText"', self.sec)
+        self.assertIn('id="npDraftReply"', self.sec)
+        self.assertIn("You text to (833) 897-0333", self.sec)
+        self.assertIn("Sample flow. In the product, the draft is a real "
+                      "filled PDF and the check runs on it.", self.sec)
+
+    def test_panel_next_steps_block(self):
+        self.assertIn('id="npdNext" hidden', self.seg)
+        self.assertIn("Next steps", self.seg)
+        self.assertIn('id="npdActions"', self.seg)
+        self.assertIn('id="npdReminder"', self.seg)
+        self.assertIn('id="npdDraft"', self.seg)
+        self.assertIn('id="npdDraftOut" hidden', self.seg)
+        self.assertIn("Sample flow. In the product, the draft is a real "
+                      "filled PDF and the check runs on it.", self.seg)
+
+    def test_workflow_generators_in_js(self):
+        for name in ("buildActions", "buildReminders", "buildDraftText",
+                     "buildDraftReply", "closingLine", "renderWorkflow"):
+            self.assertIn("function " + name, self.js, name)
+        # The honest strings the generators must be able to produce.
+        self.assertIn("Confirm ", self.js)
+        self.assertIn("Deliver earnest money to the escrow agent", self.js)
+        self.assertIn("Collect the HOA documents", self.js)
+        self.assertIn("Earnest money due", self.js)
+        self.assertIn("Option period ends", self.js)
+        self.assertIn("No closing date in your notes yet", self.js)
+        self.assertIn("TC Check on this draft: 2 must-fix: Price Math, "
+                      "Earnest Money; 1 to review.", self.js)
+        self.assertIn("Draft ready: TREC 20-19 for ", self.js)
+
+
 class DemoNeverSaves(unittest.TestCase):
     """The demo must not perform any network save. The member widget
     POSTs to the signed /notepad endpoints; the demo script (NOTEPAD_JS)
