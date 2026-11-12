@@ -13954,36 +13954,42 @@ def notepad_field_update(tx_id):
     sheet = notepad.get_deal_sheet(tx_id, phone)
     current = (sheet["fields"].get(key) or {}) if sheet else {}
     action = data.get("action", "")
-    if action == "clear" or (action == "" and data.get("value") is None):
-        fields = notepad.set_field(tx_id, phone, key, None)
-    elif action == "accept":
-        if current.get("value") in (None, ""):
-            return jsonify({"error": "Nothing to accept for that field."}), 400
-        fields = notepad.set_field(tx_id, phone, key, current.get("value"),
-                                   state="found", origin="user",
-                                   span=current.get("span", ""))
-    else:
-        value = data.get("value")
-        kind = notepad.FIELD_KINDS.get(key)
-        try:
-            if kind == "money":
-                value = int(round(float(str(value).replace(",", "").replace("$", ""))))
-            elif kind == "int":
-                value = int(float(str(value)))
-            elif kind == "pct":
-                v = float(str(value).replace("%", ""))
-                value = v / 100 if v > 1 else v
-            elif kind == "date":
-                datetime.strptime(str(value), "%Y-%m-%d")
-                value = str(value)
-            else:
-                value = str(value).strip()
-        except (TypeError, ValueError):
-            return jsonify({"error": f"That doesn't look like a valid {notepad.FIELD_LABELS.get(key, key)}."}), 400
-        if value in ("", None):
-            return jsonify({"error": "Value required — use Clear to empty a field."}), 400
-        fields = notepad.set_field(tx_id, phone, key, value,
-                                   state="found", origin="user")
+    try:
+        if action == "clear" or (action == "" and data.get("value") is None):
+            fields = notepad.set_field(tx_id, phone, key, None)
+        elif action == "accept":
+            if current.get("value") in (None, ""):
+                return jsonify({"error": "Nothing to accept for that field."}), 400
+            fields = notepad.set_field(tx_id, phone, key, current.get("value"),
+                                       state="found", origin="user",
+                                       span=current.get("span", ""))
+        else:
+            value = data.get("value")
+            kind = notepad.FIELD_KINDS.get(key)
+            try:
+                if kind == "money":
+                    value = int(round(float(str(value).replace(",", "").replace("$", ""))))
+                elif kind == "int":
+                    value = int(float(str(value)))
+                elif kind == "pct":
+                    v = float(str(value).replace("%", ""))
+                    value = v / 100 if v > 1 else v
+                elif kind == "date":
+                    datetime.strptime(str(value), "%Y-%m-%d")
+                    value = str(value)
+                else:
+                    value = str(value).strip()
+            except (TypeError, ValueError):
+                return jsonify({"error": f"That doesn't look like a valid {notepad.FIELD_LABELS.get(key, key)}."}), 400
+            if value in ("", None):
+                return jsonify({"error": "Value required — use Clear to empty a field."}), 400
+            fields = notepad.set_field(tx_id, phone, key, value,
+                                       state="found", origin="user")
+    except ValueError as exc:
+        # A field guard rejected the value (the address shape guard is
+        # the one that raises today); its message is written for the
+        # user and rides the standard error shape.
+        return jsonify({"error": str(exc)}), 400
     if fields is None:
         return jsonify({"error": "Could not save that field."}), 400
     return jsonify({"ok": True, "fields": fields,
