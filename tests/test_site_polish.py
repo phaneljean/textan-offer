@@ -87,7 +87,7 @@ class HeroCardMatchesSample(unittest.TestCase):
                      "window.taState = function()"):
             self.assertIn(hook, self.html)
         self.assertNotIn("home-hero.jpg", self.html)
-        self.assertLess(self.html.find('class="state-switch"'), self.html.find("<h1>The notepad that sits"))
+        self.assertLess(self.html.find('class="state-switch"'), self.html.find("<h1>Catch it before"))
         self.assertLess(self.html.find('class="eyebrow"'), self.html.find('class="state-switch"'))
 
 
