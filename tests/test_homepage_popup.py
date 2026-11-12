@@ -47,10 +47,11 @@ def _home_html():
 
 def _section_segment(html):
     """The notepad section markup: from its comment banner up to the
-    WHAT IT CATCHES section that follows it (the pop-up demo root used
-    to sit between the two and is gone)."""
+    Deadline Autopilot section that follows it (the WHAT IT CATCHES
+    section that used to sit between them was deleted 2026-11-12; the
+    pop-up demo root that used to sit between them is also gone)."""
     start = html.index("<!-- 4a2. NOTEPAD:")
-    end = html.index("<!-- 2. WHAT IT CATCHES", start)
+    end = html.index("<!-- 2c. DEADLINE AUTOPILOT", start)
     return html[start:end]
 
 
