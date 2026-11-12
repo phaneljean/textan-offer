@@ -196,6 +196,21 @@ class DocumentRoutes(unittest.TestCase):
         # The view itself performed the lazy seeding.
         self.assertEqual(len(notepad.list_documents(tx_id, phone)), 7)
 
+    def test_detail_page_renders_cycle_control(self):
+        # 2026-11-12: the four per-status pills became ONE
+        # click-to-cycle control per row (missing -> requested ->
+        # received -> reviewed -> missing), still persisted through
+        # the same set_status route (see the roundtrip test above).
+        phone, q, tx_id = self._deal()
+        resp = self.client.get(f"/notepad/{tx_id}", query_string=q)
+        self.assertEqual(resp.status_code, 200)
+        docs = notepad.list_documents(tx_id, phone)
+        first = docs[0]
+        self.assertIn(b'class="docstat doccycle st-missing"', resp.data)
+        self.assertIn(
+            f"npDocCycle({first['id']}, 'missing')".encode(), resp.data)
+        self.assertNotIn(b"docpill", resp.data)
+
     def test_set_status_add_delete_roundtrip(self):
         phone, q, tx_id = self._deal()
         self.client.get(f"/notepad/{tx_id}", query_string=q)
@@ -263,7 +278,7 @@ class DocumentRoutes(unittest.TestCase):
     def test_documents_js_present(self):
         js = app_module._NP_JS
         for token in ("renderDocs", "npDocStatus", "npDocAdd", "npDocDelete",
-                      "documentsUrl"):
+                      "npDocCycle", "DOC_CYCLE", "documentsUrl"):
             self.assertIn(token, js)
 
     @unittest.skipUnless(shutil.which("node"), "node not available")
