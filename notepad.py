@@ -193,6 +193,23 @@ def init_notepad_tables():
         CREATE INDEX IF NOT EXISTS idx_transaction_checks_tx
         ON transaction_checks(transaction_id, phone)
     """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS transaction_documents (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            transaction_id INTEGER NOT NULL,
+            phone TEXT NOT NULL,
+            doc_key TEXT NOT NULL DEFAULT '',
+            label TEXT NOT NULL,
+            is_custom INTEGER DEFAULT 0,
+            status TEXT NOT NULL DEFAULT 'missing',
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+    """)
+    conn.execute("""
+        CREATE INDEX IF NOT EXISTS idx_transaction_documents_tx
+        ON transaction_documents(transaction_id, phone)
+    """)
     conn.commit()
     conn.close()
 
@@ -324,6 +341,7 @@ def purge_expired_deleted(retention_days: int = PURGE_AFTER_DAYS) -> int:
         conn.execute("DELETE FROM note_enhancements WHERE transaction_id = ?", (tx_id,))
         conn.execute("DELETE FROM notepad_tasks WHERE transaction_id = ?", (tx_id,))
         conn.execute("DELETE FROM transaction_checks WHERE transaction_id = ?", (tx_id,))
+        conn.execute("DELETE FROM transaction_documents WHERE transaction_id = ?", (tx_id,))
         conn.execute("DELETE FROM deal_sheets WHERE transaction_id = ?", (tx_id,))
         conn.execute("DELETE FROM transactions WHERE id = ?", (tx_id,))
     conn.commit()
@@ -951,3 +969,133 @@ def relative_label(d: date, today: date) -> str:
     if delta > 1:
         return f"in {delta} days"
     return f"{-delta} days ago"
+
+
+# ---------------------------------------------------------------------------
+# Document checklist (2026-11-11): per-deal paperwork status -- Missing,
+# Requested, Received, Reviewed. Status-only tracking: no document bytes
+# are stored here (the contract file itself still goes through TC Check,
+# "Checked. Then deleted."). The standard set is seeded lazily on first
+# view from a state-aware default list; users can add their own rows.
+# Seeded rows are never deleted (reset one to Missing instead) so the
+# standard set stays whole; custom rows can be removed. updated_at moves
+# on every status change on purpose -- a future activity timeline reads
+# it as the "document changed" event stream.
+# ---------------------------------------------------------------------------
+
+DOCUMENT_STATUSES = ("missing", "requested", "received", "reviewed")
+
+_DEFAULT_DOCUMENTS = {
+    "TX": [
+        ("purchase_agreement", "Purchase agreement"),
+        ("sellers_disclosure", "Seller's disclosure"),
+        ("hoa_documents", "HOA documents"),
+        ("survey", "Survey"),
+        ("t47_affidavit", "T-47 affidavit"),
+        ("addenda", "Addenda"),
+        ("title_commitment", "Title commitment"),
+    ],
+    "CO": [
+        ("purchase_agreement", "Purchase agreement"),
+        ("sellers_disclosure", "Seller's property disclosure"),
+        ("hoa_documents", "HOA documents"),
+        ("survey_ilc", "Survey / ILC"),
+        ("addenda", "Addenda"),
+        ("title_commitment", "Title commitment"),
+    ],
+}
+
+
+def ensure_documents(tx) -> list:
+    """Seed the default checklist for a transaction the first time its
+    checklist is viewed, then return the full list. Idempotent: when any
+    rows already exist nothing is inserted, so statuses and custom rows
+    are never reset or duplicated by a re-view."""
+    if not tx:
+        return []
+    conn = _conn()
+    count = conn.execute(
+        "SELECT COUNT(*) AS n FROM transaction_documents"
+        " WHERE transaction_id = ? AND phone = ?",
+        (tx["id"], tx["phone"])).fetchone()["n"]
+    if count == 0:
+        now = _now()
+        defaults = _DEFAULT_DOCUMENTS.get(tx.get("state") or "TX",
+                                          _DEFAULT_DOCUMENTS["TX"])
+        for key, label in defaults:
+            conn.execute(
+                "INSERT INTO transaction_documents (transaction_id, phone,"
+                " doc_key, label, is_custom, status, created_at, updated_at)"
+                " VALUES (?, ?, ?, ?, 0, 'missing', ?, ?)",
+                (tx["id"], tx["phone"], key, label, now, now))
+        conn.commit()
+    conn.close()
+    return list_documents(tx["id"], tx["phone"])
+
+
+def list_documents(tx_id, phone: str) -> list:
+    tx = get_transaction(tx_id, phone)
+    if not tx:
+        return []
+    conn = _conn()
+    rows = conn.execute(
+        "SELECT * FROM transaction_documents"
+        " WHERE transaction_id = ? AND phone = ? ORDER BY id ASC",
+        (tx["id"], phone)).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def set_document_status(doc_id, tx_id, phone: str, status: str) -> bool:
+    """Move one checklist row to a new status. Anything outside the
+    four-value enum is rejected before the database is touched."""
+    if status not in DOCUMENT_STATUSES:
+        return False
+    tx = get_transaction(tx_id, phone)
+    if not tx:
+        return False
+    conn = _conn()
+    cur = conn.execute(
+        "UPDATE transaction_documents SET status = ?, updated_at = ?"
+        " WHERE id = ? AND transaction_id = ? AND phone = ?",
+        (status, _now(), doc_id, tx["id"], phone))
+    conn.commit()
+    conn.close()
+    return cur.rowcount > 0
+
+
+def add_document(tx_id, phone: str, label: str):
+    """A user-added checklist row. Returns the new row id, or None."""
+    tx = get_transaction(tx_id, phone)
+    label = (label or "").strip()
+    if not tx or not label:
+        return None
+    now = _now()
+    conn = _conn()
+    cur = conn.execute(
+        "INSERT INTO transaction_documents (transaction_id, phone, doc_key,"
+        " label, is_custom, status, created_at, updated_at)"
+        " VALUES (?, ?, ?, ?, 1, 'missing', ?, ?)",
+        (tx["id"], phone, "custom:" + uuid.uuid4().hex[:16], label[:300],
+         now, now))
+    conn.commit()
+    doc_id = cur.lastrowid
+    conn.close()
+    return doc_id
+
+
+def delete_document(doc_id, tx_id, phone: str) -> bool:
+    """Only custom rows can be deleted. The seeded standard rows stay --
+    set one back to Missing instead -- so the checklist never silently
+    loses a standard document."""
+    tx = get_transaction(tx_id, phone)
+    if not tx:
+        return False
+    conn = _conn()
+    cur = conn.execute(
+        "DELETE FROM transaction_documents"
+        " WHERE id = ? AND transaction_id = ? AND phone = ? AND is_custom = 1",
+        (doc_id, tx["id"], phone))
+    conn.commit()
+    conn.close()
+    return cur.rowcount > 0
