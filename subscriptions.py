@@ -92,6 +92,27 @@ def has_professional_access(phone: str) -> bool:
         return True
     return bool(user["is_subscribed"]) and user["plan"] in PROFESSIONAL_PLANS
 
+# Plans that include the Deal Notepad. The pricing decision (2026-11-11)
+# puts the notepad in the $40 Agent plan, which checkouts write as
+# "starter" -- so unlike PROFESSIONAL_PLANS this set includes every paid
+# tier. Reusing has_professional_access() for the notepad would lock out
+# exactly the customer the feature is sold to.
+NOTEPAD_PLANS = {"starter", "professional", "brokerage"}
+
+def has_notepad_access(phone: str) -> bool:
+    """Deal Notepad entitlement: admin, brokerage-roster agents, and any
+    personally subscribed user on a paid plan (starter/professional/
+    brokerage) -- mirroring has_professional_access()'s shape with the
+    wider plan set."""
+    if is_admin_phone(phone):
+        return True
+    user = get_user(phone)
+    if not user:
+        return False
+    if user.get("brokerage_id"):
+        return True
+    return bool(user["is_subscribed"]) and user["plan"] in NOTEPAD_PLANS
+
 def create_user(phone: str) -> dict:
     """Create new user record"""
     conn = sqlite3.connect(DB_PATH)
