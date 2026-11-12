@@ -12929,14 +12929,8 @@ border-bottom:1px solid var(--border);}
 .docrow:last-child{border-bottom:none;}
 .docrow .dlabel{flex:1;font-size:0.92rem;}
 .docstatus{display:flex;gap:0.3rem;flex-wrap:wrap;}
-.docpill{padding:0.18rem 0.6rem;border-radius:9999px;font-size:0.72rem;font-weight:600;
-border:1px solid var(--border);background:#fff;color:var(--text-dim);cursor:pointer;
-font-family:inherit;}
-.docpill:hover{border-color:var(--accent);}
-.docpill.sel-missing{background:#FDECEC;border-color:var(--red);color:var(--red);}
-.docpill.sel-requested{background:#FBF3DF;border-color:var(--amber);color:var(--amber);}
-.docpill.sel-received{background:var(--accent-tint);border-color:var(--accent);color:var(--accent-dark);}
-.docpill.sel-reviewed{background:var(--accent);border-color:var(--accent);color:#fff;}
+.doccycle{cursor:pointer;border:1px solid transparent;font-family:inherit;}
+.doccycle:hover{text-decoration:underline;}
 .docstat{font-size:0.72rem;font-weight:700;padding:0.2rem 0.6rem;border-radius:9999px;
 white-space:nowrap;}
 .docstat.st-missing{background:#FDECEC;color:var(--red);}
@@ -13010,6 +13004,42 @@ padding:0.45rem 0;border-bottom:1px solid var(--border);}
 .health-out{margin-top:0.8rem;font-size:0.88rem;}
 .health-out div{padding:0.2rem 0;color:var(--text-muted);}
 .health-out strong{color:var(--text);}
+/* Deal rail + ledger (2026-11-12, mock approved by Baptiste): the deal
+   page becomes a daily workspace -- a deal rail on the left, the main
+   flow on the right, and the Deal Sheet reading as a firmed-values
+   ledger (firmed rows accented, unset rows quiet). */
+.np-shell{display:grid;grid-template-columns:248px minmax(0,1fr);gap:1.25rem;
+align-items:start;}
+.np-main{min-width:0;}
+@media (max-width:900px){.np-shell{grid-template-columns:1fr;}}
+.np-rail{position:sticky;top:1rem;background:var(--bg-card);border:1px solid var(--border);
+border-radius:var(--radius);padding:1.1rem;box-shadow:0 1px 2px rgba(15,31,47,0.04);}
+@media (max-width:900px){.np-rail{position:static;}}
+.rail-back{display:inline-block;font-size:0.88rem;margin-bottom:0.5rem;}
+.rail-brand{font-weight:800;font-size:0.95rem;letter-spacing:-0.01em;margin-bottom:0.9rem;}
+.rail-newform{margin-bottom:0.9rem;}
+.rail-new{width:100%;background:var(--accent);color:#fff;border:none;cursor:pointer;
+padding:0.55rem 1rem;border-radius:999px;font-size:0.85rem;font-weight:600;font-family:inherit;}
+.rail-new:hover{background:var(--accent-light);}
+.rail-list{display:flex;flex-direction:column;gap:0.4rem;}
+.rail-deal{display:block;padding:0.6rem 0.7rem;border:1px solid var(--border);
+border-radius:var(--radius-sm);color:var(--text);}
+.rail-deal:hover{text-decoration:none;border-color:var(--accent);}
+.rail-deal.current{border-color:var(--accent);background:var(--accent-tint);}
+.rail-deal-title{display:block;font-weight:700;font-size:0.88rem;line-height:1.3;}
+.rail-deal-meta{display:block;color:var(--text-dim);font-size:0.74rem;margin-top:0.15rem;}
+.rail-deal .chip{margin-top:0.35rem;}
+.rail-check{width:100%;margin-top:0.9rem;background:#fff;color:var(--accent);
+border:1px solid var(--border);cursor:pointer;padding:0.55rem 1rem;border-radius:999px;
+font-size:0.85rem;font-weight:600;font-family:inherit;}
+.rail-check:hover{border-color:var(--accent);color:var(--accent-dark);}
+.tag-firmed{background:var(--accent);color:#fff;}
+.frow-found{box-shadow:inset 3px 0 0 var(--accent);}
+.frow-calculated{box-shadow:inset 3px 0 0 #2E4A63;}
+.frow-unset .flabel{color:var(--text-dim);font-weight:500;}
+.frow-unset .fmissing{font-style:italic;}
+.dl-count{background:var(--accent-tint);color:var(--accent-dark);
+padding:0.1rem 0.55rem;border-radius:9999px;font-weight:700;}
 """
 
 
@@ -13192,26 +13222,26 @@ _DOC_STATUS_LABELS = (("missing", "Missing"), ("requested", "Requested"),
 
 def _np_documents_html(docs, access):
     """Server-rendered document checklist (the JS renderDocs mirrors it).
-    Members get a status pill control per row and a remove button on
-    rows they added; read-only viewers get a static status chip."""
+    Members get ONE click-to-cycle status control per row (Missing ->
+    Requested -> Received -> Reviewed -> Missing, persisted through the
+    same set_status route as the old four-pill control) and a remove
+    button on rows they added; read-only viewers get a static chip."""
     if not docs:
         return '<p class="sub">No documents tracked yet.</p>'
     rows = []
     for d in docs:
+        label = dict(_DOC_STATUS_LABELS).get(d["status"], d["status"])
         if access:
-            pills = ""
-            for s, label in _DOC_STATUS_LABELS:
-                sel = f" sel-{s}" if d["status"] == s else ""
-                pills += (f'<button type="button" class="docpill{sel}" '
-                          f'onclick="npDocStatus({d["id"]}, \'{s}\')">'
-                          f'{label}</button>')
-            ctrl = f'<span class="docstatus">{pills}</span>'
+            ctrl = (f'<span class="docstatus"><button type="button" '
+                    f'class="docstat doccycle st-{escape(d["status"])}" '
+                    f'title="Click to advance the status" '
+                    f'onclick="npDocCycle({d["id"]}, \'{d["status"]}\')">'
+                    f'{escape(label)}</button></span>')
             if d["is_custom"]:
                 ctrl += (f'<button type="button" class="btn-mini" '
                          f'title="Remove document" '
                          f'onclick="npDocDelete({d["id"]})">&times;</button>')
         else:
-            label = dict(_DOC_STATUS_LABELS).get(d["status"], d["status"])
             ctrl = (f'<span class="docstat st-{escape(d["status"])}">'
                     f'{escape(label)}</span>')
         rows.append(f'<div class="docrow">'
@@ -13262,16 +13292,20 @@ def _np_check_results_html(checks):
 
 def _np_field_row(key, label, field):
     """One Deal Sheet row, server-rendered (the page's JS re-renders the
-    same structure after enhance/field calls). Three states, three
-    tags: Captured (green -- stated in the notes and firmed, or entered
+    same structure after enhance/field calls). The sheet reads as a
+    firmed-values ledger: a row whose value is firmed (Captured or
+    Calculated) is highlighted and carries a Firmed tag next to its
+    state tag, an unset row stays quiet ("Not set", no tag), and a
+    Confirm row keeps its amber call-out. Three states, three tags:
+    Captured (green -- stated in the notes and firmed, or entered
     by the user), Calculated (slate -- derived from Captured values,
     formula shown on the row), Confirm (amber -- proposed, not yet
     verified). A Calculated row offers Edit (which converts it to
     Captured) but no Accept (there is nothing to accept -- it is math)
     and no Clear (you change the inputs, or override by editing)."""
     if not field or field.get("value") in (None, ""):
-        return (f'<div class="frow" data-key="{key}"><div class="flabel">{escape(label)}</div>'
-                f'<div class="fmain"><span class="fmissing">Not in your notes</span></div>'
+        return (f'<div class="frow frow-unset" data-key="{key}"><div class="flabel">{escape(label)}</div>'
+                f'<div class="fmain"><span class="fmissing">Not set</span></div>'
                 f'<div class="fctrl"><button type="button" class="btn-mini" '
                 f'onclick="npField(\'{key}\',\'edit\')">Add</button></div></div>')
     state = field.get("state") if field.get("state") in ("found", "confirm", "calculated") else "confirm"
@@ -13282,6 +13316,8 @@ def _np_field_row(key, label, field):
         tag = '<span class="tag tag-calc">Calculated</span>'
     else:
         tag = '<span class="tag tag-found">Captured</span>'
+    if state in ("found", "calculated"):
+        tag += ' <span class="tag tag-firmed">Firmed</span>'
     note = f'<div class="fnote">{escape(field["note"])}</div>' if field.get("note") else ""
     formula = (f'<div class="fformula">{escape(field["formula"])}</div>'
                if state == "calculated" and field.get("formula") else "")
@@ -13471,6 +13507,92 @@ def _np_ws_spine_html(steps):
     return "".join(out)
 
 
+def _np_recency_label(iso_ts, today):
+    """'updated today' / 'updated yesterday' / 'updated Nov 3, 2026'
+    for a transaction's updated_at, against the deal-local date."""
+    if not iso_ts:
+        return ""
+    try:
+        d = datetime.fromisoformat(str(iso_ts)[:10]).date()
+    except ValueError:
+        return ""
+    if d == today:
+        return "updated today"
+    if (today - d).days == 1:
+        return "updated yesterday"
+    return f"updated {d.strftime('%b %d, %Y')}"
+
+
+def _np_rail_html(current_tx_id, current_state, phone, expires, sig,
+                  access, today):
+    """The deal rail (2026-11-12; Baptiste approved the mock's left
+    rail): back link, brand line, the shared Install app block, a
+    + new deal action (the same POST /notepad create the list page
+    uses), the owner's deal list with the current deal highlighted,
+    and a Run TC check shortcut. Rendered server-side from
+    notepad.list_transactions so the window.NP payload is untouched;
+    every link carries the signed trio via _np_signed."""
+    items = ""
+    for t in notepad.list_transactions(phone):
+        cur = " current" if t["id"] == current_tx_id else ""
+        badge = (f' <span class="chip chip-confirm">'
+                 f'{t["confirm_count"]} to confirm</span>'
+                 if t["confirm_count"] else "")
+        meta = f'{escape(t["state"] or "TX")} &middot; notepad'
+        recency = _np_recency_label(t.get("updated_at"), today)
+        if recency:
+            meta += f" &middot; {recency}"
+        items += (f'<a class="rail-deal{cur}" '
+                  f'href="{_np_signed(f"/notepad/{t["id"]}", phone, expires, sig)}">'
+                  f'<span class="rail-deal-title">'
+                  f'{escape(t["title"] or "Untitled deal")}</span>'
+                  f'<span class="rail-deal-meta">{meta}</span>{badge}</a>')
+    if not items:
+        items = '<p class="sub">No deals yet.</p>'
+    new_html = ""
+    if access:
+        new_html = (f'<form method="post" class="rail-newform" '
+                    f'action="{_np_signed("/notepad", phone, expires, sig)}">'
+                    f'<input type="hidden" name="state" '
+                    f'value="{escape(current_state)}">'
+                    f'<button type="submit" class="rail-new">'
+                    f'+ new deal</button></form>')
+    return (f'<aside class="np-rail">'
+            f'<a class="rail-back" '
+            f'href="{_np_signed("/notepad", phone, expires, sig)}">'
+            f'&larr; deals</a>'
+            f'<div class="rail-brand">txtanoffer &middot; deal notepad</div>'
+            f'{PWA_INSTALL_HTML}'
+            f'{new_html}'
+            f'<div class="rail-list">{items}</div>'
+            f'<button type="button" class="rail-check" '
+            f'onclick="npRunCheckFocus()">Run TC check</button>'
+            f'</aside>')
+
+
+def _np_blocking_keys(state):
+    """The Deal Sheet keys the hard draft gate walks, exactly as
+    notepad.blocking_confirm_fields selects them (the contract keys,
+    minus the Texas-only ones for a Colorado deal). Emitted to the page
+    as its own global so the draft-gate chip can recount after field
+    edits without touching the window.NP payload."""
+    keys = list(notepad._CONTRACT_KEYS)
+    if state == "CO":
+        keys = [k for k in keys if k not in notepad.TX_ONLY_FIELDS]
+    return keys
+
+
+def _np_draft_gate_html(fields, state):
+    """The Draft card's gate chip: the count comes from the gate's own
+    computation, notepad.blocking_confirm_fields, so the chip can never
+    disagree with the refusal the Create draft button would get."""
+    n = len(notepad.blocking_confirm_fields(fields, state))
+    if n:
+        return (f'<span class="chip chip-confirm">{n} '
+                f'term{"s" if n != 1 else ""} still unconfirmed</span>')
+    return '<span class="chip">All terms firmed, ready to draft</span>'
+
+
 _NP_JS = """
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){
 return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
@@ -13483,12 +13605,13 @@ function fmtVal(key,v){
 }
 function rowHtml(key,label,f){
   if(!f||f.value==null||f.value===''){
-    return '<div class="frow" data-key="'+key+'"><div class="flabel">'+esc(label)+'</div>'
-      +'<div class="fmain"><span class="fmissing">Not in your notes</span></div>'
+    return '<div class="frow frow-unset" data-key="'+key+'"><div class="flabel">'+esc(label)+'</div>'
+      +'<div class="fmain"><span class="fmissing">Not set</span></div>'
       +'<div class="fctrl"><button type="button" class="btn-mini" onclick="npField(\\''+key+'\\',\\'edit\\')">Add</button></div></div>';
   }
   var state=f.state==='found'?'found':(f.state==='calculated'?'calculated':'confirm');
   var tag=state==='confirm'?'<span class="tag tag-confirm">Confirm</span>':(state==='calculated'?'<span class="tag tag-calc">Calculated</span>':'<span class="tag tag-found">Captured</span>');
+  if(state==='found'||state==='calculated'){tag+=' <span class="tag tag-firmed">Firmed</span>';}
   var note=f.note?'<div class="fnote">'+esc(f.note)+'</div>':'';
   var formula=(state==='calculated'&&f.formula)?'<div class="fformula">'+esc(f.formula)+'</div>':'';
   var span=f.span?'<div class="fspan">from: &ldquo;'+esc(f.span)+'&rdquo;</div>':'';
@@ -13506,6 +13629,15 @@ function renderFields(){
   document.getElementById('sheetRows').innerHTML=html;
   var cc=Object.keys(window.NP.fields).filter(function(k){return window.NP.fields[k].state==='confirm';}).length;
   document.getElementById('npConfirmCount').textContent=cc?cc+' to confirm':'';
+  npDraftGateUpdate();
+}
+function npDraftGateUpdate(){
+  var el=document.getElementById('npDraftGate');
+  if(!el||!window.NP_BLOCKING_KEYS)return;
+  var n=window.NP_BLOCKING_KEYS.filter(function(k){
+    var f=window.NP.fields[k];return f&&f.state==='confirm';}).length;
+  el.innerHTML=n?'<span class="chip chip-confirm">'+n+' term'+(n===1?'':'s')+' still unconfirmed</span>'
+    :'<span class="chip">All terms firmed, ready to draft</span>';
 }
 function postJson(url,body){
   return fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})})
@@ -13630,13 +13762,15 @@ function npTaskDelete(id){
   }).catch(function(){alert('Network error — please try again.');});
 }
 var DOC_STATUSES=[['missing','Missing'],['requested','Requested'],['received','Received'],['reviewed','Reviewed']];
+var DOC_CYCLE={missing:'requested',requested:'received',received:'reviewed',reviewed:'missing'};
+var DOC_LABELS={missing:'Missing',requested:'Requested',received:'Received',reviewed:'Reviewed'};
 function docRowHtml(d){
-  var pills=DOC_STATUSES.map(function(pair){
-    var s=pair[0];
-    return '<button type="button" class="docpill'+(d.status===s?' sel-'+s:'')+'" onclick="npDocStatus('+d.id+',\\''+s+'\\')">'+pair[1]+'</button>';
-  }).join('');
+  var cyc='<button type="button" class="docstat doccycle st-'+d.status+'" title="Click to advance the status" onclick="npDocCycle('+d.id+',\\''+d.status+'\\')">'+(DOC_LABELS[d.status]||d.status)+'</button>';
   var del=d.is_custom?'<button type="button" class="btn-mini" title="Remove document" onclick="npDocDelete('+d.id+')">&times;</button>':'';
-  return '<div class="docrow"><span class="dlabel">'+esc(d.label)+'</span><span class="docstatus">'+pills+'</span>'+del+'</div>';
+  return '<div class="docrow"><span class="dlabel">'+esc(d.label)+'</span><span class="docstatus">'+cyc+'</span>'+del+'</div>';
+}
+function npDocCycle(id,current){
+  npDocStatus(id, DOC_CYCLE[current]||'requested');
 }
 function renderDocs(docs){
   var box=document.getElementById('npDocs');
@@ -14041,6 +14175,8 @@ def notepad_detail(tx_id):
         dl_html = ""
         for r in dl_rows:
             rel_cls = "dlrel past" if r["date"] < today_local else "dlrel"
+            if r["kind"] == "closing":
+                rel_cls += " dl-count"
             note_html = (f' <span class="sub">({escape(r["note"])})</span>'
                          if r["note"] else "")
             dl_html += (f'<div class="dlrow"><span>{escape(r["label"])}{note_html}</span>'
@@ -14156,6 +14292,9 @@ def notepad_detail(tx_id):
         draft_html = (f'<p class="sub" style="margin-bottom:0.5rem;">Draft on file: '
                       f'<a href="{pdf_url}" target="_blank" rel="noopener">'
                       f'{escape(tx["offer_filename"])}</a></p>')
+    draft_gate_html = _np_draft_gate_html(fields, _ws_state)
+    rail_html = _np_rail_html(tx_id, _ws_state, phone, expires, sig,
+                              access, today_local)
     np_config = {
         "fieldsUrl": _np_signed(f"/notepad/{tx_id}/fields", phone, expires, sig),
         "enhanceUrl": _np_signed(f"/notepad/{tx_id}/enhance", phone, expires, sig),
@@ -14170,6 +14309,9 @@ def notepad_detail(tx_id):
         "txId": tx_id,
     }
     body = f"""
+    <div class="np-shell">
+      {rail_html}
+      <div class="np-main">
     {header_html}
     {banner}
     {spine_html}
@@ -14233,6 +14375,7 @@ def notepad_detail(tx_id):
       </div>
       <div class="card">
         <h2>Deadlines</h2>
+        <p class="sub" style="margin-bottom:0.5rem;">Computed from your sheet dates, never guessed.</p>
         {dl_html}
       </div>
     </div>
@@ -14245,7 +14388,7 @@ def notepad_detail(tx_id):
     <div class="ws-two ws-two-wide">
       <div class="card" id="wsCheckCard">
         <h2>TC Check</h2>
-        <p class="sub" style="margin-bottom:0.6rem;">Check the filled contract for this deal. The file is checked, then deleted — only the result stays pinned here.</p>
+        <p class="sub" style="margin-bottom:0.6rem;">Check the filled contract for this deal. The file is checked, then deleted — only the result stays pinned here. Or forward the filled contract to tc@check.txtanoffer.com.</p>
         <form id="npCheckForm" onsubmit="return npCheckSubmit(event)">
           <p style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
             <input type="file" id="npCheckFile" name="file" accept="application/pdf,.pdf" style="flex:1;min-width:200px;">
@@ -14257,6 +14400,7 @@ def notepad_detail(tx_id):
       <div class="card">
         <h2>Draft</h2>
         <p class="sub" style="margin-bottom:0.5rem;">Turn the confirmed Deal Sheet into a filled draft PDF. Anything still marked Confirm blocks the draft — nothing uncertain goes into a contract.</p>
+        <p style="margin-bottom:0.6rem;" id="npDraftGate">{draft_gate_html}</p>
         <div id="npDraftResult">{draft_html}</div>
         <p style="margin-top:0.4rem;"><button type="button" class="btn" data-evt="notepad_draft_created" onclick="npDraft(this)">Create draft from the Deal Sheet</button></p>
       </div>
@@ -14266,7 +14410,10 @@ def notepad_detail(tx_id):
           onsubmit="return confirm('Delete this deal? It disappears now and its notes are permanently purged after 30 days.');">
       <button type="submit" class="btn-mini">Delete this deal</button>
     </form>
+      </div>
+    </div>
     <script>window.NP={json.dumps(np_config)};</script>
+    <script>window.NP_BLOCKING_KEYS={json.dumps(_np_blocking_keys(_ws_state))};</script>
     <script>{_NP_JS}</script>"""
     return _np_page(tx['title'] or 'Deal Notepad', body,
                     widget=_np_pop_widget(phone, expires, sig, access,
