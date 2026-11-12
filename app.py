@@ -31,7 +31,7 @@ from pdf_filler import fill_offer_pdf, OUTPUT_DIR
 from pdf_validator import validate_offer_pdf
 from amendment import fill_amendment_pdf, amended_closing_line
 from agent_profiles import get_agent_profile, save_agent_profile, find_by_email, get_emails_for_phones
-from subscriptions import can_generate_offer, increment_offer_count, activate_subscription, deactivate_subscription, get_user, create_user, FREE_OFFER_LIMIT, is_admin_phone, has_professional_access
+from subscriptions import can_generate_offer, increment_offer_count, activate_subscription, deactivate_subscription, get_user, create_user, FREE_OFFER_LIMIT, is_admin_phone, has_professional_access, has_notepad_access
 from analytics import _is_internal_traffic
 from analytics import track_event, get_conversion_metrics, get_revenue_metrics, get_recent_sms, get_recent_sms_failures, get_last_blocked_state, get_waitlist_signups, get_signups_by_source, get_signup_details, get_landing_visits_by_source, get_tc_check_summary, get_recent_tc_check_email_senders, get_tc_check_count_for_sender, get_tc_check_repeat_senders, get_tc_check_bulk_summary, get_brokerage_alert_delivery, get_daily_funnel, get_top_referrers, set_internal_visitor, get_engagement_by_device, get_recent_email_send_failures, get_recent_visitors, get_co_tool_usage, get_headline
 from analytics import get_engagement_by_source, CHECK_CTA_EVENTS, SAMPLE_CTA_EVENTS, BOOK_CALL_EVENTS, DROPZONE_INTERACT_EVENT
@@ -53,6 +53,8 @@ from reminders import run_reminders_if_due
 import nurture
 from deadlines import earnest_money_deadline, option_end_date, fmt_option_end, build_day_one_summary, offer_closing_date, fmt_closing_date, closing_roll_note, roll_note, colorado_date
 import transaction_tasks
+import notepad
+import note_enhancer
 from drafts import save_draft, get_draft, clear_draft
 from tc_audit import check_tc_file, compare_contracts
 import first_screen
@@ -268,7 +270,10 @@ _ENGAGEMENT_TYPES = ("js_ok", "upload_picked", "upload_failed_rejected", "upload
                      # homepage final CTA + sample findings link, shipped
                      # 2026-11-10 without being added here; /v1/evt dropped
                      # them until now (found 2026-11-10 by test_tracking).
-                     "home_final_cta", "home_final_sample", "home_sample_findings") \
+                     "home_final_cta", "home_final_sample", "home_sample_findings",
+                     # Deal Notepad pages, 2026-11-11
+                     "notepad_created", "notepad_note_saved", "notepad_enhance_run",
+                     "notepad_field_confirmed", "notepad_draft_created") \
     + CHECK_CTA_EVENTS + SAMPLE_CTA_EVENTS + BOOK_CALL_EVENTS + (DROPZONE_INTERACT_EVENT,)
 # Pages whose beacons /v1/evt accepts: the ones with their own
 # track_page_view() call, plus _BEACON_ONLY_PAGES below.
@@ -12308,6 +12313,575 @@ def _offer_deadline_items(offer):
     return sorted(items, key=lambda i: i["date"])
 
 
+# --- Deal Notepad ------------------------------------------------------------
+# Notepad (entry point) -> Deal Sheet (the transaction record) -> Draft ->
+# TC Check. Phase 1: notes + deterministic enhance + the Deal Sheet, in the
+# dashboard's signed-link world (phone/expires/sig on every route and every
+# emitted URL -- the convention sign_dashboard_url/verify_dashboard_signature
+# define) and gated by subscriptions.has_notepad_access (every paid tier;
+# has_professional_access would exclude the $40 "starter" Agent plan the
+# notepad is sold in). Data lives in notepad.py; interpretation of note text
+# lives in note_enhancer.py and nowhere else.
+
+_NOTEPAD_CSS = """
+:root{--bg:#F5F5F7;--bg-card:#fff;--border:rgba(15,31,47,0.08);
+--text:#0f1f2f;--text-muted:#5a6b7a;--text-dim:#5f707f;
+--accent:#0b5d52;--accent-light:#16806e;--accent-dark:#0a3a33;--accent-tint:#eef5f3;
+--amber:#9a6200;--amber-bg:#FBF3DF;--red:#c62828;
+--radius:1.25rem;--radius-sm:0.85rem;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:var(--bg);
+color:var(--text);line-height:1.5;-webkit-font-smoothing:antialiased;min-height:100vh;}
+a{color:var(--accent);font-weight:600;text-decoration:none;}
+a:hover{text-decoration:underline;}
+.container{max-width:1100px;margin:0 auto;padding:2rem 1.25rem 4rem;}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-bottom:1.25rem;flex-wrap:wrap;}
+h1{font-size:1.6rem;font-weight:800;letter-spacing:-0.02em;}
+h2{font-size:1.05rem;font-weight:700;margin-bottom:0.6rem;}
+.sub{color:var(--text-muted);font-size:0.9rem;}
+.card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
+padding:1.25rem 1.4rem;margin-bottom:1.25rem;box-shadow:0 1px 2px rgba(15,31,47,0.04);}
+.btn{display:inline-block;background:var(--accent);color:#fff;border:none;cursor:pointer;
+padding:0.65rem 1.3rem;border-radius:999px;font-size:0.9rem;font-weight:600;font-family:inherit;}
+.btn:hover{background:var(--accent-light);text-decoration:none;}
+.btn[disabled]{opacity:0.55;cursor:wait;}
+.btn-ghost{background:#fff;color:var(--accent);border:1px solid var(--border);}
+.btn-mini{background:#fff;border:1px solid var(--border);color:var(--text);cursor:pointer;
+padding:0.28rem 0.7rem;border-radius:999px;font-size:0.78rem;font-weight:600;font-family:inherit;}
+.btn-mini:hover{border-color:var(--accent);color:var(--accent-dark);}
+.btn-acc{background:var(--accent);color:#fff;border-color:var(--accent);}
+.btn-acc:hover{background:var(--accent-light);color:#fff;}
+.chip{display:inline-block;padding:0.22rem 0.7rem;border-radius:9999px;font-size:0.72rem;
+font-weight:700;letter-spacing:0.02em;background:var(--accent-tint);color:var(--accent-dark);}
+.chip-confirm{background:var(--amber-bg);color:var(--amber);}
+.tx-card{display:flex;align-items:center;justify-content:space-between;gap:1rem;
+background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
+padding:1rem 1.3rem;margin-bottom:0.8rem;box-shadow:0 1px 2px rgba(15,31,47,0.04);}
+.tx-title{font-weight:700;font-size:1rem;color:var(--text);}
+.tx-meta{color:var(--text-dim);font-size:0.8rem;margin-top:0.15rem;}
+textarea,input[type=text],select{width:100%;border:1px solid var(--border);border-radius:var(--radius-sm);
+padding:0.7rem 0.85rem;font-family:inherit;font-size:0.92rem;background:#fff;color:var(--text);}
+textarea{min-height:300px;line-height:1.55;resize:vertical;}
+label.flabel2{display:block;font-size:0.75rem;font-weight:700;color:var(--text-dim);
+text-transform:uppercase;letter-spacing:0.05em;margin:0.7rem 0 0.3rem;}
+.np-grid{display:grid;grid-template-columns:390px 1fr;gap:1.25rem;align-items:start;}
+@media (max-width:900px){.np-grid{grid-template-columns:1fr;}}
+@media (min-width:901px){.np-left{position:sticky;top:1rem;}}
+.frow{display:grid;grid-template-columns:130px 1fr auto;gap:0.75rem;align-items:start;
+padding:0.6rem 0.5rem;border-bottom:1px solid var(--border);border-radius:0.5rem;}
+.frow:last-child{border-bottom:none;}
+.frow-confirm{background:var(--amber-bg);}
+.flabel{font-size:0.8rem;font-weight:600;color:var(--text-muted);padding-top:0.15rem;}
+.fvalue{font-weight:600;font-size:0.95rem;}
+.fmissing{color:var(--text-dim);font-size:0.88rem;}
+.fmeta{margin-top:0.1rem;}
+.tag{display:inline-block;padding:0.08rem 0.55rem;border-radius:9999px;font-size:0.68rem;font-weight:700;}
+.tag-confirm{background:#F7E8C3;color:var(--amber);}
+.tag-found{background:var(--accent-tint);color:var(--accent-dark);}
+.fnote{font-size:0.8rem;color:var(--amber);margin-top:0.15rem;}
+.fspan{font-size:0.78rem;color:var(--text-dim);margin-top:0.15rem;font-style:italic;}
+.fctrl{display:flex;gap:0.35rem;flex-wrap:wrap;justify-content:flex-end;}
+.warn{background:#FDECEC;color:var(--red);border-radius:var(--radius-sm);
+padding:0.6rem 0.85rem;font-size:0.85rem;margin-bottom:0.5rem;}
+.notice{background:var(--amber-bg);color:#6d4c00;border-radius:var(--radius-sm);
+padding:0.7rem 0.9rem;font-size:0.85rem;line-height:1.5;margin-bottom:0.75rem;}
+.banner{background:var(--amber-bg);color:#6d4c00;border-radius:var(--radius-sm);
+padding:0.8rem 1rem;font-size:0.88rem;margin-bottom:1.25rem;}
+details.notehist{margin-top:1rem;}
+details.notehist summary{cursor:pointer;font-size:0.85rem;font-weight:600;color:var(--accent-dark);}
+.notever{border-top:1px solid var(--border);padding:0.6rem 0;}
+.notever pre{white-space:pre-wrap;font-family:inherit;font-size:0.88rem;color:var(--text);margin-top:0.25rem;}
+.notever .nv-meta{font-size:0.75rem;color:var(--text-dim);}
+.empty{color:var(--text-dim);font-size:0.9rem;}
+"""
+
+
+def _np_signed(path, phone, expires, sig):
+    return f"{path}?phone={_urlquote(phone, safe='')}&expires={expires}&sig={sig}"
+
+
+def _np_auth():
+    """(phone, expires, sig) when the dashboard signature verifies, else
+    None. Reads request.values so POST bodies' query strings count too --
+    every notepad URL carries the trio in its query string."""
+    phone = request.values.get("phone", "")
+    expires = request.values.get("expires", "")
+    sig = request.values.get("sig", "")
+    if not verify_dashboard_signature(phone, expires, sig):
+        return None
+    return phone, expires, sig
+
+
+def _np_expired():
+    # The same 403 "Access Expired" page /dashboard returns.
+    return """
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Dashboard - TxtAnOffer</title>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"></noscript>
+<style>
+body{font-family:'Inter',sans-serif;background:#F5F5F7;color:#0f1f2f;display:flex;
+align-items:center;justify-content:center;min-height:100vh;margin:0;padding:20px;}
+.box{background:#fff;border-radius:1.25rem;padding:2.5rem;max-width:400px;text-align:center;
+border:1px solid rgba(15,31,47,0.08);box-shadow:0 1px 2px rgba(15,31,47,0.04);}
+h2{margin:0 0 0.75rem;font-size:1.35rem;font-weight:700;}
+p{color:#5a6b7a;font-size:0.9rem;line-height:1.6;}
+a{color:#0b5d52;font-weight:600;text-decoration:none;}
+a:hover{text-decoration:underline;}
+</style></head><body><div class="box">
+<h2>Access Expired</h2>
+<p>Your dashboard link has expired or is invalid.<br>
+Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
+<p style="margin-top:1rem;"><a href="/">Back to home</a></p></div></body></html>""", 403
+
+
+def _np_upsell():
+    # The /transaction paywall pattern: a friendly page, not an error.
+    return f"""<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Deal Notepad — TxtAnOffer</title>
+<style>body{{font-family:'Inter',sans-serif;background:#F5F5F7;color:#0f1f2f;min-height:100vh;
+display:flex;align-items:center;justify-content:center;text-align:center;padding:2rem;}}
+.box{{max-width:440px;}}h2{{margin-bottom:0.75rem;}}p{{color:#5a6b7a;font-size:0.9rem;line-height:1.6;margin-bottom:1.25rem;}}
+a.btn{{display:inline-block;background:#0b5d52;color:#fff;padding:0.75rem 1.5rem;border-radius:999px;font-size:0.9rem;font-weight:600;text-decoration:none;}}</style>
+</head><body><div class="box"><h2>The Deal Notepad is part of the Agent plan</h2>
+<p>Notes in, Deal Sheet out: keep a running notepad for every deal, enhance your notes into a clean Deal Sheet, and draft from it when you're ready. It's included with the Agent plan.</p>
+<a href="/pricing" class="btn">See plans &rarr;</a></div></body></html>"""
+
+
+def _np_not_found():
+    return """<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Not found — TxtAnOffer</title>
+<style>body{font-family:'Inter',sans-serif;background:#F5F5F7;color:#0f1f2f;min-height:100vh;
+display:flex;align-items:center;justify-content:center;text-align:center;padding:2rem;}
+.box{max-width:420px;}p{color:#5a6b7a;font-size:0.9rem;line-height:1.6;}</style>
+</head><body><div class="box"><h2>Deal not found</h2>
+<p>This transaction doesn't exist, was deleted, or belongs to a different account.</p></div></body></html>""", 404
+
+
+def _np_page(title, body):
+    return f"""<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{escape(title)} — TxtAnOffer</title>
+<link rel="icon" href="/static/favicon.ico?v=2" type="image/x-icon">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<style>{_NOTEPAD_CSS}</style></head>
+<body><div class="container">{body}</div></body></html>"""
+
+
+def _np_rate_limited(phone):
+    return not check_and_increment(f"notepad:{phone}", limit=120)
+
+
+@app.route("/notepad", methods=["GET", "POST"])
+def notepad_list():
+    auth = _np_auth()
+    if not auth:
+        return _np_expired()
+    phone, expires, sig = auth
+    user = get_user(phone)
+    if not user:
+        return redirect("/signup")
+    access = has_notepad_access(phone)
+
+    if request.method == "POST":
+        if not access:
+            return _np_upsell()
+        if _np_rate_limited(phone):
+            return "Too many requests. Try again in a bit.", 429
+        state = request.form.get("state", "TX")
+        title = (request.form.get("title") or "").strip()[:120]
+        tx = notepad.create_transaction(
+            phone, state=state if state in ("TX", "CO") else "TX",
+            title=title, brokerage_id=user.get("brokerage_id"))
+        return redirect(_np_signed(f"/notepad/{tx['id']}", phone, expires, sig))
+
+    dash_url = sign_dashboard_url(phone, request.host_url.rstrip("/"))
+    cards = ""
+    for t in notepad.list_transactions(phone):
+        confirm_badge = (f' <span class="chip chip-confirm">{t["confirm_count"]} to confirm</span>'
+                         if t["confirm_count"] else "")
+        cards += f"""
+        <a href="{_np_signed(f"/notepad/{t['id']}", phone, expires, sig)}" style="text-decoration:none;">
+          <div class="tx-card">
+            <div>
+              <div class="tx-title">{escape(t['title'] or 'Untitled deal')}</div>
+              <div class="tx-meta">{escape(t['state'])} &middot; updated {escape((t['updated_at'] or '')[:10])}</div>
+            </div>
+            <div><span class="chip">{escape(t['status'])}</span>{confirm_badge}</div>
+          </div>
+        </a>"""
+    if not cards:
+        cards = '<p class="empty">No deals yet. Start one below — write your notes after a call, and the Deal Sheet builds itself from them.</p>'
+    if access:
+        action_block = f"""
+        <div class="card">
+          <h2>New deal</h2>
+          <form method="post" action="{_np_signed('/notepad', phone, expires, sig)}">
+            <label class="flabel2" for="npTitle">Deal name (optional — the address fills this in later)</label>
+            <input type="text" id="npTitle" name="title" maxlength="120" placeholder="e.g. 123 Main St">
+            <label class="flabel2" for="npState">State</label>
+            <select id="npState" name="state"><option value="TX">Texas</option><option value="CO">Colorado</option></select>
+            <p style="margin-top:1rem;"><button type="submit" class="btn" data-evt="notepad_created">Start this deal's notepad &rarr;</button></p>
+          </form>
+        </div>"""
+    else:
+        action_block = """
+        <div class="card">
+          <h2>The Deal Notepad is part of the Agent plan</h2>
+          <p class="sub">Keep a running notepad for every deal, enhance your notes into a clean Deal Sheet, and draft from it when you're ready.</p>
+          <p style="margin-top:0.9rem;"><a href="/pricing" class="btn">See plans &rarr;</a></p>
+        </div>"""
+    body = f"""
+    <div class="topbar">
+      <div><h1>Deal Notepad</h1><p class="sub">Your transaction command center — notes in, Deal Sheet out.</p></div>
+      <a href="{dash_url}">&larr; Dashboard</a>
+    </div>
+    {cards}
+    {action_block}"""
+    return _np_page("Deal Notepad", body)
+
+
+def _np_field_row(key, label, field):
+    """One Deal Sheet row, server-rendered (the page's JS re-renders the
+    same structure after enhance/field calls)."""
+    if not field or field.get("value") in (None, ""):
+        return (f'<div class="frow" data-key="{key}"><div class="flabel">{escape(label)}</div>'
+                f'<div class="fmain"><span class="fmissing">Not in your notes</span></div>'
+                f'<div class="fctrl"><button type="button" class="btn-mini" '
+                f'onclick="npField(\'{key}\',\'edit\')">Add</button></div></div>')
+    state = field.get("state") if field.get("state") in ("found", "confirm") else "confirm"
+    val = escape(notepad.format_field_value(key, field.get("value")))
+    tag = ('<span class="tag tag-confirm">Confirm</span>' if state == "confirm"
+           else '<span class="tag tag-found">On the sheet</span>')
+    note = f'<div class="fnote">{escape(field["note"])}</div>' if field.get("note") else ""
+    span = (f'<div class="fspan">from: &ldquo;{escape(field["span"])}&rdquo;</div>'
+            if field.get("span") else "")
+    accept = (f'<button type="button" class="btn-mini btn-acc" data-evt="notepad_field_confirmed" '
+              f'onclick="npField(\'{key}\',\'accept\')">Accept</button>'
+              if state == "confirm" else "")
+    return (f'<div class="frow frow-{state}" data-key="{key}"><div class="flabel">{escape(label)}</div>'
+            f'<div class="fmain"><div class="fvalue">{val}</div><div class="fmeta">{tag}</div>{note}{span}</div>'
+            f'<div class="fctrl">{accept}'
+            f'<button type="button" class="btn-mini" onclick="npField(\'{key}\',\'edit\')">Edit</button>'
+            f'<button type="button" class="btn-mini" onclick="npField(\'{key}\',\'clear\')">Clear</button>'
+            f'</div></div>')
+
+
+_NP_JS = """
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){
+return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function fmtVal(key,v){
+  if(v==null||v==='')return '';
+  var kind=window.NP.kinds[key];
+  if(kind==='money'){var n=Number(v);return isNaN(n)?String(v):'$'+Math.round(n).toLocaleString('en-US');}
+  if(kind==='pct'){var p=Number(v)*100;return isNaN(p)?String(v):(Math.round(p*10)/10)+'%';}
+  return String(v);
+}
+function rowHtml(key,label,f){
+  if(!f||f.value==null||f.value===''){
+    return '<div class="frow" data-key="'+key+'"><div class="flabel">'+esc(label)+'</div>'
+      +'<div class="fmain"><span class="fmissing">Not in your notes</span></div>'
+      +'<div class="fctrl"><button type="button" class="btn-mini" onclick="npField(\\''+key+'\\',\\'edit\\')">Add</button></div></div>';
+  }
+  var state=f.state==='found'?'found':'confirm';
+  var tag=state==='confirm'?'<span class="tag tag-confirm">Confirm</span>':'<span class="tag tag-found">On the sheet</span>';
+  var note=f.note?'<div class="fnote">'+esc(f.note)+'</div>':'';
+  var span=f.span?'<div class="fspan">from: &ldquo;'+esc(f.span)+'&rdquo;</div>':'';
+  var accept=state==='confirm'?'<button type="button" class="btn-mini btn-acc" onclick="npField(\\''+key+'\\',\\'accept\\')">Accept</button>':'';
+  return '<div class="frow frow-'+state+'" data-key="'+key+'"><div class="flabel">'+esc(label)+'</div>'
+    +'<div class="fmain"><div class="fvalue">'+esc(fmtVal(key,f.value))+'</div><div class="fmeta">'+tag+'</div>'+note+span+'</div>'
+    +'<div class="fctrl">'+accept
+    +'<button type="button" class="btn-mini" onclick="npField(\\''+key+'\\',\\'edit\\')">Edit</button>'
+    +'<button type="button" class="btn-mini" onclick="npField(\\''+key+'\\',\\'clear\\')">Clear</button></div></div>';
+}
+function renderFields(){
+  var html='';
+  window.NP.defs.forEach(function(def){html+=rowHtml(def[0],def[1],window.NP.fields[def[0]]);});
+  document.getElementById('sheetRows').innerHTML=html;
+  var cc=Object.keys(window.NP.fields).filter(function(k){return window.NP.fields[k].state==='confirm';}).length;
+  document.getElementById('npConfirmCount').textContent=cc?cc+' to confirm':'';
+}
+function postJson(url,body){
+  return fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})})
+    .then(function(r){return r.json();});
+}
+function npField(key,action){
+  var cur=(window.NP.fields[key]||{}).value;
+  var body={key:key};
+  if(action==='accept'){body.action='accept';}
+  else if(action==='clear'){
+    if(!confirm('Clear this field back to "Not in your notes"?'))return;
+    body.action='clear';
+  }else{
+    var v=prompt('Value for '+key+':',cur==null?'':cur);
+    if(v===null)return;
+    body.value=v;
+  }
+  postJson(window.NP.fieldsUrl,body).then(function(d){
+    if(d.ok){window.NP.fields=d.fields;renderFields();}
+    else{alert(d.error||'Could not save that field.');}
+  }).catch(function(){alert('Network error — please try again.');});
+}
+function npEnhance(btn){
+  btn.disabled=true;var old=btn.textContent;btn.textContent='Enhancing…';
+  var raw=document.getElementById('npNote').value;
+  postJson(window.NP.notesUrl,{raw_text:raw}).then(function(d){
+    if(!d.ok)throw new Error(d.error||'save failed');
+    return postJson(window.NP.enhanceUrl,{});
+  }).then(function(d){
+    btn.disabled=false;btn.textContent=old;
+    if(!d.ok){alert(d.error||'Enhance failed.');return;}
+    window.NP.fields=d.fields;renderFields();
+    document.getElementById('npSummary').textContent=d.summary||'';
+    document.getElementById('npSummaryEmpty').style.display=d.summary?'none':'';
+    document.getElementById('npWarnings').innerHTML=(d.warnings||[]).map(function(w){
+      return '<div class="warn">'+esc(w)+'</div>';}).join('');
+    document.getElementById('npNotice').style.display=d.status==='fallback_regex'?'block':'none';
+  }).catch(function(){
+    btn.disabled=false;btn.textContent=old;
+    alert('Enhance hit a snag — your note text is still in the box above; save it and try again.');
+  });
+}
+"""
+
+
+@app.route("/notepad/<int:tx_id>", methods=["GET"])
+def notepad_detail(tx_id):
+    import json
+    auth = _np_auth()
+    if not auth:
+        return _np_expired()
+    phone, expires, sig = auth
+    tx = notepad.get_transaction(tx_id, phone)
+    if not tx:
+        return _np_not_found()
+    access = has_notepad_access(phone)
+    sheet = notepad.get_deal_sheet(tx_id, phone)
+    fields = sheet["fields"]
+    latest = notepad.get_latest_note(tx_id)
+    history = notepad.list_notes(tx_id)
+
+    rows = "".join(_np_field_row(k, label, fields.get(k))
+                   for k, label, _ in notepad.FIELD_DEFS)
+    hist_html = ""
+    if history:
+        versions = ""
+        for n in history:
+            versions += (f'<div class="notever"><div class="nv-meta">'
+                         f'{escape((n["created_at"] or "")[:16].replace("T", " "))} UTC</div>'
+                         f'<pre>{escape(n["raw_text"])}</pre></div>')
+        hist_html = (f'<details class="notehist"><summary>Original notes — '
+                     f'{len(history)} version{"s" if len(history) != 1 else ""}, kept verbatim</summary>'
+                     f'{versions}</details>')
+    summary_html = escape(sheet["summary"]) if sheet["summary"] else ""
+    summary_empty = "" if sheet["summary"] else '<span class="empty" id="npSummaryEmpty">No summary yet — write your notes and tap Enhance.</span>'
+    banner = "" if access else ('<div class="banner">Your plan doesn\'t include the Deal Notepad '
+                                 'right now — you\'re viewing your saved deals. '
+                                 '<a href="/pricing">See plans</a></div>')
+    confirm_count = notepad.confirm_count(fields)
+    np_config = {
+        "fieldsUrl": _np_signed(f"/notepad/{tx_id}/fields", phone, expires, sig),
+        "enhanceUrl": _np_signed(f"/notepad/{tx_id}/enhance", phone, expires, sig),
+        "notesUrl": _np_signed(f"/notepad/{tx_id}/notes", phone, expires, sig),
+        "fields": fields,
+        "defs": [[k, label] for k, label, _ in notepad.FIELD_DEFS],
+        "kinds": notepad.FIELD_KINDS,
+    }
+    body = f"""
+    <div class="topbar">
+      <div>
+        <h1>{escape(tx['title'] or 'Untitled deal')}</h1>
+        <p class="sub">{escape(tx['state'])} &middot; <span class="chip">{escape(tx['status'])}</span>
+        <span class="chip chip-confirm" id="npConfirmCount">{confirm_count} to confirm</span></p>
+      </div>
+      <a href="{_np_signed('/notepad', phone, expires, sig)}">&larr; All deals</a>
+    </div>
+    {banner}
+    <div class="np-grid">
+      <div class="np-left">
+        <div class="card">
+          <h2>Notepad</h2>
+          <p class="sub" style="margin-bottom:0.7rem;">Write like you actually write after a call — fragments, question marks, half-remembered numbers. Your notes are saved in your account, exactly as written.</p>
+          <form method="post" action="{_np_signed(f'/notepad/{tx_id}/notes', phone, expires, sig)}">
+            <textarea id="npNote" name="raw_text" maxlength="20000" placeholder="e.g. Pecan Grove condo, buyers John &amp; Jane Doe, 685k, earnest maybe 7k ??, 10 day option $350, signed Nov 10, close Dec 18, fridge + washer/dryer stay, roof credit 5k&hellip;">{escape(latest['raw_text']) if latest else ''}</textarea>
+            <p style="margin-top:0.8rem;display:flex;gap:0.5rem;flex-wrap:wrap;">
+              <button type="submit" class="btn btn-ghost" data-evt="notepad_note_saved">Save note</button>
+              <button type="button" class="btn" data-evt="notepad_enhance_run" onclick="npEnhance(this)">Enhance notes</button>
+            </p>
+          </form>
+          <p class="sub" style="margin-top:0.7rem;">Enhance organizes your notes into a summary and deal terms. Anything it isn't sure about is marked <strong>Confirm</strong> — it never fills in a term your notes don't contain.</p>
+          {hist_html}
+        </div>
+      </div>
+      <div class="np-right">
+        <div id="npWarnings"></div>
+        <div class="notice" id="npNotice" style="display:none;">Pulled from your notes mechanically — every field below needs your confirmation before it counts.</div>
+        <div class="card">
+          <h2>Summary</h2>
+          <p id="npSummary">{summary_html}</p>{summary_empty}
+        </div>
+        <div class="card">
+          <h2>Deal Sheet</h2>
+          <p class="sub" style="margin-bottom:0.5rem;">The central record for this transaction. Confirm a value to put it on the sheet; only values on the sheet can go into a draft.</p>
+          <div id="sheetRows">{rows}</div>
+        </div>
+        <form method="post" action="{_np_signed(f'/notepad/{tx_id}/delete', phone, expires, sig)}"
+              onsubmit="return confirm('Delete this deal? It disappears now and its notes are permanently purged after 30 days.');">
+          <button type="submit" class="btn-mini">Delete this deal</button>
+        </form>
+      </div>
+    </div>
+    <script>window.NP={json.dumps(np_config)};</script>
+    <script>{_NP_JS}</script>"""
+    return _np_page(tx['title'] or 'Deal Notepad', body)
+
+
+@app.route("/notepad/<int:tx_id>/notes", methods=["POST"])
+def notepad_save_note(tx_id):
+    auth = _np_auth()
+    if not auth:
+        return _np_expired()
+    phone, expires, sig = auth
+    tx = notepad.get_transaction(tx_id, phone)
+    if not tx:
+        if request.is_json:
+            return jsonify({"error": "Deal not found."}), 404
+        return _np_not_found()
+    if not has_notepad_access(phone):
+        if request.is_json:
+            return jsonify({"error": "The Deal Notepad is part of the Agent plan."}), 403
+        return _np_upsell()
+    if _np_rate_limited(phone):
+        if request.is_json:
+            return jsonify({"error": "Too many requests. Try again in a bit."}), 429
+        return "Too many requests. Try again in a bit.", 429
+    if request.is_json:
+        raw_text = (request.get_json(silent=True) or {}).get("raw_text", "")
+    else:
+        raw_text = request.form.get("raw_text", "")
+    if not isinstance(raw_text, str) or not raw_text.strip():
+        if request.is_json:
+            return jsonify({"error": "The note is empty."}), 400
+        return redirect(_np_signed(f"/notepad/{tx_id}", phone, expires, sig))
+    if len(raw_text) > 20000:
+        if request.is_json:
+            return jsonify({"error": "Notes are capped at 20,000 characters."}), 400
+        return redirect(_np_signed(f"/notepad/{tx_id}", phone, expires, sig))
+    note = notepad.add_note(tx_id, phone, raw_text, source="web")
+    if request.is_json:
+        return jsonify({"ok": True, "note_id": note["id"] if note else None})
+    return redirect(_np_signed(f"/notepad/{tx_id}", phone, expires, sig))
+
+
+@app.route("/notepad/<int:tx_id>/enhance", methods=["POST"])
+def notepad_enhance(tx_id):
+    auth = _np_auth()
+    if not auth:
+        return _np_expired()
+    phone, expires, sig = auth
+    tx = notepad.get_transaction(tx_id, phone)
+    if not tx:
+        return jsonify({"error": "Deal not found."}), 404
+    if not has_notepad_access(phone):
+        return jsonify({"error": "The Deal Notepad is part of the Agent plan."}), 403
+    if _np_rate_limited(phone):
+        return jsonify({"error": "Too many requests. Try again in a bit."}), 429
+    note = notepad.get_latest_note(tx_id)
+    if not note:
+        return jsonify({"error": "Save a note first — there's nothing to enhance yet."}), 400
+    from agent_profiles import get_agent_profile
+    profile = get_agent_profile(phone)
+    result = note_enhancer.enhance_note(note["raw_text"], tx.get("state") or "TX", profile)
+    validated, validation_warnings = note_enhancer.validate_proposal(
+        note["raw_text"], result.get("fields", {}), tx.get("state") or "TX")
+    merged = notepad.apply_enhancement(
+        tx_id, phone, note, result, validated,
+        validation_warnings=validation_warnings, profile=profile)
+    sheet = notepad.get_deal_sheet(tx_id, phone)
+    return jsonify({
+        "ok": True,
+        "status": result.get("status", "fallback_regex"),
+        "summary": sheet["summary"] if sheet else "",
+        "fields": merged["fields"],
+        "warnings": merged["warnings"],
+        "confirm_count": notepad.confirm_count(merged["fields"]),
+    })
+
+
+@app.route("/notepad/<int:tx_id>/fields", methods=["POST"])
+def notepad_field_update(tx_id):
+    auth = _np_auth()
+    if not auth:
+        return _np_expired()
+    phone, expires, sig = auth
+    tx = notepad.get_transaction(tx_id, phone)
+    if not tx:
+        return jsonify({"error": "Deal not found."}), 404
+    if not has_notepad_access(phone):
+        return jsonify({"error": "The Deal Notepad is part of the Agent plan."}), 403
+    if _np_rate_limited(phone):
+        return jsonify({"error": "Too many requests. Try again in a bit."}), 429
+    data = request.get_json(silent=True) or {}
+    key = data.get("key", "")
+    if key not in notepad.FIELD_KEYS:
+        return jsonify({"error": "Unknown field."}), 400
+    sheet = notepad.get_deal_sheet(tx_id, phone)
+    current = (sheet["fields"].get(key) or {}) if sheet else {}
+    action = data.get("action", "")
+    if action == "clear" or (action == "" and data.get("value") is None):
+        fields = notepad.set_field(tx_id, phone, key, None)
+    elif action == "accept":
+        if current.get("value") in (None, ""):
+            return jsonify({"error": "Nothing to accept for that field."}), 400
+        fields = notepad.set_field(tx_id, phone, key, current.get("value"),
+                                   state="found", origin="user",
+                                   span=current.get("span", ""))
+    else:
+        value = data.get("value")
+        kind = notepad.FIELD_KINDS.get(key)
+        try:
+            if kind == "money":
+                value = int(round(float(str(value).replace(",", "").replace("$", ""))))
+            elif kind == "int":
+                value = int(float(str(value)))
+            elif kind == "pct":
+                v = float(str(value).replace("%", ""))
+                value = v / 100 if v > 1 else v
+            elif kind == "date":
+                datetime.strptime(str(value), "%Y-%m-%d")
+                value = str(value)
+            else:
+                value = str(value).strip()
+        except (TypeError, ValueError):
+            return jsonify({"error": f"That doesn't look like a valid {notepad.FIELD_LABELS.get(key, key)}."}), 400
+        if value in ("", None):
+            return jsonify({"error": "Value required — use Clear to empty a field."}), 400
+        fields = notepad.set_field(tx_id, phone, key, value,
+                                   state="found", origin="user")
+    if fields is None:
+        return jsonify({"error": "Could not save that field."}), 400
+    return jsonify({"ok": True, "fields": fields,
+                    "confirm_count": notepad.confirm_count(fields)})
+
+
+@app.route("/notepad/<int:tx_id>/delete", methods=["POST"])
+def notepad_delete(tx_id):
+    auth = _np_auth()
+    if not auth:
+        return _np_expired()
+    phone, expires, sig = auth
+    if not notepad.get_transaction(tx_id, phone):
+        return _np_not_found()
+    if not has_notepad_access(phone):
+        return _np_upsell()
+    notepad.soft_delete_transaction(tx_id, phone)
+    return redirect(_np_signed("/notepad", phone, expires, sig))
+
+
 @app.route("/dashboard")
 def dashboard():
     phone = request.args.get("phone", "")
@@ -12496,6 +13070,40 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
         </div>"""
     else:
         profile_body = f'<p class="profile-empty">Not set up yet. Your name, license, and brokerage auto-fill into every contract once saved. <a href="{profile_url}">Set up your profile &rarr;</a></p>'
+
+    # Deal Notepad transactions (2026-11-11): entry point above the offer
+    # archive. Wrapped so a notepad failure can never break the dashboard.
+    notepad_section = ""
+    try:
+        _np_txs = notepad.list_transactions(phone)
+        _np_list_url = _np_signed("/notepad", phone, expires, sig)
+        if _np_txs:
+            _np_cards = ""
+            for _t in _np_txs[:6]:
+                _badge = (f'<span class="status-badge" style="background:#fdf3e0;color:#9a6200;">'
+                          f'{_t["confirm_count"]} to confirm</span>') if _t["confirm_count"] else ""
+                _np_cards += (
+                    f'<a href="{_np_signed("/notepad/" + str(_t["id"]), phone, expires, sig)}" '
+                    f'style="display:flex;align-items:center;justify-content:space-between;gap:1rem;'
+                    f'padding:0.75rem 0;border-bottom:1px solid rgba(15,31,47,0.06);color:inherit;text-decoration:none;">'
+                    f'<span style="font-weight:600;">{escape(_t["title"] or "Untitled deal")}</span>'
+                    f'<span style="display:flex;gap:0.4rem;align-items:center;">'
+                    f'<span class="status-badge status-draft">{escape(_t["status"])}</span>{_badge}</span></a>')
+            notepad_section = (
+                f'<h2>Transactions</h2>'
+                f'<p class="section-sub">Your deal notepads — notes in, Deal Sheet out.'
+                f' <a href="{_np_list_url}">All transactions &rarr;</a></p>{_np_cards}')
+        else:
+            notepad_section = (
+                f'<div class="profile-card" style="margin-bottom:2.25rem;">'
+                f'<div class="profile-card-head"><h2>Deal Notepad</h2></div>'
+                f'<p style="font-size:0.9rem;color:#5a6b7a;line-height:1.6;margin-bottom:0.9rem;">'
+                f'Start a deal notepad — keep your call and showing notes in one place, '
+                f'and let the Deal Sheet build itself from them.</p>'
+                f'<a href="{_np_list_url}" data-evt="notepad_created" '
+                f'style="font-weight:600;">Open the notepad &rarr;</a></div>')
+    except Exception:
+        notepad_section = ""
 
     return f"""
 <!DOCTYPE html>
@@ -12776,6 +13384,8 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
     </div>
     {profile_body}
   </div>
+
+  {notepad_section}
 
   <h2>Your offer archive</h2>
   <p class="section-sub">{archive_sub}</p>
