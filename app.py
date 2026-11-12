@@ -1194,6 +1194,41 @@ __SITE_NAV__
   </div>
 </section>
 
+<!-- 4a2. NOTEPAD: deal notes into a Deal Sheet, interactive (2026-11-11).
+     State-agnostic on purpose: the notepad works for Texas and Colorado
+     deals alike. The parse runs in the page (NOTEPAD_JS) on the visitor's
+     own edited note: honest regex extraction, nothing invented; hedged
+     terms land as Confirm, absent terms read "Not in your notes". -->
+<section class="notepad">
+  <div class="eyebrow">New: Deal Notepad</div>
+  <h2>Your deal notes,<br>turned into a Deal Sheet.</h2>
+  <p class="sub">Messy call notes in, a structured deal sheet out. Every uncertain term is flagged Confirm instead of guessed, and anything you didn&rsquo;t write down stays blank.</p>
+  <div class="np-grid">
+    <div class="np-card">
+      <div class="np-card-h">Scratch notes</div>
+      <textarea class="np-notes" id="npNotes" rows="9" aria-label="Your deal notes">Elm Creek Dr house, Austin. Buyers John &amp; Jane Doe. Sellers fine with Dec 18 close. $685k. Earnest maybe 7k?? 10 days option, $350 fee. Conventional, 20% down. Fridge + washer stay. Asked 5k seller credit for the roof, not agreed yet. Old survey from 2019. HOA docs still pending.</textarea>
+      <button type="button" class="btn solid np-run" id="npRun">Clean it up</button>
+      <p class="np-hint">Edit the note and run it again. Nothing you type leaves this page.</p>
+    </div>
+    <div class="np-card">
+      <div class="np-card-h">Deal Sheet</div>
+      <div class="np-rows" id="npRows">
+        <div class="np-row" data-np-row="property"><span class="np-k">Property</span><span class="np-v miss">Run Clean it up</span></div>
+        <div class="np-row" data-np-row="buyers"><span class="np-k">Buyers</span><span class="np-v miss">Run Clean it up</span></div>
+        <div class="np-row" data-np-row="price"><span class="np-k">Price</span><span class="np-v miss">Run Clean it up</span></div>
+        <div class="np-row" data-np-row="earnest"><span class="np-k">Earnest money</span><span class="np-v miss">Run Clean it up</span></div>
+        <div class="np-row" data-np-row="option"><span class="np-k">Option period</span><span class="np-v miss">Run Clean it up</span></div>
+        <div class="np-row" data-np-row="closing"><span class="np-k">Closing date</span><span class="np-v miss">Run Clean it up</span></div>
+        <div class="np-row" data-np-row="financing"><span class="np-k">Financing</span><span class="np-v miss">Run Clean it up</span></div>
+        <div class="np-row" data-np-row="credit"><span class="np-k">Seller credit</span><span class="np-v miss">Run Clean it up</span></div>
+        <div class="np-row" data-np-row="inclusions"><span class="np-k">Inclusions</span><span class="np-v miss">Run Clean it up</span></div>
+        <div class="np-row" data-np-row="survey"><span class="np-k">Survey</span><span class="np-v miss">Run Clean it up</span></div>
+      </div>
+    </div>
+  </div>
+  <p class="partner-line">In the product, the notepad lives in your dashboard on the Agent plan. Your notes are saved so the deal stays in one place. Contract files are still checked, then deleted. <a href="#pricing">See the plans</a></p>
+</section>
+
 <!-- 2. WHAT IT CATCHES: one finding per tile, huge type -->
 <section class="catches">
   <h2>What it flags<br>before title sees it.</h2>
@@ -1327,41 +1362,6 @@ __SITE_NAV__
     <p class="fine">Counted the way &sect;535.2(h) reads: at least 4 years from the closing or termination date. Four years is the floor, not the ceiling.</p>
   </div>
   <p class="partner-line">On the Brokerage plan, every executed contract forwarded or uploaded is checked and kept <strong>5 years</strong>, searchable by address. <a href="/guides/broker-record-retention-texas" data-evt="home_retention_guide">The full retention guide</a> &middot; <a href="/archive" data-evt="home_retention_archive">How the archive works</a></p>
-</section>
-
-<!-- 4a2. NOTEPAD: deal notes into a Deal Sheet, interactive (2026-11-11).
-     State-agnostic on purpose: the notepad works for Texas and Colorado
-     deals alike. The parse runs in the page (NOTEPAD_JS) on the visitor's
-     own edited note: honest regex extraction, nothing invented; hedged
-     terms land as Confirm, absent terms read "Not in your notes". -->
-<section class="notepad">
-  <div class="eyebrow">New: Deal Notepad</div>
-  <h2>Your deal notes,<br>turned into a Deal Sheet.</h2>
-  <p class="sub">Messy call notes in, a structured deal sheet out. Every uncertain term is flagged Confirm instead of guessed, and anything you didn&rsquo;t write down stays blank.</p>
-  <div class="np-grid">
-    <div class="np-card">
-      <div class="np-card-h">Scratch notes</div>
-      <textarea class="np-notes" id="npNotes" rows="9" aria-label="Your deal notes">Elm Creek Dr house, Austin. Buyers John &amp; Jane Doe. Sellers fine with Dec 18 close. $685k. Earnest maybe 7k?? 10 days option, $350 fee. Conventional, 20% down. Fridge + washer stay. Asked 5k seller credit for the roof, not agreed yet. Old survey from 2019. HOA docs still pending.</textarea>
-      <button type="button" class="btn solid np-run" id="npRun">Clean it up</button>
-      <p class="np-hint">Edit the note and run it again. Nothing you type leaves this page.</p>
-    </div>
-    <div class="np-card">
-      <div class="np-card-h">Deal Sheet</div>
-      <div class="np-rows" id="npRows">
-        <div class="np-row" data-np-row="property"><span class="np-k">Property</span><span class="np-v miss">Run Clean it up</span></div>
-        <div class="np-row" data-np-row="buyers"><span class="np-k">Buyers</span><span class="np-v miss">Run Clean it up</span></div>
-        <div class="np-row" data-np-row="price"><span class="np-k">Price</span><span class="np-v miss">Run Clean it up</span></div>
-        <div class="np-row" data-np-row="earnest"><span class="np-k">Earnest money</span><span class="np-v miss">Run Clean it up</span></div>
-        <div class="np-row" data-np-row="option"><span class="np-k">Option period</span><span class="np-v miss">Run Clean it up</span></div>
-        <div class="np-row" data-np-row="closing"><span class="np-k">Closing date</span><span class="np-v miss">Run Clean it up</span></div>
-        <div class="np-row" data-np-row="financing"><span class="np-k">Financing</span><span class="np-v miss">Run Clean it up</span></div>
-        <div class="np-row" data-np-row="credit"><span class="np-k">Seller credit</span><span class="np-v miss">Run Clean it up</span></div>
-        <div class="np-row" data-np-row="inclusions"><span class="np-k">Inclusions</span><span class="np-v miss">Run Clean it up</span></div>
-        <div class="np-row" data-np-row="survey"><span class="np-k">Survey</span><span class="np-v miss">Run Clean it up</span></div>
-      </div>
-    </div>
-  </div>
-  <p class="partner-line">In the product, the notepad lives in your dashboard on the Agent plan. Your notes are saved so the deal stays in one place. Contract files are still checked, then deleted. <a href="#pricing">See the plans</a></p>
 </section>
 
 <!-- 4b. PRICING: the three plans from /pricing, one line each (2026-11-03). -->
