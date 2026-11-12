@@ -799,9 +799,9 @@ def index():
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TxtAnOffer — Catch it before title does.</title>
+  <title>TxtAnOffer — The notepad that sits on your desk.</title>
   <meta name="description" content="For transaction coordinators and managing brokers in Texas and Colorado: drop a filled TREC 20-19 or CBS1 and see what's missing or inconsistent before title kicks it back. New: Deadline Autopilot puts every contract deadline in your calendar. TxtAnOffer also drafts new offers by text message.">
-  <meta property="og:title" content="TxtAnOffer — Catch it before title does.">
+  <meta property="og:title" content="TxtAnOffer — The notepad that sits on your desk.">
   <meta property="og:description" content="Contract error-checker for Texas & Colorado real estate. Upload a filled TREC resale (20-19), condo (30-18), land (9-18) or farm and ranch (25-17) contract, or a Colorado CBS1, and get a report of what's blank, missing or doesn't add up before title kicks it back.">
   <meta property="og:url" content="https://txtanoffer.com/">
   <meta property="og:type" content="website">
@@ -810,7 +810,7 @@ def index():
   <meta property="og:image:height" content="630">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:image" content="https://txtanoffer.com/static/og-home.png">
-  <meta name="twitter:title" content="TxtAnOffer — Catch it before title does.">
+  <meta name="twitter:title" content="TxtAnOffer — The notepad that sits on your desk.">
   <meta name="twitter:description" content="Contract error-checker for Texas & Colorado real estate. Upload a filled TREC resale (20-19), condo (30-18), land (9-18) or farm and ranch (25-17) contract, or a Colorado CBS1, and get a report of what's blank, missing or doesn't add up before title kicks it back.">
   <script type="application/ld+json">
   {"@context":"https://schema.org","@graph":[
@@ -1142,12 +1142,12 @@ __SITE_NAV__
     <button type="button" data-set-state="tx" aria-pressed="__TX_PRESSED__" data-evt="state_toggle_tx">Texas <small>TREC</small></button>
     <button type="button" data-set-state="co" aria-pressed="__CO_PRESSED__" data-evt="state_toggle_co">Colorado <small>CBS1 &amp; Land</small></button>
   </div>
-  <h1>Catch it before<br>title does.</h1>
-  <p class="sub" data-state="tx">One checker for the Texas contracts you file most: resale, condo, land, and farm and ranch. Upload a filled TREC contract and in seconds you get a report flagging the blank fields, bad math and impossible dates title would kick back. Built for TCs, agents and brokerages.</p>
+  <h1>The notepad that sits<br>on your desk.</h1>
+  <p class="sub" data-state="tx">Take the call, jot the notes, and the Deal Sheet builds itself, every unsure term flagged Confirm instead of guessed. When the contract is filled, it gets checked before title: blank fields, bad math and impossible dates on the Texas contracts you file most, resale, condo, land, and farm and ranch. Built for TCs, agents and brokerages.</p>
   <ul class="forms" data-state="tx" aria-label="Contracts TC Check reads">
     <li><span>Resale</span><small>TREC <b>20-19</b></small></li><li><span>Condo</span><small>TREC <b>30-18</b></small></li><li><span>Land</span><small>TREC <b>9-18</b></small></li><li><span>Farm &amp; Ranch</span><small>TREC <b>25-17</b></small></li>
   </ul>
-  <p class="sub" data-state="co">Drop a filled CBS1 or Colorado Land contract and see what title would kick back in seconds &mdash; &sect;3.1 deadlines left blank that delete a contingency, &sect;4.1 price math that doesn&rsquo;t add up, deadlines that land after closing. Built for TCs, agents and brokerages.</p>
+  <p class="sub" data-state="co">Take the call, jot the notes, and the Deal Sheet builds itself, every unsure term flagged Confirm instead of guessed. When the contract is filled, it gets checked before title: &sect;3.1 deadlines left blank that delete a contingency, &sect;4.1 price math that doesn&rsquo;t add up, deadlines that land after closing. Built for TCs, agents and brokerages.</p>
   <ul class="forms" data-state="co" aria-label="Colorado contracts TC Check reads">
     <li><span>Residential</span><small><b>CBS1</b></small></li><li><span>Land</span><small><b>CBS4</b></small></li>
   </ul>
@@ -1308,7 +1308,7 @@ __SITE_NAV__
       <div class="np-desk">
         <h3>Take the notepad to your desk.</h3>
         <p class="np-desk-line">The Notepad as its own app on your computer: parked beside your other tools, one hotkey away, ready when a call comes in.</p>
-        <div class="np-install" id="txoInstall" style="display:none">
+        <div class="np-install" id="txoInstall">
           <button type="button" class="btn solid" id="txoInstallBtn">Install the app</button>
           <span class="np-install-hint" id="txoInstallHint" style="display:none">To install: Share &rarr; Add to Home Screen</span>
         </div>
@@ -14796,7 +14796,7 @@ def robots_txt():
 # the phone is attached.
 # ---------------------------------------------------------------------------
 
-PWA_INSTALL_HTML = """<div id="txoInstall" style="display:none;margin:0 0 1rem;">
+PWA_INSTALL_HTML = """<div id="txoInstall" style="margin:0 0 1rem;">
   <button type="button" id="txoInstallBtn" style="background:#0b5d52;color:#fff;border:0;border-radius:999px;padding:0.55rem 1.15rem;font-size:0.85rem;font-weight:600;cursor:pointer;">Install the app</button>
   <span id="txoInstallHint" style="display:none;font-size:0.85rem;color:#5a6b7a;">To install: Share \u2192 Add to Home Screen</span>
 </div>"""
@@ -14841,11 +14841,27 @@ PWA_JS = """<script>
   });
   var deferred = null;
   function wrap(){ return document.getElementById('txoInstall'); }
-  function showWrap(){ var w = wrap(); if(w) w.style.display = ''; }
   function hideWrap(){ var w = wrap(); if(w) w.style.display = 'none'; }
+  function isIOS(){
+    var ua = window.navigator.userAgent || '';
+    return /iphone|ipad|ipod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  }
+  function showHint(){
+    // No native prompt available (already installed, prompt dismissed
+    // earlier, or an unsupported browser): the click falls back to
+    // manual install instructions. This path never fires
+    // pwa_install_accepted -- nothing was installed.
+    var hint = document.getElementById('txoInstallHint');
+    if(!hint) return;
+    hint.textContent = isIOS()
+      ? 'To install: Share \u2192 Add to Home Screen'
+      : 'To install: open your browser menu and choose "Install app" or "Add to Home Screen".';
+    hint.style.display = '';
+  }
   window.addEventListener('beforeinstallprompt', function(e){
+    // The install block is always visible; this only arms the button
+    // for the native prompt flow whenever the browser offers one.
     e.preventDefault(); deferred = e;
-    if(!isStandalone() && !lsGet('txo_pwa_dismissed')) showWrap();
   });
   window.addEventListener('appinstalled', function(){
     deferred = null; hideWrap(); if(window.taEvt) window.taEvt('pwa_installed');
@@ -14853,17 +14869,8 @@ PWA_JS = """<script>
   document.addEventListener('DOMContentLoaded', function(){
     var btn = document.getElementById('txoInstallBtn');
     if(!btn) return;
-    if(isStandalone()){ hideWrap(); return; }
-    if(deferred && !lsGet('txo_pwa_dismissed')) showWrap();
-    var ua = window.navigator.userAgent || '';
-    var isIOS = /iphone|ipad|ipod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    if(isIOS){
-      // iOS Safari never fires beforeinstallprompt: the hint is the UI.
-      var hint = document.getElementById('txoInstallHint');
-      if(hint && !lsGet('txo_pwa_dismissed')){ hint.style.display = ''; btn.style.display = 'none'; showWrap(); }
-    }
     btn.addEventListener('click', function(){
-      if(!deferred){ hideWrap(); return; }
+      if(!deferred){ showHint(); return; }
       var d = deferred; deferred = null;
       d.prompt();
       d.userChoice.then(function(choice){
