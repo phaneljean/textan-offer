@@ -73,7 +73,7 @@ class TwoStatePages(unittest.TestCase):
         html = self.get("/")
         self.assertNotIn('id="colorado"', html)
         self.assertNotIn("sl-hero-states", html)
-        self.assertIn("<h1>The notepad that sits<br>on your desk.</h1>", html)
+        self.assertIn("<h1>Catch it before<br>title does.</h1>", html)
 
     def test_sms_disclosure_kept(self):
         html = self.get("/?state=co")
