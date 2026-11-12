@@ -275,6 +275,40 @@ class NotepadRoutes(unittest.TestCase):
                                 query_string=_signed(owner), json={})
         self.assertEqual(resp.status_code, 403)
 
+    def test_detail_page_has_deal_sheet_download(self):
+        phone = _mkuser(_fresh_phone(), plan="starter")
+        q = _signed(phone)
+        tx = notepad.create_transaction(phone, title="123 Main St")
+        notepad.add_note(tx["id"], phone,
+                         "Buyers liked the place, earnest maybe 7k, close Dec 18")
+        resp = self.client.get(f"/notepad/{tx['id']}", query_string=q)
+        self.assertEqual(resp.status_code, 200)
+        # The button and its client-side builder ride along on the page,
+        # fed by the already-embedded window.NP config (txId included).
+        self.assertIn(b"Download Deal Sheet", resp.data)
+        self.assertIn(b"npDownload", resp.data)
+        self.assertIn(b"deal-sheet-", resp.data)
+        self.assertIn(b'"txId": ' + str(tx["id"]).encode(), resp.data)
+        self.assertIn(
+            b"Saved in your TxtAnOffer dashboard. "
+            b"Contract files are checked, then deleted.", resp.data)
+
+    def test_detail_page_note_cannot_break_out_of_script(self):
+        phone = _mkuser(_fresh_phone(), plan="starter")
+        q = _signed(phone)
+        tx = notepad.create_transaction(phone, title="Payload deal")
+        payload = "</script><script>alert(1)</script>"
+        notepad.add_note(tx["id"], phone, "Buyer wants " + payload + " in writing")
+        resp = self.client.get(f"/notepad/{tx['id']}", query_string=q)
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn(b"Download Deal Sheet", resp.data)
+        # The note text is never embedded raw in the download path (the
+        # builder reads the textarea at click time); everywhere the stored
+        # note is rendered (textarea, verbatim history) it is HTML-escaped,
+        # so the payload sequence must not appear verbatim anywhere.
+        self.assertNotIn(payload.encode(), resp.data)
+        self.assertIn(b"&lt;/script&gt;", resp.data)
+
 
 if __name__ == "__main__":
     unittest.main()
