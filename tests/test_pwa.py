@@ -118,6 +118,14 @@ class HeadWiringAndInstallBlock(unittest.TestCase):
         self.assertIn("apple-touch-icon", html)
         self.assertIn("serviceWorker.register('/sw.js')", html)
 
+    def test_homepage_carries_install_block(self):
+        # The homepage desk block reuses the same ids, so the shared
+        # PWA_JS snippet drives it with no homepage-specific wiring.
+        html = self.client.get("/", headers=UA).get_data(as_text=True)
+        self.assertIn('id="txoInstallBtn"', html)
+        self.assertIn("Install the app", html)
+        self.assertIn("Add to Home Screen", html)
+
     def test_dashboard_carries_head_tags_and_install_block(self):
         resp = self.client.get("/dashboard", query_string=self.qs, headers=UA)
         self.assertEqual(resp.status_code, 200)
