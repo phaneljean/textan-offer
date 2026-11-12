@@ -1,6 +1,7 @@
-"""Said on LinkedIn section (2026-11-12): four verbatim comments from
-outside people under TxtAnOffer LinkedIn posts, shown as cards directly
-before the pricing section. No ratings, no review-platform wording.
+"""Said on LinkedIn section (2026-11-12): three verbatim comments from
+outside people under TxtAnOffer LinkedIn posts, shown as cards in the
+proof cluster -- right after the founder block, before How it works.
+No ratings, no review-platform wording.
 
     python3 -m unittest tests.test_linkedin_quotes
 """
@@ -20,7 +21,9 @@ import app as app_module
 
 UA = {"User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) test"}
 
-# The four comments, verbatim (Albert's keeps its em dash).
+# The three comments, verbatim (Albert's keeps its em dash). A fourth
+# comment (Yaroslav K., about the homepage copy rather than the product)
+# was removed in the 2026-11-12 re-curation to product-relevant only.
 QUOTES = (
     "The Effective Date field controls everything downstream. Miss it on "
     "page 1 and every option period, financing deadline, and closing date "
@@ -28,16 +31,12 @@ QUOTES = (
     "Those tiny missing fields really do create outsized downstream work "
     "for TCs\u2014catching them before title seems like a meaningful "
     "time-saver.",
-    "The revised description names the user, the documents and the problem "
-    "in one pass. A sample flagged report could help people understand the "
-    "output before they upload their own contract.",
     "Great tool for Texas brokers and transaction coordinators. Catching "
     "compliance issues before they become closing delays can save time, "
     "money, and unnecessary stress.",
 )
-NAMES = ("Mohit Tomar", "Albert van Zyl", "Yaroslav K.", "Jason Hammond")
-ROLES = ("Co-Founder, VAConnect", "COO, Incode Group & LinkedRefs",
-         "real estate funding")
+NAMES = ("Mohit Tomar", "Albert van Zyl", "Jason Hammond")
+ROLES = ("Co-Founder, VAConnect", "real estate funding")
 
 
 def _get(path):
@@ -51,10 +50,17 @@ def _unescape(html):
 
 
 class LinkedInQuotes(unittest.TestCase):
-    def test_all_four_quotes_appear_verbatim(self):
+    def test_all_three_quotes_appear_verbatim(self):
         text = _unescape(_get("/"))
         for quote in QUOTES:
             self.assertIn('"%s"' % quote, text, quote[:40])
+
+    def test_removed_quote_is_gone(self):
+        html = _get("/")
+        section = html[html.index('<section class="quotes">'):
+                       html.index('<section class="how">')]
+        self.assertNotIn("Yaroslav", section)
+        self.assertNotIn("revised description", section)
 
     def test_names_and_roles_appear(self):
         html = _unescape(_get("/"))
@@ -65,16 +71,21 @@ class LinkedInQuotes(unittest.TestCase):
 
     def test_via_linkedin_label_on_every_card(self):
         html = _get("/")
-        self.assertEqual(html.count("via LinkedIn"), 4)
+        self.assertEqual(html.count("via LinkedIn"), 3)
 
-    def test_section_sits_immediately_before_pricing(self):
+    def test_section_sits_between_founder_and_how_it_works(self):
+        # Proof cluster (2026-11-12): sample report -> founder -> LinkedIn,
+        # then How it works; the quotes touch both neighbours directly.
         html = _get("/")
+        founder_at = html.index('<section class="founder">')
         quotes_at = html.index('<section class="quotes">')
-        pricing_at = html.index('<section class="pricing-strip">')
-        self.assertLess(quotes_at, pricing_at)
-        between = html[quotes_at:pricing_at]
-        self.assertEqual(between.count("<section"), 1,
-                         "nothing else may sit between the quotes and pricing")
+        how_at = html.index('<section class="how">')
+        self.assertLess(founder_at, quotes_at)
+        self.assertLess(quotes_at, how_at)
+        self.assertEqual(html[founder_at:quotes_at].count("<section"), 1,
+                         "nothing else may sit between founder and quotes")
+        self.assertEqual(html[quotes_at:how_at].count("<section"), 1,
+                         "nothing else may sit between quotes and How it works")
 
     def test_heading_is_honest_about_what_these_are(self):
         html = _get("/")
@@ -86,7 +97,7 @@ class LinkedInQuotes(unittest.TestCase):
         # contains "operatingSystem" (JSON-LD) and "rating" inside words.
         html = _get("/")
         section = html[html.index('<section class="quotes">'):
-                       html.index('<section class="pricing-strip">')]
+                       html.index('<section class="how">')]
         self.assertNotIn("\u2605", section)
         self.assertIsNone(re.search(r"\bstars?\b", section, re.I))
         self.assertNotIn("rating", section.lower())
@@ -97,7 +108,7 @@ class LinkedInQuotes(unittest.TestCase):
         # quote; the section's own copy (heading, subhead, labels) has none.
         html = _get("/")
         section = _unescape(html[html.index('<section class="quotes">'):
-                                 html.index('<section class="pricing-strip">')])
+                                 html.index('<section class="how">')])
         self.assertEqual(section.count("\u2014"), 1,
                          "only the verbatim quote may carry an em dash")
 
