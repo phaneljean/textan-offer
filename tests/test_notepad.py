@@ -310,5 +310,116 @@ class NotepadRoutes(unittest.TestCase):
         self.assertIn(b"&lt;/script&gt;", resp.data)
 
 
+class PopWidget(unittest.TestCase):
+    """The floating pop-up notepad: rendered only for members with
+    notepad access, on the dashboard and on both notepad pages, and its
+    save flow rides the existing form endpoints -- create answers with a
+    redirect to the new deal's signed detail URL (how the panel learns
+    the id), and a saved note answers with a redirect to the detail
+    page (how the panel knows it landed)."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.client = app_module.app.test_client()
+
+    def test_dashboard_widget_for_paid_user(self):
+        phone = _mkuser(_fresh_phone(), plan="starter")
+        notepad.create_transaction(phone, title="742 Evergreen Terrace")
+        resp = self.client.get("/dashboard", query_string=_signed(phone))
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn(b"npopPill", resp.data)
+        self.assertIn(b"npopPanel", resp.data)
+        self.assertIn(b"window.NPOP", resp.data)
+        # The picker carries the member's deals, escaped like the list page.
+        self.assertIn(b"742 Evergreen Terrace", resp.data)
+        self.assertIn("＋ New deal…".encode(), resp.data)
+
+    def test_dashboard_widget_hidden_for_free_user(self):
+        phone = _mkuser(_fresh_phone())
+        resp = self.client.get("/dashboard", query_string=_signed(phone))
+        self.assertEqual(resp.status_code, 200)
+        self.assertNotIn(b"npopPill", resp.data)
+        self.assertNotIn(b"window.NPOP", resp.data)
+
+    def test_list_and_detail_pages_have_widget(self):
+        phone = _mkuser(_fresh_phone(), plan="starter")
+        q = _signed(phone)
+        tx = notepad.create_transaction(phone, title="1 Picker Way")
+        resp = self.client.get("/notepad", query_string=q)
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn(b"npopPill", resp.data)
+        self.assertIn(b"1 Picker Way", resp.data)
+        resp = self.client.get(f"/notepad/{tx['id']}", query_string=q)
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn(b"npopPill", resp.data)
+        self.assertIn(b"npopPanel", resp.data)
+
+    def test_list_page_widget_hidden_for_free_user(self):
+        phone = _mkuser(_fresh_phone())
+        resp = self.client.get("/notepad", query_string=_signed(phone))
+        self.assertEqual(resp.status_code, 200)
+        self.assertNotIn(b"npopPill", resp.data)
+
+    def test_widget_js_posts_forms_with_signed_trio(self):
+        phone = _mkuser(_fresh_phone(), plan="starter")
+        resp = self.client.get("/notepad", query_string=_signed(phone))
+        data = resp.data
+        # Same form encoding the pages' own forms use, trio in the URLs.
+        self.assertIn(b"URLSearchParams", data)
+        self.assertIn(b"'/notepad/' + id + '/notes?'", data)
+        self.assertIn(b'"createUrl": "/notepad?phone=', data)
+        self.assertIn(b'"trio": "phone=', data)
+        self.assertIn(b"&expires=", data)
+        self.assertIn(b"&sig=", data)
+        # The success signals the JS keys on: the redirect targets.
+        self.assertIn(b"finalPath(resp) === '/notepad/' + id", data)
+        self.assertIn(b"'/notepad/' + id + '?'", data)  # View Deal Sheet URL
+
+    def test_panel_create_then_note_flow(self):
+        phone = _mkuser(_fresh_phone(), plan="starter")
+        q = _signed(phone)
+        # Step 1, exactly the panel's create POST (form fields title/state):
+        # the app answers 302 to the new deal's signed detail URL.
+        resp = self.client.post("/notepad", query_string=q,
+                                data={"title": "Panel Deal", "state": "TX"})
+        self.assertEqual(resp.status_code, 302)
+        loc = resp.headers["Location"]
+        tx_id = int(urlparse(loc).path.rsplit("/", 1)[1])
+        # Step 2, the panel's note POST (form field raw_text): success is
+        # the redirect landing on the detail page, note stored verbatim.
+        note_text = "panel note — verbatim, earnest maybe 7k??"
+        resp = self.client.post(f"/notepad/{tx_id}/notes", query_string=q,
+                                data={"raw_text": note_text},
+                                follow_redirects=True)
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(len(resp.history), 1)
+        self.assertEqual(resp.history[0].status_code, 302)
+        self.assertEqual(urlparse(resp.history[0].headers["Location"]).path,
+                         f"/notepad/{tx_id}")
+        self.assertEqual(notepad.get_latest_note(tx_id)["raw_text"], note_text)
+        # Step 3: a second note appends to the same deal (panel keeps the
+        # picker on the saved deal).
+        resp = self.client.post(f"/notepad/{tx_id}/notes", query_string=q,
+                                data={"raw_text": "second panel note"})
+        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(notepad.get_latest_note(tx_id)["raw_text"],
+                         "second panel note")
+        self.assertEqual(len(notepad.list_notes(tx_id)), 2)
+
+    def test_panel_failure_shape_when_access_lapses(self):
+        # The form-post failure the JS must recognise: no redirect at all,
+        # just the upsell page with a 200 -- so finalPath never equals the
+        # detail path and the panel keeps the typed note.
+        phone = _mkuser(_fresh_phone(), plan="starter")
+        q = _signed(phone)
+        tx = notepad.create_transaction(phone)
+        subscriptions.deactivate_subscription("sub_t")  # keyed by Stripe sub id
+        resp = self.client.post(f"/notepad/{tx['id']}/notes", query_string=q,
+                                data={"raw_text": "must not be stored"})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn(b"part of the Agent plan", resp.data)
+        self.assertIsNone(notepad.get_latest_note(tx["id"]))
+
+
 if __name__ == "__main__":
     unittest.main()
