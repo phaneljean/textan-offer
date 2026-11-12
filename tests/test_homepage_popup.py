@@ -182,8 +182,7 @@ class AppWindowAndDesk(unittest.TestCase):
         self.assertIn("The Notepad as its own app on your computer: parked "
                       "beside your other tools, one hotkey away, ready "
                       "when a call comes in.", self.sec)
-        self.assertIn("Windows and Mac desktop installers are in "
-                      "packaging.", self.sec)
+        self.assertNotIn("in packaging", self.sec)
 
     def test_desk_install_controls_use_the_shared_pwa_ids(self):
         # PWA_JS (already included on the homepage) drives this block
@@ -207,11 +206,28 @@ class AppWindowAndDesk(unittest.TestCase):
         self.assertIn('open your browser menu and choose "Install app"',
                       app_module.PWA_JS)
 
-    def test_no_desktop_installer_links_yet(self):
-        self.assertNotIn(".dmg", self.sec)
-        self.assertNotIn(".exe", self.sec)
-        self.assertNotIn("Download for Windows", self.sec)
-        self.assertNotIn("Download for Mac", self.sec)
+    def test_desktop_download_buttons_live(self):
+        # The desktop v0.1.0 release is public, so the desk block now
+        # links the real installers, Windows first, each click tracked
+        # with its own registered engagement type, plus the fine print
+        # and a link to the release page for Linux / all versions.
+        win = ("https://github.com/phaneljean/txtanoffer-notepad/releases/"
+               "download/v0.1.0/TxtAnOffer.Notepad_0.1.0_x64-setup.exe")
+        mac = ("https://github.com/phaneljean/txtanoffer-notepad/releases/"
+               "download/v0.1.0/TxtAnOffer.Notepad_0.1.0_aarch64.dmg")
+        self.assertIn(win, self.sec)
+        self.assertIn(mac, self.sec)
+        self.assertLess(self.sec.index(win), self.sec.index(mac))
+        self.assertIn("Download for Windows", self.sec)
+        self.assertIn("Download for Mac", self.sec)
+        self.assertIn('data-evt="desk_download_windows"', self.sec)
+        self.assertIn('data-evt="desk_download_mac"', self.sec)
+        self.assertIn("Free to download. Mac version is for Apple "
+                      "Silicon Macs.", self.sec)
+        self.assertIn("https://github.com/phaneljean/txtanoffer-notepad/"
+                      "releases/tag/v0.1.0", self.sec)
+        self.assertIn(">all downloads<", self.sec)
+        self.assertIn("Or keep it in your browser:", self.sec)
 
 
 class DemoNeverSaves(unittest.TestCase):
