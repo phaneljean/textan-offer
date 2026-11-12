@@ -281,7 +281,9 @@ _ENGAGEMENT_TYPES = ("js_ok", "upload_picked", "upload_failed_rejected", "upload
                      # /about company block -> TC Check, 2026-11-11
                      "about_check_cta",
                      # homepage desk block desktop downloads, 2026-11-11
-                     "desk_download_windows", "desk_download_mac") \
+                     "desk_download_windows", "desk_download_mac",
+                     # homepage hero "Try the Deal Notepad" CTA, 2026-11-11
+                     "hero_notepad_cta") \
     + CHECK_CTA_EVENTS + SAMPLE_CTA_EVENTS + BOOK_CALL_EVENTS + (DROPZONE_INTERACT_EVENT,)
 # Pages whose beacons /v1/evt accepts: the ones with their own
 # track_page_view() call, plus _BEACON_ONLY_PAGES below.
@@ -1157,11 +1159,13 @@ __SITE_NAV__
     <li><span>Residential</span><small><b>CBS1</b></small></li><li><span>Land</span><small><b>CBS4</b></small></li>
   </ul>
   <div class="ctas" data-state="tx">
-    <a class="btn solid" href="/tc-check" data-evt="hero_cta">Check a file free</a>
+    <a class="btn solid" href="#notepad" data-evt="hero_notepad_cta">Try the Deal Notepad</a>
+    <a class="btn ghost" href="/tc-check" data-evt="hero_cta">Check a file free</a>
     <a class="btn ghost" href="/tc-check?demo=1" data-evt="hero_sample">See a sample report</a>
   </div>
   <div class="ctas" data-state="co">
-    <a class="btn solid" href="/tc-check?state=co" data-evt="hero_cta">Check a file free</a>
+    <a class="btn solid" href="#notepad" data-evt="hero_notepad_cta">Try the Deal Notepad</a>
+    <a class="btn ghost" href="/tc-check?state=co" data-evt="hero_cta">Check a file free</a>
     <a class="btn ghost" href="/tc-check?demo=1&amp;state=co" data-evt="hero_sample">See a sample report</a>
   </div>
   <p class="fine" data-state="tx">3 free reports, no signup, no credit card &middot; 4 Texas TREC contracts + the 40-11, 41-3 and 39-11</p>
@@ -1477,7 +1481,7 @@ __SITE_NAV__
     <div class="tile price">
       <span class="tag g">AGENT</span>
       <div class="big">$40<small>/mo</small></div>
-      <p>Draft offers by text message. First 3 offers free, then unlimited.</p>
+      <p>Deal Notepad and Deal Sheet, saved notes, action items and reminders, plus draft offers by text. First 3 offers free.</p>
     </div>
     <div class="tile price">
       <span class="tag g">BROKERAGE</span>
@@ -6520,6 +6524,9 @@ def pricing():
       <span class="price-period">/month</span>
     </div>
     <ul class="features">
+      <li><span class="check">&#10003;</span> Deal Notepad: notes become a Deal Sheet</li>
+      <li><span class="check">&#10003;</span> Saved transaction notes</li>
+      <li><span class="check">&#10003;</span> Action items and reminders from your deal dates</li>
       <li><span class="check">&#10003;</span> First 3 offers free</li>
       <li><span class="check">&#10003;</span> Then unlimited offers</li>
       <li><span class="check">&#10003;</span> Address, price and closing date filled in for you</li>
@@ -6542,10 +6549,11 @@ def pricing():
       <span class="price-period">/month</span>
     </div>
     <ul class="features">
+      <li><span class="check">&#10003;</span> Everything in Agent, plus:</li>
       <li><span class="check">&#10003;</span> Every agent&rsquo;s offer checked before it&rsquo;s sent</li>
       <li><span class="check">&#10003;</span> Unlimited offers for all your agents</li>
-      <li><span class="check">&#10003;</span> Contract archive: forward or drop executed contracts, checked and kept 5 years</li>
-      <li><span class="check">&#10003;</span> Transaction Workspace and roster dashboard</li>
+      <li><span class="check">&#10003;</span> Team workspace for your roster (Transaction Workspace and roster dashboard)</li>
+      <li><span class="check">&#10003;</span> Contract archive: forward or drop executed contracts, checked and kept 5 years, searchable by address</li>
     </ul>
     <a href="/brokers" class="cta-btn dark" data-evt="pricing_audit_cta">Start with a free 20-file audit</a>
     <form action="/create-checkout-session" method="POST" class="plan-sub">
