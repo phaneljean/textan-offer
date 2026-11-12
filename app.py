@@ -12878,6 +12878,9 @@ white-space:nowrap;}
 .docstat.st-received{background:var(--accent-tint);color:var(--accent-dark);}
 .docstat.st-reviewed{background:var(--accent);color:#fff;}
 .docprog{font-size:0.8rem;color:var(--text-muted);font-weight:600;white-space:nowrap;}
+.frow-calculated{background:#F2F6FA;}
+.tag-calc{background:#E7EDF3;color:#2E4A63;}
+.fformula{font-size:0.78rem;color:#2E4A63;margin-top:0.15rem;}
 """
 
 
@@ -13130,27 +13133,41 @@ def _np_check_results_html(checks):
 
 def _np_field_row(key, label, field):
     """One Deal Sheet row, server-rendered (the page's JS re-renders the
-    same structure after enhance/field calls)."""
+    same structure after enhance/field calls). Three states, three
+    tags: Captured (green -- stated in the notes and firmed, or entered
+    by the user), Calculated (slate -- derived from Captured values,
+    formula shown on the row), Confirm (amber -- proposed, not yet
+    verified). A Calculated row offers Edit (which converts it to
+    Captured) but no Accept (there is nothing to accept -- it is math)
+    and no Clear (you change the inputs, or override by editing)."""
     if not field or field.get("value") in (None, ""):
         return (f'<div class="frow" data-key="{key}"><div class="flabel">{escape(label)}</div>'
                 f'<div class="fmain"><span class="fmissing">Not in your notes</span></div>'
                 f'<div class="fctrl"><button type="button" class="btn-mini" '
                 f'onclick="npField(\'{key}\',\'edit\')">Add</button></div></div>')
-    state = field.get("state") if field.get("state") in ("found", "confirm") else "confirm"
+    state = field.get("state") if field.get("state") in ("found", "confirm", "calculated") else "confirm"
     val = escape(notepad.format_field_value(key, field.get("value")))
-    tag = ('<span class="tag tag-confirm">Confirm</span>' if state == "confirm"
-           else '<span class="tag tag-found">On the sheet</span>')
+    if state == "confirm":
+        tag = '<span class="tag tag-confirm">Confirm</span>'
+    elif state == "calculated":
+        tag = '<span class="tag tag-calc">Calculated</span>'
+    else:
+        tag = '<span class="tag tag-found">Captured</span>'
     note = f'<div class="fnote">{escape(field["note"])}</div>' if field.get("note") else ""
+    formula = (f'<div class="fformula">{escape(field["formula"])}</div>'
+               if state == "calculated" and field.get("formula") else "")
     span = (f'<div class="fspan">from: &ldquo;{escape(field["span"])}&rdquo;</div>'
             if field.get("span") else "")
     accept = (f'<button type="button" class="btn-mini btn-acc" data-evt="notepad_field_confirmed" '
               f'onclick="npField(\'{key}\',\'accept\')">Accept</button>'
               if state == "confirm" else "")
+    clear = ('' if state == "calculated" else
+             f'<button type="button" class="btn-mini" onclick="npField(\'{key}\',\'clear\')">Clear</button>')
     return (f'<div class="frow frow-{state}" data-key="{key}"><div class="flabel">{escape(label)}</div>'
-            f'<div class="fmain"><div class="fvalue">{val}</div><div class="fmeta">{tag}</div>{note}{span}</div>'
+            f'<div class="fmain"><div class="fvalue">{val}</div><div class="fmeta">{tag}</div>{note}{formula}{span}</div>'
             f'<div class="fctrl">{accept}'
             f'<button type="button" class="btn-mini" onclick="npField(\'{key}\',\'edit\')">Edit</button>'
-            f'<button type="button" class="btn-mini" onclick="npField(\'{key}\',\'clear\')">Clear</button>'
+            f'{clear}'
             f'</div></div>')
 
 
@@ -13170,16 +13187,18 @@ function rowHtml(key,label,f){
       +'<div class="fmain"><span class="fmissing">Not in your notes</span></div>'
       +'<div class="fctrl"><button type="button" class="btn-mini" onclick="npField(\\''+key+'\\',\\'edit\\')">Add</button></div></div>';
   }
-  var state=f.state==='found'?'found':'confirm';
-  var tag=state==='confirm'?'<span class="tag tag-confirm">Confirm</span>':'<span class="tag tag-found">On the sheet</span>';
+  var state=f.state==='found'?'found':(f.state==='calculated'?'calculated':'confirm');
+  var tag=state==='confirm'?'<span class="tag tag-confirm">Confirm</span>':(state==='calculated'?'<span class="tag tag-calc">Calculated</span>':'<span class="tag tag-found">Captured</span>');
   var note=f.note?'<div class="fnote">'+esc(f.note)+'</div>':'';
+  var formula=(state==='calculated'&&f.formula)?'<div class="fformula">'+esc(f.formula)+'</div>':'';
   var span=f.span?'<div class="fspan">from: &ldquo;'+esc(f.span)+'&rdquo;</div>':'';
   var accept=state==='confirm'?'<button type="button" class="btn-mini btn-acc" onclick="npField(\\''+key+'\\',\\'accept\\')">Accept</button>':'';
+  var clearBtn=state==='calculated'?'':'<button type="button" class="btn-mini" onclick="npField(\\''+key+'\\',\\'clear\\')">Clear</button>';
   return '<div class="frow frow-'+state+'" data-key="'+key+'"><div class="flabel">'+esc(label)+'</div>'
-    +'<div class="fmain"><div class="fvalue">'+esc(fmtVal(key,f.value))+'</div><div class="fmeta">'+tag+'</div>'+note+span+'</div>'
+    +'<div class="fmain"><div class="fvalue">'+esc(fmtVal(key,f.value))+'</div><div class="fmeta">'+tag+'</div>'+note+formula+span+'</div>'
     +'<div class="fctrl">'+accept
     +'<button type="button" class="btn-mini" onclick="npField(\\''+key+'\\',\\'edit\\')">Edit</button>'
-    +'<button type="button" class="btn-mini" onclick="npField(\\''+key+'\\',\\'clear\\')">Clear</button></div></div>';
+    +clearBtn+'</div></div>';
 }
 function renderFields(){
   var html='';
@@ -13240,7 +13259,7 @@ function npDownload(){
   window.NP.defs.forEach(function(def){
     var f=window.NP.fields[def[0]];
     if(!f||f.value==null||f.value===''){lines.push(def[1]+': Not in your notes');}
-    else{lines.push(def[1]+': '+fmtVal(def[0],f.value)+' ['+(f.state==='found'?'Found':'Confirm')+']');}
+    else{lines.push(def[1]+': '+fmtVal(def[0],f.value)+' ['+(f.state==='found'?'Captured':(f.state==='calculated'?'Calculated':'Confirm'))+']');}
   });
   lines.push('', 'Saved in your TxtAnOffer dashboard. Contract files are checked, then deleted.');
   var blob=new Blob([lines.join('\\n')],{type:'text/plain'});
@@ -13655,6 +13674,12 @@ def notepad_detail(tx_id):
     access = has_notepad_access(phone)
     sheet = notepad.get_deal_sheet(tx_id, phone)
     fields = sheet["fields"]
+    if access:
+        # Accuracy Pass (2026-11-11): Calculated fields refresh on view
+        # for members, mirroring the generate_tasks refresh below --
+        # derivations (notably close_days, which moves with the calendar)
+        # are never left stale on a rendered sheet.
+        fields = notepad.refresh_deal_sheet(tx_id, phone)
     latest = notepad.get_latest_note(tx_id)
     history = notepad.list_notes(tx_id)
 
@@ -14123,7 +14148,8 @@ def _np_draft_parsed(tx, fields, phone):
 
     parsed = notepad.sheet_to_parsed(fields)
     firm = {k: f["value"] for k, f in fields.items()
-            if f.get("state") == "found" and f.get("value") not in (None, "")}
+            if f.get("state") in ("found", "calculated")
+            and f.get("value") not in (None, "")}
     missing = []
     price = firm.get("price")
     if not price:
@@ -14169,6 +14195,27 @@ def _np_draft_parsed(tx, fields, phone):
         else:
             missing.append("Close timing (days to close, or a closing date "
                            "within the next year)")
+    # Accuracy Pass (2026-11-11): the required-field gate beyond the
+    # essentials above. A draft may not proceed on values the filler
+    # would have to invent or silently take from the agent profile:
+    # city, county, and financing must be on the sheet; the earnest pair
+    # must have at least one firm side (the other is Calculated from
+    # it); and for Texas the option pair and the title company must be
+    # on the sheet (until now a missing Texas option fee quietly became
+    # the profile default inside the generated contract).
+    # Deliberate exemptions, checked against what fill_offer_pdf
+    # actually writes: effective_date (the filler never writes one --
+    # the broker dates the contract at final acceptance), buyer_name /
+    # seller_name (party names are left blank on drafts by design, the
+    # same rule the SMS flow states on its face), escrow_agent_name
+    # (never read from the sheet -- the filler writes the escrow line
+    # from the agent profile's title company).
+    for _key, _label in (("city", "City"), ("county", "County"),
+                         ("financing_type", "Financing")):
+        if not firm.get(_key):
+            missing.append(_label)
+    if not firm.get("earnest_money_amount") and not firm.get("earnest_pct"):
+        missing.append("Earnest money")
     if tx.get("state") == "CO":
         parsed["state"] = "CO"
         parsed["_tx_needs_confirm"] = False
@@ -14190,6 +14237,12 @@ def _np_draft_parsed(tx, fields, phone):
             parsed["co_closing_note"] = roll_note(
                 today + timedelta(days=int(parsed["close_days"])), co_business_day)
     else:
+        if not firm.get("option_fee_amount"):
+            missing.append("Option fee")
+        if not firm.get("option_days"):
+            missing.append("Option days")
+        if not firm.get("title_company"):
+            missing.append("Title company")
         if firm.get("option_fee_amount"):
             parsed["option_fee"] = int(firm["option_fee_amount"])
         else:
@@ -14216,7 +14269,7 @@ def notepad_draft_create(tx_id):
         return jsonify({"error": "Too many requests. Try again in a bit."}), 429
     sheet = notepad.get_deal_sheet(tx_id, phone)
     fields = sheet["fields"] if sheet else {}
-    blocking = notepad.blocking_confirm_fields(fields)
+    blocking = notepad.blocking_confirm_fields(fields, tx.get("state") or "TX")
     if blocking:
         labels = [notepad.FIELD_LABELS.get(k, k) for k in blocking]
         return jsonify({"ok": False, "blocking": labels}), 400
