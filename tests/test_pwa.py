@@ -9,6 +9,7 @@ list that reads them back).
 """
 import json
 import os
+import re
 import sqlite3
 import tempfile
 import unittest
@@ -142,6 +143,25 @@ class HeadWiringAndInstallBlock(unittest.TestCase):
         self.assertIn('rel="manifest"', html)
         self.assertIn('id="txoInstallBtn"', html)
 
+    def test_install_wrapper_is_always_visible(self):
+        # The button must render on page load, everywhere the block
+        # appears: neither wrapper may start hidden behind display:none
+        # (it used to appear only if beforeinstallprompt fired, so for
+        # already-installed / dismissed / unsupported visitors the
+        # download option simply did not exist on screen).
+        pages = [
+            self.client.get("/", headers=UA).get_data(as_text=True),
+            self.client.get("/dashboard", query_string=self.qs,
+                            headers=UA).get_data(as_text=True),
+            self.client.get("/notepad", query_string=self.qs,
+                            headers=UA).get_data(as_text=True),
+        ]
+        for html in pages:
+            m = re.search(r'<div[^>]*id="txoInstall"[^>]*>', html)
+            self.assertIsNotNone(m)
+            self.assertNotIn("display:none", m.group(0))
+            self.assertNotIn("display: none", m.group(0))
+
 
 class InstallTracking(unittest.TestCase):
     @classmethod
@@ -160,6 +180,17 @@ class InstallTracking(unittest.TestCase):
         self.assertIn("appinstalled", app_module.PWA_JS)
         self.assertIn("display-mode: standalone", app_module.PWA_JS)
         self.assertIn("txo_pwa_dismissed", app_module.PWA_JS)
+
+    def test_install_click_fallback_instructions(self):
+        # With no deferred beforeinstallprompt, the click reveals
+        # manual install instructions (per-platform text) instead of
+        # hiding the block; pwa_install_accepted stays exclusive to
+        # the native prompt's userChoice (asserted above).
+        js = app_module.PWA_JS
+        self.assertIn("showHint()", js)
+        self.assertIn("To install: Share \u2192 Add to Home Screen", js)
+        self.assertIn('open your browser menu and choose "Install app" '
+                      'or "Add to Home Screen".', js)
 
     def test_signed_beacon_records_phone(self):
         phone = "+15145550102"
