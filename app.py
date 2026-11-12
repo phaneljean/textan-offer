@@ -12795,7 +12795,7 @@ display:flex;align-items:center;justify-content:center;text-align:center;padding
 <p>This transaction doesn't exist, was deleted, or belongs to a different account.</p></div></body></html>""", 404
 
 
-def _np_page(title, body):
+def _np_page(title, body, widget=""):
     return f"""<!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12807,8 +12807,8 @@ def _np_page(title, body):
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
-<style>{_NOTEPAD_CSS}</style></head>
-<body><div class="container">{body}</div>{PWA_JS}</body></html>"""
+<style>{_NOTEPAD_CSS}{_NPOP_CSS}</style></head>
+<body><div class="container">{body}</div>{widget}{PWA_JS}</body></html>"""
 
 
 def _np_rate_limited(phone):
@@ -12882,7 +12882,8 @@ def notepad_list():
     {PWA_INSTALL_HTML}
     {cards}
     {action_block}"""
-    return _np_page("Deal Notepad", body)
+    return _np_page("Deal Notepad", body,
+                    widget=_np_pop_widget(phone, expires, sig, access))
 
 
 def _np_field_row(key, label, field):
@@ -13013,6 +13014,223 @@ function npDownload(){
 """
 
 
+# --- Floating pop-up notepad (2026-11-11) -----------------------------------
+# A fixed bottom-right pill + panel injected on the dashboard and on the
+# notepad pages (via _np_page) for members with notepad access, so a note
+# can be jotted without leaving the page being read. It talks ONLY to the
+# existing routes, with the forms' own encoding and the signed trio in the
+# query string: POST /notepad/<id>/notes for an existing deal; for a new
+# deal, POST /notepad first and learn the new id from the redirect target
+# (the create route answers 302 -> /notepad/<id>?trio, which is how the app
+# itself communicates it). A successful note post is likewise recognised by
+# its redirect landing on the deal's detail path; every failure mode
+# (error status, or a 200 page that never redirected, e.g. the upsell)
+# leaves the typed note untouched in the box.
+
+_NPOP_CSS = """
+.npop-pill{position:fixed;right:20px;bottom:20px;z-index:1000;background:#0b5d52;color:#fff;
+border:none;cursor:pointer;padding:0.7rem 1.25rem;border-radius:999px;font-size:0.92rem;
+font-weight:700;font-family:inherit;box-shadow:0 6px 20px rgba(10,58,51,0.35);}
+.npop-pill:hover{background:#16806e;}
+.npop-panel{position:fixed;right:20px;bottom:20px;z-index:1001;width:380px;max-width:92vw;
+max-height:72vh;overflow-y:auto;background:#fff;border:1px solid rgba(15,31,47,0.1);
+border-radius:16px;box-shadow:0 16px 44px rgba(15,31,47,0.22);
+padding:1.1rem 1.2rem 1rem;font-family:inherit;color:#0f1f2f;line-height:1.5;}
+.npop-panel[hidden]{display:none;}
+.npop-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:0.35rem;}
+.npop-title{font-size:1rem;font-weight:800;letter-spacing:-0.01em;}
+.npop-close{background:none;border:none;cursor:pointer;font-size:1.4rem;line-height:1;
+color:#5a6b7a;padding:0.1rem 0.3rem;font-family:inherit;}
+.npop-close:hover{color:#0f1f2f;}
+.npop-label{display:block;font-size:0.72rem;font-weight:700;color:#5f707f;
+text-transform:uppercase;letter-spacing:0.05em;margin:0.65rem 0 0.3rem;}
+.npop-select,.npop-input,.npop-text{width:100%;box-sizing:border-box;
+border:1px solid rgba(15,31,47,0.14);border-radius:0.85rem;padding:0.6rem 0.8rem;
+font-family:inherit;font-size:0.92rem;background:#fff;color:#0f1f2f;}
+.npop-text{min-height:110px;line-height:1.5;resize:vertical;}
+.npop-msg{border-radius:0.85rem;padding:0.55rem 0.8rem;font-size:0.85rem;margin-top:0.7rem;}
+.npop-msg-ok{background:#eef5f3;color:#0a3a33;}
+.npop-msg-err{background:#FDECEC;color:#c62828;}
+.npop-actions{display:flex;align-items:center;gap:0.9rem;margin-top:0.85rem;flex-wrap:wrap;}
+.npop-save{background:#0b5d52;color:#fff;border:none;cursor:pointer;padding:0.6rem 1.2rem;
+border-radius:999px;font-size:0.88rem;font-weight:600;font-family:inherit;}
+.npop-save:hover{background:#16806e;}
+.npop-save[disabled]{opacity:0.55;cursor:wait;}
+.npop-sheet{font-size:0.88rem;font-weight:600;color:#0b5d52;text-decoration:none;}
+.npop-sheet:hover{text-decoration:underline;}
+.npop-foot{margin-top:0.85rem;padding-top:0.7rem;border-top:1px solid rgba(15,31,47,0.08);
+font-size:0.85rem;}
+.npop-foot a{color:#0b5d52;font-weight:600;text-decoration:none;}
+.npop-foot a:hover{text-decoration:underline;}
+@media (max-width:600px){.npop-panel{left:12px;right:12px;width:auto;}}
+"""
+
+_NPOP_JS = """
+(function(){
+  var cfg = window.NPOP;
+  if(!cfg) return;
+  var pill = document.getElementById('npopPill');
+  var panel = document.getElementById('npopPanel');
+  if(!pill || !panel) return;
+  var closeBtn = document.getElementById('npopClose');
+  var sel = document.getElementById('npopDeal');
+  var newWrap = document.getElementById('npopNewWrap');
+  var titleIn = document.getElementById('npopTitle');
+  var text = document.getElementById('npopText');
+  var saveBtn = document.getElementById('npopSave');
+  var msg = document.getElementById('npopMsg');
+  var sheet = document.getElementById('npopSheet');
+  function openPanel(){
+    panel.hidden = false;
+    pill.style.display = 'none';
+    pill.setAttribute('aria-expanded', 'true');
+    text.focus();
+  }
+  function closePanel(){
+    panel.hidden = true;
+    pill.style.display = '';
+    pill.setAttribute('aria-expanded', 'false');
+    pill.focus();
+  }
+  pill.addEventListener('click', openPanel);
+  closeBtn.addEventListener('click', closePanel);
+  document.addEventListener('keydown', function(e){
+    if((e.key === 'Escape' || e.key === 'Esc') && !panel.hidden) closePanel();
+  });
+  sel.addEventListener('change', function(){
+    newWrap.hidden = sel.value !== 'new';
+    hideMsg();
+    if(sel.value === 'new') titleIn.focus();
+  });
+  function showMsg(kind, txt){
+    msg.className = 'npop-msg npop-msg-' + kind;
+    msg.textContent = txt;
+    msg.hidden = false;
+  }
+  function hideMsg(){ msg.hidden = true; msg.textContent = ''; }
+  function notesUrl(id){ return '/notepad/' + id + '/notes?' + cfg.trio; }
+  function detailUrl(id){ return '/notepad/' + id + '?' + cfg.trio; }
+  function postForm(url, fields){
+    var body = new URLSearchParams();
+    Object.keys(fields).forEach(function(k){ body.append(k, fields[k]); });
+    return fetch(url, {method: 'POST', body: body});
+  }
+  function finalPath(resp){
+    try { return new URL(resp.url).pathname; } catch(e) { return ''; }
+  }
+  function noteSaved(resp, id){
+    return !!resp && resp.ok && finalPath(resp) === '/notepad/' + id;
+  }
+  function createdId(resp){
+    if(!resp || !resp.ok) return null;
+    var m = finalPath(resp).match(/^\\/notepad\\/(\\d+)$/);
+    return m ? m[1] : null;
+  }
+  var busy = false;
+  function setBusy(b){
+    busy = b;
+    saveBtn.disabled = b;
+    saveBtn.textContent = b ? 'Saving…' : 'Save note';
+  }
+  function fail(){
+    setBusy(false);
+    showMsg('err', 'Could not save. Your note is still here, try again.');
+  }
+  function succeed(id, label){
+    setBusy(false);
+    text.value = '';
+    sheet.href = detailUrl(id);
+    sheet.hidden = false;
+    showMsg('ok', 'Saved to ' + label);
+  }
+  saveBtn.addEventListener('click', function(){
+    if(busy) return;
+    var note = text.value;
+    if(!note.replace(/\\s+/g, '')){
+      showMsg('err', 'Write a note first — the box is empty.');
+      text.focus();
+      return;
+    }
+    hideMsg();
+    sheet.hidden = true;
+    setBusy(true);
+    if(sel.value === 'new'){
+      var title = titleIn.value.replace(/^\\s+|\\s+$/g, '');
+      postForm(cfg.createUrl, {title: title, state: cfg.state}).then(function(resp){
+        var id = createdId(resp);
+        if(!id){ fail(); return; }
+        var label = title || 'Untitled deal';
+        var opt = document.createElement('option');
+        opt.value = id;
+        opt.textContent = label;
+        sel.insertBefore(opt, sel.options[sel.options.length - 1]);
+        sel.value = id;
+        newWrap.hidden = true;
+        postForm(notesUrl(id), {raw_text: note}).then(function(r2){
+          if(noteSaved(r2, id)) succeed(id, label); else fail();
+        }).catch(fail);
+      }).catch(fail);
+    } else {
+      var id = sel.value;
+      var label = sel.options[sel.selectedIndex].textContent;
+      postForm(notesUrl(id), {raw_text: note}).then(function(resp){
+        if(noteSaved(resp, id)) succeed(id, label); else fail();
+      }).catch(fail);
+    }
+  });
+})();
+"""
+
+
+def _np_pop_widget(phone, expires, sig, access, state="TX"):
+    """The floating pop-up notepad for one signed page view. Returns ""
+    unless the user has notepad access -- the same gate the routes apply,
+    so free/lapsed members never see it. The deal picker is populated
+    server-side from the owner's non-deleted transactions; labels go
+    through the same escape() the list page uses for titles."""
+    if not access:
+        return ""
+    import json
+    options = ""
+    for t in notepad.list_transactions(phone):
+        options += (f'<option value="{t["id"]}">'
+                    f'{escape(t["title"] or "Untitled deal")}</option>')
+    options += '<option value="new">＋ New deal…</option>'
+    config = {
+        "createUrl": _np_signed("/notepad", phone, expires, sig),
+        "listUrl": _np_signed("/notepad", phone, expires, sig),
+        "trio": (f"phone={_urlquote(phone, safe='')}"
+                 f"&expires={expires}&sig={sig}"),
+        "state": state if state in ("TX", "CO") else "TX",
+    }
+    return f"""
+<div class="npop-root">
+  <button type="button" class="npop-pill" id="npopPill" aria-haspopup="dialog" aria-expanded="false">&#9998; Notepad</button>
+  <div class="npop-panel" id="npopPanel" role="dialog" aria-label="Deal Notepad" hidden>
+    <div class="npop-head">
+      <span class="npop-title">Deal Notepad</span>
+      <button type="button" class="npop-close" id="npopClose" aria-label="Close notepad">&times;</button>
+    </div>
+    <label class="npop-label" for="npopDeal">Deal</label>
+    <select class="npop-select" id="npopDeal">{options}</select>
+    <div id="npopNewWrap" hidden>
+      <label class="npop-label" for="npopTitle">New deal name</label>
+      <input type="text" class="npop-input" id="npopTitle" maxlength="120" placeholder="e.g. 123 Main St">
+    </div>
+    <label class="npop-label" for="npopText">Note</label>
+    <textarea class="npop-text" id="npopText" maxlength="20000" placeholder="Jot the messy notes…"></textarea>
+    <div class="npop-msg" id="npopMsg" hidden></div>
+    <div class="npop-actions">
+      <button type="button" class="npop-save" id="npopSave">Save note</button>
+      <a class="npop-sheet" id="npopSheet" href="#" hidden>View Deal Sheet &rarr;</a>
+    </div>
+    <div class="npop-foot"><a href="{config['listUrl']}">Open the full notepad</a></div>
+  </div>
+</div>
+<script>window.NPOP={json.dumps(config)};</script>
+<script>{_NPOP_JS}</script>"""
+
+
 @app.route("/notepad/<int:tx_id>", methods=["GET"])
 def notepad_detail(tx_id):
     import json
@@ -13103,7 +13321,9 @@ def notepad_detail(tx_id):
     </div>
     <script>window.NP={json.dumps(np_config)};</script>
     <script>{_NP_JS}</script>"""
-    return _np_page(tx['title'] or 'Deal Notepad', body)
+    return _np_page(tx['title'] or 'Deal Notepad', body,
+                    widget=_np_pop_widget(phone, expires, sig, access,
+                                          state=tx.get("state") or "TX"))
 
 
 @app.route("/notepad/<int:tx_id>/notes", methods=["POST"])
@@ -13471,6 +13691,15 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
     except Exception:
         notepad_section = ""
 
+    # Floating pop-up notepad (paid tiers only; the builder returns ""
+    # without access). Same never-break-the-dashboard guard as above.
+    npop_widget = ""
+    try:
+        npop_widget = _np_pop_widget(phone, expires, sig,
+                                     has_notepad_access(phone))
+    except Exception:
+        npop_widget = ""
+
     return f"""
 <!DOCTYPE html>
 <html lang="en">
@@ -13707,6 +13936,7 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
     .nav {{padding:1rem 1.25rem;}}
   }}
 </style>
+<style>{_NPOP_CSS}</style>
 </head>
 <body>
 <nav class="nav">
@@ -13769,6 +13999,7 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
   <a href="{profile_url}" class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg>Profile</a>
   <a href="/pricing" class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>{'Billing' if user['is_subscribed'] else 'Upgrade'}</a>
 </nav>
+{npop_widget}
 {PWA_JS}
 </body>
 </html>"""
