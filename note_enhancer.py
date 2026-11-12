@@ -27,6 +27,9 @@ producer (this one today, an LLM tomorrow):
 * Seller concessions whose own words say the credit is not agreed
   ("not agreed", "asked", "proposed", "not confirmed") are demoted to
   "confirm" and labeled "Proposed, not agreed."
+* Address guard: an address proposal that is not shaped like a street
+  address (notepad.looks_like_address) is dropped outright -- the
+  property line of a contract is no place for a note fragment.
 * Texas-only fields (option fee/days) are dropped for Colorado deals.
 """
 import re
@@ -591,6 +594,16 @@ def validate_proposal(raw_text: str, proposal_fields: dict, state: str = "TX"):
             # as the proposal it is.
             field = _demote(field)
             field["note"] = "Proposed, not agreed."
+        if key == "address" and not _notepad.looks_like_address(value):
+            # The address guard (see notepad.looks_like_address): the
+            # sheet's address feeds the contract's property line, so a
+            # proposal that isn't shaped like a street address is
+            # dropped outright, never demoted -- there is no "confirm
+            # this whole note as an address" state worth offering.
+            warnings.append(
+                "Dropped Address: that doesn't look like a street "
+                "address — keep it to the property address only.")
+            continue
         out[key] = field
 
     if state == "CO":
