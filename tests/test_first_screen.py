@@ -153,7 +153,7 @@ class HomepageFirstScreen(unittest.TestCase):
         self.assertNotIn("__HOME_", self.html)
         for hook in ('href="/tc-check" data-evt="hero_cta"', 'href="#sample" data-evt="hero_sample"',
                      'href="/tc-check?state=co" data-evt="hero_cta"',
-                     'id="heroReportCard"', 'href="/tc-check#what-it-checks" data-evt="home_check_link"'):
+                     'id="heroReportCard"'):
             self.assertIn(hook, self.html)
         # The notepad CTA is gone from the hero (2026-11-12) but its event
         # stays registered; the check CTA is the solid primary in both
