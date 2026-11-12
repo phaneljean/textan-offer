@@ -935,18 +935,12 @@ def index():
   .sample-watch{margin-top:16px;font-size:15px}
   .sample-watch a{color:var(--green);font-weight:700}
 
-  /* ---------- 2. what it catches: 2x2 tiles ---------- */
-  .catches{background:var(--gray);padding-bottom:110px;margin-top:110px}
+  /* ---------- tiles: shared card grid (pricing) ---------- */
   .tiles{display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:1024px;margin:56px auto 0}
   .tile{background:#fff;border-radius:28px;padding:56px 30px 50px;min-height:330px;display:flex;flex-direction:column;align-items:center;justify-content:center}
   .tile .big{font-size:50px;font-weight:800;letter-spacing:-.03em;line-height:1.1;position:relative;display:inline-block}
-  .tile .mono{font-family:"SF Mono",Menlo,monospace;font-weight:600;font-size:34px;letter-spacing:-.01em}
   .tile p{font-size:19px;color:var(--mute);font-weight:500;margin-top:18px}
   .tile .tag{margin-bottom:22px;font-size:12px;padding:5px 10px}
-  .ring{position:absolute;inset:-14px -22px;width:calc(100% + 44px);height:calc(100% + 28px);overflow:visible}
-  .blank{display:inline-block;width:150px;border-bottom:3px solid var(--ink);margin-left:8px;position:relative;top:-6px}
-  .neq{color:var(--red)}
-  .tile .big.eff{font-size:40px}
 
   /* ---------- 3. text an offer: dark, phone ---------- */
   .text{background:var(--green-deep);color:#fff}
@@ -1015,19 +1009,24 @@ __TEXT_DEMO_CSS__
   .desk-card .link{font-size:17px}
   /* ---------- 4b0. said on LinkedIn: verbatim comments (2026-11-12) ---------- */
   .quotes{padding-bottom:110px}
-  .quotes-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;max-width:1024px;margin:56px auto 0;text-align:left}
+  .quotes-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;max-width:1024px;margin:56px auto 0;text-align:left}
   .quote-card{margin:0;background:#fff;border:1px solid var(--line);border-radius:22px;padding:32px 28px;display:flex;flex-direction:column}
   .quote-card blockquote{margin:0;font-size:19px;line-height:1.5;color:var(--ink)}
   .quote-who{margin-top:22px;font-size:15.5px;font-weight:700;color:var(--ink)}
   .quote-who span{display:block;font-weight:500;color:var(--mute);font-size:14.5px;margin-top:2px}
   .quote-src{margin-top:14px;font-size:12.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--green)}
   .final-sec{padding-bottom:110px}
+  /* ---------- 3b. text an offer, slim: the demo phone, static (2026-11-12) ---------- */
+  .phone-solo{display:flex;justify-content:center;margin-top:52px}
+  .phone-solo .td-phone{position:relative;left:auto;top:auto;flex:none}
+  .text .sub a{color:inherit;font-weight:700;text-decoration:underline;text-underline-offset:3px}
   @media (max-width:734px){
     .steps,.desk-cards{grid-template-columns:1fr;margin-top:40px}
     .desk{margin-top:72px;padding-bottom:72px}
     .quotes-grid{grid-template-columns:1fr;margin-top:40px}
     .quotes{padding-bottom:72px}
     .final-sec{padding-bottom:72px}
+    .phone-solo{margin-top:40px}
   }
 
   /* ---------- mobile (734px break) ---------- */
@@ -1045,22 +1044,17 @@ __TEXT_DEMO_CSS__
     .paper{position:relative;width:88%;top:0;font-size:13px;padding:16px 18px 20px}
     .paper .circ svg{width:130px;right:-12px}
     .paper .ph span:last-child{display:none}
-    .tile .big.eff{font-size:30px}
     .card{position:relative;width:100%;margin-top:-34px}
-    .catches{margin-top:72px;padding-bottom:72px}
     .tiles{grid-template-columns:1fr;margin-top:40px}
     .tile{min-height:250px;padding:44px 20px 40px}
     .tile .big{font-size:40px}
-    .tile .mono{font-size:26px}
     .tile p{font-size:17px}
-    .blank{width:100px}
     .brokers,.trust{padding-bottom:72px}
     .num{font-size:150px}
     .facts{flex-direction:column;align-items:center;gap:16px}
   }
   /* --- homepage funnel additions (2026-11-03): trust line, capture, pricing, faq --- */
   .trust-line{font-weight:600;color:var(--green)}
-  .tools-row{margin-top:14px}
   .capture-form{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:32px}
   .capture-input{font:16px Inter,sans-serif;padding:13px 20px;border:1.5px solid var(--line);border-radius:980px;width:300px;background:#fff}
   .capture-input:focus{outline:none;border-color:var(--green)}
@@ -1297,6 +1291,43 @@ __SITE_NAV__
   <p class="fine" id="homeCaptureMsg">The full sample PDF and the 6&#8209;point checklist, one email. Form&#8209;change updates only when they matter &mdash; unsubscribe anytime.</p>
 </section>
 
+<!-- 2c. FOUNDER: a short mention here (added 2026-11-06 as the full
+     story; shortened 2026-11-11) -- the full story lives on /about. -->
+<section class="founder">
+  <img class="avatar" src="/static/founder.jpg" alt="Phanel Jean-Baptiste, founder of TxtAnOffer" width="104" height="104" loading="lazy">
+  <div class="eyebrow">From the founder</div>
+  <h2>Built by someone who read<br>the fine print for a living.</h2>
+  <p class="story">Before TxtAnOffer, I reviewed group benefits claims at Sun Life Canada, checking files against policy wording line by line and deciding what the contract actually covered. So I built the check I wished every file had before it reached my desk.</p>
+  <p class="sig">Phanel Jean-Baptiste<span>Founder, TxtAnOffer</span></p>
+  <div class="ctas"><a class="link" href="/about">Read the founder story</a></div>
+</section>
+
+<!-- 4b0. SAID ON LINKEDIN: verbatim comments under our posts (2026-11-12).
+     Three real comments, word for word. No ratings, no review-platform
+     wording: these are comments, not reviews. -->
+<section class="quotes">
+  <div class="eyebrow">From LinkedIn</div>
+  <h2>Said on LinkedIn.</h2>
+  <p class="sub">Comments under our posts. <a href="https://www.linkedin.com/company/143677963/">TxtAnOffer on LinkedIn</a></p>
+  <div class="quotes-grid">
+    <figure class="quote-card">
+      <blockquote>&ldquo;The Effective Date field controls everything downstream. Miss it on page 1 and every option period, financing deadline, and closing date shifts before anyone catches it. One blank, entire timeline corrupted.&rdquo;</blockquote>
+      <figcaption class="quote-who">Mohit Tomar</figcaption>
+      <div class="quote-src">via LinkedIn</div>
+    </figure>
+    <figure class="quote-card">
+      <blockquote>&ldquo;Those tiny missing fields really do create outsized downstream work for TCs&mdash;catching them before title seems like a meaningful time-saver.&rdquo;</blockquote>
+      <figcaption class="quote-who">Albert van Zyl<span>Co-Founder, VAConnect</span></figcaption>
+      <div class="quote-src">via LinkedIn</div>
+    </figure>
+    <figure class="quote-card">
+      <blockquote>&ldquo;Great tool for Texas brokers and transaction coordinators. Catching compliance issues before they become closing delays can save time, money, and unnecessary stress.&rdquo;</blockquote>
+      <figcaption class="quote-who">Jason Hammond<span>real estate funding</span></figcaption>
+      <div class="quote-src">via LinkedIn</div>
+    </figure>
+  </div>
+</section>
+
 <!-- 2d. HOW IT WORKS: three steps, no signup (2026-11-12). The middle
      step carries the honesty line: fixed checks, no AI. -->
 <section class="how">
@@ -1425,55 +1456,6 @@ __SITE_NAV__
   <p class="partner-line">In the product, the notepad lives in your dashboard on the Agent plan. Your notes are saved so the deal stays in one place. Contract files are still checked, then deleted. <a href="#pricing">See the plans</a></p>
 </section>
 
-<!-- 2. WHAT IT CATCHES: one finding per tile, huge type -->
-<section class="catches">
-  <h2>What it flags<br>before title sees it.</h2>
-  <p class="sub">Four of the things TC Check flags.</p>
-  <div class="tiles">
-    <div class="tile">
-      <span class="tag b">MUST FIX</span>
-      <div class="big" data-state="tx">3A + 3B <span class="neq">&ne;</span> 3C</div>
-      <div class="big" data-state="co">&sect;4.1 <span class="neq">&ne;</span> Price</div>
-      <p data-state="tx">A sales price that doesn&rsquo;t add up.</p>
-      <p data-state="co">A &sect;4.1 price table that doesn&rsquo;t add up to the Purchase Price.</p>
-    </div>
-    <div class="tile" data-state="tx">
-      <span class="tag b">MUST FIX</span>
-      <div class="big">November 31
-        <svg class="ring" viewBox="0 0 300 80" preserveAspectRatio="none" aria-hidden="true"><path d="M60 6 C 180 -4, 296 6, 294 40 C 292 74, 160 80, 80 74 C 10 68, 0 30, 40 14" fill="none" stroke="#c62828" stroke-width="3" stroke-linecap="round"/></svg>
-      </div>
-      <p>A closing date that doesn&rsquo;t exist.</p>
-    </div>
-    <div class="tile" data-state="tx">
-      <span class="tag b">MUST FIX</span>
-      <div class="big eff">Effective Date<span class="blank"></span></div>
-      <p>The date the contract&rsquo;s deadlines count from, left blank.</p>
-    </div>
-    <div class="tile" data-state="tx">
-      <span class="tag w">REVIEW</span>
-      <div class="mono">john.doe@gmail<span class="neq">com</span></div>
-      <p>A notice email that would bounce.</p>
-    </div>
-    <div class="tile" data-state="co">
-      <span class="tag w">REVIEW</span>
-      <div class="big">&sect;3.1 N/A</div>
-      <p>A loan deadline marked N/A while &sect;4.1 still has a New Loan.</p>
-    </div>
-    <div class="tile" data-state="co">
-      <span class="tag w">REVIEW</span>
-      <div class="big">11/11 closing</div>
-      <p>A Closing Date that lands on a holiday, when banks may not fund.</p>
-    </div>
-    <div class="tile" data-state="co">
-      <span class="tag w">REVIEW</span>
-      <div class="big eff">Contract Date<span class="blank"></span></div>
-      <p>The contract Date on page 1 left blank.</p>
-    </div>
-  </div>
-  <div class="ctas"><a class="link" href="/tc-check#what-it-checks" data-evt="home_check_link">See everything it checks</a></div>
-  <div class="ctas tools-row"><a class="link" href="/guides/trec-deadline-calculator" data-evt="home_calc_link">Free TREC deadline calculator</a><a class="link" href="/guides" data-evt="home_guides_link">Browse the guides</a></div>
-</section>
-
 <!-- 2c. DEADLINE AUTOPILOT: free with every TC Check report (2026-11-05).
      Texas-only today, like the sheet itself. Sits after the sample report
      since 2026-11-10: it is a feature of the report. -->
@@ -1538,65 +1520,46 @@ __SITE_NAV__
   <p class="partner-line">On the Brokerage plan, every executed contract forwarded or uploaded is checked and kept <strong>5 years</strong>, searchable by address. <a href="/guides/broker-record-retention-texas" data-evt="home_retention_guide">The full retention guide</a> &middot; <a href="/archive" data-evt="home_retention_archive">How the archive works</a></p>
 </section>
 
-<!-- 3. TEXT AN OFFER: the namesake product, played as a 3-step demo (text_demo.py) -->
+<!-- 3. TEXT AN OFFER: slim band (2026-11-12) -- the three-tools card
+     above plus this phone is the whole homepage pitch; the full demo and
+     walkthrough live on /text-an-offer. The phone below is the demo's own
+     mock (text_demo.py classes) showing the finished conversation. -->
 <section class="text" id="text">
   <div class="eyebrow">Also from TxtAnOffer: Text an offer</div>
   <h2>Text the terms.<br>Get a filled draft back.</h2>
-  <p class="sub" data-state="tx">Price, down payment, closing days, address. Reply YES and the TREC 20&#8209;19 comes back with your terms filled in, ready to review.</p>
-  <p class="sub" data-state="co">Price, down payment, closing days and a Colorado address. Reply YES and the CBS1 comes back with your terms filled in, ready to review.</p>
-  <div class="ctas">
-    <a class="btn solid" href="sms:+18338970333" data-evt="workflow_offer_sms">Text (833) 897-0333</a>
-    <a class="btn ghost" href="/pricing">See pricing</a>
-    <a class="btn ghost" href="/text-an-offer" data-evt="text_learn_more">Learn more</a>
+  <p class="sub">Text the price, down payment, closing days and address to <a href="sms:+18338970333" data-evt="workflow_offer_sms">(833) 897-0333</a>, reply YES, and the filled draft comes back ready to review.</p>
+  <div class="phone-solo">
+    <div class="td-phone"><div class="td-screen"><div class="td-island"></div>
+      <div class="td-who"><div class="td-av">t</div><b>TxtAnOffer</b>(833) 897-0333</div>
+      <div class="td-thread">
+        <div class="td-time">Today 9:41 AM</div>
+        <div class="td-bub td-me">725k 3% 21day 123 Main St, Austin, TX</div>
+        <div class="td-bub td-them">TxtAnOffer: got it.
+
+123 Main St, Austin, TX
+Price $725,000, 3% down ($21,750)
+Loan $703,250
+Earnest $7,250, option fee $250
+Closing Mon, Nov 16, 2026 (21 days, moved off the weekend)
+
+Reply YES to create the TREC draft, or text a correction (ex: "make it 820k").</div>
+        <div class="td-time">Today 9:42 AM</div>
+        <div class="td-bub td-me">YES</div>
+        <div class="td-bub td-them">Your TREC draft for 123 Main St is ready.
+
+Review and email it: <u>txtanoffer.com/review/&hellip;</u>
+
+Includes TREC 20-19, 40-11 Financing Addendum, 61-0 Water Disclosure and IABS. Draft only: review every page before signing.</div>
+      </div>
+      <div class="td-composer"><div class="td-field"></div>
+        <div class="td-send"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></div></div>
+    </div></div>
   </div>
   <p class="fine">By texting, you agree to receive SMS replies and reminders about your offers, plus up to 2 tips on the free trial. Reply STOP to opt out, HELP for help. Msg frequency varies. Msg &amp; data rates may apply. <a href="/privacy">Privacy</a> &middot; <a href="/terms">Terms</a></p>
-__TEXT_DEMO__
-</section>
-
-<!-- 2c. FOUNDER: a short mention here (added 2026-11-06 as the full
-     story; shortened 2026-11-11) -- the full story lives on /about. -->
-<section class="founder">
-  <img class="avatar" src="/static/founder.jpg" alt="Phanel Jean-Baptiste, founder of TxtAnOffer" width="104" height="104" loading="lazy">
-  <div class="eyebrow">From the founder</div>
-  <h2>Built by someone who read<br>the fine print for a living.</h2>
-  <p class="story">Before TxtAnOffer, I reviewed group benefits claims at Sun Life Canada, checking files against policy wording line by line and deciding what the contract actually covered. So I built the check I wished every file had before it reached my desk.</p>
-  <p class="sig">Phanel Jean-Baptiste<span>Founder, TxtAnOffer</span></p>
-  <div class="ctas"><a class="link" href="/about">Read the founder story</a></div>
 </section>
 
 <!-- 5. TRUST: one promise, then what's protected (see _home_trust) -->
 __HOME_TRUST__
-
-<!-- 4b0. SAID ON LINKEDIN: verbatim comments under our posts (2026-11-12).
-     Four real comments, word for word. No ratings, no review-platform
-     wording: these are comments, not reviews. -->
-<section class="quotes">
-  <div class="eyebrow">From LinkedIn</div>
-  <h2>Said on LinkedIn.</h2>
-  <p class="sub">Comments under our posts. <a href="https://www.linkedin.com/company/143677963/">TxtAnOffer on LinkedIn</a></p>
-  <div class="quotes-grid">
-    <figure class="quote-card">
-      <blockquote>&ldquo;The Effective Date field controls everything downstream. Miss it on page 1 and every option period, financing deadline, and closing date shifts before anyone catches it. One blank, entire timeline corrupted.&rdquo;</blockquote>
-      <figcaption class="quote-who">Mohit Tomar</figcaption>
-      <div class="quote-src">via LinkedIn</div>
-    </figure>
-    <figure class="quote-card">
-      <blockquote>&ldquo;Those tiny missing fields really do create outsized downstream work for TCs&mdash;catching them before title seems like a meaningful time-saver.&rdquo;</blockquote>
-      <figcaption class="quote-who">Albert van Zyl<span>Co-Founder, VAConnect</span></figcaption>
-      <div class="quote-src">via LinkedIn</div>
-    </figure>
-    <figure class="quote-card">
-      <blockquote>&ldquo;The revised description names the user, the documents and the problem in one pass. A sample flagged report could help people understand the output before they upload their own contract.&rdquo;</blockquote>
-      <figcaption class="quote-who">Yaroslav K.<span>COO, Incode Group &amp; LinkedRefs</span></figcaption>
-      <div class="quote-src">via LinkedIn</div>
-    </figure>
-    <figure class="quote-card">
-      <blockquote>&ldquo;Great tool for Texas brokers and transaction coordinators. Catching compliance issues before they become closing delays can save time, money, and unnecessary stress.&rdquo;</blockquote>
-      <figcaption class="quote-who">Jason Hammond<span>real estate funding</span></figcaption>
-      <div class="quote-src">via LinkedIn</div>
-    </figure>
-  </div>
-</section>
 
 <!-- 4b. PRICING: the three plans from /pricing, one line each (2026-11-03). -->
 <section class="pricing-strip">
@@ -1649,7 +1612,6 @@ __HOME_TRUST__
 </section>
 
 __SITE_FOOTER__
-__TEXT_DEMO_JS__
 __STATE_SWITCH_JS__
 __HOME_SAMPLE_JS__
 __RETENTION_JS__
@@ -1686,8 +1648,6 @@ __PWA_JS__
                 .replace("__SITE_FOOTER__", _SITE_FOOTER)
                 .replace("__HOME_TRUST__", _home_trust())
                 .replace("__TEXT_DEMO_CSS__", text_demo.CSS)
-                .replace("__TEXT_DEMO__", text_demo.HTML)
-                .replace("__TEXT_DEMO_JS__", text_demo.JS)
                 .replace("__HOME_SAMPLE_JS__", HOME_SAMPLE_JS)
                 .replace("__RETENTION_JS__", RETENTION_JS)
                 .replace("__NOTEPAD_JS__", NOTEPAD_JS)
