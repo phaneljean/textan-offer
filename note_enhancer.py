@@ -24,6 +24,9 @@ producer (this one today, an LLM tomorrow):
   "confirm" and kept only if the value itself appears in the note.
 * Type/range checks demote to "confirm" -- values are never silently
   "fixed".
+* Seller concessions whose own words say the credit is not agreed
+  ("not agreed", "asked", "proposed", "not confirmed") are demoted to
+  "confirm" and labeled "Proposed, not agreed."
 * Texas-only fields (option fee/days) are dropped for Colorado deals.
 """
 import re
@@ -38,6 +41,24 @@ PROVIDER = "regex"
 _HEDGE_RE = re.compile(
     r"\b(maybe|perhaps|around|about|approx\.?|approximately|ish|"
     r"not sure|probably|i think|supposedly)\b|\?", re.IGNORECASE)
+
+# A seller credit the parties have not agreed to is a proposal, not a
+# term (Accuracy Pass, 2026-11-11). The markers are checked against the
+# concessions value, its span, and the clause around the span ("Asked
+# 5k seller credit for the roof, not agreed yet" -- the "Asked" sits
+# outside the extracted span but inside its clause).
+_NOT_AGREED_RE = re.compile(
+    r"\b(not\s+agreed|not\s+yet\s+agreed|not\s+confirmed|unconfirmed|"
+    r"proposed|asked)\b", re.IGNORECASE)
+
+
+def _not_agreed(text: str, span: str, value) -> bool:
+    haystacks = [str(value or ""), span or ""]
+    if span:
+        start = text.find(span)
+        if start >= 0:
+            haystacks.append(_clause_around(text, start, start + len(span)))
+    return any(_NOT_AGREED_RE.search(h) for h in haystacks)
 
 _MONEY_STRICT = _notepad.STRICT_SPAN_FIELDS
 _FREE_TEXT = _notepad.FREE_TEXT_FIELDS
@@ -202,9 +223,10 @@ def _find_closing(text: str):
                                      int(m.group(2)))
         if target:
             out["closing_date"] = (target.isoformat(), m.group(0), None)
-            days = (target - datetime.now().date()).days
-            if 7 <= days <= 365:
-                out["close_days"] = (days, m.group(0), None)
+            # close_days is NOT extracted from a stated date: it is a
+            # subtraction (date - today), so it belongs to the sheet's
+            # Calculated layer, derived once the date is Captured
+            # (notepad.refresh_calculated_fields).
             return out
     m = re.search(r"\bclos(?:e|ing)\s+(?:on\s+)?(20\d\d-\d\d-\d\d)\b", text, re.IGNORECASE)
     if m:
@@ -470,6 +492,10 @@ def enhance_note(raw_text: str, state: str = "TX", profile: dict = None) -> dict
                 warnings.append(note)
         elif hedge_src and _HEDGE_RE.search(hedge_src):
             field["note"] = "Your notes hedge this one — confirm the exact value."
+        if key == "seller_concessions" and _not_agreed(raw_text, span, value):
+            # The words say this credit is not agreed: label it as the
+            # proposal it is (wins over the generic hedge note).
+            field["note"] = "Proposed, not agreed."
         fields[key] = field
     return {
         "status": "fallback_regex",
@@ -559,6 +585,12 @@ def validate_proposal(raw_text: str, proposal_fields: dict, state: str = "TX"):
                 warnings.append(
                     f"{_notepad.FIELD_LABELS.get(key, key)} couldn't be "
                     "read as a usable value — confirm it.")
+        if key == "seller_concessions" and _not_agreed(raw_text, span, value):
+            # Producer-agnostic: a credit whose own words say it is not
+            # agreed can never be firmer than Confirm, and is labeled
+            # as the proposal it is.
+            field = _demote(field)
+            field["note"] = "Proposed, not agreed."
         out[key] = field
 
     if state == "CO":
