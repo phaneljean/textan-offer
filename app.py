@@ -271,6 +271,8 @@ _ENGAGEMENT_TYPES = ("js_ok", "upload_picked", "upload_failed_rejected", "upload
                      # 2026-11-10 without being added here; /v1/evt dropped
                      # them until now (found 2026-11-10 by test_tracking).
                      "home_final_cta", "home_final_sample", "home_sample_findings",
+                     # homepage Deal Notepad interactive, 2026-11-11
+                     "home_notepad_run",
                      # Deal Notepad pages, 2026-11-11
                      "notepad_created", "notepad_note_saved", "notepad_enhance_run",
                      "notepad_field_confirmed", "notepad_draft_created") \
@@ -1021,6 +1023,26 @@ __TEXT_DEMO_CSS__
   .ret-fill{height:100%;width:0;background:var(--green);border-radius:999px;transition:width .5s ease}
   .ret-scale{display:flex;justify-content:space-between;margin-top:8px;font-size:13px;color:var(--mute)}
   .ret-box .fine{font-size:13px;color:#5b6b67;margin:16px 0 0}
+  /* ---------- 4a2. notepad: deal notes into a Deal Sheet, interactive ---------- */
+  .np-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:1024px;margin:44px auto 0;text-align:left}
+  .np-card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:24px 26px}
+  .np-card-h{font-size:13px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--green);margin-bottom:14px}
+  .np-notes{width:100%;font:inherit;font-size:16px;line-height:1.55;color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:14px 16px;background:var(--gray);resize:vertical;min-height:196px}
+  .np-notes:focus{outline:none;border-color:var(--green);background:#fff}
+  .np-run{font-family:inherit;cursor:pointer;margin-top:14px}
+  .np-hint{font-size:13px;color:var(--mute);margin-top:12px}
+  .np-row{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:10px 0;border-bottom:1px solid var(--line)}
+  .np-row:last-child{border-bottom:none}
+  .np-k{font-size:14px;font-weight:600;color:var(--mute);flex:none}
+  .np-v{font-size:15.5px;font-weight:600;color:var(--ink);text-align:right;display:flex;align-items:center;justify-content:flex-end;gap:8px}
+  .np-v.miss{color:var(--mute);font-weight:500}
+  .np-chip{flex:none;font-size:10.5px;font-weight:800;letter-spacing:.04em;padding:4px 8px;border-radius:6px}
+  .np-chip.found{background:#e6f2f0;color:var(--green)}
+  .np-chip.confirm{background:#fff4dc;color:var(--amber)}
+  .np-row.in{animation:npfade .35s ease both}
+  @keyframes npfade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion: reduce){ .np-row.in{animation:none} }
+  @media (max-width:734px){ .np-grid{grid-template-columns:1fr} }
   .tiles-3{grid-template-columns:1fr 1fr 1fr}
   .tile.price{min-height:0;padding:44px 30px 40px}
   .tile .big small{font-size:22px;color:var(--mute);font-weight:600}
@@ -1276,6 +1298,41 @@ __SITE_NAV__
   <p class="partner-line">On the Brokerage plan, every executed contract forwarded or uploaded is checked and kept <strong>5 years</strong>, searchable by address. <a href="/guides/broker-record-retention-texas" data-evt="home_retention_guide">The full retention guide</a> &middot; <a href="/archive" data-evt="home_retention_archive">How the archive works</a></p>
 </section>
 
+<!-- 4a2. NOTEPAD: deal notes into a Deal Sheet, interactive (2026-11-11).
+     State-agnostic on purpose: the notepad works for Texas and Colorado
+     deals alike. The parse runs in the page (NOTEPAD_JS) on the visitor's
+     own edited note: honest regex extraction, nothing invented; hedged
+     terms land as Confirm, absent terms read "Not in your notes". -->
+<section class="notepad">
+  <div class="eyebrow">New: Deal Notepad</div>
+  <h2>Your deal notes,<br>turned into a Deal Sheet.</h2>
+  <p class="sub">Messy call notes in, a structured deal sheet out. Every uncertain term is flagged Confirm instead of guessed, and anything you didn&rsquo;t write down stays blank.</p>
+  <div class="np-grid">
+    <div class="np-card">
+      <div class="np-card-h">Scratch notes</div>
+      <textarea class="np-notes" id="npNotes" rows="9" aria-label="Your deal notes">Elm Creek Dr house, Austin. Buyers John &amp; Jane Doe. Sellers fine with Dec 18 close. $685k. Earnest maybe 7k?? 10 days option, $350 fee. Conventional, 20% down. Fridge + washer stay. Asked 5k seller credit for the roof, not agreed yet. Old survey from 2019. HOA docs still pending.</textarea>
+      <button type="button" class="btn solid np-run" id="npRun">Clean it up</button>
+      <p class="np-hint">Edit the note and run it again. Nothing you type leaves this page.</p>
+    </div>
+    <div class="np-card">
+      <div class="np-card-h">Deal Sheet</div>
+      <div class="np-rows" id="npRows">
+        <div class="np-row" data-np-row="property"><span class="np-k">Property</span><span class="np-v miss">Run Clean it up</span></div>
+        <div class="np-row" data-np-row="buyers"><span class="np-k">Buyers</span><span class="np-v miss">Run Clean it up</span></div>
+        <div class="np-row" data-np-row="price"><span class="np-k">Price</span><span class="np-v miss">Run Clean it up</span></div>
+        <div class="np-row" data-np-row="earnest"><span class="np-k">Earnest money</span><span class="np-v miss">Run Clean it up</span></div>
+        <div class="np-row" data-np-row="option"><span class="np-k">Option period</span><span class="np-v miss">Run Clean it up</span></div>
+        <div class="np-row" data-np-row="closing"><span class="np-k">Closing date</span><span class="np-v miss">Run Clean it up</span></div>
+        <div class="np-row" data-np-row="financing"><span class="np-k">Financing</span><span class="np-v miss">Run Clean it up</span></div>
+        <div class="np-row" data-np-row="credit"><span class="np-k">Seller credit</span><span class="np-v miss">Run Clean it up</span></div>
+        <div class="np-row" data-np-row="inclusions"><span class="np-k">Inclusions</span><span class="np-v miss">Run Clean it up</span></div>
+        <div class="np-row" data-np-row="survey"><span class="np-k">Survey</span><span class="np-v miss">Run Clean it up</span></div>
+      </div>
+    </div>
+  </div>
+  <p class="partner-line">In the product, the notepad lives in your dashboard on the Agent plan. Your notes are saved so the deal stays in one place. Contract files are still checked, then deleted. <a href="#pricing">See the plans</a></p>
+</section>
+
 <!-- 4b. PRICING: the three plans from /pricing, one line each (2026-11-03). -->
 <section class="pricing-strip">
   <div class="eyebrow">Pricing</div>
@@ -1353,6 +1410,7 @@ __TEXT_DEMO_JS__
 __STATE_SWITCH_JS__
 __HOME_SAMPLE_JS__
 __RETENTION_JS__
+__NOTEPAD_JS__
 <script>
 (function(){
   var form = document.getElementById('homeCaptureForm');
@@ -1388,6 +1446,7 @@ __RETENTION_JS__
                 .replace("__TEXT_DEMO_JS__", text_demo.JS)
                 .replace("__HOME_SAMPLE_JS__", HOME_SAMPLE_JS)
                 .replace("__RETENTION_JS__", RETENTION_JS)
+                .replace("__NOTEPAD_JS__", NOTEPAD_JS)
                 .replace("__HOME_FINDINGS_TX__", _home_findings("tx"))
                 .replace("__HOME_FINDINGS_CO__", _home_findings("co"))
                 .replace("__STATE_SWITCH_JS__", STATE_SWITCH_JS))
@@ -1503,6 +1562,203 @@ RETENTION_JS = """<script>
     });
   });
   update();
+})();
+</script>
+"""
+
+# --- Homepage Deal Notepad interactive (2026-11-11) ----------------------
+# A miniature of the product's Deal Notepad: the visitor's own scratch
+# notes (an editable textarea prefilled with a fictional sample) are
+# parsed in the page by small honest regexes into a Deal Sheet. A term is
+# Found only when the note states it plainly, Confirm when the note hedges
+# it ("maybe", "??", "not agreed"), and "Not in your notes" when absent.
+# Nothing is invented and nothing leaves the page. The pricing section
+# carries no id in the markup, so the script lends it one for the
+# section's "See the plans" anchor.
+NOTEPAD_JS = """<script>
+(function(){
+  var ta = document.getElementById('npNotes');
+  var btn = document.getElementById('npRun');
+  var rowsEl = document.getElementById('npRows');
+  if(!ta || !btn || !rowsEl) return;
+  var ps = document.querySelector('.pricing-strip');
+  if(ps && !ps.id) ps.id = 'pricing';
+  var fired = false;
+  var MONTHS = {jan:'Jan', feb:'Feb', mar:'Mar', apr:'Apr', may:'May', jun:'Jun',
+                jul:'Jul', aug:'Aug', sep:'Sep', oct:'Oct', nov:'Nov', dec:'Dec'};
+  function amt(num, k){
+    var v = parseFloat(String(num).replace(/,/g, ''));
+    if(isNaN(v)) return null;
+    if(k) v = v * 1000;
+    return Math.round(v);
+  }
+  function money(v){ return '$' + v.toLocaleString('en-US'); }
+  function clauseBounds(t, i){
+    var s = Math.max(t.lastIndexOf('.', i - 1), t.lastIndexOf(';', i - 1), t.lastIndexOf('\\n', i - 1)) + 1;
+    var e = t.length, e1 = t.indexOf('.', i), e2 = t.indexOf(';', i);
+    if(e1 >= 0) e = Math.min(e, e1);
+    if(e2 >= 0) e = Math.min(e, e2);
+    return [s, e];
+  }
+  function hedgeIn(t, s, e){
+    return /maybe|not agreed|not sure|unsure|\\?/i.test(t.slice(Math.max(0, s), e));
+  }
+  function moneyCandidates(t){
+    var out = [], m, re = /\\$\\s?(\\d[\\d,]*(?:\\.\\d+)?)(k)?|(\\d[\\d,]*(?:\\.\\d+)?)k\\b/gi;
+    while((m = re.exec(t)) !== null){
+      var v = (m[1] !== undefined) ? amt(m[1], m[2]) : amt(m[3], true);
+      if(v !== null) out.push({v: v, i: m.index, e: m.index + m[0].length});
+      if(re.lastIndex === m.index) re.lastIndex++;
+    }
+    return out;
+  }
+  function findPrice(t){
+    var cands = moneyCandidates(t), j, c;
+    for(j = 0; j < cands.length; j++){
+      c = cands[j];
+      var before = t.slice(Math.max(0, c.i - 30), c.i);
+      var after = t.slice(c.e, c.e + 40).split(/[.;\\n]/)[0];
+      if(/earnest|option|credit|fee/i.test(before)) continue;
+      if(/earnest|option|credit|fee/i.test(after)) continue;
+      var b = clauseBounds(t, c.i);
+      var s = hedgeIn(t, Math.max(b[0], c.i - 12), c.e + 6) ? 'confirm' : 'found';
+      return {v: money(c.v), s: s};
+    }
+    return null;
+  }
+  function findProperty(t){
+    var m = t.match(/^\\s*((?:\\d+\\s+)?[A-Za-z][\\w'&-]*(?:\\s+[\\w'&-]+){0,4}?\\s(?:Dr|Drive|St|Street|Ave|Avenue|Blvd|Ln|Lane|Rd|Road|Ct|Court|Way|Cir|Circle|Trl|Trail|Hwy|Pl|Place)\\b)/);
+    if(!m) return null;
+    var street = m[1].replace(/\\s+/g, ' ').trim();
+    var end = t.indexOf('.', m.index + m[0].length);
+    var first = t.slice(0, end >= 0 ? end : t.length);
+    var rest = first.slice(m.index + m[0].length);
+    var cm = rest.match(/,\\s*([A-Za-z][A-Za-z ]*?)(?=,|\\.|$)/);
+    var v = street;
+    if(cm) v += ', ' + cm[1].trim();
+    return {v: v, s: 'found'};
+  }
+  function findBuyers(t){
+    var m = t.match(/buyers?\\s*[:\\-]?\\s*([^.;\\n]+)/i);
+    if(!m) return null;
+    var v = m[1].trim().replace(/\\s+/g, ' ');
+    if(!v) return null;
+    return {v: v.charAt(0).toUpperCase() + v.slice(1), s: 'found'};
+  }
+  function findEarnest(t){
+    var m = t.match(/earnest[\\s\\S]{0,40}?\\$?\\s?(\\d[\\d,]*(?:\\.\\d+)?)\\s?(k)?\\b/i)
+         || t.match(/(\\d[\\d,]*(?:\\.\\d+)?)\\s?(k)?\\s+earnest/i);
+    if(!m) return null;
+    var v = amt(m[1], m[2]);
+    if(v === null || (v < 100 && !m[2])) return null;
+    var b = clauseBounds(t, m.index);
+    var s = hedgeIn(t, m.index, Math.min(b[1], m.index + m[0].length + 4)) ? 'confirm' : 'found';
+    return {v: money(v), s: s};
+  }
+  function findOption(t){
+    var dm = t.match(/(\\d+)\\s*-?\\s*days?\\s*(?:option|inspection)/i)
+          || t.match(/option(?:\\s*period)?[^.;]{0,25}?(\\d+)\\s*days?/i);
+    var fm = t.match(/\\$\\s?(\\d[\\d,]*)\\s*fee/i)
+          || t.match(/option[^.;]{0,40}?\\$(\\d[\\d,]*)/i);
+    if(!dm && !fm) return null;
+    var parts = [];
+    if(dm) parts.push(dm[1] + ' days');
+    if(fm) parts.push(money(amt(fm[1], null)) + ' fee');
+    var first = dm || fm;
+    var last = fm || dm;
+    var s = hedgeIn(t, first.index, last.index + last[0].length) ? 'confirm' : 'found';
+    return {v: parts.join(', '), s: s};
+  }
+  function findClosing(t){
+    var re = /(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\\.?\\s+(\\d{1,2})(?:st|nd|rd|th)?\\b/gi;
+    var m, all = [];
+    while((m = re.exec(t)) !== null){ all.push(m); if(re.lastIndex === m.index) re.lastIndex++; }
+    if(!all.length) return null;
+    var pick = null, j, b;
+    for(j = 0; j < all.length; j++){
+      b = clauseBounds(t, all[j].index);
+      if(/clos/i.test(t.slice(b[0], b[1]))){ pick = all[j]; break; }
+    }
+    if(!pick && all.length === 1) pick = all[0];
+    if(!pick) return null;
+    b = clauseBounds(t, pick.index);
+    var s = hedgeIn(t, Math.max(b[0], pick.index - 30), Math.min(b[1], pick.index + pick[0].length + 20)) ? 'confirm' : 'found';
+    return {v: MONTHS[pick[1].toLowerCase().slice(0, 3)] + ' ' + parseInt(pick[2], 10), s: s};
+  }
+  function findFinancing(t){
+    var m = t.match(/\\b(conventional|fha|va|cash)\\b/i);
+    if(!m) return null;
+    var type = m[1].toLowerCase();
+    type = type === 'fha' ? 'FHA' : type === 'va' ? 'VA' : type.charAt(0).toUpperCase() + type.slice(1);
+    var d = t.match(/(\\d+(?:\\.\\d+)?)\\s*%\\s*down/i);
+    return {v: type + (d ? ', ' + d[1] + '% down' : ''), s: 'found'};
+  }
+  function findCredit(t){
+    var m = t.match(/\\$?\\s?(\\d[\\d,]*(?:\\.\\d+)?)\\s?(k)?\\s*(?:seller\\s+)?credit\\b/i)
+         || t.match(/credit[^.;]{0,25}?\\$(\\d[\\d,]*)/i);
+    if(!m) return null;
+    var v = amt(m[1], m[2]);
+    if(v === null) return null;
+    var b = clauseBounds(t, m.index);
+    var seg = t.slice(Math.max(b[0], m.index - 15), b[1]);
+    var s = /not agreed|not yet agreed|maybe|asked|request|\\?/i.test(seg) ? 'confirm' : 'found';
+    return {v: money(v), s: s};
+  }
+  function findInclusions(t){
+    var m = t.match(/([^.;\\n]+?)\\s+stays?\\b/i) || t.match(/includes?\\s*:?\\s*([^.;\\n]+)/i);
+    if(!m) return null;
+    var v = m[1].trim().replace(/\\s+/g, ' ').replace(/^(and|the)\\s+/i, '');
+    if(!v) return null;
+    return {v: v.charAt(0).toUpperCase() + v.slice(1), s: 'found'};
+  }
+  function findSurvey(t){
+    var m = t.match(/survey[^.;\\n]{0,30}?(\\d{4})\\b/i) || t.match(/(\\d{4})\\b[^.;\\n]{0,25}?survey/i);
+    if(!m) return null;
+    return {v: m[1], s: 'found'};
+  }
+  function parse(t){
+    return {
+      property: findProperty(t),
+      buyers: findBuyers(t),
+      price: findPrice(t),
+      earnest: findEarnest(t),
+      option: findOption(t),
+      closing: findClosing(t),
+      financing: findFinancing(t),
+      credit: findCredit(t),
+      inclusions: findInclusions(t),
+      survey: findSurvey(t)
+    };
+  }
+  var FIELDS = ['property', 'buyers', 'price', 'earnest', 'option', 'closing', 'financing', 'credit', 'inclusions', 'survey'];
+  function render(res){
+    FIELDS.forEach(function(key, i){
+      var row = rowsEl.querySelector('[data-np-row="' + key + '"]');
+      if(!row) return;
+      var v = row.querySelector('.np-v');
+      var f = res[key];
+      v.className = 'np-v';
+      v.textContent = '';
+      if(!f){
+        v.textContent = 'Not in your notes';
+        v.classList.add('miss');
+      } else {
+        v.appendChild(document.createTextNode(f.v));
+        var chip = document.createElement('span');
+        chip.className = 'np-chip ' + f.s;
+        chip.textContent = f.s === 'confirm' ? 'Confirm' : 'Found';
+        v.appendChild(chip);
+      }
+      row.classList.remove('in');
+      void row.offsetWidth;
+      row.style.animationDelay = (i * 60) + 'ms';
+      row.classList.add('in');
+    });
+  }
+  btn.addEventListener('click', function(){
+    render(parse(ta.value));
+    if(!fired){ fired = true; if(window.taEvt) window.taEvt('home_notepad_run'); }
+  });
 })();
 </script>
 """
