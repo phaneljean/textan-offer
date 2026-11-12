@@ -273,6 +273,8 @@ _ENGAGEMENT_TYPES = ("js_ok", "upload_picked", "upload_failed_rejected", "upload
                      "home_final_cta", "home_final_sample", "home_sample_findings",
                      # homepage Deal Notepad interactive, 2026-11-11
                      "home_notepad_run",
+                     # PWA install tracking, 2026-11-11 (see PWA_JS)
+                     "pwa_install_accepted", "pwa_installed", "pwa_standalone_launch",
                      # Deal Notepad pages, 2026-11-11
                      "notepad_created", "notepad_note_saved", "notepad_enhance_run",
                      "notepad_field_confirmed", "notepad_draft_created") \
@@ -376,6 +378,13 @@ def track_page_view(resp, page: str):
     })
 
 
+# The three PWA install event types (also registered in
+# _ENGAGEMENT_TYPES above). /v1/evt accepts them from public pages via
+# the stock path, and from the signed dashboard/notepad pages via the
+# signature-verified block inside engagement_event().
+_PWA_EVENT_TYPES = ("pwa_install_accepted", "pwa_installed", "pwa_standalone_launch")
+
+
 @app.route("/v1/evt", methods=["POST"])
 def engagement_event():
     """Beacon target for _ENGAGEMENT_JS. Fixed whitelist of event types and
@@ -392,6 +401,25 @@ def engagement_event():
             "type": etype, "page": page, "visitor": visitor,
             "device": "mobile" if _is_mobile_request() else "desktop",
         })
+    # PWA install events from the signed pages (dashboard / notepad),
+    # 2026-11-11. Those pages never carried the stock beacon above (no
+    # data-page, no ta_vid) and the stock path records phone=None -- but
+    # Baptiste needs to know WHO installed. The PWA snippet's taEvt sends
+    # the page's own signed-link trio along; the phone recorded here is
+    # derived from that trio only after verify_dashboard_signature()
+    # passes, exactly the check /dashboard and /notepad themselves run.
+    # A raw phone field on its own is never trusted. Previously these
+    # types/pages fell through unrecorded, so nothing above changes.
+    if (ua and not _BOT_UA_RE.search(ua) and etype in _PWA_EVENT_TYPES
+            and page in ("dashboard", "notepad")):
+        pwa_phone = request.form.get("phone", "")
+        if verify_dashboard_signature(pwa_phone, request.form.get("expires", ""),
+                                      request.form.get("sig", "")):
+            track_event("page_engagement", pwa_phone, {
+                "type": etype, "page": page,
+                "visitor": visitor if re.fullmatch(r"[0-9a-f]{32}", visitor) else "",
+                "device": "mobile" if _is_mobile_request() else "desktop",
+            })
     return "", 204
 
 
@@ -797,6 +825,9 @@ def index():
   ]}
   </script>
   <link rel="icon" href="/static/favicon.ico?v=2" type="image/x-icon">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#0b5d52">
+  <link rel="apple-touch-icon" href="/static/pwa/apple-touch-icon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
@@ -1411,6 +1442,7 @@ __STATE_SWITCH_JS__
 __HOME_SAMPLE_JS__
 __RETENTION_JS__
 __NOTEPAD_JS__
+__PWA_JS__
 <script>
 (function(){
   var form = document.getElementById('homeCaptureForm');
@@ -1447,6 +1479,7 @@ __NOTEPAD_JS__
                 .replace("__HOME_SAMPLE_JS__", HOME_SAMPLE_JS)
                 .replace("__RETENTION_JS__", RETENTION_JS)
                 .replace("__NOTEPAD_JS__", NOTEPAD_JS)
+                .replace("__PWA_JS__", PWA_JS)
                 .replace("__HOME_FINDINGS_TX__", _home_findings("tx"))
                 .replace("__HOME_FINDINGS_CO__", _home_findings("co"))
                 .replace("__STATE_SWITCH_JS__", STATE_SWITCH_JS))
@@ -6792,6 +6825,11 @@ def analytics_dashboard():
     landing_30 = get_landing_visits_by_source(days=30)
     _landing_24 = {r["source"]: r["count"] for r in get_landing_visits_by_source(days=1)}
     landing_rows = "".join(f"<tr><td>{escape(v['source'])}</td><td>{v['count']}</td><td>{_landing_24.get(v['source'], 0)}</td></tr>" for v in landing_30)
+    from analytics import get_recent_pwa_events
+    pwa_install_rows = "".join(
+        f"<tr><td>{_short(r['created_at'])}</td><td>{escape(r['phone'] or '(public page)')}</td>"
+        f"<td>{escape(r['type'])}</td><td>{escape(r['page'])}</td><td>{escape(r['device'])}</td></tr>"
+        for r in get_recent_pwa_events(limit=50))
 
     def _fold(title, body):
         return f"<details class='fold'><summary>{title}</summary>{body}</details>"
@@ -6819,6 +6857,12 @@ def analytics_dashboard():
         _fold("Landing Visits by src (30 days, raw clicks)",
               _table(["Source", "30 days", "Last 24h"], landing_rows, "No tagged visits yet.")
               + "<p class='note'>Raw ?src= link opens, scanners included. The channel table above is the people count.</p>"),
+        _fold("App installs",
+              _table(["Time (UTC)", "Phone", "Event", "Page", "Device"], pwa_install_rows, "No app installs yet.")
+              + "<p class='note'>pwa_install_accepted = accepted the Android install prompt; pwa_installed = the browser "
+                "confirmed the install; pwa_standalone_launch = the installed app was opened (the only signal iOS gives). "
+                "Phone is attached when the event came from a signed dashboard/notepad link; &ldquo;(public page)&rdquo; "
+                "means a standalone launch from the homepage, where no phone exists.</p>"),
     ])
 
     h = headline
@@ -12721,11 +12765,14 @@ def _np_page(title, body):
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{escape(title)} — TxtAnOffer</title>
 <link rel="icon" href="/static/favicon.ico?v=2" type="image/x-icon">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#0b5d52">
+<link rel="apple-touch-icon" href="/static/pwa/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <style>{_NOTEPAD_CSS}</style></head>
-<body><div class="container">{body}</div></body></html>"""
+<body><div class="container">{body}</div>{PWA_JS}</body></html>"""
 
 
 def _np_rate_limited(phone):
@@ -12796,6 +12843,7 @@ def notepad_list():
       <div><h1>Deal Notepad</h1><p class="sub">Your transaction command center — notes in, Deal Sheet out.</p></div>
       <a href="{dash_url}">&larr; Dashboard</a>
     </div>
+    {PWA_INSTALL_HTML}
     {cards}
     {action_block}"""
     return _np_page("Deal Notepad", body)
@@ -13369,6 +13417,9 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dashboard — TxtAnOffer</title>
 <link rel="icon" href="/static/favicon.ico?v=2" type="image/x-icon">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#0b5d52">
+<link rel="apple-touch-icon" href="/static/pwa/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
@@ -13623,6 +13674,7 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
 <div class="container">
   <div class="greeting">Welcome back{', ' + agent.get('name').split()[0] if agent.get('name') else ''}</div>
   <span class="sub-badge">{sub_status}</span>
+  {PWA_INSTALL_HTML}
 
   <div class="stats">
     <div class="stat"><div class="stat-val">{user['offer_count']}</div><div class="stat-label">Total offers</div></div>
@@ -13655,6 +13707,7 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
   <a href="{profile_url}" class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg>Profile</a>
   <a href="/pricing" class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>{'Billing' if user['is_subscribed'] else 'Upgrade'}</a>
 </nav>
+{PWA_JS}
 </body>
 </html>"""
 
@@ -13831,6 +13884,173 @@ def robots_txt():
         "Sitemap: https://txtanoffer.com/sitemap.xml\n"
     )
     return Response(body, mimetype="text/plain")
+
+
+# ---------------------------------------------------------------------------
+# PWA: installable web app (2026-11-11). Deliberately minimal -- a manifest,
+# four icons under static/pwa/, a service worker that exists ONLY so
+# browsers offer the install prompt (it is not an offline cache), one
+# shared JS snippet (PWA_JS) wired into the homepage + dashboard + notepad
+# heads/bodies, and the "Install the app" block (PWA_INSTALL_HTML) on the
+# dashboard and notepad list pages. Install events report through
+# window.taEvt; see the signed-page block in engagement_event() for how
+# the phone is attached.
+# ---------------------------------------------------------------------------
+
+PWA_INSTALL_HTML = """<div id="txoInstall" style="display:none;margin:0 0 1rem;">
+  <button type="button" id="txoInstallBtn" style="background:#0b5d52;color:#fff;border:0;border-radius:999px;padding:0.55rem 1.15rem;font-size:0.85rem;font-weight:600;cursor:pointer;">Install the app</button>
+  <span id="txoInstallHint" style="display:none;font-size:0.85rem;color:#5a6b7a;">To install: Share \u2192 Add to Home Screen</span>
+</div>"""
+
+PWA_JS = """<script>
+(function(){
+  function lsGet(k){ try{ return window.localStorage.getItem(k); }catch(e){ return null; } }
+  function lsSet(k,v){ try{ window.localStorage.setItem(k,v); }catch(e){} }
+  function ssGet(k){ try{ return window.sessionStorage.getItem(k); }catch(e){ return null; } }
+  function ssSet(k,v){ try{ window.sessionStorage.setItem(k,v); }catch(e){} }
+  var path = window.location.pathname || '';
+  var signedPage = (path === '/dashboard') ? 'dashboard' : (path.indexOf('/notepad') === 0 ? 'notepad' : '');
+  if(signedPage && !window.taEvt){
+    // The dashboard/notepad pages never carried the stock _ENGAGEMENT_JS
+    // beacon. Define a compatible taEvt: same /v1/evt endpoint and form
+    // shape, same once-per-type-per-page dedupe, plus this page's own
+    // signed-link trio (phone/expires/sig) from its URL. /v1/evt verifies
+    // the signature server-side and only then attaches the phone.
+    var sent = {};
+    window.taEvt = function(t){
+      if(sent[t]) return; sent[t] = true;
+      try{
+        var q = new URLSearchParams(window.location.search);
+        var f = new FormData();
+        f.append('type', t); f.append('page', signedPage);
+        f.append('phone', q.get('phone') || ''); f.append('expires', q.get('expires') || ''); f.append('sig', q.get('sig') || '');
+        if(!(navigator.sendBeacon && navigator.sendBeacon('/v1/evt', f))) fetch('/v1/evt', {method:'POST', body:f, keepalive:true});
+      }catch(e){}
+    };
+  }
+  if('serviceWorker' in navigator){
+    window.addEventListener('load', function(){ try{ navigator.serviceWorker.register('/sw.js'); }catch(e){} });
+  }
+  function isStandalone(){
+    return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
+  }
+  window.addEventListener('load', function(){
+    // Launched from the home screen. On iOS this is the ONLY install
+    // signal there is (no beforeinstallprompt, no appinstalled), so it
+    // doubles as the iOS install detector. Once per browser session.
+    if(isStandalone() && !ssGet('txo_pwa_standalone_sent')){ ssSet('txo_pwa_standalone_sent','1'); if(window.taEvt) window.taEvt('pwa_standalone_launch'); }
+  });
+  var deferred = null;
+  function wrap(){ return document.getElementById('txoInstall'); }
+  function showWrap(){ var w = wrap(); if(w) w.style.display = ''; }
+  function hideWrap(){ var w = wrap(); if(w) w.style.display = 'none'; }
+  window.addEventListener('beforeinstallprompt', function(e){
+    e.preventDefault(); deferred = e;
+    if(!isStandalone() && !lsGet('txo_pwa_dismissed')) showWrap();
+  });
+  window.addEventListener('appinstalled', function(){
+    deferred = null; hideWrap(); if(window.taEvt) window.taEvt('pwa_installed');
+  });
+  document.addEventListener('DOMContentLoaded', function(){
+    var btn = document.getElementById('txoInstallBtn');
+    if(!btn) return;
+    if(isStandalone()){ hideWrap(); return; }
+    if(deferred && !lsGet('txo_pwa_dismissed')) showWrap();
+    var ua = window.navigator.userAgent || '';
+    var isIOS = /iphone|ipad|ipod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    if(isIOS){
+      // iOS Safari never fires beforeinstallprompt: the hint is the UI.
+      var hint = document.getElementById('txoInstallHint');
+      if(hint && !lsGet('txo_pwa_dismissed')){ hint.style.display = ''; btn.style.display = 'none'; showWrap(); }
+    }
+    btn.addEventListener('click', function(){
+      if(!deferred){ hideWrap(); return; }
+      var d = deferred; deferred = null;
+      d.prompt();
+      d.userChoice.then(function(choice){
+        if(choice && choice.outcome === 'accepted' && window.taEvt) window.taEvt('pwa_install_accepted');
+        lsSet('txo_pwa_dismissed','1'); hideWrap();
+      });
+    });
+  });
+})();
+</script>"""
+
+# Installability only -- NOT an offline cache. The fetch handler is
+# network-only for everything except the precached icon/manifest assets.
+# PWA_GUARD: never cache a URL with a query string -- signed dashboard /
+# notepad links carry phone/expires/sig, and caching one would be a
+# security bug. HTML pages, POSTs and cross-origin requests are never
+# intercepted either.
+PWA_SW_JS = """// TxtAnOffer service worker -- installability only, NOT offline mode.
+// Pages always come from the network. Only the PWA icons and the
+// manifest are precached. PWA_GUARD: never cache a URL with a query
+// string (signed links carry phone/expires/sig -- caching them would
+// be a security bug), never intercept POSTs or cross-origin requests.
+var CACHE = 'txo-pwa-v1';
+var PRECACHE = [
+  '/static/pwa/icon-192.png',
+  '/static/pwa/icon-512.png',
+  '/static/pwa/icon-maskable-512.png',
+  '/static/pwa/apple-touch-icon.png',
+  '/manifest.json'
+];
+self.addEventListener('install', function(event){
+  event.waitUntil(
+    caches.open(CACHE).then(function(cache){ return cache.addAll(PRECACHE); })
+      .then(function(){ return self.skipWaiting(); })
+  );
+});
+self.addEventListener('activate', function(event){
+  event.waitUntil(
+    caches.keys().then(function(keys){
+      return Promise.all(keys.map(function(k){ return k === CACHE ? null : caches.delete(k); }));
+    }).then(function(){ return self.clients.claim(); })
+  );
+});
+self.addEventListener('fetch', function(event){
+  var req = event.request;
+  if(req.method !== 'GET') return;
+  var url = new URL(req.url);
+  if(url.origin !== self.location.origin) return;
+  if(url.search) return;
+  if(PRECACHE.indexOf(url.pathname) !== -1){
+    event.respondWith(caches.match(req).then(function(hit){ return hit || fetch(req); }));
+  }
+});
+"""
+
+
+@app.route("/manifest.json")
+@app.route("/manifest.webmanifest")
+def pwa_manifest():
+    import json
+    manifest = {
+        "name": "TxtAnOffer",
+        "short_name": "TxtAnOffer",
+        "description": "Catch it before title does. TC Check, text-an-offer drafts, and your Deal Notepad.",
+        "start_url": "/",
+        "scope": "/",
+        "display": "standalone",
+        "orientation": "portrait",
+        "background_color": "#f5f5f7",
+        "theme_color": "#0b5d52",
+        "icons": [
+            {"src": "/static/pwa/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+            {"src": "/static/pwa/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+            {"src": "/static/pwa/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"},
+        ],
+    }
+    return Response(json.dumps(manifest), mimetype="application/manifest+json")
+
+
+@app.route("/sw.js")
+def pwa_service_worker():
+    # Served from the root so its scope is the whole origin; the header
+    # makes that explicit.
+    resp = Response(PWA_SW_JS, mimetype="application/javascript")
+    resp.headers["Service-Worker-Allowed"] = "/"
+    return resp
 
 
 @app.route("/dashboard/deadlines.ics")
