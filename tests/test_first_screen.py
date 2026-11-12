@@ -148,10 +148,15 @@ class HomepageFirstScreen(unittest.TestCase):
     def test_copy_and_hooks(self):
         self.assertNotIn("__FS_", self.html)
         self.assertNotIn("__HOME_", self.html)
-        for hook in ('href="/tc-check" data-evt="hero_cta"', 'href="/tc-check?demo=1" data-evt="hero_sample"',
+        for hook in ('href="#notepad" data-evt="hero_notepad_cta"',
+                     'href="/tc-check" data-evt="hero_cta"', 'href="/tc-check?demo=1" data-evt="hero_sample"',
                      'href="/tc-check?state=co" data-evt="hero_cta"', 'href="/tc-check?demo=1&amp;state=co" data-evt="hero_sample"',
                      'id="heroReportCard"', 'href="/tc-check#what-it-checks" data-evt="home_check_link"'):
             self.assertIn(hook, self.html)
+        self.assertIn("hero_notepad_cta", app_module._ENGAGEMENT_TYPES)
+        # The notepad CTA is the solid primary in both hero CTA rows; the
+        # check CTA is the secondary now (2026-11-11).
+        self.assertEqual(self.html.count('<a class="btn solid" href="#notepad" data-evt="hero_notepad_cta">Try the Deal Notepad</a>'), 2)
         for evt in ("hero_cta", "home_check_link"):
             self.assertIn(evt, app_module.CHECK_CTA_EVENTS)
         self.assertIn("hero_sample", app_module.SAMPLE_CTA_EVENTS)
@@ -229,3 +234,26 @@ class PricingFormsTest(unittest.TestCase):
             num = c.split()[-1]
             self.assertIn({"CBS1": "CBS1 Residential", "Land": "Land"}.get(num, num), card, c)
         self.assertNotIn("any TREC 20-19", html)
+
+    def test_pricing_names_the_notepad_in_agent(self):
+        # The Notepad is an Agent-plan feature (Baptiste's 2026-11-11 tier
+        # call); /pricing must say so, in this order, above the draft lines,
+        # and Brokerage must read as Agent + the team layer.
+        html = _get("/pricing")
+        start = html.find('id="individual"')
+        card = html[start:html.find('</ul>', start)]
+        lines = ("Deal Notepad: notes become a Deal Sheet", "Saved transaction notes",
+                 "Action items and reminders from your deal dates", "First 3 offers free")
+        pos = [card.find(line) for line in lines]
+        self.assertTrue(all(p >= 0 for p in pos), lines)
+        self.assertEqual(pos, sorted(pos))
+        bstart = html.find('id="brokerage"')
+        bcard = html[bstart:html.find('</ul>', bstart)]
+        for line in ("Everything in Agent, plus:", "Team workspace for your roster",
+                     "kept 5 years, searchable by address"):
+            self.assertIn(line, bcard)
+
+    def test_homepage_pricing_card_names_the_notepad(self):
+        html = _get("/")
+        self.assertIn("Deal Notepad and Deal Sheet, saved notes, action items and reminders, "
+                      "plus draft offers by text. First 3 offers free.", html)
