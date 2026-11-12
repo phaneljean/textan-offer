@@ -432,6 +432,41 @@ def get_revenue_metrics() -> dict:
         "arr": arr,
     }
 
+PWA_EVENT_TYPES = ("pwa_install_accepted", "pwa_installed", "pwa_standalone_launch")
+
+
+def get_recent_pwa_events(limit: int = 50) -> list:
+    """Recent PWA install events (2026-11-11) for the /analytics "App
+    installs" list: who installed the app, which signal fired, and when.
+    The events ride the page_engagement rows (metadata.type carries the
+    signal); phone is the events-table phone, set only when the beacon
+    came from a signature-verified dashboard/notepad link -- public-page
+    standalone launches have phone=None."""
+    import json
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        raw = conn.execute("""
+            SELECT phone, metadata, created_at FROM events
+            WHERE event_type = 'page_engagement'
+            ORDER BY created_at DESC LIMIT 1000
+        """).fetchall()
+    finally:
+        conn.close()
+    out = []
+    for phone, metadata, created_at in raw:
+        try:
+            m = json.loads(metadata) if metadata else {}
+        except ValueError:
+            m = {}
+        if m.get("type") in PWA_EVENT_TYPES:
+            out.append({"phone": phone, "type": m.get("type"),
+                        "page": m.get("page") or "", "device": m.get("device") or "",
+                        "created_at": created_at})
+            if len(out) >= limit:
+                break
+    return out
+
+
 def get_recent_sms(limit: int = 50) -> list:
     """Get recent SMS activity"""
     conn = sqlite3.connect(DB_PATH)
