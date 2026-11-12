@@ -279,7 +279,9 @@ _ENGAGEMENT_TYPES = ("js_ok", "upload_picked", "upload_failed_rejected", "upload
                      "notepad_created", "notepad_note_saved", "notepad_enhance_run",
                      "notepad_field_confirmed", "notepad_draft_created",
                      # /about company block -> TC Check, 2026-11-11
-                     "about_check_cta") \
+                     "about_check_cta",
+                     # homepage desk block desktop downloads, 2026-11-11
+                     "desk_download_windows", "desk_download_mac") \
     + CHECK_CTA_EVENTS + SAMPLE_CTA_EVENTS + BOOK_CALL_EVENTS + (DROPZONE_INTERACT_EVENT,)
 # Pages whose beacons /v1/evt accepts: the ones with their own
 # track_page_view() call, plus _BEACON_ONLY_PAGES below.
@@ -1115,6 +1117,9 @@ __TEXT_DEMO_CSS__
   .np-desk-line{font-size:15.5px;line-height:1.55;color:#3d4a47;margin:0;max-width:640px}
   .np-install{margin-top:18px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
   .np-install-hint{font-size:14px;color:var(--mute)}
+  .np-downloads{margin-top:18px;display:flex;gap:12px;flex-wrap:wrap}
+  .np-orlabel{font-size:13.5px;color:var(--mute);margin:22px 0 0}
+  .np-desk .np-install{margin-top:10px}
   .np-desk-fine{font-size:13px;color:var(--mute);margin:16px 0 0}
   .tiles-3{grid-template-columns:1fr 1fr 1fr}
   .tile.price{min-height:0;padding:44px 30px 40px}
@@ -1301,18 +1306,23 @@ __SITE_NAV__
           </div>
         </div>
       </div>
-      <!-- Desk block: the notepad as its own app. The Install
-           button is the PWA flow (PWA_JS drives #txoInstall by id,
-           as on the dashboard); the Windows/Mac installers are
-           still in packaging, so no download buttons yet. -->
+      <!-- Desk block: the notepad as its own app. Real desktop
+           downloads (GitHub release v0.1.0) come first; below them,
+           the web-app Install button (the PWA flow — PWA_JS drives
+           #txoInstall by id, as on the dashboard). -->
       <div class="np-desk">
         <h3>Take the notepad to your desk.</h3>
         <p class="np-desk-line">The Notepad as its own app on your computer: parked beside your other tools, one hotkey away, ready when a call comes in.</p>
+        <div class="np-downloads">
+          <a class="btn solid" href="https://github.com/phaneljean/txtanoffer-notepad/releases/download/v0.1.0/TxtAnOffer.Notepad_0.1.0_x64-setup.exe" data-evt="desk_download_windows">Download for Windows</a>
+          <a class="btn ghost" href="https://github.com/phaneljean/txtanoffer-notepad/releases/download/v0.1.0/TxtAnOffer.Notepad_0.1.0_aarch64.dmg" data-evt="desk_download_mac">Download for Mac</a>
+        </div>
+        <p class="np-desk-fine">Free to download. Mac version is for Apple Silicon Macs. First install shows a standard security prompt while the app is new. Linux and all versions: <a href="https://github.com/phaneljean/txtanoffer-notepad/releases/tag/v0.1.0">all downloads</a></p>
+        <p class="np-orlabel">Or keep it in your browser:</p>
         <div class="np-install" id="txoInstall">
           <button type="button" class="btn solid" id="txoInstallBtn">Install the app</button>
           <span class="np-install-hint" id="txoInstallHint" style="display:none">To install: Share &rarr; Add to Home Screen</span>
         </div>
-        <p class="np-desk-fine">Windows and Mac desktop installers are in packaging.</p>
       </div>
     </div>
   </div>
