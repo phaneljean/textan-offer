@@ -93,6 +93,77 @@ FIELD_STATES = ("found", "confirm", "calculated")
 
 PURGE_AFTER_DAYS = 30
 
+# ---------------------------------------------------------------------------
+# Address integrity guard (2026-11-11). The Deal Sheet's address feeds
+# the contract's property line, so the slot may only ever hold a street
+# address -- never a sentence, a note fragment, or a whole note (the
+# failure this guards against: a prose-note extraction that returned
+# "123 Main St ... Buyers John & Jane Doe ... Docs Still Pending" as
+# the "address", and the blob printed across a generated contract).
+# ONE shared shape check, enforced at every door: validate_proposal
+# (note_enhancer.py) drops a failing proposal, apply_enhancement
+# refuses to merge one, set_field rejects one, and sheet_to_parsed
+# leaves a stored failing value out of the draft dict. The stored
+# field itself is never rewritten by the guard -- pre-guard legacy
+# data is the user's to fix, not ours.
+#
+# Rules (ALL must hold):
+# * a street number, a street name, and a street suffix (St, Dr, Ave,
+#   Blvd, Ln, Rd, Ct, Way, Hwy, Cir, Trl, Pkwy, Pl, Ter, or the full
+#   words) -- or a numbered-road form (County Road 12, CR 12, FM 1960,
+#   Ranch Road 12, Highway 6) where the designator carries the name
+#   and suffix and the trailing number is the street number;
+# * at most 100 characters;
+# * no contamination: no "$", no "?", at most one period (so "St." is
+#   fine), and none of the note-words that betray non-address text
+#   (buyer/seller/earnest/credit/survey/fridge/washer/docs/pending).
+# Deliberate exclusions: a PO Box is not a property address and fails
+# the suffix rule; an intersection with no street number ("Main St &
+# Elm Dr") fails the number rule -- neither can be written into a
+# contract as the property address. Unit designators after the street
+# core ("4500 Commerce St, Apt 12, Dallas") pass: the core is checked
+# at the start of the string and the tail is policed by the
+# contamination rules, not parsed.
+# ---------------------------------------------------------------------------
+
+ADDRESS_GUARD_MESSAGE = ("That doesn't look like a street address — "
+                         "keep it to the property address only.")
+
+_ADDRESS_SUFFIXES = (
+    "county road", "ranch road", "street", "avenue", "boulevard",
+    "parkway", "terrace", "highway", "circle", "trail", "place",
+    "court", "drive", "lane", "road", "st", "dr", "ave", "blvd",
+    "ln", "rd", "ct", "way", "hwy", "cir", "trl", "pkwy", "pl", "ter",
+)
+_ADDRESS_CORE_RE = re.compile(
+    r"^\s*\d+\s+(?:[A-Za-z0-9][A-Za-z0-9'.-]*\s+){1,6}?"
+    r"(?:" + "|".join(_ADDRESS_SUFFIXES) + r")\b",
+    re.IGNORECASE)
+_ADDRESS_ROAD_RE = re.compile(
+    r"^\s*(?:\d+\s+)?(?:county\s+road|ranch\s+road|cr|rr|fm|hwy|highway)"
+    r"\s+\d+\b",
+    re.IGNORECASE)
+_ADDRESS_CONTAMINATION_RE = re.compile(
+    r"\b(?:buyer|buyers|seller|sellers|earnest|credit|survey|fridge|"
+    r"washer|docs|pending)\b",
+    re.IGNORECASE)
+
+
+def looks_like_address(value) -> bool:
+    """True only when `value` is shaped like a street address (see the
+    guard rules above). Non-strings and blanks are never addresses."""
+    if not isinstance(value, str):
+        return False
+    text = value.strip()
+    if not text or len(text) > 100:
+        return False
+    if "$" in text or "?" in text or text.count(".") > 1:
+        return False
+    if _ADDRESS_CONTAMINATION_RE.search(text):
+        return False
+    return bool(_ADDRESS_CORE_RE.match(text)
+                or _ADDRESS_ROAD_RE.match(text))
+
 
 def _now():
     return datetime.utcnow().isoformat()
@@ -475,7 +546,10 @@ def set_field(tx_id, phone: str, key: str, value, state: str = "found",
               origin: str = "user", span: str = ""):
     """Set one field (the fields endpoint: user accept/edit), or clear it
     back to missing with value=None. Returns the full fields dict after
-    the write, or None when the transaction isn't owned / key unknown."""
+    the write, or None when the transaction isn't owned / key unknown.
+    Raises ValueError with a user-facing message when a field guard
+    rejects the value (today: the address shape guard) -- the fields
+    route turns it into the standard error response."""
     if key not in FIELD_KEYS:
         return None
     sheet = get_deal_sheet(tx_id, phone)
@@ -485,6 +559,8 @@ def set_field(tx_id, phone: str, key: str, value, state: str = "found",
     if value is None:
         fields.pop(key, None)
     else:
+        if key == "address" and not looks_like_address(value):
+            raise ValueError(ADDRESS_GUARD_MESSAGE)
         if state not in FIELD_STATES:
             state = "found"
         fields[key] = {
@@ -715,6 +791,14 @@ def apply_enhancement(tx_id, phone: str, note: dict, enhancer_result: dict,
     for key, proposal in (validated_fields or {}).items():
         if key not in FIELD_KEYS:
             continue
+        if key == "address" and not looks_like_address(proposal.get("value")):
+            # The address guard holds at merge time too (defense in
+            # depth): a value that isn't shaped like a street address
+            # never lands on the sheet, whatever produced it.
+            warnings.append(
+                "Dropped Address: that doesn't look like a street "
+                "address — keep it to the property address only.")
+            continue
         existing = fields.get(key)
         if existing and existing.get("origin") == "user":
             if existing.get("value") != proposal.get("value"):
@@ -802,7 +886,10 @@ def sheet_to_parsed(fields: dict) -> dict:
     Only firm fields are included -- state "found" (Captured) and
     "calculated" (derived entirely from Captured inputs, so it is as
     firm as its inputs). A Confirm value never reaches a contract by
-    accident."""
+    accident. An address that fails the shape guard (a pre-guard sheet
+    can still store one) is excluded too: the stored field is left
+    exactly as it is, and the draft path's missing-address refusal
+    handles the rest."""
     firm = {k: f.get("value") for k, f in (fields or {}).items()
             if f.get("state") in ("found", "calculated")
             and f.get("value") not in (None, "")}
@@ -815,8 +902,11 @@ def sheet_to_parsed(fields: dict) -> dict:
                      ("city", "city"),
                      ("financing_type", "financing_type"),
                      ("option_days", "inspection_days")):
-        if src in firm:
-            parsed[dst] = firm[src]
+        if src not in firm:
+            continue
+        if src == "address" and not looks_like_address(firm[src]):
+            continue  # legacy blob: never another draft (see docstring)
+        parsed[dst] = firm[src]
     if firm.get("hoa"):
         parsed["has_hoa"] = True
     return parsed
