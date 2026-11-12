@@ -1013,10 +1013,20 @@ __TEXT_DEMO_CSS__
   .desk-card h3{font-size:24px;font-weight:800;letter-spacing:-.02em}
   .desk-card p{font-size:16.5px;line-height:1.5;color:var(--mute);margin:10px 0 20px}
   .desk-card .link{font-size:17px}
+  /* ---------- 4b0. said on LinkedIn: verbatim comments (2026-11-12) ---------- */
+  .quotes{padding-bottom:110px}
+  .quotes-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;max-width:1024px;margin:56px auto 0;text-align:left}
+  .quote-card{margin:0;background:#fff;border:1px solid var(--line);border-radius:22px;padding:32px 28px;display:flex;flex-direction:column}
+  .quote-card blockquote{margin:0;font-size:19px;line-height:1.5;color:var(--ink)}
+  .quote-who{margin-top:22px;font-size:15.5px;font-weight:700;color:var(--ink)}
+  .quote-who span{display:block;font-weight:500;color:var(--mute);font-size:14.5px;margin-top:2px}
+  .quote-src{margin-top:14px;font-size:12.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--green)}
   .final-sec{padding-bottom:110px}
   @media (max-width:734px){
     .steps,.desk-cards{grid-template-columns:1fr;margin-top:40px}
     .desk{margin-top:72px;padding-bottom:72px}
+    .quotes-grid{grid-template-columns:1fr;margin-top:40px}
+    .quotes{padding-bottom:72px}
     .final-sec{padding-bottom:72px}
   }
 
@@ -1556,6 +1566,37 @@ __TEXT_DEMO__
 
 <!-- 5. TRUST: one promise, then what's protected (see _home_trust) -->
 __HOME_TRUST__
+
+<!-- 4b0. SAID ON LINKEDIN: verbatim comments under our posts (2026-11-12).
+     Four real comments, word for word. No ratings, no review-platform
+     wording: these are comments, not reviews. -->
+<section class="quotes">
+  <div class="eyebrow">From LinkedIn</div>
+  <h2>Said on LinkedIn.</h2>
+  <p class="sub">Comments under our posts. <a href="https://www.linkedin.com/company/143677963/">TxtAnOffer on LinkedIn</a></p>
+  <div class="quotes-grid">
+    <figure class="quote-card">
+      <blockquote>&ldquo;The Effective Date field controls everything downstream. Miss it on page 1 and every option period, financing deadline, and closing date shifts before anyone catches it. One blank, entire timeline corrupted.&rdquo;</blockquote>
+      <figcaption class="quote-who">Mohit Tomar</figcaption>
+      <div class="quote-src">via LinkedIn</div>
+    </figure>
+    <figure class="quote-card">
+      <blockquote>&ldquo;Those tiny missing fields really do create outsized downstream work for TCs&mdash;catching them before title seems like a meaningful time-saver.&rdquo;</blockquote>
+      <figcaption class="quote-who">Albert van Zyl<span>Co-Founder, VAConnect</span></figcaption>
+      <div class="quote-src">via LinkedIn</div>
+    </figure>
+    <figure class="quote-card">
+      <blockquote>&ldquo;The revised description names the user, the documents and the problem in one pass. A sample flagged report could help people understand the output before they upload their own contract.&rdquo;</blockquote>
+      <figcaption class="quote-who">Yaroslav K.<span>COO, Incode Group &amp; LinkedRefs</span></figcaption>
+      <div class="quote-src">via LinkedIn</div>
+    </figure>
+    <figure class="quote-card">
+      <blockquote>&ldquo;Great tool for Texas brokers and transaction coordinators. Catching compliance issues before they become closing delays can save time, money, and unnecessary stress.&rdquo;</blockquote>
+      <figcaption class="quote-who">Jason Hammond<span>real estate funding</span></figcaption>
+      <div class="quote-src">via LinkedIn</div>
+    </figure>
+  </div>
+</section>
 
 <!-- 4b. PRICING: the three plans from /pricing, one line each (2026-11-03). -->
 <section class="pricing-strip">
