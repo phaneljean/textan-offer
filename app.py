@@ -1400,8 +1400,8 @@ __SITE_NAV__
         <h3>Take the notepad to your desk.</h3>
         <p class="np-desk-line">The Notepad as its own app on your computer: parked beside your other tools, one hotkey away, ready when a call comes in.</p>
         <div class="np-downloads">
-          <a class="btn solid" href="https://github.com/phaneljean/txtanoffer-notepad/releases/download/v0.1.0/TxtAnOffer.Notepad_0.1.0_x64-setup.exe" data-evt="desk_download_windows">Download for Windows</a>
-          <a class="btn ghost" href="https://github.com/phaneljean/txtanoffer-notepad/releases/download/v0.1.0/TxtAnOffer.Notepad_0.1.0_aarch64.dmg" data-evt="desk_download_mac">Download for Mac</a>
+          <a class="btn solid" href="https://github.com/phaneljean/txtanoffer-notepad/releases/download/v0.1.1/TxtAnOffer.Notepad_0.1.1_x64-setup.exe" data-evt="desk_download_windows">Download for Windows</a>
+          <a class="btn ghost" href="https://github.com/phaneljean/txtanoffer-notepad/releases/download/v0.1.1/TxtAnOffer.Notepad_0.1.1_aarch64.dmg" data-evt="desk_download_mac">Download for Mac</a>
         </div>
         <p class="np-desk-fine">Free to download. Mac version is for Apple Silicon Macs. First install shows a standard security prompt while the app is new. First open on a Mac: right-click the app, then Open. Linux and all versions: <a href="https://github.com/phaneljean/txtanoffer-notepad/releases/tag/v0.1.0">all downloads</a></p>
         <p class="np-orlabel">Or keep it in your browser:</p>
