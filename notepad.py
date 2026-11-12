@@ -14,11 +14,16 @@ Doctrine, binding on everything in this module:
   or "cleans up" a stored note -- the raw note is the source of truth and
   is always shown next to whatever an enhancement proposed from it.
 * Confirm-first. Every field on a deal sheet carries a state:
-  "found" (user-accepted or user-typed), "confirm" (proposed, needs the
-  user's eye), or absent (= missing, "Not in your notes"). Enhancements
-  are proposals: they never overwrite a user-entered value, and a
-  "confirm" proposal never overwrites a "found" one. Only firm ("found")
-  fields serialize into a draft (see sheet_to_parsed).
+  "found" (Captured -- explicitly stated in the notes and firmed, or
+  entered/confirmed by the user), "confirm" (proposed, needs the user's
+  eye -- hedges, inferences, and profile defaults live here, never
+  firmer), "calculated" (derived arithmetically from Captured inputs,
+  with the formula stored on the field; withdrawn the moment an input
+  stops being Captured), or absent (= missing, "Not in your notes").
+  Enhancements are proposals: they never overwrite a user-entered value,
+  and a "confirm" proposal never overwrites a "found" one. Only firm
+  fields ("found" + "calculated") serialize into a draft (see
+  sheet_to_parsed).
 * Deletes are soft. `deleted_at` hides a transaction immediately; a
   purge sweep hard-deletes its rows 30 days later (purge_expired_deleted,
   mirroring the free-PDF 30-day doctrine).
@@ -84,7 +89,7 @@ STRICT_SPAN_FIELDS = {k for k, kind in FIELD_KINDS.items()
                       if kind in ("money", "pct", "int", "date", "party", "string")}
 FREE_TEXT_FIELDS = {k for k, kind in FIELD_KINDS.items() if kind == "text"}
 TX_ONLY_FIELDS = {"option_fee_amount", "option_days"}
-FIELD_STATES = ("found", "confirm")
+FIELD_STATES = ("found", "confirm", "calculated")
 
 PURGE_AFTER_DAYS = 30
 
@@ -489,6 +494,8 @@ def set_field(tx_id, phone: str, key: str, value, state: str = "found",
             "origin": origin,
             "updated_at": _now(),
         }
+    tx = get_transaction(sheet["transaction_id"], phone)
+    fields = refresh_calculated_fields(fields, (tx or {}).get("state") or "TX")
     _write_sheet(sheet["transaction_id"], phone, fields)
     _title_from_address(sheet["transaction_id"], phone, fields)
     return fields
@@ -507,6 +514,144 @@ def confirm_count(fields: dict) -> int:
 
 
 # ---------------------------------------------------------------------------
+# Calculated fields (Accuracy Pass, 2026-11-11). A value the sheet can
+# derive arithmetically from Captured ("found") inputs is stored as its
+# own field -- state "calculated", origin "calculated", the formula that
+# produced it on the field's "formula" key -- so a derived number never
+# masquerades as a captured fact. Recomputation runs wherever the sheet
+# changes: enhancement apply, field writes, and member detail views
+# (refresh_deal_sheet). A calculated field exists only while every one
+# of its inputs is Captured; lose an input and the derivation is
+# withdrawn rather than left stale. A slot holding any other state is
+# never touched: a Captured value is the user's fact, a Confirm value is
+# the user's pending decision, and both win over math. Editing a
+# calculated field through the fields endpoint writes it back as
+# "found"/"user", which converts it to Captured like any other field.
+# ---------------------------------------------------------------------------
+
+def _captured_value(fields, key):
+    f = (fields or {}).get(key) or {}
+    if f.get("state") == "found" and f.get("value") not in (None, ""):
+        return f["value"]
+    return None
+
+
+def _pct_display(value) -> str:
+    """0.2 -> "20%", 0.0102 -> "1.02%" (formula/display precision)."""
+    pct = round(float(value) * 100, 2)
+    return f"{pct:.2f}".rstrip("0").rstrip(".") + "%"
+
+
+def _money_display(value) -> str:
+    return f"${int(round(float(value))):,}"
+
+
+def refresh_calculated_fields(fields: dict, state: str = "TX") -> dict:
+    """Return `fields` with every derivation recomputed. Pure -- the
+    caller persists. The derived fields and their only inputs:
+
+    * earnest_pct          = earnest_money_amount / price
+    * earnest_money_amount = earnest_pct * price
+    * down_payment_amount  = down_payment_pct * price
+    * down_payment_pct     = down_payment_amount / price
+    * close_days           = closing_date - today (state-local), 1..365
+
+    Inputs are snapshotted before any derivation runs and only "found"
+    inputs count, so a value derived in this pass never feeds another
+    derivation (no chains, no circularity). Percentages are stored
+    rounded to 4 decimals (hundredths of a percent) so the displayed
+    value and the formula agree."""
+    out = dict(fields or {})
+
+    def derive(key, computed):
+        current = out.get(key)
+        if current is not None and current.get("state") != "calculated":
+            return  # Captured / Confirm / anything else: not ours to move
+        if computed is None:
+            out.pop(key, None)  # inputs no longer all Captured: withdraw
+            return
+        value, formula = computed
+        if current is not None and current.get("value") == value \
+                and current.get("formula") == formula:
+            return  # unchanged: keep the stored row (and its timestamp)
+        out[key] = {"value": value, "state": "calculated", "span": "",
+                    "origin": "calculated", "formula": formula,
+                    "updated_at": _now()}
+
+    price = _captured_value(out, "price")
+    try:
+        price = float(price) if price is not None else None
+    except (TypeError, ValueError):
+        price = None
+    if price is not None and price <= 0:
+        price = None
+    earnest_amount = _captured_value(out, "earnest_money_amount")
+    earnest_pct = _captured_value(out, "earnest_pct")
+    down_pct = _captured_value(out, "down_payment_pct")
+    down_amount = _captured_value(out, "down_payment_amount")
+    closing_raw = _captured_value(out, "closing_date")
+
+    computed = None
+    if price and earnest_amount is not None:
+        v = round(float(earnest_amount) / price, 4)
+        computed = (v, f"{_pct_display(v)} = {_money_display(earnest_amount)}"
+                       f" ÷ {_money_display(price)}")
+    derive("earnest_pct", computed)
+
+    computed = None
+    if price and earnest_pct is not None:
+        v = int(round(price * float(earnest_pct)))
+        computed = (v, f"{_money_display(v)} = {_pct_display(earnest_pct)}"
+                       f" × {_money_display(price)}")
+    derive("earnest_money_amount", computed)
+
+    computed = None
+    if price and down_pct is not None:
+        v = int(round(price * float(down_pct)))
+        computed = (v, f"{_money_display(v)} = {_pct_display(down_pct)}"
+                       f" × {_money_display(price)}")
+    derive("down_payment_amount", computed)
+
+    computed = None
+    if price and down_amount is not None:
+        v = round(float(down_amount) / price, 4)
+        computed = (v, f"{_pct_display(v)} = {_money_display(down_amount)}"
+                       f" ÷ {_money_display(price)}")
+    derive("down_payment_pct", computed)
+
+    computed = None
+    if closing_raw:
+        try:
+            closing = date.fromisoformat(str(closing_raw)[:10])
+            today = (deadlines.texas_date() if state == "TX"
+                     else deadlines.colorado_date())
+            days = (closing - today).days
+            if 1 <= days <= 365:
+                computed = (days, f"{days} days = {closing.strftime('%b')} "
+                                  f"{closing.day}, {closing.year} - today")
+        except ValueError:
+            computed = None
+    derive("close_days", computed)
+    return out
+
+
+def refresh_deal_sheet(tx_id, phone: str) -> dict:
+    """Recompute a stored sheet's Calculated fields and persist when
+    anything changed (the member detail view calls this, mirroring how
+    generate_tasks refreshes on view). Returns the fields dict."""
+    sheet = get_deal_sheet(tx_id, phone)
+    if sheet is None:
+        return {}
+    tx = get_transaction(tx_id, phone)
+    fields = refresh_calculated_fields(
+        sheet["fields"], (tx or {}).get("state") or "TX")
+    if fields != sheet["fields"]:
+        _write_sheet(sheet["transaction_id"], phone, fields)
+        _title_from_address(sheet["transaction_id"], phone, fields)
+    return fields
+
+
+# ---------------------------------------------------------------------------
 # Enhancement merge + audit
 # ---------------------------------------------------------------------------
 
@@ -521,7 +666,7 @@ def _profile_default_fields(tx: dict, fields: dict, profile: dict) -> dict:
         out["earnest_pct"] = {
             "value": profile["default_earnest_pct"], "state": "confirm",
             "span": "", "origin": "profile_default",
-            "note": "Your saved default — confirm it applies to this deal.",
+            "note": "From your profile default — verify it applies to this deal.",
             "updated_at": _now(),
         }
     if tx.get("state") == "TX" and "option_fee_amount" not in fields \
@@ -529,14 +674,14 @@ def _profile_default_fields(tx: dict, fields: dict, profile: dict) -> dict:
         out["option_fee_amount"] = {
             "value": profile["default_option_fee"], "state": "confirm",
             "span": "", "origin": "profile_default",
-            "note": "Your saved default — confirm it applies to this deal.",
+            "note": "From your profile default — verify it applies to this deal.",
             "updated_at": _now(),
         }
     if "title_company" not in fields and (profile.get("title_company") or "").strip():
         out["title_company"] = {
             "value": profile["title_company"].strip(), "state": "confirm",
             "span": "", "origin": "profile_default",
-            "note": "Your saved title company — confirm for this deal.",
+            "note": "From your profile default — verify for this deal.",
             "updated_at": _now(),
         }
     return out
@@ -590,6 +735,15 @@ def apply_enhancement(tx_id, phone: str, note: dict, enhancer_result: dict,
         }
         if proposal.get("note"):
             merged["note"] = proposal["note"]
+        if merged.get("origin") == "profile_default" and not merged.get("span"):
+            # A profile default is the user's standing preference, not a
+            # fact about THIS deal -- it has no words in the note behind
+            # it, so it can never land firmer than Confirm, whatever a
+            # producer claimed (Accuracy Pass rule, 2026-11-11).
+            merged["state"] = "confirm"
+            if not merged.get("note"):
+                merged["note"] = ("From your profile default — verify it "
+                                  "applies to this deal.")
         fields[key] = merged
         applied[key] = merged
 
@@ -597,6 +751,7 @@ def apply_enhancement(tx_id, phone: str, note: dict, enhancer_result: dict,
         fields[key] = field
         applied[key] = field
 
+    fields = refresh_calculated_fields(fields, tx.get("state") or "TX")
     summary = enhancer_result.get("summary") or None
     _write_sheet(tx["id"], phone, fields,
                  summary=summary if summary else None,
@@ -644,10 +799,13 @@ def list_enhancements(tx_id, phone: str) -> list:
 
 def sheet_to_parsed(fields: dict) -> dict:
     """Serialize a deal sheet's fields into parser.py's `parsed` shape.
-    Only state == "found" fields are included -- a Confirm value never
-    reaches a contract by accident."""
+    Only firm fields are included -- state "found" (Captured) and
+    "calculated" (derived entirely from Captured inputs, so it is as
+    firm as its inputs). A Confirm value never reaches a contract by
+    accident."""
     firm = {k: f.get("value") for k, f in (fields or {}).items()
-            if f.get("state") == "found" and f.get("value") not in (None, "")}
+            if f.get("state") in ("found", "calculated")
+            and f.get("value") not in (None, "")}
     parsed = {}
     for src, dst in (("price", "price"),
                      ("down_payment_pct", "down_payment_pct"),
@@ -664,16 +822,26 @@ def sheet_to_parsed(fields: dict) -> dict:
     return parsed
 
 
-def blocking_confirm_fields(fields: dict) -> list:
+_CONTRACT_KEYS = ("address", "city", "county", "buyer_name", "seller_name",
+                  "price", "down_payment_pct", "down_payment_amount",
+                  "financing_type", "earnest_money_amount", "earnest_pct",
+                  "option_fee_amount", "option_days", "escrow_agent_name",
+                  "title_company", "effective_date", "close_days",
+                  "closing_date")
+
+
+def blocking_confirm_fields(fields: dict, state: str = "TX") -> list:
     """Confirm-state fields that map onto a filled contract field -- the
-    list a draft action must walk the user through first (spec 2.3)."""
-    contract_keys = ("address", "city", "county", "buyer_name", "seller_name",
-                     "price", "down_payment_pct", "down_payment_amount",
-                     "financing_type", "earnest_money_amount", "earnest_pct",
-                     "option_fee_amount", "option_days", "escrow_agent_name",
-                     "title_company", "effective_date", "close_days",
-                     "closing_date")
-    return [k for k in contract_keys
+    list a draft action must walk the user through first (spec 2.3).
+    Texas-only fields never block a Colorado draft. Since the Accuracy
+    Pass, profile defaults and not-agreed proposals reliably sit in
+    Confirm, so this list genuinely bites on them; values missing
+    entirely are the draft path's separate `missing` refusal (see
+    _np_draft_parsed in app.py)."""
+    keys = _CONTRACT_KEYS
+    if state == "CO":
+        keys = tuple(k for k in keys if k not in TX_ONLY_FIELDS)
+    return [k for k in keys
             if (fields or {}).get(k, {}).get("state") == "confirm"]
 
 
@@ -720,7 +888,8 @@ def _task_candidates(tx: dict, fields: dict, note_text: str) -> dict:
                 label += f": {rendered}"
             cands[f"confirm:{key}"] = label
     earnest = (fields or {}).get("earnest_money_amount") or {}
-    if earnest.get("state") == "found" and earnest.get("value") not in (None, ""):
+    if earnest.get("state") in ("found", "calculated") \
+            and earnest.get("value") not in (None, ""):
         cands["earnest_delivery"] = (
             "Deliver earnest money ("
             + format_field_value("earnest_money_amount", earnest["value"])
