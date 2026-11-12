@@ -30,9 +30,13 @@ Every helper is scoped by owner phone -- a transaction id alone never
 grants access to another agent's deal.
 """
 import json
+import re
 import sqlite3
 import os
-from datetime import datetime, timedelta
+import uuid
+from datetime import date, datetime, timedelta
+
+import deadlines
 
 DB_PATH = os.environ.get("DATABASE_PATH", "subscriptions.db")
 
@@ -155,6 +159,39 @@ def init_notepad_tables():
             status TEXT DEFAULT 'ok',
             created_at TEXT NOT NULL
         )
+    """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS notepad_tasks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            transaction_id INTEGER NOT NULL,
+            phone TEXT NOT NULL,
+            label TEXT NOT NULL,
+            key TEXT NOT NULL DEFAULT '',
+            done INTEGER DEFAULT 0,
+            created_at TEXT NOT NULL,
+            done_at TEXT DEFAULT ''
+        )
+    """)
+    conn.execute("""
+        CREATE INDEX IF NOT EXISTS idx_notepad_tasks_tx
+        ON notepad_tasks(transaction_id, phone)
+    """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS transaction_checks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            transaction_id INTEGER NOT NULL,
+            phone TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            form_label TEXT DEFAULT '',
+            recognized INTEGER DEFAULT 0,
+            must_fix_count INTEGER DEFAULT 0,
+            review_count INTEGER DEFAULT 0,
+            findings_json TEXT DEFAULT '[]'
+        )
+    """)
+    conn.execute("""
+        CREATE INDEX IF NOT EXISTS idx_transaction_checks_tx
+        ON transaction_checks(transaction_id, phone)
     """)
     conn.commit()
     conn.close()
@@ -285,6 +322,8 @@ def purge_expired_deleted(retention_days: int = PURGE_AFTER_DAYS) -> int:
     for tx_id in ids:
         conn.execute("DELETE FROM notes WHERE transaction_id = ?", (tx_id,))
         conn.execute("DELETE FROM note_enhancements WHERE transaction_id = ?", (tx_id,))
+        conn.execute("DELETE FROM notepad_tasks WHERE transaction_id = ?", (tx_id,))
+        conn.execute("DELETE FROM transaction_checks WHERE transaction_id = ?", (tx_id,))
         conn.execute("DELETE FROM deal_sheets WHERE transaction_id = ?", (tx_id,))
         conn.execute("DELETE FROM transactions WHERE id = ?", (tx_id,))
     conn.commit()
@@ -637,3 +676,278 @@ def format_field_value(key: str, value) -> str:
         except (TypeError, ValueError):
             return str(value)
     return str(value)
+
+
+# ---------------------------------------------------------------------------
+# Action items (Phase 2, spec 2.5/3.4). Generated server-side from the
+# sheet + latest note whenever an enhancement is applied and on detail
+# views. Dedupe key is (transaction_id, key): regeneration never
+# duplicates an item and never resurrects a done item as undone -- a done
+# item stays done, and only a NEW trigger creates a new item. An undone
+# auto item whose trigger disappeared (e.g. its Confirm field was firmed)
+# is pruned. Custom items (key "custom:...") are never auto-pruned.
+# There are deliberately NO due dates here (codebase doctrine: a deadline
+# is only ever computed from firm sheet dates, see deal_deadlines).
+# ---------------------------------------------------------------------------
+
+def _task_candidates(tx: dict, fields: dict, note_text: str) -> dict:
+    """{dedupe_key: label} for every action item the current sheet + note
+    support. Pure function of the inputs, so regeneration is testable."""
+    cands = {}
+    for key, f in (fields or {}).items():
+        if f.get("state") == "confirm" and f.get("value") not in (None, ""):
+            label = f"Confirm {FIELD_LABELS.get(key, key)}"
+            rendered = format_field_value(key, f["value"])
+            if rendered:
+                label += f": {rendered}"
+            cands[f"confirm:{key}"] = label
+    earnest = (fields or {}).get("earnest_money_amount") or {}
+    if earnest.get("state") == "found" and earnest.get("value") not in (None, ""):
+        cands["earnest_delivery"] = (
+            "Deliver earnest money ("
+            + format_field_value("earnest_money_amount", earnest["value"])
+            + ") to the escrow agent")
+    blob = (note_text or "") + " " + " ".join(
+        str(f.get("value") or "") for f in (fields or {}).values())
+    if re.search(r"\bsurvey\b", blob, re.I):
+        if (tx or {}).get("state") == "CO":
+            cands["survey"] = ("Handle the survey: an improvement location "
+                               "certificate (ILC) is typical in Colorado")
+        else:
+            cands["survey"] = ("Handle the survey: use the existing survey "
+                               "with a T-47 affidavit, or order a new one")
+    hoa_field = (fields or {}).get("hoa") or {}
+    if hoa_field.get("value") or re.search(r"\bhoa\b", note_text or "", re.I):
+        cands["hoa_docs"] = "Collect the HOA documents"
+    price = (fields or {}).get("price") or {}
+    buyer = (fields or {}).get("buyer_name") or {}
+    if price.get("state") == "found" and buyer.get("state") == "found":
+        cands["send_draft"] = "Send the draft to the buyers for review"
+    if (note_text or "").strip():
+        cands["run_tc_check"] = "Run TC Check on the filled contract"
+    return cands
+
+
+def generate_tasks(tx_id, phone: str) -> list:
+    """(Re)build the auto action items for a transaction. Idempotent:
+    existing rows (done or not) are left untouched, new triggers insert,
+    stale undone auto items are pruned. Returns the full task list."""
+    tx = get_transaction(tx_id, phone)
+    if not tx:
+        return []
+    sheet = get_deal_sheet(tx["id"], phone)
+    fields = sheet["fields"] if sheet else {}
+    note = get_latest_note(tx["id"])
+    desired = _task_candidates(tx, fields, note["raw_text"] if note else "")
+    conn = _conn()
+    rows = conn.execute(
+        "SELECT id, key, done FROM notepad_tasks"
+        " WHERE transaction_id = ? AND phone = ?",
+        (tx["id"], phone)).fetchall()
+    existing = {r["key"]: r for r in rows}
+    for key, row in existing.items():
+        if key.startswith("custom:"):
+            continue
+        if key not in desired and not row["done"]:
+            conn.execute("DELETE FROM notepad_tasks WHERE id = ?", (row["id"],))
+    for key, label in desired.items():
+        if key not in existing:
+            conn.execute(
+                "INSERT INTO notepad_tasks (transaction_id, phone, label, key,"
+                " done, created_at, done_at) VALUES (?, ?, ?, ?, 0, ?, '')",
+                (tx["id"], phone, label, key, _now()))
+    conn.commit()
+    conn.close()
+    return list_tasks(tx["id"], phone)
+
+
+def list_tasks(tx_id, phone: str) -> list:
+    tx = get_transaction(tx_id, phone)
+    if not tx:
+        return []
+    conn = _conn()
+    rows = conn.execute(
+        "SELECT * FROM notepad_tasks WHERE transaction_id = ? AND phone = ?"
+        " ORDER BY done ASC, id ASC", (tx["id"], phone)).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def set_task_done(task_id, tx_id, phone: str, done: bool) -> bool:
+    tx = get_transaction(tx_id, phone)
+    if not tx:
+        return False
+    conn = _conn()
+    cur = conn.execute(
+        "UPDATE notepad_tasks SET done = ?, done_at = ?"
+        " WHERE id = ? AND transaction_id = ? AND phone = ?",
+        (1 if done else 0, _now() if done else "", task_id, tx["id"], phone))
+    conn.commit()
+    conn.close()
+    return cur.rowcount > 0
+
+
+def add_task(tx_id, phone: str, label: str):
+    """A user-added item. Returns the new task id, or None."""
+    tx = get_transaction(tx_id, phone)
+    label = (label or "").strip()
+    if not tx or not label:
+        return None
+    conn = _conn()
+    cur = conn.execute(
+        "INSERT INTO notepad_tasks (transaction_id, phone, label, key, done,"
+        " created_at, done_at) VALUES (?, ?, ?, ?, 0, ?, '')",
+        (tx["id"], phone, label[:300], "custom:" + uuid.uuid4().hex[:16], _now()))
+    conn.commit()
+    task_id = cur.lastrowid
+    conn.close()
+    return task_id
+
+
+def delete_task(task_id, tx_id, phone: str) -> bool:
+    tx = get_transaction(tx_id, phone)
+    if not tx:
+        return False
+    conn = _conn()
+    cur = conn.execute(
+        "DELETE FROM notepad_tasks WHERE id = ? AND transaction_id = ? AND phone = ?",
+        (task_id, tx["id"], phone))
+    conn.commit()
+    conn.close()
+    return cur.rowcount > 0
+
+
+# ---------------------------------------------------------------------------
+# TC Checks pinned to the transaction (Phase 3, spec 2.6/3.5). Only the
+# RESULT is stored -- the uploaded contract bytes are deleted by the
+# caller after the check runs ("Checked. Then deleted."). Findings are
+# normalized to the /tc-check severity language: "blocker" = must fix,
+# everything else = review.
+# ---------------------------------------------------------------------------
+
+_FINDINGS_CAP = 100
+_FINDING_MESSAGE_CAP = 500
+
+
+def record_check(tx_id, phone: str, form_label: str, recognized: bool,
+                 must_fix_count: int, review_count: int, findings) -> dict:
+    """Store one check result. Returns the stored row (with `findings`
+    parsed back out), or None when the transaction isn't owned."""
+    tx = get_transaction(tx_id, phone)
+    if not tx:
+        return None
+    capped = []
+    for f in (findings or [])[:_FINDINGS_CAP]:
+        capped.append({
+            "severity": "blocker" if f.get("severity") == "blocker" else "review",
+            "message": str(f.get("message") or "")[:_FINDING_MESSAGE_CAP],
+            "key": str(f.get("key") or ""),
+        })
+    conn = _conn()
+    cur = conn.execute(
+        "INSERT INTO transaction_checks (transaction_id, phone, created_at,"
+        " form_label, recognized, must_fix_count, review_count, findings_json)"
+        " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        (tx["id"], phone, _now(), form_label or "", 1 if recognized else 0,
+         int(must_fix_count), int(review_count), json.dumps(capped)))
+    conn.commit()
+    check_id = cur.lastrowid
+    conn.close()
+    for check in list_checks(tx["id"], phone):
+        if check["id"] == check_id:
+            return check
+    return None
+
+
+def _check_row(row) -> dict:
+    d = dict(row)
+    try:
+        d["findings"] = json.loads(d.pop("findings_json") or "[]")
+    except (TypeError, ValueError):
+        d["findings"] = []
+    d["recognized"] = bool(d["recognized"])
+    return d
+
+
+def list_checks(tx_id, phone: str, limit: int = 20) -> list:
+    tx = get_transaction(tx_id, phone)
+    if not tx:
+        return []
+    conn = _conn()
+    rows = conn.execute(
+        "SELECT * FROM transaction_checks WHERE transaction_id = ? AND phone = ?"
+        " ORDER BY id DESC LIMIT ?", (tx["id"], phone, limit)).fetchall()
+    conn.close()
+    return [_check_row(r) for r in rows]
+
+
+def latest_check(tx_id, phone: str):
+    checks = list_checks(tx_id, phone, limit=1)
+    return checks[0] if checks else None
+
+
+# ---------------------------------------------------------------------------
+# Reminders (Phase 2, spec 2.5): computed at render from FIRM (found)
+# sheet values only, using deadlines.py -- the same math the public
+# deadline tools use. Anything whose inputs are missing is skipped;
+# a date is never invented. Display only: nothing here sends, schedules,
+# or writes an .ics.
+# ---------------------------------------------------------------------------
+
+def _firm_date(fields: dict, key: str):
+    f = (fields or {}).get(key) or {}
+    if f.get("state") != "found" or not f.get("value"):
+        return None
+    try:
+        return date.fromisoformat(str(f["value"])[:10])
+    except ValueError:
+        return None
+
+
+def _firm_int(fields: dict, key: str):
+    f = (fields or {}).get(key) or {}
+    if f.get("state") != "found" or f.get("value") in (None, ""):
+        return None
+    try:
+        return int(f["value"])
+    except (TypeError, ValueError):
+        return None
+
+
+def deal_deadlines(tx: dict, fields: dict) -> list:
+    """[{kind, label, date, note}] for every deadline the firm sheet
+    values support, earliest first. Texas: earnest due (effective + the
+    5A(2)-extended count), option period end (5:00 PM, never extended),
+    closing. Colorado: closing only (CBS1 carries no option period and
+    its earnest timing is negotiated, not statutory)."""
+    out = []
+    state = (tx or {}).get("state") or "TX"
+    effective = _firm_date(fields, "effective_date")
+    if state == "TX" and effective is not None:
+        out.append({"kind": "earnest", "label": "Earnest money due",
+                    "date": deadlines.earnest_money_deadline(effective),
+                    "note": ""})
+        option_days = _firm_int(fields, "option_days")
+        if option_days:
+            out.append({"kind": "option", "label": "Option period ends",
+                        "date": deadlines.option_end_date(effective, option_days),
+                        "note": "5:00 PM"})
+    closing = _firm_date(fields, "closing_date")
+    if closing is not None:
+        out.append({"kind": "closing", "label": "Closing",
+                    "date": closing, "note": ""})
+    out.sort(key=lambda r: r["date"])
+    return out
+
+
+def relative_label(d: date, today: date) -> str:
+    delta = (d - today).days
+    if delta == 0:
+        return "today"
+    if delta == 1:
+        return "tomorrow"
+    if delta == -1:
+        return "yesterday"
+    if delta > 1:
+        return f"in {delta} days"
+    return f"{-delta} days ago"
