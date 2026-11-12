@@ -12858,6 +12858,26 @@ border-bottom:1px solid var(--border);font-size:0.9rem;}
 .chkhist{font-size:0.85rem;color:var(--text-muted);margin-top:0.6rem;}
 .chkhist div{padding:0.3rem 0.25rem;border-bottom:1px solid var(--border);}
 .chkhist div:last-child{border-bottom:none;}
+.docrow{display:flex;align-items:center;gap:0.6rem;padding:0.5rem 0.25rem;
+border-bottom:1px solid var(--border);}
+.docrow:last-child{border-bottom:none;}
+.docrow .dlabel{flex:1;font-size:0.92rem;}
+.docstatus{display:flex;gap:0.3rem;flex-wrap:wrap;}
+.docpill{padding:0.18rem 0.6rem;border-radius:9999px;font-size:0.72rem;font-weight:600;
+border:1px solid var(--border);background:#fff;color:var(--text-dim);cursor:pointer;
+font-family:inherit;}
+.docpill:hover{border-color:var(--accent);}
+.docpill.sel-missing{background:#FDECEC;border-color:var(--red);color:var(--red);}
+.docpill.sel-requested{background:#FBF3DF;border-color:var(--amber);color:var(--amber);}
+.docpill.sel-received{background:var(--accent-tint);border-color:var(--accent);color:var(--accent-dark);}
+.docpill.sel-reviewed{background:var(--accent);border-color:var(--accent);color:#fff;}
+.docstat{font-size:0.72rem;font-weight:700;padding:0.2rem 0.6rem;border-radius:9999px;
+white-space:nowrap;}
+.docstat.st-missing{background:#FDECEC;color:var(--red);}
+.docstat.st-requested{background:#FBF3DF;color:var(--amber);}
+.docstat.st-received{background:var(--accent-tint);color:var(--accent-dark);}
+.docstat.st-reviewed{background:var(--accent);color:#fff;}
+.docprog{font-size:0.8rem;color:var(--text-muted);font-weight:600;white-space:nowrap;}
 """
 
 
@@ -13031,6 +13051,40 @@ def _np_tasks_html(tasks, access):
                     f'onclick="npTaskDelete({t["id"]})">&times;</button>')
         rows.append(f'<div class="{cls}">{box}'
                     f'<span class="tlabel">{escape(t["label"])}</span>{ctrl}</div>')
+    return "".join(rows)
+
+
+_DOC_STATUS_LABELS = (("missing", "Missing"), ("requested", "Requested"),
+                      ("received", "Received"), ("reviewed", "Reviewed"))
+
+
+def _np_documents_html(docs, access):
+    """Server-rendered document checklist (the JS renderDocs mirrors it).
+    Members get a status pill control per row and a remove button on
+    rows they added; read-only viewers get a static status chip."""
+    if not docs:
+        return '<p class="sub">No documents tracked yet.</p>'
+    rows = []
+    for d in docs:
+        if access:
+            pills = ""
+            for s, label in _DOC_STATUS_LABELS:
+                sel = f" sel-{s}" if d["status"] == s else ""
+                pills += (f'<button type="button" class="docpill{sel}" '
+                          f'onclick="npDocStatus({d["id"]}, \'{s}\')">'
+                          f'{label}</button>')
+            ctrl = f'<span class="docstatus">{pills}</span>'
+            if d["is_custom"]:
+                ctrl += (f'<button type="button" class="btn-mini" '
+                         f'title="Remove document" '
+                         f'onclick="npDocDelete({d["id"]})">&times;</button>')
+        else:
+            label = dict(_DOC_STATUS_LABELS).get(d["status"], d["status"])
+            ctrl = (f'<span class="docstat st-{escape(d["status"])}">'
+                    f'{escape(label)}</span>')
+        rows.append(f'<div class="docrow">'
+                    f'<span class="dlabel">{escape(d["label"])}</span>'
+                    f'{ctrl}</div>')
     return "".join(rows)
 
 
@@ -13254,6 +13308,48 @@ function npTaskDelete(id){
   postJson(window.NP.tasksUrl,{action:'delete',id:id}).then(function(d){
     if(d&&d.ok){renderTasks(d.tasks);}
     else{alert((d&&d.error)||'Could not remove that item.');}
+  }).catch(function(){alert('Network error — please try again.');});
+}
+var DOC_STATUSES=[['missing','Missing'],['requested','Requested'],['received','Received'],['reviewed','Reviewed']];
+function docRowHtml(d){
+  var pills=DOC_STATUSES.map(function(pair){
+    var s=pair[0];
+    return '<button type="button" class="docpill'+(d.status===s?' sel-'+s:'')+'" onclick="npDocStatus('+d.id+',\\''+s+'\\')">'+pair[1]+'</button>';
+  }).join('');
+  var del=d.is_custom?'<button type="button" class="btn-mini" title="Remove document" onclick="npDocDelete('+d.id+')">&times;</button>':'';
+  return '<div class="docrow"><span class="dlabel">'+esc(d.label)+'</span><span class="docstatus">'+pills+'</span>'+del+'</div>';
+}
+function renderDocs(docs){
+  var box=document.getElementById('npDocs');
+  if(!box)return;
+  if(!docs||!docs.length){
+    box.innerHTML='<p class="sub">No documents tracked yet.</p>';
+  }else{
+    box.innerHTML=docs.map(docRowHtml).join('');
+  }
+  var done=(docs||[]).filter(function(d){return d.status==='received'||d.status==='reviewed';}).length;
+  var prog=document.getElementById('npDocProgress');
+  if(prog)prog.textContent=done+' of '+(docs?docs.length:0)+' received or reviewed';
+}
+function npDocStatus(id,status){
+  postJson(window.NP.documentsUrl,{action:'set_status',id:id,status:status}).then(function(d){
+    if(d&&d.ok){renderDocs(d.documents);}
+    else{alert((d&&d.error)||'Could not save that.');}
+  }).catch(function(){alert('Network error — please try again.');});
+}
+function npDocAdd(){
+  var inp=document.getElementById('npDocInput');
+  var label=(inp.value||'').trim();
+  if(!label)return;
+  postJson(window.NP.documentsUrl,{action:'add',label:label}).then(function(d){
+    if(d&&d.ok){inp.value='';renderDocs(d.documents);}
+    else{alert((d&&d.error)||'Could not add that document.');}
+  }).catch(function(){alert('Network error — please try again.');});
+}
+function npDocDelete(id){
+  postJson(window.NP.documentsUrl,{action:'delete',id:id}).then(function(d){
+    if(d&&d.ok){renderDocs(d.documents);}
+    else{alert((d&&d.error)||'Could not remove that document.');}
   }).catch(function(){alert('Network error — please try again.');});
 }
 function renderCheck(d){
@@ -13594,6 +13690,19 @@ def notepad_detail(tx_id):
                           'maxlength="300" placeholder="Add your own item...">'
                           '<button type="button" class="btn-mini btn-acc" '
                           'onclick="npTaskAdd()">Add</button></div>')
+    # Document checklist (2026-11-11): seeded lazily on first view for
+    # any owner; status controls render for members only, mirroring tasks.
+    documents = notepad.ensure_documents(tx)
+    documents_html = _np_documents_html(documents, access)
+    doc_done = sum(1 for d in documents
+                   if d["status"] in ("received", "reviewed"))
+    doc_progress = f"{doc_done} of {len(documents)} received or reviewed"
+    docs_add_html = ""
+    if access:
+        docs_add_html = ('<div class="taskadd"><input type="text" id="npDocInput" '
+                         'maxlength="300" placeholder="Add a document...">'
+                         '<button type="button" class="btn-mini btn-acc" '
+                         'onclick="npDocAdd()">Add</button></div>')
     dl_rows = notepad.deal_deadlines(tx, fields)
     today_local = (deadlines.texas_date() if tx.get("state") == "TX"
                    else deadlines.colorado_date())
@@ -13624,6 +13733,7 @@ def notepad_detail(tx_id):
         "enhanceUrl": _np_signed(f"/notepad/{tx_id}/enhance", phone, expires, sig),
         "notesUrl": _np_signed(f"/notepad/{tx_id}/notes", phone, expires, sig),
         "tasksUrl": _np_signed(f"/notepad/{tx_id}/tasks", phone, expires, sig),
+        "documentsUrl": _np_signed(f"/notepad/{tx_id}/documents", phone, expires, sig),
         "checkUrl": _np_signed(f"/notepad/{tx_id}/check", phone, expires, sig),
         "draftUrl": _np_signed(f"/notepad/{tx_id}/draft", phone, expires, sig),
         "fields": fields,
@@ -13679,6 +13789,12 @@ def notepad_detail(tx_id):
           <h2>Deal Sheet</h2>
           <p class="sub" style="margin-bottom:0.5rem;">The central record for this transaction. Confirm a value to put it on the sheet; only values on the sheet can go into a draft.</p>
           <div id="sheetRows">{rows}</div>
+        </div>
+        <div class="card">
+          <h2>Documents <span class="docprog" id="npDocProgress">{doc_progress}</span></h2>
+          <p class="sub" style="margin-bottom:0.5rem;">Track the paperwork for this deal — status only. The contract file itself still goes through TC Check below, and is deleted after the check.</p>
+          <div id="npDocs">{documents_html}</div>
+          {docs_add_html}
         </div>
         <div class="card">
           <h2>Draft</h2>
@@ -13887,6 +14003,54 @@ def notepad_tasks_update(tx_id):
     else:
         return jsonify({"error": "Unknown action."}), 400
     return jsonify({"ok": True, "tasks": notepad.list_tasks(tx_id, phone)})
+
+
+@app.route("/notepad/<int:tx_id>/documents", methods=["POST"])
+def notepad_documents_update(tx_id):
+    """Document checklist: set_status / add / delete, JSON in and out.
+    Same signed-trio auth, ownership, access, and rate-limit gates as
+    the other notepad writes. Status values are validated against the
+    four-value enum here and again in notepad.set_document_status."""
+    auth = _np_auth()
+    if not auth:
+        return _np_expired()
+    phone, expires, sig = auth
+    tx = notepad.get_transaction(tx_id, phone)
+    if not tx:
+        return jsonify({"error": "Deal not found."}), 404
+    if not has_notepad_access(phone):
+        return jsonify({"error": "The Deal Notepad is part of the Agent plan."}), 403
+    if _np_rate_limited(phone):
+        return jsonify({"error": "Too many requests. Try again in a bit."}), 429
+    payload = request.get_json(silent=True) or {}
+    action = payload.get("action")
+    notepad.ensure_documents(tx)
+    if action == "set_status":
+        try:
+            doc_id = int(payload.get("id"))
+        except (TypeError, ValueError):
+            return jsonify({"error": "Bad document id."}), 400
+        status = str(payload.get("status") or "")
+        if status not in notepad.DOCUMENT_STATUSES:
+            return jsonify({"error": "Unknown status."}), 400
+        if not notepad.set_document_status(doc_id, tx_id, phone, status):
+            return jsonify({"error": "Document not found."}), 404
+    elif action == "add":
+        label = str(payload.get("label") or "").strip()
+        if not label or len(label) > 300:
+            return jsonify({"error": "Name the document first (300 characters max)."}), 400
+        notepad.add_document(tx_id, phone, label)
+    elif action == "delete":
+        try:
+            doc_id = int(payload.get("id"))
+        except (TypeError, ValueError):
+            return jsonify({"error": "Bad document id."}), 400
+        if not notepad.delete_document(doc_id, tx_id, phone):
+            return jsonify({"error": "Only documents you added can be removed — "
+                                     "set a standard one back to Missing instead."}), 400
+    else:
+        return jsonify({"error": "Unknown action."}), 400
+    return jsonify({"ok": True, "documents": notepad.list_documents(tx_id, phone)})
 
 
 @app.route("/notepad/<int:tx_id>/check", methods=["POST"])
