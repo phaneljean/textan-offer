@@ -277,7 +277,9 @@ _ENGAGEMENT_TYPES = ("js_ok", "upload_picked", "upload_failed_rejected", "upload
                      "pwa_install_accepted", "pwa_installed", "pwa_standalone_launch",
                      # Deal Notepad pages, 2026-11-11
                      "notepad_created", "notepad_note_saved", "notepad_enhance_run",
-                     "notepad_field_confirmed", "notepad_draft_created") \
+                     "notepad_field_confirmed", "notepad_draft_created",
+                     # /about company block -> TC Check, 2026-11-11
+                     "about_check_cta") \
     + CHECK_CTA_EVENTS + SAMPLE_CTA_EVENTS + BOOK_CALL_EVENTS + (DROPZONE_INTERACT_EVENT,)
 # Pages whose beacons /v1/evt accepts: the ones with their own
 # track_page_view() call, plus _BEACON_ONLY_PAGES below.
@@ -1239,7 +1241,7 @@ __SITE_NAV__
      deals alike. The parse runs in the page (NOTEPAD_JS) on the visitor's
      own edited note: honest regex extraction, nothing invented; hedged
      terms land as Confirm, absent terms read "Not in your notes". -->
-<section class="notepad">
+<section class="notepad" id="notepad">
   <div class="eyebrow">New: Deal Notepad</div>
   <h2>Your deal notes,<br>turned into a Deal Sheet.</h2>
   <p class="sub">Messy call notes in, a structured deal sheet out. Every uncertain term is flagged Confirm instead of guessed, and anything you didn&rsquo;t write down stays blank.</p>
@@ -1477,13 +1479,15 @@ __SITE_NAV__
   <p class="partner-line">Title company? <strong>TC Check is free for your agents</strong> &mdash; <a href="mailto:support@txtanoffer.com?subject=Title%20partner%20placement">ask about a partner placement</a>.</p>
 </section>
 
-<!-- 2c. FOUNDER: the human behind the checker (added 2026-11-06). -->
+<!-- 2c. FOUNDER: a short mention here (added 2026-11-06 as the full
+     story; shortened 2026-11-11) -- the full story lives on /about. -->
 <section class="founder">
   <img class="avatar" src="/static/founder.jpg" alt="Phanel Jean-Baptiste, founder of TxtAnOffer" width="104" height="104" loading="lazy">
   <div class="eyebrow">From the founder</div>
   <h2>Built by someone who read<br>the fine print for a living.</h2>
-  <p class="story">I am Phanel Jean-Baptiste. Before TxtAnOffer, I reviewed group benefits claims at Sun Life Canada, checking files against policy wording line by line and deciding what the contract actually covered. The expensive mistakes were never in the big print. They were in a blank field on page seven, a date that does not exist, numbers that do not add up. So I built the check I wished every file had before it reached my desk. TxtAnOffer reads a filled contract the same way, flags what title would flag, and deletes your file when it is done.</p>
+  <p class="story">Before TxtAnOffer, I reviewed group benefits claims at Sun Life Canada, checking files against policy wording line by line and deciding what the contract actually covered. So I built the check I wished every file had before it reached my desk.</p>
   <p class="sig">Phanel Jean-Baptiste<span>Founder, TxtAnOffer</span></p>
+  <div class="ctas"><a class="link" href="/about">Read the founder story</a></div>
 </section>
 
 <!-- 3. TEXT AN OFFER: the namesake product, played as a 3-step demo (text_demo.py) -->
@@ -9341,163 +9345,69 @@ def trust_center():
 
 @app.route("/about")
 def about():
-    html = """<!DOCTYPE html>
+    """About: the founder story, in full. The homepage carried the whole
+    story in its founder section until 2026-11-11; the homepage now
+    keeps a short mention and the full text lives here. Same shell as
+    /text-an-offer: homepage variables and type scale, _SITE_CHROME_CSS,
+    _site_nav and _SITE_FOOTER."""
+    return """<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>About — TxtAnOffer</title>
-<meta name="description" content="TxtAnOffer started as a faster way to text in an offer. It became TC File Check &mdash; a free tool that catches what's missing in a TREC 20-19 before title does. Here's the story.">
-<link rel="icon" href="/static/favicon.ico?v=2" type="image/x-icon">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
-<style>
-  :root {
-    --bg: #F5F5F7;
-    --bg-card: #fff;
-    --border: rgba(15,31,47,0.08);
-    --text: #0f1f2f;
-    --text-muted: #5a6b7a;
-    --text-dim: #5f707f;
-    --accent: #0b5d52;
-    --accent-light: #16806e;
-    --accent-dark: #0a3a33;
-    --accent-tint: #E7F3F1;
-    --radius: 1.25rem;
-    --transition: all 0.2s ease;
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>About — TxtAnOffer</title>
+  <meta name="description" content="Before TxtAnOffer, Phanel Jean-Baptiste reviewed group benefits claims at Sun Life Canada, checking files against policy wording line by line. He built the check he wished every file had before it reached his desk. The founder story.">
+  <link rel="icon" href="/static/favicon.ico?v=2" type="image/x-icon">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+  <style>
+  /* Homepage variables and type scale (see index()). */
+  :root{
+    --green:#0b5d52; --green-deep:#0a3f3a; --ink:#1d1d1f; --mute:#6e6e73;
+    --gray:#f5f5f7; --line:#e3e3e6; --red:#c62828; --amber:#9a6200;
   }
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body {
-    font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
-    background:var(--bg); color:var(--text); line-height:1.6;
-    -webkit-font-smoothing:antialiased; min-height:100vh;
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-font-smoothing:antialiased;scroll-behavior:smooth}
+  body{font-family:Inter,-apple-system,system-ui,sans-serif;color:var(--ink);background:#fff;line-height:1.4}
+  a{color:inherit;text-decoration:none}
+""" + _SITE_CHROME_CSS + """
+  section{text-align:center;overflow:hidden}
+  .eyebrow{font-size:19px;font-weight:600;color:var(--green);margin-bottom:10px}
+  h1{font-size:56px;line-height:1.07;letter-spacing:-.03em;font-weight:800}
+  .story-sec{padding:90px 24px 0}
+  .story-sec .avatar{width:120px;height:120px;border-radius:50%;object-fit:cover;display:block;margin:0 auto 26px;border:3px solid #fff;box-shadow:0 4px 18px rgba(10,63,58,.18)}
+  .story-sec .story{font-size:21px;line-height:1.55;color:var(--ink);max-width:640px;margin:30px auto 0;text-align:left}
+  .story-sec .sig{margin-top:32px;font-size:19px;font-weight:700;color:var(--green-deep)}
+  .story-sec .sig span{display:block;font-weight:500;color:var(--mute);font-size:16px;margin-top:2px}
+  .company{max-width:680px;margin:64px auto 0;padding:0 24px 110px}
+  .company .box{background:var(--gray);border:1px solid var(--line);border-radius:18px;padding:26px 28px;font-size:18px;line-height:1.55;color:var(--ink);text-align:left}
+  .company a{color:var(--green);font-weight:600;text-decoration:underline}
+  @media (max-width:734px){
+    .eyebrow{font-size:17px}
+    h1{font-size:38px}
+    .story-sec{padding-top:64px}
+    .story-sec .story{font-size:19px}
+    .company{padding-bottom:80px}
   }
-  a { color:inherit; text-decoration:none; }
-  .nav {
-    display:flex;align-items:center;justify-content:space-between;
-    padding:1rem 2rem;position:sticky;top:0;
-    background:rgba(255,255,255,0.85);backdrop-filter:blur(20px);
-    -webkit-backdrop-filter:blur(20px);
-    border-bottom:1px solid var(--border);z-index:100;
-  }
-  .nav-left {display:flex;align-items:center;gap:0.6rem;font-weight:700;font-size:1.1rem;letter-spacing:-0.02em;color:var(--text);}
-  .nav-logo {width:34px;height:34px;border-radius:22%;overflow:hidden;}
-  .nav-logo img {width:100%;height:100%;object-fit:contain;}
-  .nav-links {display:flex;gap:2rem;font-size:0.875rem;font-weight:500;color:var(--text-muted);}
-  .nav-links a {transition:var(--transition);}
-  .nav-links a:hover {color:var(--text);}
-  .nav-cta {
-    background:var(--accent);color:#fff;padding:0.55rem 1.35rem;border-radius:9999px;
-    font-size:0.875rem;font-weight:600;text-decoration:none;display:inline-block;
-    transition:var(--transition);
-  }
-  .nav-cta:hover {transform:scale(1.05);box-shadow:0 0 24px rgba(0,0,0,0.25);}
-  .nav-toggle { display: none; flex-direction: column; justify-content: center; gap: 5px; width: 34px; height: 34px; background: none; border: none; cursor: pointer; padding: 0; }
-  .nav-toggle span { display: block; width: 100%; height: 2px; background: var(--text); border-radius: 2px; }
-  .container {max-width:680px;margin:0 auto;padding:3.5rem 2rem 4rem;}
-  .avatar-lg {
-    width:64px;height:64px;border-radius:50%;overflow:hidden;margin-bottom:1.5rem;
-    border:2px solid var(--border);
-  }
-  .avatar-lg img {width:100%;height:100%;object-fit:cover;}
-  h1 {font-size:2.1rem;font-weight:800;letter-spacing:-0.03em;line-height:1.12;margin-bottom:0.4rem;color:var(--text);}
-  .kicker {font-size:0.9rem;color:var(--accent-dark);font-weight:600;margin-bottom:1.75rem;}
-  .about-body p {font-size:0.95rem;color:var(--text-muted);margin-bottom:1.1rem;}
-  .about-body strong {color:var(--text);font-weight:600;}
-  h2 {font-size:1.2rem;font-weight:700;margin:2rem 0 0.9rem;color:var(--text);}
-  ul {margin:0 0 1.1rem 1.2rem;color:var(--text-muted);font-size:0.95rem;}
-  li {margin-bottom:0.4rem;}
-  .signoff {
-    margin-top:2.5rem;padding-top:1.75rem;border-top:1px solid var(--border);
-    font-size:0.9rem;color:var(--text-muted);
-  }
-  .signoff strong {display:block;color:var(--text);font-size:1rem;margin-bottom:0.2rem;}
-  .foot {text-align:center;margin-top:3rem;font-size:0.8rem;color:var(--text-dim);}
-  .foot a {color:var(--accent-dark);}
-  .foot a:hover {text-decoration:underline;}
-  @media(max-width:600px) {
-    .container {padding:2.5rem 1.25rem 3rem;}
-    .nav-toggle { display: flex; }
-    .nav-links {
-      display: none; position: absolute; top: 100%; left: 0; right: 0;
-      flex-direction: column; gap: 0; padding: 0.5rem 1.25rem 1.25rem;
-      background: #fff; border-bottom: 1px solid rgba(15,31,47,0.08);
-    }
-    .nav-links.open { display: flex; }
-    .nav-links a { padding: 0.75rem 0; border-bottom: 1px solid rgba(15,31,47,0.08); }
-    .nav-links a:last-child { border-bottom: none; }
-  }
-</style>
+  </style>
 </head>
 <body>
-<nav class="nav">
-  <a href="/" class="nav-left">
-    <img src="/static/logo-wordmark.png?v=2" alt="TxtAnOffer" style="height:26px;width:auto;display:block;">
-  </a>
-  <div class="nav-links" id="navLinks">
-    <a href="/#how">How it works</a>
-    <a href="/pricing">Pricing</a>
-    <a href="/faq">FAQ</a>
-    <a href="/login">Log In</a>
-  </div>
-  <a href="/tc-check" class="nav-cta" data-evt="nav_check_cta">Check a file free</a>
-  <button class="nav-toggle" id="navToggle" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
-</nav>
-<script>
-(function(){
-  var t=document.getElementById('navToggle'), l=document.getElementById('navLinks');
-  if(!t||!l) return;
-  t.addEventListener('click', function(){
-    var open = l.classList.toggle('open');
-    t.setAttribute('aria-expanded', open ? 'true' : 'false');
-  });
-  l.querySelectorAll('a').forEach(function(a){
-    a.addEventListener('click', function(){ l.classList.remove('open'); t.setAttribute('aria-expanded','false'); });
-  });
-})();
-</script>
-
-<div class="container">
-  <div class="avatar-lg"><img src="/static/logo.png?v=2" alt="TxtAnOffer"></div>
-  <h1>Built After Listening to Texas Real Estate</h1>
-  <div class="kicker">The story behind TxtAnOffer</div>
-
-  <div class="about-body">
-    <p>Hi, I'm <strong>Phanel Jean Baptiste</strong>, the founder of TxtAnOffer.</p>
-
-    <p>I'm not a real estate agent &mdash; I'm a software builder with a passion for solving real problems with simple tools. TxtAnOffer started after a conversation with a Texas REALTOR who walked me through what a bad day actually looks like: standing in a driveway or sitting in a parking lot, laptop open, manually filling 40+ fields on a TREC 20-19 while a buyer waits, because in Texas real estate the agent who gets their offer in first often gets the house.</p>
-
-    <p>That time costs deals. So I built a way to skip it. TxtAnOffer turns what used to take a laptop into a text message and about 10 seconds.</p>
-
-    <p><strong>That solved the drafting. It didn't solve what happens next.</strong> The more I dug into how Texas files actually close, the clearer it got: the real risk in a Texas contract isn't how fast it gets written &mdash; it's what's still blank or mismatched by the time it reaches title. A missing initial. An Effective Date nobody filled in. A 40-11 that disagrees with the contract it's attached to. That's not a speed problem, it's a review problem, and it can happen on any file &mdash; not just the ones typed from a phone.</p>
-
-    <p>So TxtAnOffer became two things. <strong>Create</strong> an offer by text in seconds &mdash; still here, free to start. And <strong>Check</strong> any TREC 20-19 for exactly what's missing before title finds it &mdash; free, no login, just drop it on the site. Brokerages and TC teams that want every file checked automatically, across their whole roster, get the Brokerage Dashboard.</p>
-
-    <h2>Why It's Built This Way</h2>
-    <p>Every feature is built around a specific way a Texas file goes wrong &mdash; not because a spec sheet said a contract tool should have it:</p>
-    <ul>
-      <li><strong>Field-by-field verification</strong> because a checklist that's just guessing from a form's field names misses the exact mistakes that get a file kicked back</li>
-      <li><strong>No login to check a file</strong> because a TC who needs an answer in the next two minutes shouldn't have to create an account first</li>
-      <li><strong>SMS-first offer drafting</strong> because most agents I talked to are in the field on their phone, not at a desk</li>
-      <li><strong>Draft warnings</strong> because nothing should go out until the licensed agent sending it has actually reviewed it</li>
-    </ul>
-
-    <h2>The Mission</h2>
-    <p>Give Texas real estate professionals &mdash; agents, TCs, and the brokers who manage them &mdash; a faster way to create a contract and a sharper way to catch what's wrong with one, before it costs a deal or a closing.</p>
-  </div>
-
-  <div class="signoff">
-    <strong>Phanel Jean Baptiste</strong>
-    Founder, TxtAnOffer<br>
-    <a href="/contact" style="color:var(--accent-dark);">Get in touch</a>
-  </div>
-
-  <p class="foot"><a href="/">&larr; Back to home</a> &middot; <a href="/faq">FAQ</a> &middot; <a href="/contact">Contact</a></p>
+""" + _site_nav().replace('data-evt="nav_check_cta">Check a file</a>',
+                          'data-evt="nav_check_cta">Check a file free</a>') + """
+<section class="story-sec">
+  <img class="avatar" src="/static/founder.jpg" alt="Phanel Jean-Baptiste, founder of TxtAnOffer" width="120" height="120" loading="lazy">
+  <div class="eyebrow">From the founder</div>
+  <h1>Built by someone who read<br>the fine print for a living.</h1>
+  <p class="story">I am Phanel Jean-Baptiste. Before TxtAnOffer, I reviewed group benefits claims at Sun Life Canada, checking files against policy wording line by line and deciding what the contract actually covered. The expensive mistakes were never in the big print. They were in a blank field on page seven, a date that does not exist, numbers that do not add up. So I built the check I wished every file had before it reached my desk. TxtAnOffer reads a filled contract the same way, flags what title would flag, and deletes your file when it is done.</p>
+  <p class="sig">Phanel Jean-Baptiste<span>Founder, TxtAnOffer</span></p>
+</section>
+<div class="company">
+  <div class="box">TxtAnOffer is a contract checker for Texas and Colorado real estate: <a href="/tc-check" data-evt="about_check_cta">TC Check</a> flags errors in filled TREC and Colorado contracts before title; agents can also draft offers by text and keep deal notes in the <a href="/#notepad">Deal Notepad</a>.</div>
 </div>
-</body>
-</html>"""
-    return html
+""" + _SITE_FOOTER + """</body>
+</html>
+"""
 
 
 # --- SEO guides -----------------------------------------------------------
@@ -15018,7 +14928,7 @@ def pwa_manifest():
         "name": "TxtAnOffer",
         "short_name": "TxtAnOffer",
         "description": "Catch it before title does. TC Check, text-an-offer drafts, and your Deal Notepad.",
-        "start_url": "/",
+        "start_url": "/notepad",
         "scope": "/",
         "display": "standalone",
         "orientation": "portrait",
