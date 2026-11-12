@@ -164,7 +164,8 @@ class HomepageFirstScreen(unittest.TestCase):
         self.assertIn('href="/tc-check/bulk" data-evt="hero_broker_cta"', m.group(2))
 
     def test_subhead_per_state(self):
-        self.assertIn('<p class="sub" data-state="tx">One checker for the Texas contracts you file most', self.html)
+        self.assertIn('<p class="sub" data-state="tx">Take the call, jot the notes, and the Deal Sheet builds itself', self.html)
+        self.assertIn('<p class="sub" data-state="co">Take the call, jot the notes, and the Deal Sheet builds itself', self.html)
 
     def test_hero_lists_every_checked_contract(self):
         # Every contract TC Check reads must show in the hero's form row, so
@@ -177,7 +178,7 @@ class HomepageFirstScreen(unittest.TestCase):
             if not c.startswith("Colorado "):
                 self.assertIn('<b>' + c.split()[-1] + '</b>', row)
         self.assertNotIn('<b>CBS1</b>', row)
-        self.assertIn('<p class="sub" data-state="co">Drop a filled CBS1', self.html)
+        self.assertIn('<p class="sub" data-state="co">Take the call, jot the notes, and the Deal Sheet builds itself', self.html)
 
     def test_co_forms_row(self):
         # Colorado Land (CBS4) is checked since 2026-10-26 ("<b>CBS4</b>").
@@ -201,7 +202,7 @@ class HomepageFirstScreen(unittest.TestCase):
         self.assertIn('class="state-tx"', _get("/?src=cold_x"))
 
     def test_eyebrow_above_h1(self):
-        self.assertLess(self.html.find('<div class="eyebrow">TC Check &middot; contract error-checker'), self.html.find("<h1>Catch it before"))
+        self.assertLess(self.html.find('<div class="eyebrow">TC Check &middot; contract error-checker'), self.html.find("<h1>The notepad that sits"))
 
     def test_what_it_checks_anchor_on_tc_check(self):
         # The homepage link lands on a wrapper holding both states' lists.
