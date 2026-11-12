@@ -138,8 +138,11 @@ class TcCheckFirstScreen(unittest.TestCase):
 
 class HomepageFirstScreen(unittest.TestCase):
     """The simplified homepage (2026-10-23) keeps the hero's analytics hooks
-    on its new buttons: the sample button now opens /tc-check?demo=1 (which
-    runs the sample there) instead of running it in place."""
+    on its buttons. Since the 2026-11-12 restructure the hero sells TC
+    Check only, with exactly two exits per state row: the check CTA and
+    the sample button, which now anchors to the on-page sample section
+    (#sample). The Deal Notepad CTA left the hero; its event stays
+    registered so rows already logged keep parsing."""
 
     @classmethod
     def setUpClass(cls):
@@ -148,15 +151,18 @@ class HomepageFirstScreen(unittest.TestCase):
     def test_copy_and_hooks(self):
         self.assertNotIn("__FS_", self.html)
         self.assertNotIn("__HOME_", self.html)
-        for hook in ('href="#notepad" data-evt="hero_notepad_cta"',
-                     'href="/tc-check" data-evt="hero_cta"', 'href="/tc-check?demo=1" data-evt="hero_sample"',
-                     'href="/tc-check?state=co" data-evt="hero_cta"', 'href="/tc-check?demo=1&amp;state=co" data-evt="hero_sample"',
+        for hook in ('href="/tc-check" data-evt="hero_cta"', 'href="#sample" data-evt="hero_sample"',
+                     'href="/tc-check?state=co" data-evt="hero_cta"',
                      'id="heroReportCard"', 'href="/tc-check#what-it-checks" data-evt="home_check_link"'):
             self.assertIn(hook, self.html)
+        # The notepad CTA is gone from the hero (2026-11-12) but its event
+        # stays registered; the check CTA is the solid primary in both
+        # hero CTA rows, the sample anchor the ghost, exactly two exits.
+        self.assertNotIn('data-evt="hero_notepad_cta"', self.html)
         self.assertIn("hero_notepad_cta", app_module._ENGAGEMENT_TYPES)
-        # The notepad CTA is the solid primary in both hero CTA rows; the
-        # check CTA is the secondary now (2026-11-11).
-        self.assertEqual(self.html.count('<a class="btn solid" href="#notepad" data-evt="hero_notepad_cta">Try the Deal Notepad</a>'), 2)
+        self.assertEqual(self.html.count('<a class="btn solid" href="/tc-check" data-evt="hero_cta">Check a contract free</a>'), 1)
+        self.assertEqual(self.html.count('<a class="btn solid" href="/tc-check?state=co" data-evt="hero_cta">Check a contract free</a>'), 1)
+        self.assertEqual(self.html.count('<a class="btn ghost" href="#sample" data-evt="hero_sample">See the sample report</a>'), 2)
         for evt in ("hero_cta", "home_check_link"):
             self.assertIn(evt, app_module.CHECK_CTA_EVENTS)
         self.assertIn("hero_sample", app_module.SAMPLE_CTA_EVENTS)
@@ -168,9 +174,16 @@ class HomepageFirstScreen(unittest.TestCase):
         self.assertIn('data-state="tx"', m.group(1))
         self.assertIn('href="/tc-check/bulk" data-evt="hero_broker_cta"', m.group(2))
 
-    def test_subhead_per_state(self):
-        self.assertIn('<p class="sub" data-state="tx">Take the call, jot the notes, and the Deal Sheet builds itself', self.html)
-        self.assertIn('<p class="sub" data-state="co">Take the call, jot the notes, and the Deal Sheet builds itself', self.html)
+    def test_subhead_is_one_tc_check_line(self):
+        # 2026-11-12: one state-agnostic TC Check sub in the hero (the
+        # per-state form rows still switch below it).
+        hero = re.search(r'<section class="hero">(.*?)</section>', self.html, re.S).group(1)
+        self.assertIn('<p class="sub">Drop in a filled TREC or Colorado contract. '
+                      'Blank fields, bad math and impossible dates get flagged as Must fix '
+                      'or Review, and every report ends with the deadline sheet and a '
+                      'calendar file.</p>', hero)
+        self.assertNotIn('<p class="sub" data-state=', hero)
+        self.assertNotIn('Take the call, jot the notes', hero)
 
     def test_hero_lists_every_checked_contract(self):
         # Every contract TC Check reads must show in the hero's form row, so
@@ -183,7 +196,7 @@ class HomepageFirstScreen(unittest.TestCase):
             if not c.startswith("Colorado "):
                 self.assertIn('<b>' + c.split()[-1] + '</b>', row)
         self.assertNotIn('<b>CBS1</b>', row)
-        self.assertIn('<p class="sub" data-state="co">Take the call, jot the notes, and the Deal Sheet builds itself', self.html)
+        self.assertIn('<p class="sub">Drop in a filled TREC or Colorado contract.', self.html)
 
     def test_co_forms_row(self):
         # Colorado Land (CBS4) is checked since 2026-10-26 ("<b>CBS4</b>").
@@ -207,7 +220,7 @@ class HomepageFirstScreen(unittest.TestCase):
         self.assertIn('class="state-tx"', _get("/?src=cold_x"))
 
     def test_eyebrow_above_h1(self):
-        self.assertLess(self.html.find('<div class="eyebrow">TC Check &middot; contract error-checker'), self.html.find("<h1>The notepad that sits"))
+        self.assertLess(self.html.find('<div class="eyebrow">TC Check &middot; contract error-checker'), self.html.find("<h1>Catch it before"))
 
     def test_what_it_checks_anchor_on_tc_check(self):
         # The homepage link lands on a wrapper holding both states' lists.
