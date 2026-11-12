@@ -101,6 +101,13 @@ _OPTION_FEE_PATTERNS = (
     r"\boption\s*\$\s*(\d[\d,]*(?:\.\d+)?)\s*(k)?",
 )
 
+# Option/inspection day counts, plural-aware. parser.INSPECTION_RE only
+# matches the singular ("10 day option"): a note's "10 days option" fell
+# through to the generic day-count patterns and was read as close_days.
+# parser.py is the SMS flow's module, so the wider pattern lives here.
+_OPTION_DAYS_RE = re.compile(
+    r"(\d+)[\s-]*days?\s*(?:option|inspection)(?:\s+period)?", re.IGNORECASE)
+
 
 def _labeled_money_spans(text: str):
     spans = []
@@ -203,7 +210,21 @@ def _find_closing(text: str):
     if m:
         out["closing_date"] = (m.group(1), m.group(0), None)
         return out
-    insp = _parser.INSPECTION_RE.search(text)
+    # Date-first phrasing: "Dec 18 close" / "Sellers fine with Dec 18
+    # close" -- the month/day BEFORE the word close, which CLOSE_DATE_RE
+    # (close-first only) can't see. The date only: close_days is not
+    # derived from it, so a note whose only day count is the option
+    # period doesn't gain a phantom close_days from this branch either.
+    m = re.search(r"\b(" + "|".join(_parser.MONTH_NAMES.keys()) +
+                  r")\.?\s+(\d{1,2})(?:st|nd|rd|th)?\s+clos(?:e|ing)\b",
+                  text, re.IGNORECASE)
+    if m:
+        target = _iso_from_month_day(_parser.MONTH_NAMES[m.group(1).lower()],
+                                     int(m.group(2)))
+        if target:
+            out["closing_date"] = (target.isoformat(), m.group(0), None)
+            return out
+    insp = _OPTION_DAYS_RE.search(text)
     insp_span = insp.span() if insp else None
     for m in _parser.CLOSE_PHRASE_RE.finditer(text):
         out["close_days"] = (int(m.group(1)), m.group(0), None)
@@ -248,17 +269,25 @@ def _find_party(text: str, role: str):
         if 2 <= len(value) <= 60:
             start = m.start(1)
             return value, text[start:start + len(value)]
-    m = re.search(rf"\b{role}s?\s+(?:is|are|named)\s+"
+    # The role word itself is case-insensitive (scoped (?i:...)): a note
+    # that starts a sentence with "Buyers John & Jane Doe" must match
+    # just like mid-sentence "buyers ...". The NAME stays case-sensitive
+    # -- it must be capitalized in the note to be proposed at all.
+    m = re.search(rf"\b(?i:{role}s?)\s+(?:is|are|named)\s+"
                   rf"([A-Z][A-Za-z.'-]+(?:\s+[A-Z][A-Za-z.'-]+){{0,2}})", text)
     if m:
-        return m.group(1), m.group(1)
+        name = m.group(1).rstrip(".")
+        return name, name
     # Bare form: "buyers John & Jane Doe" -- capitalized name(s) right
-    # after the role word ("buyers agent" can't match: lowercase).
-    m = re.search(rf"\b{role}s?\s+([A-Z][A-Za-z.'-]+"
+    # after the role word ("buyers agent" can't match: lowercase). The
+    # name class allows periods for initials ("John Q. Doe"), so a
+    # sentence-ending period gets trimmed back off the capture.
+    m = re.search(rf"\b(?i:{role}s?)\s+([A-Z][A-Za-z.'-]+"
                   rf"(?:\s+(?:&|and)\s+[A-Z][A-Za-z.'-]+)?"
                   rf"(?:\s+[A-Z][A-Za-z.'-]+)?)", text)
     if m:
-        return m.group(1), m.group(1)
+        name = m.group(1).rstrip(".")
+        return name, name
     return None
 
 
@@ -297,6 +326,45 @@ def _clause_field(text: str, pattern: str, require: str = None):
     return None
 
 
+# Words that end an address when they carry the sentence period
+# ("123 Main St." -- the period belongs to the address, not the cut).
+_SUFFIX_WORDS = frozenset(
+    "st street ave avenue blvd boulevard dr drive ln lane ct court rd "
+    "road way pkwy parkway pl place cir circle trl trail loop pass run "
+    "cv cove hwy highway".split())
+
+# Signals that the note has moved past the address into another field.
+_ADDRESS_SIGNAL_RE = re.compile(
+    r"\b(?:buyers?|sellers?|earnest|option|financing|hoa|survey|fridge|"
+    r"washer|credit|conventional|fha|usda)\b|\$", re.IGNORECASE)
+
+
+def _bounded_address(text: str, street) -> str:
+    """The address portion of the note, starting at the street match and
+    cut at the first sentence boundary or field signal. parser's
+    _parse_address is built for one-line SMS shorthand: on prose notes
+    it strips the field tokens and returns everything left, so the
+    "address" swallowed whole sentences ("123 Main St ... Buyers John &
+    Jane Doe. Sellers fine with ..."). Bounding the raw substring here
+    keeps the proposal to the address itself -- and span == value, an
+    exact substring by construction."""
+    start = street.start()
+    end = street.end()
+    limit = min(len(text), start + 120)
+    cut = limit
+    for m in re.finditer(r"\.", text[end:limit]):
+        dot = end + m.start()
+        word = re.search(r"([A-Za-z]+)$", text[start:dot])
+        if word and word.group(1).lower() in _SUFFIX_WORDS:
+            continue  # "St." / "Dr." -- the period is part of the address
+        cut = dot
+        break
+    sig = _ADDRESS_SIGNAL_RE.search(text, end, limit)
+    if sig:
+        cut = min(cut, sig.start())
+    return text[start:cut].strip(" ,.") or None
+
+
 def _extract_fields(raw_text: str) -> dict:
     """Deterministic extraction. Returns {key: (value, span, note)}."""
     text = raw_text or ""
@@ -318,7 +386,7 @@ def _extract_fields(raw_text: str) -> dict:
     hit = _find_dated(text, r"(?:effective|signed|executed)")
     if hit:
         found["effective_date"] = (hit[0], hit[1], None)
-    m = _parser.INSPECTION_RE.search(text)
+    m = _OPTION_DAYS_RE.search(text)
     if m:
         found["option_days"] = (int(m.group(1)), m.group(0), None)
     hit = _find_labeled_money(text, _EARNEST_MONEY_PATTERNS)
@@ -333,12 +401,14 @@ def _extract_fields(raw_text: str) -> dict:
     if hit:
         found["option_fee_amount"] = (hit[0], hit[1], None)
 
-    address = _parser._parse_address(text)
+    parsed_address = _parser._parse_address(text)
     street = re.search(
         r"\b\d{1,6}\s+[A-Za-z0-9'’ .\-]+?\s+(?:" + _parser.STREET_SUFFIXES + r")\b\.?",
         text, re.IGNORECASE)
-    if address and street:
-        found["address"] = (address, street.group(0), None)
+    if parsed_address and street:
+        bounded = _bounded_address(text, street)
+        if bounded:
+            found["address"] = (bounded, bounded, None)
     city = _parser._parse_city(text)
     if city:
         for m in re.finditer(re.escape(city), text, re.IGNORECASE):
@@ -347,7 +417,7 @@ def _extract_fields(raw_text: str) -> dict:
                             after, re.IGNORECASE):
                 found["city"] = (city, m.group(0), None)
                 break
-    county = _parser._parse_county(text, address, city)
+    county = _parser._parse_county(text, parsed_address, city)
     if county:
         m = re.search(re.escape(county), text, re.IGNORECASE)
         if m:
