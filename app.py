@@ -273,6 +273,8 @@ _ENGAGEMENT_TYPES = ("js_ok", "upload_picked", "upload_failed_rejected", "upload
                      "home_final_cta", "home_final_sample", "home_sample_findings",
                      # homepage Deal Notepad interactive, 2026-11-11
                      "home_notepad_run",
+                     # homepage one-desk three-tools cards, 2026-11-12
+                     "home_tools_check", "home_tools_notepad", "home_tools_text",
                      # PWA install tracking, 2026-11-11 (see PWA_JS)
                      "pwa_install_accepted", "pwa_installed", "pwa_standalone_launch",
                      # Deal Notepad pages, 2026-11-11
@@ -803,9 +805,9 @@ def index():
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TxtAnOffer — The notepad that sits on your desk.</title>
+  <title>TxtAnOffer — Catch it before title does.</title>
   <meta name="description" content="For transaction coordinators and managing brokers in Texas and Colorado: drop a filled TREC 20-19 or CBS1 and see what's missing or inconsistent before title kicks it back. New: Deadline Autopilot puts every contract deadline in your calendar. TxtAnOffer also drafts new offers by text message.">
-  <meta property="og:title" content="TxtAnOffer — The notepad that sits on your desk.">
+  <meta property="og:title" content="TxtAnOffer — Catch it before title does.">
   <meta property="og:description" content="Contract error-checker for Texas & Colorado real estate. Upload a filled TREC resale (20-19), condo (30-18), land (9-18) or farm and ranch (25-17) contract, or a Colorado CBS1, and get a report of what's blank, missing or doesn't add up before title kicks it back.">
   <meta property="og:url" content="https://txtanoffer.com/">
   <meta property="og:type" content="website">
@@ -814,7 +816,7 @@ def index():
   <meta property="og:image:height" content="630">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:image" content="https://txtanoffer.com/static/og-home.png">
-  <meta name="twitter:title" content="TxtAnOffer — The notepad that sits on your desk.">
+  <meta name="twitter:title" content="TxtAnOffer — Catch it before title does.">
   <meta name="twitter:description" content="Contract error-checker for Texas & Colorado real estate. Upload a filled TREC resale (20-19), condo (30-18), land (9-18) or farm and ranch (25-17) contract, or a Colorado CBS1, and get a report of what's blank, missing or doesn't add up before title kicks it back.">
   <script type="application/ld+json">
   {"@context":"https://schema.org","@graph":[
@@ -998,6 +1000,26 @@ __TEXT_DEMO_CSS__
   .facts4{gap:20px 34px;font-size:16px}
   .protect p{margin-top:8px;font-size:16px;line-height:1.45;color:var(--mute)}
 
+  /* ---------- 2e. how it works + one desk, three tools (2026-11-12) ---------- */
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;max-width:1024px;margin:56px auto 0;text-align:left}
+  .step{background:var(--gray);border-radius:22px;padding:32px 28px 34px}
+  .step-n{display:block;font-size:15px;font-weight:800;letter-spacing:.1em;color:var(--green);margin-bottom:16px}
+  .step b{display:block;font-size:21px;font-weight:700;letter-spacing:-.01em}
+  .step p{margin-top:8px;font-size:16.5px;line-height:1.5;color:var(--mute)}
+  .desk{background:var(--gray);padding-bottom:110px;margin-top:110px}
+  .desk-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;max-width:1024px;margin:56px auto 0;text-align:left}
+  .desk-card{background:#fff;border:1px solid var(--line);border-radius:22px;padding:32px 28px}
+  .desk-card .tag{margin-bottom:18px;font-size:12px;padding:5px 10px}
+  .desk-card h3{font-size:24px;font-weight:800;letter-spacing:-.02em}
+  .desk-card p{font-size:16.5px;line-height:1.5;color:var(--mute);margin:10px 0 20px}
+  .desk-card .link{font-size:17px}
+  .final-sec{padding-bottom:110px}
+  @media (max-width:734px){
+    .steps,.desk-cards{grid-template-columns:1fr;margin-top:40px}
+    .desk{margin-top:72px;padding-bottom:72px}
+    .final-sec{padding-bottom:72px}
+  }
+
   /* ---------- mobile (734px break) ---------- */
   @media (max-width:734px){
     section{padding-top:72px}
@@ -1140,6 +1162,7 @@ __TEXT_DEMO_CSS__
 <body>
 
 __SITE_NAV__
+
 <!-- 1. HERO: one idea, the product doing it -->
 <section class="hero">
   <div class="eyebrow">TC Check &middot; contract error-checker for Texas &amp; Colorado real estate</div>
@@ -1149,24 +1172,21 @@ __SITE_NAV__
     <button type="button" data-set-state="tx" aria-pressed="__TX_PRESSED__" data-evt="state_toggle_tx">Texas <small>TREC</small></button>
     <button type="button" data-set-state="co" aria-pressed="__CO_PRESSED__" data-evt="state_toggle_co">Colorado <small>CBS1 &amp; Land</small></button>
   </div>
-  <h1>The notepad that sits<br>on your desk.</h1>
-  <p class="sub" data-state="tx">Take the call, jot the notes, and the Deal Sheet builds itself, every unsure term flagged Confirm instead of guessed. When the contract is filled, it gets checked before title: blank fields, bad math and impossible dates on the Texas contracts you file most, resale, condo, land, and farm and ranch. Built for TCs, agents and brokerages.</p>
+  <h1>Catch it before<br>title does.</h1>
+  <p class="sub">Drop in a filled TREC or Colorado contract. Blank fields, bad math and impossible dates get flagged as Must fix or Review, and every report ends with the deadline sheet and a calendar file.</p>
   <ul class="forms" data-state="tx" aria-label="Contracts TC Check reads">
     <li><span>Resale</span><small>TREC <b>20-19</b></small></li><li><span>Condo</span><small>TREC <b>30-18</b></small></li><li><span>Land</span><small>TREC <b>9-18</b></small></li><li><span>Farm &amp; Ranch</span><small>TREC <b>25-17</b></small></li>
   </ul>
-  <p class="sub" data-state="co">Take the call, jot the notes, and the Deal Sheet builds itself, every unsure term flagged Confirm instead of guessed. When the contract is filled, it gets checked before title: &sect;3.1 deadlines left blank that delete a contingency, &sect;4.1 price math that doesn&rsquo;t add up, deadlines that land after closing. Built for TCs, agents and brokerages.</p>
   <ul class="forms" data-state="co" aria-label="Colorado contracts TC Check reads">
     <li><span>Residential</span><small><b>CBS1</b></small></li><li><span>Land</span><small><b>CBS4</b></small></li>
   </ul>
   <div class="ctas" data-state="tx">
-    <a class="btn solid" href="#notepad" data-evt="hero_notepad_cta">Try the Deal Notepad</a>
-    <a class="btn ghost" href="/tc-check" data-evt="hero_cta">Check a file free</a>
-    <a class="btn ghost" href="/tc-check?demo=1" data-evt="hero_sample">See a sample report</a>
+    <a class="btn solid" href="/tc-check" data-evt="hero_cta">Check a contract free</a>
+    <a class="btn ghost" href="#sample" data-evt="hero_sample">See the sample report</a>
   </div>
   <div class="ctas" data-state="co">
-    <a class="btn solid" href="#notepad" data-evt="hero_notepad_cta">Try the Deal Notepad</a>
-    <a class="btn ghost" href="/tc-check?state=co" data-evt="hero_cta">Check a file free</a>
-    <a class="btn ghost" href="/tc-check?demo=1&amp;state=co" data-evt="hero_sample">See a sample report</a>
+    <a class="btn solid" href="/tc-check?state=co" data-evt="hero_cta">Check a contract free</a>
+    <a class="btn ghost" href="#sample" data-evt="hero_sample">See the sample report</a>
   </div>
   <p class="fine" data-state="tx">3 free reports, no signup, no credit card &middot; 4 Texas TREC contracts + the 40-11, 41-3 and 39-11</p>
   <p class="fine" data-state="co">3 free reports, no signup, no credit card &middot; Colorado CBS1 &amp; Land + Amend/Extend and Counterproposal</p>
@@ -1241,6 +1261,68 @@ __SITE_NAV__
       <span><i>&#10003;</i>12 pages read on the sample report</span>
       <span><i>&#10003;</i>16 findings: 12 must fix, 4 review</span>
       <span><i>&#10003;</i>Deadline sheet + calendar file in every report</span>
+    </div>
+  </div>
+</section>
+
+<!-- 2b. SAMPLE REPORT: findings public on the page (2026-11-10 rearrangement:
+     moved above Deadline Autopilot; the email ask below it now only sends
+     the full PDF + the checklist). -->
+<section class="capture" id="sample">
+  <div class="eyebrow">Free, and public</div>
+  <h2>Start with the<br>sample report.</h2>
+  <p class="sub">A filled TREC 20&#8209;19, checked the way title would check it. The findings are right here &mdash; no email needed to look.</p>
+  <div class="sample-findings">
+    <div class="finding"><span class="tag b">MUST FIX</span><div><b>Price doesn&rsquo;t add up</b><span>Paragraph 3: Cash portion (3A) $85,000 + financing (3B) $340,000 = $425,000, but the Sales Price (3C) says $435,000</span></div></div>
+    <div class="finding"><span class="tag b">MUST FIX</span><div><b>Impossible closing date</b><span>Paragraph 9A: Closing date &ldquo;November 31&rdquo; is not a real date</span></div></div>
+    <div class="finding"><span class="tag w">REVIEW</span><div><b>Notices will bounce</b><span>Buyer&rsquo;s notice email (Paragraph 21) &ldquo;john.doe@gmailcom&rdquo; is not a valid email address</span></div></div>
+  </div>
+  <div class="sample-verdict"><span><b>16</b> findings</span><span><b>12</b> must fix</span><span><b>4</b> review</span><span><b>12</b> pages read</span><span>Verdict: not ready for title</span></div>
+  <p class="sample-watch">or <a href="/tc-check?demo=1" data-evt="home_sample_findings">watch the full sample run</a></p>
+  <form class="capture-form" id="homeCaptureForm" novalidate>
+    <input type="email" id="homeEmailOptinInput" class="capture-input" placeholder="work email" autocomplete="email" aria-label="Email address">
+    <input type="text" id="homeCaptureHp" class="capture-hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+    <button type="submit" class="btn solid" id="homeCaptureBtn">Email me the full report + checklist</button>
+  </form>
+  <p class="fine" id="homeCaptureMsg">The full sample PDF and the 6&#8209;point checklist, one email. Form&#8209;change updates only when they matter &mdash; unsubscribe anytime.</p>
+</section>
+
+<!-- 2d. HOW IT WORKS: three steps, no signup (2026-11-12). The middle
+     step carries the honesty line: fixed checks, no AI. -->
+<section class="how">
+  <div class="eyebrow">How it works</div>
+  <h2>Three steps,<br>no signup.</h2>
+  <div class="steps">
+    <div class="step"><span class="step-n">01</span><b>Forward or drop the file</b><p>Send it to tc@check.txtanoffer.com or upload it here. No account needed.</p></div>
+    <div class="step"><span class="step-n">02</span><b>Fixed checks run</b><p>Blanks, math, dates and mismatches on the published TREC and Colorado forms. No AI reads the contract.</p></div>
+    <div class="step"><span class="step-n">03</span><b>Report back with the dates</b><p>Findings, a deadline sheet counted from the contract as written, and a calendar file attached.</p></div>
+  </div>
+</section>
+
+<!-- 2e. ONE DESK, THREE TOOLS: the hierarchy in one strip (2026-11-12).
+     TC Check is the free wedge every visitor starts with; the Notepad
+     and Text an Offer are the Agent plan's second act. -->
+<section class="desk">
+  <div class="eyebrow">One desk, three tools</div>
+  <h2>Check first.<br>Then take it further.</h2>
+  <div class="desk-cards">
+    <div class="desk-card">
+      <span class="tag g">FREE &middot; START HERE</span>
+      <h3>TC Check</h3>
+      <p>The error-checker above. Where every visitor starts, and where the free 20&#8209;file broker audit starts too.</p>
+      <a class="link" href="/tc-check" data-evt="home_tools_check">Check a contract</a>
+    </div>
+    <div class="desk-card">
+      <span class="tag g">AGENT PLAN</span>
+      <h3>Deal Notepad</h3>
+      <p>Call notes in, a structured Deal Sheet out. Unsure terms flagged Confirm, blanks stay blank. Desktop app, or right in your dashboard.</p>
+      <a class="link" href="#notepad" data-evt="home_tools_notepad">See the notepad</a>
+    </div>
+    <div class="desk-card">
+      <span class="tag g">AGENT PLAN</span>
+      <h3>Text an Offer</h3>
+      <p>Text the terms, reply YES, get a filled draft back.</p>
+      <a class="link" href="#text" data-evt="home_tools_text">How texting works</a>
     </div>
   </div>
 </section>
@@ -1382,28 +1464,6 @@ __SITE_NAV__
   <div class="ctas tools-row"><a class="link" href="/guides/trec-deadline-calculator" data-evt="home_calc_link">Free TREC deadline calculator</a><a class="link" href="/guides" data-evt="home_guides_link">Browse the guides</a></div>
 </section>
 
-<!-- 2b. SAMPLE REPORT: findings public on the page (2026-11-10 rearrangement:
-     moved above Deadline Autopilot; the email ask below it now only sends
-     the full PDF + the checklist). -->
-<section class="capture">
-  <div class="eyebrow">Free, and public</div>
-  <h2>Start with the<br>sample report.</h2>
-  <p class="sub">A filled TREC 20&#8209;19, checked the way title would check it. The findings are right here &mdash; no email needed to look.</p>
-  <div class="sample-findings">
-    <div class="finding"><span class="tag b">MUST FIX</span><div><b>Price doesn&rsquo;t add up</b><span>Paragraph 3: Cash portion (3A) $85,000 + financing (3B) $340,000 = $425,000, but the Sales Price (3C) says $435,000</span></div></div>
-    <div class="finding"><span class="tag b">MUST FIX</span><div><b>Impossible closing date</b><span>Paragraph 9A: Closing date &ldquo;November 31&rdquo; is not a real date</span></div></div>
-    <div class="finding"><span class="tag w">REVIEW</span><div><b>Notices will bounce</b><span>Buyer&rsquo;s notice email (Paragraph 21) &ldquo;john.doe@gmailcom&rdquo; is not a valid email address</span></div></div>
-  </div>
-  <div class="sample-verdict"><span><b>16</b> findings</span><span><b>12</b> must fix</span><span><b>4</b> review</span><span><b>12</b> pages read</span><span>Verdict: not ready for title</span></div>
-  <p class="sample-watch">or <a href="/tc-check?demo=1" data-evt="home_sample_findings">watch the full sample run</a></p>
-  <form class="capture-form" id="homeCaptureForm" novalidate>
-    <input type="email" id="homeEmailOptinInput" class="capture-input" placeholder="work email" autocomplete="email" aria-label="Email address">
-    <input type="text" id="homeCaptureHp" class="capture-hp" tabindex="-1" autocomplete="off" aria-hidden="true">
-    <button type="submit" class="btn solid" id="homeCaptureBtn">Email me the full report + checklist</button>
-  </form>
-  <p class="fine" id="homeCaptureMsg">The full sample PDF and the 6&#8209;point checklist, one email. Form&#8209;change updates only when they matter &mdash; unsubscribe anytime.</p>
-</section>
-
 <!-- 2c. DEADLINE AUTOPILOT: free with every TC Check report (2026-11-05).
      Texas-only today, like the sheet itself. Sits after the sample report
      since 2026-11-10: it is a feature of the report. -->
@@ -1468,6 +1528,35 @@ __SITE_NAV__
   <p class="partner-line">On the Brokerage plan, every executed contract forwarded or uploaded is checked and kept <strong>5 years</strong>, searchable by address. <a href="/guides/broker-record-retention-texas" data-evt="home_retention_guide">The full retention guide</a> &middot; <a href="/archive" data-evt="home_retention_archive">How the archive works</a></p>
 </section>
 
+<!-- 3. TEXT AN OFFER: the namesake product, played as a 3-step demo (text_demo.py) -->
+<section class="text" id="text">
+  <div class="eyebrow">Also from TxtAnOffer: Text an offer</div>
+  <h2>Text the terms.<br>Get a filled draft back.</h2>
+  <p class="sub" data-state="tx">Price, down payment, closing days, address. Reply YES and the TREC 20&#8209;19 comes back with your terms filled in, ready to review.</p>
+  <p class="sub" data-state="co">Price, down payment, closing days and a Colorado address. Reply YES and the CBS1 comes back with your terms filled in, ready to review.</p>
+  <div class="ctas">
+    <a class="btn solid" href="sms:+18338970333" data-evt="workflow_offer_sms">Text (833) 897-0333</a>
+    <a class="btn ghost" href="/pricing">See pricing</a>
+    <a class="btn ghost" href="/text-an-offer" data-evt="text_learn_more">Learn more</a>
+  </div>
+  <p class="fine">By texting, you agree to receive SMS replies and reminders about your offers, plus up to 2 tips on the free trial. Reply STOP to opt out, HELP for help. Msg frequency varies. Msg &amp; data rates may apply. <a href="/privacy">Privacy</a> &middot; <a href="/terms">Terms</a></p>
+__TEXT_DEMO__
+</section>
+
+<!-- 2c. FOUNDER: a short mention here (added 2026-11-06 as the full
+     story; shortened 2026-11-11) -- the full story lives on /about. -->
+<section class="founder">
+  <img class="avatar" src="/static/founder.jpg" alt="Phanel Jean-Baptiste, founder of TxtAnOffer" width="104" height="104" loading="lazy">
+  <div class="eyebrow">From the founder</div>
+  <h2>Built by someone who read<br>the fine print for a living.</h2>
+  <p class="story">Before TxtAnOffer, I reviewed group benefits claims at Sun Life Canada, checking files against policy wording line by line and deciding what the contract actually covered. So I built the check I wished every file had before it reached my desk.</p>
+  <p class="sig">Phanel Jean-Baptiste<span>Founder, TxtAnOffer</span></p>
+  <div class="ctas"><a class="link" href="/about">Read the founder story</a></div>
+</section>
+
+<!-- 5. TRUST: one promise, then what's protected (see _home_trust) -->
+__HOME_TRUST__
+
 <!-- 4b. PRICING: the three plans from /pricing, one line each (2026-11-03). -->
 <section class="pricing-strip">
   <div class="eyebrow">Pricing</div>
@@ -1493,32 +1582,6 @@ __SITE_NAV__
   <p class="partner-line">Title company? <strong>TC Check is free for your agents</strong> &mdash; <a href="mailto:support@txtanoffer.com?subject=Title%20partner%20placement">ask about a partner placement</a>.</p>
 </section>
 
-<!-- 2c. FOUNDER: a short mention here (added 2026-11-06 as the full
-     story; shortened 2026-11-11) -- the full story lives on /about. -->
-<section class="founder">
-  <img class="avatar" src="/static/founder.jpg" alt="Phanel Jean-Baptiste, founder of TxtAnOffer" width="104" height="104" loading="lazy">
-  <div class="eyebrow">From the founder</div>
-  <h2>Built by someone who read<br>the fine print for a living.</h2>
-  <p class="story">Before TxtAnOffer, I reviewed group benefits claims at Sun Life Canada, checking files against policy wording line by line and deciding what the contract actually covered. So I built the check I wished every file had before it reached my desk.</p>
-  <p class="sig">Phanel Jean-Baptiste<span>Founder, TxtAnOffer</span></p>
-  <div class="ctas"><a class="link" href="/about">Read the founder story</a></div>
-</section>
-
-<!-- 3. TEXT AN OFFER: the namesake product, played as a 3-step demo (text_demo.py) -->
-<section class="text" id="text">
-  <div class="eyebrow">Also from TxtAnOffer: Text an offer</div>
-  <h2>Text the terms.<br>Get a filled draft back.</h2>
-  <p class="sub" data-state="tx">Price, down payment, closing days, address. Reply YES and the TREC 20&#8209;19 comes back with your terms filled in, ready to review.</p>
-  <p class="sub" data-state="co">Price, down payment, closing days and a Colorado address. Reply YES and the CBS1 comes back with your terms filled in, ready to review.</p>
-  <div class="ctas">
-    <a class="btn solid" href="sms:+18338970333" data-evt="workflow_offer_sms">Text (833) 897-0333</a>
-    <a class="btn ghost" href="/pricing">See pricing</a>
-    <a class="btn ghost" href="/text-an-offer" data-evt="text_learn_more">Learn more</a>
-  </div>
-  <p class="fine">By texting, you agree to receive SMS replies and reminders about your offers, plus up to 2 tips on the free trial. Reply STOP to opt out, HELP for help. Msg frequency varies. Msg &amp; data rates may apply. <a href="/privacy">Privacy</a> &middot; <a href="/terms">Terms</a></p>
-__TEXT_DEMO__
-</section>
-
 <!-- 4c. FAQ: the standing objections, in the site's own answers (2026-11-03). -->
 <section class="faq">
   <h2>Questions.</h2>
@@ -1529,6 +1592,11 @@ __TEXT_DEMO__
     <div class="faq-item"><h3>Is this legal advice?</h3><p>No. TC Check flags issues to review before a file goes to title. It is general information, not legal advice, and TxtAnOffer is not affiliated with TREC.</p></div>
     <div class="faq-item"><h3>Which contracts does TC Check read?</h3><p>Texas TREC 20&#8209;19 Resale, 30&#8209;18 Condo, 9&#8209;18 Land and 25&#8209;17 Farm and Ranch contracts, plus the 40&#8209;11, 41&#8209;3 and 39&#8209;11 addenda, and Colorado CBS1 Residential and Land contracts.</p></div>
   </div>
+</section>
+
+<!-- 7. FINAL CTA: the closing ask, moved out of the FAQ section
+     (2026-11-12 restructure) so it stands as the last word. -->
+<section class="final-sec">
   <div class="final-cta">
     <h2>Drop in one filled contract.<br>See what title would catch.</h2>
     <div class="ctas">
@@ -1538,9 +1606,6 @@ __TEXT_DEMO__
     <p class="partner-line">or forward it to <strong>tc@check.txtanoffer.com</strong> and get the report back by email</p>
   </div>
 </section>
-
-<!-- 5. TRUST: one promise, then what's protected (see _home_trust) -->
-__HOME_TRUST__
 
 __SITE_FOOTER__
 __TEXT_DEMO_JS__
