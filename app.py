@@ -12881,6 +12881,69 @@ white-space:nowrap;}
 .frow-calculated{background:#F2F6FA;}
 .tag-calc{background:#E7EDF3;color:#2E4A63;}
 .fformula{font-size:0.78rem;color:#2E4A63;margin-top:0.15rem;}
+/* Deal workspace (2026-11-11): SaaS-style overview on the deal page --
+   header, workflow spine, summary + health cards, two-up rows. Same
+   design language as the rest of the notepad (white cards, dark green,
+   yellow accent), no new palette. */
+.ws-back{display:inline-block;margin-bottom:0.9rem;font-size:0.88rem;}
+.ws-header{display:flex;justify-content:space-between;gap:1.25rem;align-items:flex-start;
+background:#0a3f3a;color:#fff;border-radius:var(--radius);padding:1.4rem 1.5rem;
+margin-bottom:1.25rem;box-shadow:0 1px 2px rgba(15,31,47,0.06);}
+.ws-title{font-size:1.55rem;font-weight:800;letter-spacing:-0.02em;line-height:1.2;color:#fff;}
+.ws-meta{color:#c9dcd8;font-size:0.88rem;margin-top:0.35rem;display:flex;gap:0.5rem;
+align-items:center;flex-wrap:wrap;}
+.ws-closing{flex-shrink:0;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.16);
+border-radius:var(--radius-sm);padding:0.8rem 1rem;min-width:190px;}
+.ws-closing-label{font-size:0.68rem;font-weight:700;text-transform:uppercase;
+letter-spacing:0.06em;color:#f5c242;}
+.ws-closing-date{font-weight:700;font-size:1rem;margin-top:0.2rem;}
+.ws-closing-date.dim{color:#c9dcd8;font-weight:600;}
+.ws-countdown{display:inline-block;margin-top:0.4rem;background:#f5c242;color:#0f1f2f;
+padding:0.12rem 0.6rem;border-radius:9999px;font-size:0.72rem;font-weight:700;}
+.ws-check-btn{display:inline-block;margin-top:0.8rem;background:var(--accent);color:#fff;
+padding:0.65rem 1.25rem;border-radius:999px;font-size:0.9rem;font-weight:700;border:none;
+cursor:pointer;font-family:inherit;text-decoration:none;}
+.ws-check-btn:hover{background:var(--accent-light);text-decoration:none;color:#fff;}
+.ws-head-actions{flex-shrink:0;text-align:right;}
+.ws-spine{display:flex;gap:0.4rem;flex-wrap:wrap;margin-bottom:1.25rem;}
+.ws-step{display:flex;align-items:center;gap:0.45rem;background:var(--bg-card);
+border:1px solid var(--border);border-radius:999px;padding:0.4rem 0.85rem 0.4rem 0.5rem;
+font-size:0.82rem;font-weight:600;color:var(--text-dim);}
+.ws-step .ws-dot{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;
+justify-content:center;font-size:0.72rem;font-weight:800;background:rgba(15,31,47,0.06);
+color:var(--text-dim);flex-shrink:0;}
+.ws-step.done{color:var(--accent-dark);border-color:var(--accent);}
+.ws-step.done .ws-dot{background:var(--accent);color:#fff;}
+.ws-step.current{color:var(--amber);border-color:var(--amber);background:var(--amber-bg);}
+.ws-step.current .ws-dot{background:var(--amber);color:#fff;}
+.ws-arrow{align-self:center;color:var(--text-dim);font-size:0.8rem;}
+.ws-grid{display:grid;grid-template-columns:1.65fr 1fr;gap:1.25rem;align-items:start;}
+.ws-two{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;align-items:start;}
+.ws-two-wide{grid-template-columns:1.65fr 1fr;}
+@media (max-width:900px){.ws-grid,.ws-two,.ws-two-wide{grid-template-columns:1fr;}}
+.sum-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.55rem 1.5rem;}
+@media (max-width:600px){.sum-grid{grid-template-columns:1fr;}
+.ws-header{flex-direction:column;}.ws-closing{width:100%;box-sizing:border-box;}
+.ws-head-actions{text-align:left;}.ws-title{font-size:1.3rem;}}
+.sum-item{padding:0.45rem 0;border-bottom:1px solid var(--border);}
+.sum-label{font-size:0.68rem;font-weight:700;color:var(--text-dim);
+text-transform:uppercase;letter-spacing:0.05em;}
+.sum-val{font-weight:600;font-size:0.94rem;margin-top:0.1rem;}
+.sum-val .tag{margin-left:0.4rem;vertical-align:1px;}
+.sum-missing{color:var(--text-dim);font-style:italic;font-weight:500;}
+.health-top{display:flex;align-items:baseline;gap:0.6rem;}
+.health-pct{font-size:2rem;font-weight:800;color:var(--accent);line-height:1;}
+.health-verdict{font-weight:700;font-size:0.95rem;}
+.health-bar{height:10px;background:var(--accent-tint);border-radius:999px;overflow:hidden;
+margin:0.8rem 0 1rem;}
+.health-fill{height:100%;background:var(--accent);border-radius:999px;}
+.health-comp{display:flex;justify-content:space-between;gap:0.75rem;font-size:0.88rem;
+padding:0.45rem 0;border-bottom:1px solid var(--border);}
+.health-comp:last-of-type{border-bottom:none;}
+.health-comp .hc-val{font-weight:700;white-space:nowrap;}
+.health-out{margin-top:0.8rem;font-size:0.88rem;}
+.health-out div{padding:0.2rem 0;color:var(--text-muted);}
+.health-out strong{color:var(--text);}
 """
 
 
@@ -13171,6 +13234,177 @@ def _np_field_row(key, label, field):
             f'</div></div>')
 
 
+# --- Deal workspace helpers (2026-11-11) ------------------------------------
+# Presentation-only computations for the deal page's SaaS overview:
+# the Deal Summary grid, the deterministic Deal health score, the
+# workflow spine, and the deal header. Everything here is a pure
+# function of data the detail route already loads (sheet fields,
+# documents, tasks, checks, the transaction row) -- no new queries, no
+# schema, and nothing is ever invented: a value counts as "firmed"
+# only in the Captured ("found") or Calculated states, exactly the
+# states the draft gate trusts.
+
+def _np_firmed(field):
+    return bool(field) and field.get("state") in ("found", "calculated") \
+        and field.get("value") not in (None, "")
+
+
+# The canonical fields the Deal Summary shows, and therefore the
+# denominator of the health score's Terms component. Texas carries the
+# option pair; Colorado does not (CBS1 has no option period), mirroring
+# TX_ONLY_FIELDS handling elsewhere.
+_NP_WS_CANONICAL_TX = [
+    "address", "city", "county", "buyer_name", "seller_name", "price",
+    "down_payment_pct", "down_payment_amount", "financing_type",
+    "earnest_money_amount", "earnest_pct", "option_fee_amount",
+    "option_days", "closing_date", "title_company", "hoa", "inclusions",
+    "seller_concessions",
+]
+_NP_WS_CANONICAL_CO = [k for k in _NP_WS_CANONICAL_TX
+                       if k not in ("option_fee_amount", "option_days")]
+
+
+def _np_ws_canonical(state):
+    return list(_NP_WS_CANONICAL_CO if state == "CO" else _NP_WS_CANONICAL_TX)
+
+
+def _np_deal_health(fields, documents, tasks, checks_count, has_draft, state):
+    """Deterministic deal health: the simple average of three real
+    components (terms firmed, documents in, action items done), each
+    also returned on its own line so the number is never a black box.
+    A component with nothing to count (no tasks yet, no document rows)
+    counts as complete -- there is no outstanding work in it. The
+    outstanding list names only work that is actually outstanding."""
+    canonical = _np_ws_canonical(state)
+    terms_firmed = sum(1 for k in canonical if _np_firmed((fields or {}).get(k)))
+    terms_pct = round(100 * terms_firmed / len(canonical)) if canonical else 100
+    doc_total = len(documents or [])
+    doc_done = sum(1 for d in (documents or [])
+                   if d.get("status") in ("received", "reviewed"))
+    docs_pct = round(100 * doc_done / doc_total) if doc_total else 100
+    tasks_total = len(tasks or [])
+    tasks_done = sum(1 for t in (tasks or []) if t.get("done"))
+    tasks_pct = round(100 * tasks_done / tasks_total) if tasks_total else 100
+    pct = round((terms_pct + docs_pct + tasks_pct) / 3)
+    if pct >= 100:
+        verdict = "Complete"
+    elif pct >= 70:
+        verdict = "On track"
+    elif pct >= 40:
+        verdict = "In progress"
+    else:
+        verdict = "Just started"
+    outstanding = []
+    confirms = notepad.confirm_count(fields or {})
+    if confirms:
+        outstanding.append(f"{confirms} term{'s' if confirms != 1 else ''} to confirm")
+    doc_missing = sum(1 for d in (documents or []) if d.get("status") == "missing")
+    if doc_missing:
+        outstanding.append(f"{doc_missing} document{'s' if doc_missing != 1 else ''} missing")
+    tasks_open = tasks_total - tasks_done
+    if tasks_open:
+        outstanding.append(f"{tasks_open} action item{'s' if tasks_open != 1 else ''} open")
+    if not checks_count:
+        outstanding.append("No TC Check yet")
+    if not has_draft:
+        outstanding.append("No draft yet")
+    return {
+        "pct": pct, "verdict": verdict,
+        "terms_pct": terms_pct, "terms_firmed": terms_firmed,
+        "terms_total": len(canonical),
+        "docs_pct": docs_pct, "doc_done": doc_done, "doc_total": doc_total,
+        "tasks_pct": tasks_pct, "tasks_done": tasks_done,
+        "tasks_total": tasks_total, "tasks_open": tasks_open,
+        "doc_missing": doc_missing, "outstanding": outstanding[:4],
+        "all_outstanding": outstanding,
+    }
+
+
+def _np_ws_summary_html(fields, state):
+    """The read-only Deal Summary grid: the canonical Deal Sheet fields
+    at a glance, formatted with notepad.format_field_value (the same
+    formatter the Deal Sheet rows use). Captured renders plainly,
+    Calculated carries its slate chip, Confirm its amber chip, and a
+    field with nothing behind it reads "Not set". Combined lines (down
+    payment, earnest, option) take the firmest reading their parts
+    support: any Confirm part makes the line Confirm, else any
+    Calculated part makes it Calculated."""
+    fmt = notepad.format_field_value
+
+    def one(key, label):
+        f = (fields or {}).get(key)
+        if not f or f.get("value") in (None, ""):
+            return (label, '<span class="sum-missing">Not set</span>')
+        val = escape(fmt(key, f.get("value")))
+        st = f.get("state")
+        if st == "confirm":
+            val += ' <span class="tag tag-confirm">Confirm</span>'
+        elif st == "calculated":
+            val += ' <span class="tag tag-calc">calc</span>'
+        return (label, val)
+
+    def combo(label, parts):
+        # parts: [(key, render_fn)] -- render_fn formats the raw value.
+        present = [(k, (fields or {}).get(k)) for k, _ in parts]
+        present = [(k, f) for k, f in present
+                   if f and f.get("value") not in (None, "")]
+        if not present:
+            return (label, '<span class="sum-missing">Not set</span>')
+        render = dict(parts)
+        val = " / ".join(escape(render[k](f.get("value"))) for k, f in present)
+        states = [f.get("state") for _, f in present]
+        if "confirm" in states:
+            val += ' <span class="tag tag-confirm">Confirm</span>'
+        elif "calculated" in states:
+            val += ' <span class="tag tag-calc">calc</span>'
+        return (label, val)
+
+    items = [
+        one("address", "Address"),
+        one("city", "City"),
+        one("county", "County"),
+        one("buyer_name", "Buyer"),
+        one("seller_name", "Seller"),
+        one("price", "Sales price"),
+        combo("Down payment", [
+            ("down_payment_pct", lambda v: fmt("down_payment_pct", v)),
+            ("down_payment_amount", lambda v: fmt("down_payment_amount", v)),
+        ]),
+        one("financing_type", "Financing"),
+        combo("Earnest money", [
+            ("earnest_money_amount", lambda v: fmt("earnest_money_amount", v)),
+            ("earnest_pct", lambda v: "(" + fmt("earnest_pct", v) + ")"),
+        ]),
+    ]
+    if state != "CO":
+        items.append(combo("Option fee / days", [
+            ("option_fee_amount", lambda v: fmt("option_fee_amount", v)),
+            ("option_days", lambda v: fmt("option_days", v) + " days"),
+        ]))
+    items += [
+        one("closing_date", "Closing date"),
+        one("title_company", "Title company"),
+        one("hoa", "HOA"),
+        one("inclusions", "Inclusions"),
+        one("seller_concessions", "Seller concessions"),
+    ]
+    return "".join(
+        f'<div class="sum-item"><div class="sum-label">{escape(label)}</div>'
+        f'<div class="sum-val">{val}</div></div>' for label, val in items)
+
+
+def _np_ws_spine_html(steps):
+    """steps: [(label, state)] with state done | current | todo."""
+    out = []
+    for i, (label, st) in enumerate(steps):
+        mark = "&#10003;" if st == "done" else str(i + 1)
+        out.append(f'<span class="ws-step {st}"><span class="ws-dot">{mark}</span>'
+                   f'{escape(label)}</span>')
+        if i < len(steps) - 1:
+            out.append('<span class="ws-arrow">&rarr;</span>')
+    return "".join(out)
+
+
 _NP_JS = """
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){
 return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
@@ -13416,6 +13650,12 @@ function npCheckSubmit(ev){
       renderCheck({ok:false,error:'Network error — the check did not run.'});
     });
   return false;
+}
+function npRunCheckFocus(){
+  var card=document.getElementById('wsCheckCard');
+  if(card)card.scrollIntoView({behavior:'smooth',block:'start'});
+  var inp=document.getElementById('npCheckFile');
+  if(inp){setTimeout(function(){try{inp.focus();}catch(e){}},350);}
 }
 function npDraft(btn){
   btn.disabled=true;var old=btn.textContent;btn.textContent='Building draft...';
@@ -13746,7 +13986,104 @@ def notepad_detail(tx_id):
         dl_html = ('<p class="sub">No dates on the sheet yet. Deadlines appear here '
                    'once the effective and closing dates are on the sheet — they are '
                    'computed from your dates, never guessed.</p>')
-    check_html = _np_check_results_html(notepad.list_checks(tx_id, phone))
+    checks_list = notepad.list_checks(tx_id, phone)
+    check_html = _np_check_results_html(checks_list)
+    # Deal workspace (2026-11-11): header, spine, summary, health --
+    # all computed from the data already loaded above.
+    _ws_state = tx.get("state") or "TX"
+    _addr_f = fields.get("address")
+    if _np_firmed(_addr_f):
+        _ws_title = str(_addr_f.get("value"))
+    else:
+        _ws_title = tx["title"] or "Untitled deal"
+    _ws_meta_bits = []
+    _city_f = fields.get("city")
+    if _np_firmed(_city_f):
+        _ws_meta_bits.append(escape(str(_city_f.get("value"))))
+    _ws_meta_bits.append(escape(_ws_state))
+    _ws_meta = ", ".join(_ws_meta_bits)
+    _closing_f = fields.get("closing_date")
+    if _np_firmed(_closing_f):
+        try:
+            _closing_d = datetime.fromisoformat(
+                str(_closing_f.get("value"))[:10]).date()
+        except ValueError:
+            _closing_d = None
+    else:
+        _closing_d = None
+    if _closing_d is not None:
+        _delta = (_closing_d - today_local).days
+        if _delta == 0:
+            _count = "today"
+        elif _delta > 0:
+            _count = f"in {_delta} day{'s' if _delta != 1 else ''}"
+        else:
+            _count = f"{-_delta} day{'s' if _delta != -1 else ''} ago"
+        _closing_html = (
+            f'<div class="ws-closing"><div class="ws-closing-label">Closing</div>'
+            f'<div class="ws-closing-date">{_closing_d.strftime("%a, %b %d, %Y")}</div>'
+            f'<span class="ws-countdown">{_count}</span></div>')
+    else:
+        _closing_html = (
+            '<div class="ws-closing"><div class="ws-closing-label">Closing date</div>'
+            '<div class="ws-closing-date dim">Not set yet</div></div>')
+    header_html = (
+        f'<a class="ws-back" href="{_np_signed("/notepad", phone, expires, sig)}">'
+        f'&larr; All deals</a>'
+        f'<div class="ws-header"><div class="ws-titlewrap">'
+        f'<div class="ws-title">{escape(_ws_title)}</div>'
+        f'<div class="ws-meta"><span>{_ws_meta}</span>'
+        f'<span class="chip">{escape(tx["status"])}</span>'
+        f'<span class="chip chip-confirm" id="npConfirmCount">'
+        f'{confirm_count} to confirm</span></div></div>'
+        f'<div class="ws-head-actions">{_closing_html}'
+        f'<button type="button" class="ws-check-btn" '
+        f'onclick="npRunCheckFocus()">Run TC Check</button></div></div>')
+    _has_notes = bool(history)
+    _any_firmed = any(_np_firmed(f) for f in fields.values())
+    _any_fields = any(f and f.get("value") not in (None, "")
+                        for f in fields.values())
+    _docs_done_all = bool(documents) and doc_done == len(documents)
+    _docs_some = doc_done > 0 or any(
+        d.get("status") != "missing" for d in documents)
+    _has_draft = bool(tx.get("offer_filename"))
+    spine_steps = [
+        ("Notes", "done" if _has_notes else "current"),
+        ("Deal Sheet", "done" if _any_firmed else ("current" if _has_notes else "todo")),
+        ("Confirm", "done" if (confirm_count == 0 and _any_fields)
+         else ("current" if confirm_count else "todo")),
+        ("Documents", "done" if _docs_done_all else ("current" if _docs_some else "todo")),
+        ("TC Check", "done" if checks_list else
+         ("current" if (confirm_count == 0 and _any_firmed) else "todo")),
+        ("Draft", "done" if _has_draft else
+         ("current" if (checks_list or (confirm_count == 0 and _any_firmed)) else "todo")),
+    ]
+    spine_html = (f'<div class="ws-spine">{_np_ws_spine_html(spine_steps)}</div>')
+    health = _np_deal_health(fields, documents, tasks, len(checks_list),
+                             _has_draft, _ws_state)
+    _tasks_line = (f'{health["tasks_done"]} of {health["tasks_total"]} done'
+                   if health["tasks_total"] else "No action items")
+    if health["all_outstanding"]:
+        _out_html = "".join(f'<div>{escape(o)}</div>'
+                            for o in health["outstanding"])
+        _out_block = (f'<div class="health-out"><strong>Outstanding</strong>'
+                      f'{_out_html}</div>')
+    else:
+        _out_block = ('<div class="health-out">This deal is fully worked. '
+                      'Run a final TC Check before closing.</div>')
+    health_html = (
+        f'<div class="health-top"><span class="health-pct">{health["pct"]}%</span>'
+        f'<span class="health-verdict">{escape(health["verdict"])}</span></div>'
+        f'<div class="health-bar"><div class="health-fill" '
+        f'style="width:{health["pct"]}%;"></div></div>'
+        f'<div class="health-comp"><span>Terms firmed</span>'
+        f'<span class="hc-val">{health["terms_firmed"]} of {health["terms_total"]}</span></div>'
+        f'<div class="health-comp"><span>Documents in</span>'
+        f'<span class="hc-val">{health["doc_done"]} of {health["doc_total"]}</span></div>'
+        f'<div class="health-comp"><span>Action items</span>'
+        f'<span class="hc-val">{_tasks_line}</span></div>'
+        f'{_out_block}')
+    summary_html_ws = _np_ws_summary_html(fields, _ws_state)
     draft_html = ""
     if tx.get("offer_filename"):
         pdf_url = sign_pdf_url(tx["offer_filename"], request.host_url.rstrip("/"))
@@ -13767,15 +14104,20 @@ def notepad_detail(tx_id):
         "txId": tx_id,
     }
     body = f"""
-    <div class="topbar">
-      <div>
-        <h1>{escape(tx['title'] or 'Untitled deal')}</h1>
-        <p class="sub">{escape(tx['state'])} &middot; <span class="chip">{escape(tx['status'])}</span>
-        <span class="chip chip-confirm" id="npConfirmCount">{confirm_count} to confirm</span></p>
-      </div>
-      <a href="{_np_signed('/notepad', phone, expires, sig)}">&larr; All deals</a>
-    </div>
+    {header_html}
     {banner}
+    {spine_html}
+    <div class="ws-grid">
+      <div class="card">
+        <h2>Deal Summary</h2>
+        <p class="sub" style="margin-bottom:0.5rem;">Key terms at a glance, straight from the Deal Sheet. <a href="#wsSheetCard">Edit in Deal Sheet &darr;</a></p>
+        <div class="sum-grid">{summary_html_ws}</div>
+      </div>
+      <div class="card">
+        <h2>Deal health</h2>
+        {health_html}
+      </div>
+    </div>
     <div class="np-grid">
       <div class="np-left">
         <div class="card">
@@ -13810,50 +14152,54 @@ def notepad_detail(tx_id):
           <h2>Summary</h2>
           <p id="npSummary">{summary_html}</p>{summary_empty}
         </div>
-        <div class="card">
+        <div class="card" id="wsSheetCard">
           <h2>Deal Sheet</h2>
           <p class="sub" style="margin-bottom:0.5rem;">The central record for this transaction. Confirm a value to put it on the sheet; only values on the sheet can go into a draft.</p>
           <div id="sheetRows">{rows}</div>
         </div>
-        <div class="card">
-          <h2>Documents <span class="docprog" id="npDocProgress">{doc_progress}</span></h2>
-          <p class="sub" style="margin-bottom:0.5rem;">Track the paperwork for this deal — status only. The contract file itself still goes through TC Check below, and is deleted after the check.</p>
-          <div id="npDocs">{documents_html}</div>
-          {docs_add_html}
-        </div>
-        <div class="card">
-          <h2>Draft</h2>
-          <p class="sub" style="margin-bottom:0.5rem;">Turn the confirmed Deal Sheet into a filled draft PDF. Anything still marked Confirm blocks the draft — nothing uncertain goes into a contract.</p>
-          <div id="npDraftResult">{draft_html}</div>
-          <p style="margin-top:0.4rem;"><button type="button" class="btn" data-evt="notepad_draft_created" onclick="npDraft(this)">Create draft from the Deal Sheet</button></p>
-        </div>
-        <div class="card">
-          <h2>Action items</h2>
-          <div id="npTasks">{tasks_html}</div>
-          {tasks_add_html}
-        </div>
-        <div class="card">
-          <h2>Deadlines</h2>
-          {dl_html}
-        </div>
-        <div class="card">
-          <h2>TC Check</h2>
-          <p class="sub" style="margin-bottom:0.6rem;">Check the filled contract for this deal. The file is checked, then deleted — only the result stays pinned here.</p>
-          <form id="npCheckForm" onsubmit="return npCheckSubmit(event)">
-            <p style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
-              <input type="file" name="file" accept="application/pdf,.pdf" style="flex:1;min-width:200px;">
-              <button type="submit" class="btn">Run TC Check</button>
-            </p>
-          </form>
-          <div id="npCheckResults" style="margin-top:0.7rem;">{check_html}</div>
-        </div>
-        <p style="margin:0 0 1rem;"><button type="button" class="btn btn-ghost" onclick="npDownload()">Download Deal Sheet</button></p>
-        <form method="post" action="{_np_signed(f'/notepad/{tx_id}/delete', phone, expires, sig)}"
-              onsubmit="return confirm('Delete this deal? It disappears now and its notes are permanently purged after 30 days.');">
-          <button type="submit" class="btn-mini">Delete this deal</button>
-        </form>
       </div>
     </div>
+    <div class="ws-two">
+      <div class="card">
+        <h2>Action items</h2>
+        <div id="npTasks">{tasks_html}</div>
+        {tasks_add_html}
+      </div>
+      <div class="card">
+        <h2>Deadlines</h2>
+        {dl_html}
+      </div>
+    </div>
+    <div class="card">
+      <h2>Documents <span class="docprog" id="npDocProgress">{doc_progress}</span></h2>
+      <p class="sub" style="margin-bottom:0.5rem;">Track the paperwork for this deal — status only. The contract file itself still goes through TC Check below, and is deleted after the check.</p>
+      <div id="npDocs">{documents_html}</div>
+      {docs_add_html}
+    </div>
+    <div class="ws-two ws-two-wide">
+      <div class="card" id="wsCheckCard">
+        <h2>TC Check</h2>
+        <p class="sub" style="margin-bottom:0.6rem;">Check the filled contract for this deal. The file is checked, then deleted — only the result stays pinned here.</p>
+        <form id="npCheckForm" onsubmit="return npCheckSubmit(event)">
+          <p style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
+            <input type="file" id="npCheckFile" name="file" accept="application/pdf,.pdf" style="flex:1;min-width:200px;">
+            <button type="submit" class="btn">Run TC Check</button>
+          </p>
+        </form>
+        <div id="npCheckResults" style="margin-top:0.7rem;">{check_html}</div>
+      </div>
+      <div class="card">
+        <h2>Draft</h2>
+        <p class="sub" style="margin-bottom:0.5rem;">Turn the confirmed Deal Sheet into a filled draft PDF. Anything still marked Confirm blocks the draft — nothing uncertain goes into a contract.</p>
+        <div id="npDraftResult">{draft_html}</div>
+        <p style="margin-top:0.4rem;"><button type="button" class="btn" data-evt="notepad_draft_created" onclick="npDraft(this)">Create draft from the Deal Sheet</button></p>
+      </div>
+    </div>
+    <p style="margin:0 0 1rem;"><button type="button" class="btn btn-ghost" onclick="npDownload()">Download Deal Sheet</button></p>
+    <form method="post" action="{_np_signed(f'/notepad/{tx_id}/delete', phone, expires, sig)}"
+          onsubmit="return confirm('Delete this deal? It disappears now and its notes are permanently purged after 30 days.');">
+      <button type="submit" class="btn-mini">Delete this deal</button>
+    </form>
     <script>window.NP={json.dumps(np_config)};</script>
     <script>{_NP_JS}</script>"""
     return _np_page(tx['title'] or 'Deal Notepad', body,
