@@ -1055,7 +1055,19 @@ __TEXT_DEMO_CSS__
   .ret-scale{display:flex;justify-content:space-between;margin-top:8px;font-size:13px;color:var(--mute)}
   .ret-box .fine{font-size:13px;color:#5b6b67;margin:16px 0 0}
   /* ---------- 4a2. notepad: deal notes into a Deal Sheet, interactive ---------- */
-  .np-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:1024px;margin:44px auto 0;text-align:left}
+  /* App-window frame (2026-11-11): the demo presents as the product --
+     one window with a chrome bar, the cards nested on the gray app
+     backdrop, the hero report card's shadow language. */
+  .np-app{max-width:1064px;margin:44px auto 0;background:#fff;border-radius:22px;overflow:hidden;text-align:left;
+         box-shadow:0 40px 80px -24px rgba(10,63,58,.35),0 0 0 1px rgba(0,0,0,.04)}
+  .np-chrome{display:flex;align-items:center;gap:14px;padding:13px 18px;background:#fff;border-bottom:1px solid var(--line)}
+  .np-dots{display:inline-flex;gap:7px;flex:none}
+  .np-dots i{display:block;width:11px;height:11px;border-radius:50%;background:#d8d8dc}
+  .np-dots i:last-child{background:var(--green)}
+  .np-chrome-title{font-size:13.5px;font-weight:700;color:var(--ink);letter-spacing:-.01em}
+  .np-chrome-side{margin-left:auto;font-size:12.5px;font-weight:600;color:var(--mute)}
+  .np-app-body{background:var(--gray);padding:20px}
+  .np-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;text-align:left}
   .np-card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:24px 26px}
   .np-card-h{font-size:13px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--green);margin-bottom:14px}
   .np-notes{width:100%;font:inherit;font-size:16px;line-height:1.55;color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:14px 16px;background:var(--gray);resize:vertical;min-height:196px}
@@ -1067,15 +1079,16 @@ __TEXT_DEMO_CSS__
   .np-k{font-size:14px;font-weight:600;color:var(--mute);flex:none}
   .np-v{font-size:15.5px;font-weight:600;color:var(--ink);text-align:right;display:flex;align-items:center;justify-content:flex-end;gap:8px}
   .np-v.miss{color:var(--mute);font-weight:500}
-  .np-chip{flex:none;font-size:10.5px;font-weight:800;letter-spacing:.04em;padding:4px 8px;border-radius:6px}
-  .np-chip.found{background:#e6f2f0;color:var(--green)}
-  .np-chip.confirm{background:#fff4dc;color:var(--amber)}
+  .np-chip{flex:none;font-size:10.5px;font-weight:800;letter-spacing:.04em;padding:4px 9px;border-radius:999px}
+  .np-chip.found{background:#e6f2f0;color:var(--green);box-shadow:inset 0 0 0 1px rgba(11,93,82,.28)}
+  .np-chip.confirm{background:#fff4dc;color:var(--amber);box-shadow:inset 0 0 0 1px rgba(154,98,0,.32)}
   .np-row.in{animation:npfade .35s ease both}
   @keyframes npfade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
   @media (prefers-reduced-motion: reduce){ .np-row.in{animation:none} }
   @media (max-width:734px){ .np-grid{grid-template-columns:1fr} }
+  @media (max-width:734px){ .np-app-body{padding:14px} .np-chrome{padding:12px 14px} .np-desk{padding:20px} }
   /* ---------- 4a2a2. notepad workflow: actions, reminders, draft + check ---------- */
-  .npw-area{max-width:1024px;margin:16px auto 0;text-align:left}
+  .npw-area{margin-top:16px;text-align:left}
   .npw-area[hidden]{display:none}
   .npw-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
   .npw-list{list-style:none;margin:0;padding:0}
@@ -1094,6 +1107,13 @@ __TEXT_DEMO_CSS__
   .npw-reply{font-size:14.5px;color:var(--ink);margin:10px 0 0;line-height:1.55;white-space:pre-line}
   .npw-fine{font-size:13px;color:var(--mute);margin:10px 0 0;line-height:1.5}
   @media (max-width:734px){ .npw-grid{grid-template-columns:1fr} }
+  /* ---------- 4a2a3. notepad desk block: take it off the page ---------- */
+  .np-desk{margin-top:16px;background:#fff;border:1px solid var(--line);border-radius:18px;padding:24px 26px;text-align:left}
+  .np-desk h3{font-size:22px;font-weight:800;letter-spacing:-.015em;margin:0 0 8px}
+  .np-desk-line{font-size:15.5px;line-height:1.55;color:#3d4a47;margin:0;max-width:640px}
+  .np-install{margin-top:18px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .np-install-hint{font-size:14px;color:var(--mute)}
+  .np-desk-fine{font-size:13px;color:var(--mute);margin:16px 0 0}
   .tiles-3{grid-template-columns:1fr 1fr 1fr}
   .tile.price{min-height:0;padding:44px 30px 40px}
   .tile .big small{font-size:22px;color:var(--mute);font-weight:600}
@@ -1223,52 +1243,74 @@ __SITE_NAV__
   <div class="eyebrow">New: Deal Notepad</div>
   <h2>Your deal notes,<br>turned into a Deal Sheet.</h2>
   <p class="sub">Messy call notes in, a structured deal sheet out. Every uncertain term is flagged Confirm instead of guessed, and anything you didn&rsquo;t write down stays blank.</p>
-  <div class="np-grid">
-    <div class="np-card">
-      <div class="np-card-h">Scratch notes</div>
-      <textarea class="np-notes" id="npNotes" rows="9" aria-label="Your deal notes">Elm Creek Dr house, Austin. Buyers John &amp; Jane Doe. Sellers fine with Dec 18 close. $685k. Earnest maybe 7k?? 10 days option, $350 fee. Conventional, 20% down. Fridge + washer stay. Asked 5k seller credit for the roof, not agreed yet. Old survey from 2019. HOA docs still pending.</textarea>
-      <button type="button" class="btn solid np-run" id="npRun">Clean it up</button>
-      <p class="np-hint">Edit the note and run it again. Nothing you type leaves this page.</p>
+  <div class="np-app">
+    <div class="np-chrome" aria-hidden="true">
+      <span class="np-dots"><i></i><i></i><i></i></span>
+      <span class="np-chrome-title">TxtAnOffer Notepad</span>
+      <span class="np-chrome-side">Deal Sheet</span>
     </div>
-    <div class="np-card">
-      <div class="np-card-h">Deal Sheet</div>
-      <div class="np-rows" id="npRows">
-        <div class="np-row" data-np-row="property"><span class="np-k">Property</span><span class="np-v miss">Run Clean it up</span></div>
-        <div class="np-row" data-np-row="buyers"><span class="np-k">Buyers</span><span class="np-v miss">Run Clean it up</span></div>
-        <div class="np-row" data-np-row="price"><span class="np-k">Price</span><span class="np-v miss">Run Clean it up</span></div>
-        <div class="np-row" data-np-row="earnest"><span class="np-k">Earnest money</span><span class="np-v miss">Run Clean it up</span></div>
-        <div class="np-row" data-np-row="option"><span class="np-k">Option period</span><span class="np-v miss">Run Clean it up</span></div>
-        <div class="np-row" data-np-row="closing"><span class="np-k">Closing date</span><span class="np-v miss">Run Clean it up</span></div>
-        <div class="np-row" data-np-row="financing"><span class="np-k">Financing</span><span class="np-v miss">Run Clean it up</span></div>
-        <div class="np-row" data-np-row="credit"><span class="np-k">Seller credit</span><span class="np-v miss">Run Clean it up</span></div>
-        <div class="np-row" data-np-row="inclusions"><span class="np-k">Inclusions</span><span class="np-v miss">Run Clean it up</span></div>
-        <div class="np-row" data-np-row="survey"><span class="np-k">Survey</span><span class="np-v miss">Run Clean it up</span></div>
-      </div>
-    </div>
-  </div>
-  <!-- Workflow (4a2a2): what the product does with the sheet next. Empty
-       until Clean it up runs; everything below is computed in the page
-       from the visitor's own edited note, on the sample deal. -->
-  <div class="npw-area" id="npWorkflow" hidden>
-    <div class="npw-grid">
-      <div class="np-card">
-        <div class="np-card-h">Action items</div>
-        <ul class="npw-list" id="npActions"></ul>
-      </div>
-      <div class="np-card">
-        <div class="np-card-h">Reminders</div>
-        <p class="npw-note">Counted from the contract once it is signed.</p>
-        <ul class="npw-list" id="npReminders"></ul>
-      </div>
-      <div class="np-card">
-        <div class="np-card-h">Draft + TC Check</div>
-        <button type="button" class="btn solid npw-run" id="npDraft">Create draft</button>
-        <div class="npw-out" id="npDraftOut" hidden>
-          <p class="npw-out-label">You text to (833) 897-0333</p>
-          <p class="npw-text" id="npDraftText"></p>
-          <p class="npw-reply" id="npDraftReply"></p>
-          <p class="npw-fine">Sample flow. In the product, the draft is a real filled PDF and the check runs on it.</p>
+    <div class="np-app-body">
+      <div class="np-grid">
+        <div class="np-card">
+          <div class="np-card-h">Scratch notes</div>
+          <textarea class="np-notes" id="npNotes" rows="9" aria-label="Your deal notes">Elm Creek Dr house, Austin. Buyers John &amp; Jane Doe. Sellers fine with Dec 18 close. $685k. Earnest maybe 7k?? 10 days option, $350 fee. Conventional, 20% down. Fridge + washer stay. Asked 5k seller credit for the roof, not agreed yet. Old survey from 2019. HOA docs still pending.</textarea>
+          <button type="button" class="btn solid np-run" id="npRun">Clean it up</button>
+          <p class="np-hint">Edit the note and run it again. Nothing you type leaves this page.</p>
         </div>
+        <div class="np-card">
+          <div class="np-card-h">Deal Sheet</div>
+          <div class="np-rows" id="npRows">
+            <div class="np-row" data-np-row="property"><span class="np-k">Property</span><span class="np-v miss">Run Clean it up</span></div>
+            <div class="np-row" data-np-row="buyers"><span class="np-k">Buyers</span><span class="np-v miss">Run Clean it up</span></div>
+            <div class="np-row" data-np-row="price"><span class="np-k">Price</span><span class="np-v miss">Run Clean it up</span></div>
+            <div class="np-row" data-np-row="earnest"><span class="np-k">Earnest money</span><span class="np-v miss">Run Clean it up</span></div>
+            <div class="np-row" data-np-row="option"><span class="np-k">Option period</span><span class="np-v miss">Run Clean it up</span></div>
+            <div class="np-row" data-np-row="closing"><span class="np-k">Closing date</span><span class="np-v miss">Run Clean it up</span></div>
+            <div class="np-row" data-np-row="financing"><span class="np-k">Financing</span><span class="np-v miss">Run Clean it up</span></div>
+            <div class="np-row" data-np-row="credit"><span class="np-k">Seller credit</span><span class="np-v miss">Run Clean it up</span></div>
+            <div class="np-row" data-np-row="inclusions"><span class="np-k">Inclusions</span><span class="np-v miss">Run Clean it up</span></div>
+            <div class="np-row" data-np-row="survey"><span class="np-k">Survey</span><span class="np-v miss">Run Clean it up</span></div>
+          </div>
+        </div>
+      </div>
+      <!-- Workflow (4a2a2): what the product does with the sheet next. Empty
+           until Clean it up runs; everything below is computed in the page
+           from the visitor's own edited note, on the sample deal. -->
+      <div class="npw-area" id="npWorkflow" hidden>
+        <div class="npw-grid">
+          <div class="np-card">
+            <div class="np-card-h">Action items</div>
+            <ul class="npw-list" id="npActions"></ul>
+          </div>
+          <div class="np-card">
+            <div class="np-card-h">Reminders</div>
+            <p class="npw-note">Counted from the contract once it is signed.</p>
+            <ul class="npw-list" id="npReminders"></ul>
+          </div>
+          <div class="np-card">
+            <div class="np-card-h">Draft + TC Check</div>
+            <button type="button" class="btn solid npw-run" id="npDraft">Create draft</button>
+            <div class="npw-out" id="npDraftOut" hidden>
+              <p class="npw-out-label">You text to (833) 897-0333</p>
+              <p class="npw-text" id="npDraftText"></p>
+              <p class="npw-reply" id="npDraftReply"></p>
+              <p class="npw-fine">Sample flow. In the product, the draft is a real filled PDF and the check runs on it.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Desk block: the notepad as its own app. The Install
+           button is the PWA flow (PWA_JS drives #txoInstall by id,
+           as on the dashboard); the Windows/Mac installers are
+           still in packaging, so no download buttons yet. -->
+      <div class="np-desk">
+        <h3>Take the notepad to your desk.</h3>
+        <p class="np-desk-line">The Notepad as its own app on your computer: parked beside your other tools, one hotkey away, ready when a call comes in.</p>
+        <div class="np-install" id="txoInstall" style="display:none">
+          <button type="button" class="btn solid" id="txoInstallBtn">Install the app</button>
+          <span class="np-install-hint" id="txoInstallHint" style="display:none">To install: Share &rarr; Add to Home Screen</span>
+        </div>
+        <p class="np-desk-fine">Windows and Mac desktop installers are in packaging.</p>
       </div>
     </div>
   </div>
