@@ -1,9 +1,14 @@
-"""Homepage Deal Notepad DEMO pop-up (2026-11-11): the public twin of
-the member pop-up widget. It must render on the homepage for every
-visitor, run the same in-page parser as the notepad section on the
-sample note, offer the same download document, and — critically —
-never save anything: the demo performs no network calls at all, so it
-can never POST to the member /notepad endpoints.
+"""Homepage Deal Notepad demo (2026-11-11; pop-up + download removed
+2026-11-11): the homepage section runs the in-page parser on the
+sample note and shows the product's workflow (action items,
+reminders, draft + TC Check) computed client-side from that parse.
+
+The floating pop-up demo (npdPill / npdPanel) and the section's
+"Download notes + Deal Sheet" button were removed at Baptiste's
+direction — the downloadable desktop app replaces the pop-up
+concept, and these tests now assert their absence so neither creeps
+back. The demo still performs no network calls at all, so it can
+never POST to the member /notepad endpoints.
 
     python3 -m unittest tests.test_homepage_popup
 """
@@ -25,10 +30,8 @@ for _k in ("APIFY_API_TOKEN", "TWILIO_AUTH_TOKEN", "RESEND_API_KEY", "SENDGRID_A
 import app as app_module  # noqa: E402
 
 UA = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) test"}
-FIELDS = ("property", "buyers", "price", "earnest", "option", "closing",
-          "financing", "credit", "inclusions", "survey")
-FOOTER = ("Demo with a sample deal. Members save real deals to their "
-          "dashboard, on the Agent plan.")
+POPUP_FOOTER = ("Demo with a sample deal. Members save real deals to their "
+                "dashboard, on the Agent plan.")
 
 
 def _home_html():
@@ -38,69 +41,71 @@ def _home_html():
     return resp.get_data(as_text=True)
 
 
-def _demo_segment(html):
-    """The demo root markup: from the npd-root div up to the section
-    that follows the notepad section on the homepage."""
-    start = html.index('class="npd-root"')
+def _section_segment(html):
+    """The notepad section markup: from its comment banner up to the
+    WHAT IT CATCHES section that follows it (the pop-up demo root used
+    to sit between the two and is gone)."""
+    start = html.index("<!-- 4a2. NOTEPAD:")
     end = html.index("<!-- 2. WHAT IT CATCHES", start)
     return html[start:end]
 
 
-class DemoMarkup(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.html = _home_html()
-        cls.seg = _demo_segment(cls.html)
-
-    def test_pill_and_panel_markup(self):
-        self.assertIn('id="npdPill"', self.seg)
-        self.assertIn("&#9998; Notepad", self.seg)
-        self.assertIn('id="npdPanel"', self.seg)
-        self.assertIn("hidden", self.seg.split('id="npdPanel"')[1][:80])
-        self.assertIn('id="npdClose"', self.seg)
-        self.assertIn("Deal Notepad", self.seg)
-        self.assertIn('class="npd-sample">Sample</span>', self.seg)
-
-    def test_footer_line_and_plans_link(self):
-        self.assertIn(FOOTER, self.seg)
-        self.assertIn('<a href="#pricing">See the plans</a>', self.seg)
-
-    def test_panel_textarea_prefilled_with_sample_note(self):
-        start = self.seg.index('id="npdNotes"')
-        area = self.seg[start:self.seg.index("</textarea>", start)]
-        self.assertIn("Elm Creek Dr house, Austin.", area)
-        self.assertIn("Buyers John &amp; Jane Doe.", area)
-        self.assertIn("$685k.", area)
-        self.assertIn("Earnest maybe 7k??", area)
-        self.assertIn('id="npdRun"', self.seg)
-        self.assertIn('id="npdDownload"', self.seg)
-        self.assertIn("Download notes + Deal Sheet", self.seg)
-
-    def test_panel_has_all_ten_deal_sheet_rows(self):
-        for key in FIELDS:
-            self.assertIn('data-np-row="%s"' % key, self.seg,
-                          "panel row missing: %s" % key)
-
-
-def _section_segment(html):
-    """The notepad section markup: from its comment banner up to the
-    demo pop-up root that follows it."""
-    start = html.index("<!-- 4a2. NOTEPAD:")
-    end = html.index('class="npd-root"', start)
-    return html[start:end]
-
-
-class WorkflowMarkup(unittest.TestCase):
-    """The homepage demo also shows the product's workflow (action
-    items, reminders, draft + TC Check), populated client-side from
-    the same parse. The containers render empty/hidden in the static
-    HTML; the generators live in NOTEPAD_JS."""
+class DemoRemoved(unittest.TestCase):
+    """The pop-up demo and the homepage download buttons are gone."""
 
     @classmethod
     def setUpClass(cls):
         cls.html = _home_html()
         cls.sec = _section_segment(cls.html)
-        cls.seg = _demo_segment(cls.html)
+        cls.js = app_module.NOTEPAD_JS
+
+    def test_no_popup_markup_on_homepage(self):
+        for marker in ('id="npdPill"', 'id="npdPanel"', 'id="npdClose"',
+                       'id="npdNotes"', 'id="npdRun"', 'id="npdRows"',
+                       'id="npdNext"', 'id="npdDownload"',
+                       'class="npd-root"', "npd-"):
+            self.assertNotIn(marker, self.html, marker)
+
+    def test_no_popup_footer_copy(self):
+        self.assertNotIn(POPUP_FOOTER, self.html)
+
+    def test_no_section_download_button(self):
+        self.assertNotIn('id="npDownload"', self.sec)
+        self.assertNotIn("Download notes + Deal Sheet", self.html)
+        self.assertNotIn("np-dl", self.sec)
+
+    def test_notepad_js_has_no_popup_or_download_leftovers(self):
+        self.assertNotIn("npd", self.js)
+        self.assertNotIn("npDownload", self.js)
+        self.assertNotIn("downloadText", self.js)
+        self.assertNotIn("docText", self.js)
+        self.assertNotIn("buildDoc", self.js)
+        self.assertNotIn("Blob", self.js)
+
+    def test_section_still_offers_the_demo(self):
+        # What stays: the editable sample note, Clean it up, the rows.
+        self.assertIn('id="npNotes"', self.sec)
+        self.assertIn("Elm Creek Dr house, Austin.", self.sec)
+        self.assertIn('id="npRun"', self.sec)
+        self.assertIn("Clean it up", self.sec)
+        self.assertIn('id="npRows"', self.sec)
+        for key in ("property", "buyers", "price", "earnest", "option",
+                    "closing", "financing", "credit", "inclusions",
+                    "survey"):
+            self.assertIn('data-np-row="%s"' % key, self.sec,
+                          "section row missing: %s" % key)
+
+
+class WorkflowMarkup(unittest.TestCase):
+    """The homepage demo shows the product's workflow (action items,
+    reminders, draft + TC Check), populated client-side from the same
+    parse. The containers render empty/hidden in the static HTML; the
+    generators live in NOTEPAD_JS."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.html = _home_html()
+        cls.sec = _section_segment(cls.html)
         cls.js = app_module.NOTEPAD_JS
 
     def test_section_workflow_containers(self):
@@ -117,19 +122,10 @@ class WorkflowMarkup(unittest.TestCase):
         self.assertIn("Sample flow. In the product, the draft is a real "
                       "filled PDF and the check runs on it.", self.sec)
 
-    def test_panel_next_steps_block(self):
-        self.assertIn('id="npdNext" hidden', self.seg)
-        self.assertIn("Next steps", self.seg)
-        self.assertIn('id="npdActions"', self.seg)
-        self.assertIn('id="npdReminder"', self.seg)
-        self.assertIn('id="npdDraft"', self.seg)
-        self.assertIn('id="npdDraftOut" hidden', self.seg)
-        self.assertIn("Sample flow. In the product, the draft is a real "
-                      "filled PDF and the check runs on it.", self.seg)
-
     def test_workflow_generators_in_js(self):
         for name in ("buildActions", "buildReminders", "buildDraftText",
-                     "buildDraftReply", "closingLine", "renderWorkflow"):
+                     "buildDraftReply", "closingLine", "renderWorkflow",
+                     "fillList", "showDraft"):
             self.assertIn("function " + name, self.js, name)
         # The honest strings the generators must be able to produce.
         self.assertIn("Confirm ", self.js)
