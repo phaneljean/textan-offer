@@ -1076,6 +1076,26 @@ __TEXT_DEMO_CSS__
   @keyframes npfade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
   @media (prefers-reduced-motion: reduce){ .np-row.in{animation:none} }
   @media (max-width:734px){ .np-grid{grid-template-columns:1fr} }
+  /* ---------- 4a2a2. notepad workflow: actions, reminders, draft + check ---------- */
+  .npw-area{max-width:1024px;margin:16px auto 0;text-align:left}
+  .npw-area[hidden]{display:none}
+  .npw-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+  .npw-list{list-style:none;margin:0;padding:0}
+  .npw-item{padding:8px 0;border-bottom:1px solid var(--line);font-size:15px;color:var(--ink)}
+  .npw-item:last-child{border-bottom:none}
+  .npw-check{display:flex;gap:10px;align-items:flex-start;cursor:pointer;line-height:1.45}
+  .npw-box{margin-top:3px;flex:none;width:17px;height:17px;accent-color:var(--green);cursor:pointer}
+  .npw-rem-item{padding:8px 0;border-bottom:1px solid var(--line);font-size:15px;color:var(--ink);line-height:1.45}
+  .npw-rem-item:last-child{border-bottom:none}
+  .npw-note{font-size:13px;color:var(--mute);margin:0 0 8px;line-height:1.5}
+  .npw-run{font-family:inherit;cursor:pointer}
+  .npw-out{margin-top:14px;background:var(--gray);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+  .npw-out[hidden]{display:none}
+  .npw-out-label{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--green);margin:0 0 6px}
+  .npw-text{font-size:16px;font-weight:700;color:var(--ink);margin:0;line-height:1.5}
+  .npw-reply{font-size:14.5px;color:var(--ink);margin:10px 0 0;line-height:1.55;white-space:pre-line}
+  .npw-fine{font-size:13px;color:var(--mute);margin:10px 0 0;line-height:1.5}
+  @media (max-width:734px){ .npw-grid{grid-template-columns:1fr} }
   /* ---------- 4a2b. notepad demo pop-up: public twin of the member widget ---------- */
   .npd-pill{position:fixed;right:20px;bottom:20px;z-index:990;background:var(--green);color:#fff;
   border:none;cursor:pointer;padding:12px 22px;border-radius:999px;font-size:15px;
@@ -1104,6 +1124,12 @@ __TEXT_DEMO_CSS__
   .npd-foot{margin:16px 0 0;padding-top:12px;border-top:1px solid var(--line);font-size:13.5px;color:var(--mute);line-height:1.55}
   .npd-foot a{color:var(--green);font-weight:600;text-decoration:none}
   .npd-foot a:hover{text-decoration:underline}
+  .npd-next{margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+  .npd-next[hidden]{display:none}
+  .npd-next-h{font-size:13px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--green);margin-bottom:8px}
+  .npd-next .npw-rem-item{font-size:14.5px}
+  .npd-rem{font-size:14.5px;color:var(--ink);margin:10px 0 0;line-height:1.5}
+  .npd-draft{font-family:inherit;cursor:pointer;margin-top:12px;font-size:14.5px;padding:9px 18px}
   @media (max-width:600px){ .npd-panel{left:12px;right:12px;width:auto} }
   .tiles-3{grid-template-columns:1fr 1fr 1fr}
   .tile.price{min-height:0;padding:44px 30px 40px}
@@ -1258,6 +1284,32 @@ __SITE_NAV__
       <div class="np-dl-row"><button type="button" class="btn ghost np-dl" id="npDownload">Download notes + Deal Sheet</button></div>
     </div>
   </div>
+  <!-- Workflow (4a2a2): what the product does with the sheet next. Empty
+       until Clean it up runs; everything below is computed in the page
+       from the visitor's own edited note, on the sample deal. -->
+  <div class="npw-area" id="npWorkflow" hidden>
+    <div class="npw-grid">
+      <div class="np-card">
+        <div class="np-card-h">Action items</div>
+        <ul class="npw-list" id="npActions"></ul>
+      </div>
+      <div class="np-card">
+        <div class="np-card-h">Reminders</div>
+        <p class="npw-note">Counted from the contract once it is signed.</p>
+        <ul class="npw-list" id="npReminders"></ul>
+      </div>
+      <div class="np-card">
+        <div class="np-card-h">Draft + TC Check</div>
+        <button type="button" class="btn solid npw-run" id="npDraft">Create draft</button>
+        <div class="npw-out" id="npDraftOut" hidden>
+          <p class="npw-out-label">You text to (833) 897-0333</p>
+          <p class="npw-text" id="npDraftText"></p>
+          <p class="npw-reply" id="npDraftReply"></p>
+          <p class="npw-fine">Sample flow. In the product, the draft is a real filled PDF and the check runs on it.</p>
+        </div>
+      </div>
+    </div>
+  </div>
   <p class="partner-line">In the product, the notepad lives in your dashboard on the Agent plan. Your notes are saved so the deal stays in one place. Contract files are still checked, then deleted. <a href="#pricing">See the plans</a></p>
 </section>
 
@@ -1286,6 +1338,18 @@ __SITE_NAV__
       <div class="np-row" data-np-row="credit"><span class="np-k">Seller credit</span><span class="np-v miss">Run Clean it up</span></div>
       <div class="np-row" data-np-row="inclusions"><span class="np-k">Inclusions</span><span class="np-v miss">Run Clean it up</span></div>
       <div class="np-row" data-np-row="survey"><span class="np-k">Survey</span><span class="np-v miss">Run Clean it up</span></div>
+    </div>
+    <div class="npd-next" id="npdNext" hidden>
+      <div class="npd-next-h">Next steps</div>
+      <ul class="npw-list" id="npdActions"></ul>
+      <p class="npd-rem" id="npdReminder"></p>
+      <button type="button" class="btn solid npd-draft" id="npdDraft">Create draft</button>
+      <div class="npw-out" id="npdDraftOut" hidden>
+        <p class="npw-out-label">You text to (833) 897-0333</p>
+        <p class="npw-text" id="npdDraftText"></p>
+        <p class="npw-reply" id="npdDraftReply"></p>
+        <p class="npw-fine">Sample flow. In the product, the draft is a real filled PDF and the check runs on it.</p>
+      </div>
     </div>
     <div class="npd-dl-row"><button type="button" class="btn ghost npd-dl" id="npdDownload">Download notes + Deal Sheet</button></div>
     <p class="npd-foot">Demo with a sample deal. Members save real deals to their dashboard, on the Agent plan. <a href="#pricing">See the plans</a></p>
@@ -1677,6 +1741,13 @@ NOTEPAD_JS = """<script>
   var btn = document.getElementById('npRun');
   var rowsEl = document.getElementById('npRows');
   var dlBtn = document.getElementById('npDownload');
+  var wfEl = document.getElementById('npWorkflow');
+  var actEl = document.getElementById('npActions');
+  var remEl = document.getElementById('npReminders');
+  var draftBtn = document.getElementById('npDraft');
+  var draftOut = document.getElementById('npDraftOut');
+  var draftTextEl = document.getElementById('npDraftText');
+  var draftReplyEl = document.getElementById('npDraftReply');
   if(!ta || !btn || !rowsEl) return;
   var ps = document.querySelector('.pricing-strip');
   if(ps && !ps.id) ps.id = 'pricing';
@@ -1856,6 +1927,7 @@ NOTEPAD_JS = """<script>
   function render(res){
     lastRes = res;
     renderRows(rowsEl, res);
+    renderWorkflow(res);
   }
   btn.addEventListener('click', function(){
     render(parse(ta.value));
@@ -1876,6 +1948,102 @@ NOTEPAD_JS = """<script>
   }
   function buildDoc(){
     return docText(ta.value, lastRes);
+  }
+  /* Workflow generators (4a2a2): one implementation feeding the section
+     cards and the pop-up panel's Next steps block. Everything derives
+     from the parse of the note on screen; nothing is invented, so a
+     term that is not in the note produces no item and no date. */
+  function buildActions(res, noteText){
+    var items = [];
+    FIELDS.forEach(function(key){
+      var f = res[key];
+      if(f && f.s === 'confirm') items.push('Confirm ' + LABELS[key] + ': ' + f.v);
+    });
+    if(res.earnest) items.push('Deliver earnest money to the escrow agent');
+    if(res.survey) items.push('Survey on file is from ' + res.survey.v + ' \u2014 confirm a new one or use the existing');
+    if(/hoa/i.test(noteText || '')) items.push('Collect the HOA documents');
+    items.push('Create the draft from this Deal Sheet');
+    items.push('Run TC Check on the filled contract');
+    return items;
+  }
+  function closingLine(res){
+    return res.closing ? 'Closing \u2014 ' + res.closing.v : 'No closing date in your notes yet';
+  }
+  function buildReminders(res){
+    var lines = [];
+    if(res.earnest) lines.push('Earnest money due \u2014 3 days after the Effective Date');
+    if(res.option){
+      var dm = res.option.v.match(/(\\d+)\\s*days/);
+      lines.push(dm ? 'Option period ends \u2014 day ' + dm[1] + ', at 5:00 PM'
+                    : 'Option period ends \u2014 at 5:00 PM');
+    }
+    lines.push(closingLine(res));
+    return lines;
+  }
+  function buildDraftText(res){
+    var parts = [];
+    if(res.price){
+      var n = parseInt(res.price.v.replace(/[^0-9]/g, ''), 10);
+      if(!isNaN(n)) parts.push(n >= 1000 && n % 1000 === 0 ? (n / 1000) + 'k' : res.price.v);
+    }
+    if(res.financing){
+      var dp = res.financing.v.match(/(\\d+(?:\\.\\d+)?)%\\s*down/i);
+      if(dp) parts.push(dp[1] + '% down');
+    }
+    if(res.closing) parts.push('close ' + res.closing.v);
+    if(res.property) parts.push(res.property.v);
+    return parts.join(' \u00b7 ');
+  }
+  function buildDraftReply(res){
+    var addr = res.property ? res.property.v : 'the property';
+    return ['Draft ready: TREC 20-19 for ' + addr,
+            'TC Check on this draft: 2 must-fix: Price Math, Earnest Money; 1 to review.'];
+  }
+  function fillList(el, items, withChecks){
+    if(!el) return;
+    el.textContent = '';
+    items.forEach(function(txt){
+      var li = document.createElement('li');
+      if(withChecks){
+        li.className = 'npw-item';
+        var lab = document.createElement('label');
+        lab.className = 'npw-check';
+        var cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.className = 'npw-box';
+        var sp = document.createElement('span');
+        sp.textContent = txt;
+        lab.appendChild(cb);
+        lab.appendChild(sp);
+        li.appendChild(lab);
+      } else {
+        li.className = 'npw-rem-item';
+        li.textContent = txt;
+      }
+      el.appendChild(li);
+    });
+  }
+  function renderWorkflow(res){
+    if(!wfEl) return;
+    wfEl.hidden = false;
+    fillList(actEl, buildActions(res, ta.value), true);
+    fillList(remEl, buildReminders(res), false);
+    if(draftOut) draftOut.hidden = true;
+  }
+  function showDraft(res, outEl, textEl, replyEl){
+    if(!outEl) return;
+    textEl.textContent = buildDraftText(res);
+    replyEl.textContent = buildDraftReply(res).join(String.fromCharCode(10));
+    outEl.hidden = false;
+  }
+  if(draftBtn){
+    draftBtn.addEventListener('click', function(){
+      if(!lastRes){
+        render(parse(ta.value));
+        if(!fired){ fired = true; if(window.taEvt) window.taEvt('home_notepad_run'); }
+      }
+      showDraft(lastRes, draftOut, draftTextEl, draftReplyEl);
+    });
   }
   function downloadText(text){
     var blob = new Blob([text], {type: 'text/plain'});
@@ -1907,10 +2075,30 @@ NOTEPAD_JS = """<script>
   var dBtn = document.getElementById('npdRun');
   var dRowsEl = document.getElementById('npdRows');
   var dDlBtn = document.getElementById('npdDownload');
+  var dNext = document.getElementById('npdNext');
+  var dActEl = document.getElementById('npdActions');
+  var dRemEl = document.getElementById('npdReminder');
+  var dDraftBtn = document.getElementById('npdDraft');
+  var dDraftOut = document.getElementById('npdDraftOut');
+  var dDraftTextEl = document.getElementById('npdDraftText');
+  var dDraftReplyEl = document.getElementById('npdDraftReply');
   if(dPill && dPanel && dTa && dBtn && dRowsEl){
     var dRes = null;
     function fireRun(){
       if(!fired){ fired = true; if(window.taEvt) window.taEvt('home_notepad_run'); }
+    }
+    function populatePanelNext(res){
+      if(!dNext) return;
+      dNext.hidden = false;
+      fillList(dActEl, buildActions(res, dTa.value), false);
+      if(dRemEl) dRemEl.textContent = closingLine(res);
+      if(dDraftOut) dDraftOut.hidden = true;
+    }
+    function runPanelParse(){
+      dRes = parse(dTa.value);
+      renderRows(dRowsEl, dRes);
+      populatePanelNext(dRes);
+      fireRun();
     }
     function openDemo(){
       dPanel.hidden = false;
@@ -1927,18 +2115,16 @@ NOTEPAD_JS = """<script>
     document.addEventListener('keydown', function(e){
       if((e.key === 'Escape' || e.keyCode === 27) && !dPanel.hidden) closeDemo();
     });
-    dBtn.addEventListener('click', function(){
-      dRes = parse(dTa.value);
-      renderRows(dRowsEl, dRes);
-      fireRun();
-    });
+    dBtn.addEventListener('click', runPanelParse);
+    if(dDraftBtn){
+      dDraftBtn.addEventListener('click', function(){
+        if(!dRes) runPanelParse();
+        showDraft(dRes, dDraftOut, dDraftTextEl, dDraftReplyEl);
+      });
+    }
     if(dDlBtn){
       dDlBtn.addEventListener('click', function(){
-        if(!dRes){
-          dRes = parse(dTa.value);
-          renderRows(dRowsEl, dRes);
-          fireRun();
-        }
+        if(!dRes) runPanelParse();
         downloadText(docText(dTa.value, dRes));
       });
     }
