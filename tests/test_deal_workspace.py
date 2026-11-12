@@ -8,8 +8,10 @@ title, an unfirmed closing date reads "Not set yet"), the summary
 mirrors the Deal Sheet's three states honestly, the health percentage
 is the documented average of its three components computed from the
 seeded data, the outstanding list names only work that is actually
-outstanding, no purple and no sidebar markup arrive from the mock,
-and the window.NP payload (the desktop app's sync contract) keeps
+outstanding, no purple arrives from the mock (the left deal rail an
+earlier mock carried was explicitly approved by Baptiste on
+2026-11-12 and is now asserted present, with signed links), and
+the window.NP payload (the desktop app's sync contract) keeps
 exactly its key set.
 
     python3 -m unittest tests.test_deal_workspace
@@ -262,8 +264,81 @@ class DealWorkspace(unittest.TestCase):
         self.assertIn(b'ws-step done"><span class="ws-dot">&#10003;</span>TC Check',
                       spine)
 
+    # -- Deal rail (2026-11-12) ----------------------------------------
+    def test_rail_lists_deals_and_highlights_current(self):
+        phone = _mkuser(_fresh_phone(), plan="starter")
+        tx1 = notepad.create_transaction(phone, title="Rail Deal One")
+        tx2 = notepad.create_transaction(phone, title="Rail Deal Two")
+        notepad.set_field(tx2["id"], phone, "price", 500000,
+                          state="confirm", origin="user")
+        html = self._page(phone, tx1["id"])
+        rail = _slice(html, b'<aside class="np-rail">',
+                      b'<div class="np-main">')
+        self.assertIn(b"Rail Deal One", rail)
+        self.assertIn(b"Rail Deal Two", rail)
+        self.assertIn(b"1 to confirm", rail)
+        self.assertIn(b"TX &middot; notepad &middot; updated", rail)
+        cur = re.search(rb'<a class="rail-deal current" href="([^"]+)"',
+                        rail)
+        self.assertIsNotNone(cur)
+        self.assertIn(f"/notepad/{tx1['id']}".encode(), cur.group(1))
+        other = re.search(rb'<a class="rail-deal" href="([^"]+)"', rail)
+        self.assertIsNotNone(other)
+        self.assertIn(f"/notepad/{tx2['id']}".encode(), other.group(1))
+        for token in (b"phone=", b"expires=", b"sig="):
+            self.assertIn(token, other.group(1))
+
+    # -- Ledger sheet (2026-11-12) -------------------------------------
+    def test_ledger_highlights_firmed_and_quiets_unset(self):
+        phone = _mkuser(_fresh_phone(), plan="starter")
+        tx = notepad.create_transaction(phone, title="Ledger Deal")
+        notepad.set_field(tx["id"], phone, "price", 685000)
+        html = self._page(phone, tx["id"])
+        sheet = _slice(html, b'id="sheetRows"', b'id="npTasks"')
+        self.assertIn(b'<span class="tag tag-found">Captured</span> '
+                      b'<span class="tag tag-firmed">Firmed</span>', sheet)
+        self.assertIn(b"$685,000", sheet)
+        self.assertIn(b'frow frow-unset" data-key="county"', sheet)
+        self.assertIn(b'<span class="fmissing">Not set</span>', sheet)
+        self.assertNotIn(b"Not in your notes", sheet)
+
+    # -- Draft gate chip (2026-11-12) ----------------------------------
+    def test_draft_gate_chip_counts_gate_blockers(self):
+        phone = _mkuser(_fresh_phone(), plan="starter")
+        tx = notepad.create_transaction(phone, title="Gate Deal")
+        notepad.set_field(tx["id"], phone, "price", 685000,
+                          state="confirm", origin="user")
+        notepad.set_field(tx["id"], phone, "closing_date", "2026-12-18",
+                          state="confirm", origin="user")
+        # HOA sits in Confirm too, but it is not a contract field, so
+        # the gate (and therefore the chip) does not count it.
+        notepad.set_field(tx["id"], phone, "hoa", "HOA docs pending",
+                          state="confirm", origin="user")
+        html = self._page(phone, tx["id"])
+        gate = _slice(html, b'id="npDraftGate"', b'id="npDraftResult"')
+        self.assertIn(b"2 terms still unconfirmed", gate)
+        fields = notepad.refresh_deal_sheet(tx["id"], phone)
+        self.assertEqual(
+            len(notepad.blocking_confirm_fields(fields, "TX")), 2)
+        self.assertIn(b"NP_BLOCKING_KEYS", html)
+
+    def test_draft_gate_chip_ready_when_all_firmed(self):
+        phone = _mkuser(_fresh_phone(), plan="starter")
+        tx = notepad.create_transaction(phone, title="Ready Deal")
+        notepad.set_field(tx["id"], phone, "price", 685000)
+        html = self._page(phone, tx["id"])
+        gate = _slice(html, b'id="npDraftGate"', b'id="npDraftResult"')
+        self.assertIn(b"All terms firmed, ready to draft", gate)
+
     # -- Design guard + sync contract ----------------------------------
-    def test_no_purple_no_sidebar_and_np_contract_intact(self):
+    def test_no_purple_rail_present_and_np_contract_intact(self):
+        # Supersession (2026-11-12): this test used to assert NO
+        # sidebar markup, a guard from an earlier mock whose sidebar
+        # Baptiste had not approved at the time. On 2026-11-12 he
+        # approved the follow-up mock's left deal rail explicitly
+        # ("Build all four changes"), so the guard now asserts the
+        # rail is present and its links are signed. The no-purple ban
+        # and the window.NP key-set contract below are unchanged.
         phone = _mkuser(_fresh_phone(), plan="starter")
         tx = notepad.create_transaction(phone, title="Guard Deal")
         html = self._page(phone, tx["id"])
@@ -271,8 +346,16 @@ class DealWorkspace(unittest.TestCase):
         for hexval in (b"#7c3aed", b"#6d28d9", b"#8b5cf6", b"#a855f7",
                        b"#9333ea"):
             self.assertNotIn(hexval, low)
-        self.assertNotIn(b"sidebar", low)
-        self.assertNotIn(b"<aside", low)
+        rail = _slice(html, b'<aside class="np-rail">',
+                      b'<div class="np-main">')
+        self.assertIn(b"&larr; deals", rail)
+        self.assertIn(b"txtanoffer &middot; deal notepad", rail)
+        self.assertIn(b"txoInstallBtn", rail)
+        self.assertIn(b"+ new deal", rail)
+        self.assertIn(b"Run TC check", rail)
+        self.assertIn(b"/notepad?phone=", rail)
+        self.assertIn(b"expires=", rail)
+        self.assertIn(b"sig=", rail)
         # Anchors and hooks the header button and JS rely on.
         self.assertIn(b'id="wsCheckCard"', html)
         self.assertIn(b'id="npCheckFile"', html)
