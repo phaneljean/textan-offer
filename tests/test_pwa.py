@@ -68,7 +68,7 @@ class ManifestAndWorker(unittest.TestCase):
         m = json.loads(resp.get_data(as_text=True))
         self.assertEqual(m["name"], "TxtAnOffer")
         self.assertEqual(m["short_name"], "TxtAnOffer")
-        self.assertEqual(m["start_url"], "/")
+        self.assertEqual(m["start_url"], "/notepad")
         self.assertEqual(m["scope"], "/")
         self.assertEqual(m["display"], "standalone")
         self.assertEqual(m["theme_color"], "#0b5d52")
