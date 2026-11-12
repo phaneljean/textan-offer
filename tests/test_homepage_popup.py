@@ -16,6 +16,7 @@ never POST to the member /notepad endpoints.
     python3 -m unittest tests.test_homepage_popup
 """
 import os
+import re
 import tempfile
 import unittest
 
@@ -185,14 +186,26 @@ class AppWindowAndDesk(unittest.TestCase):
                       "packaging.", self.sec)
 
     def test_desk_install_controls_use_the_shared_pwa_ids(self):
-        # PWA_JS (already included on the homepage) shows/hides this
-        # block and fires pwa_install_accepted on acceptance — the
-        # same ids as the dashboard block, and only ONE set per page.
+        # PWA_JS (already included on the homepage) drives this block
+        # and fires pwa_install_accepted on acceptance — the same ids
+        # as the dashboard block, and only ONE set per page.
         self.assertEqual(self.html.count('id="txoInstall"'), 1)
         self.assertEqual(self.html.count('id="txoInstallBtn"'), 1)
         self.assertEqual(self.html.count('id="txoInstallHint"'), 1)
         self.assertIn('id="txoInstallBtn">Install the app<', self.sec)
         self.assertIn("Add to Home Screen", self.sec)
+
+    def test_desk_install_block_is_always_visible(self):
+        # The wrapper must not start hidden: no display:none on the
+        # #txoInstall div. The button renders on page load; a click
+        # with no native prompt available reveals manual instructions
+        # (the fallback text lives in PWA_JS) instead of vanishing.
+        m = re.search(r'<div[^>]*id="txoInstall"[^>]*>', self.html)
+        self.assertIsNotNone(m)
+        self.assertNotIn("display:none", m.group(0))
+        self.assertNotIn("display: none", m.group(0))
+        self.assertIn('open your browser menu and choose "Install app"',
+                      app_module.PWA_JS)
 
     def test_no_desktop_installer_links_yet(self):
         self.assertNotIn(".dmg", self.sec)
