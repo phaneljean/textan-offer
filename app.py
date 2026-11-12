@@ -1321,7 +1321,7 @@ __SITE_NAV__
           <a class="btn solid" href="https://github.com/phaneljean/txtanoffer-notepad/releases/download/v0.1.0/TxtAnOffer.Notepad_0.1.0_x64-setup.exe" data-evt="desk_download_windows">Download for Windows</a>
           <a class="btn ghost" href="https://github.com/phaneljean/txtanoffer-notepad/releases/download/v0.1.0/TxtAnOffer.Notepad_0.1.0_aarch64.dmg" data-evt="desk_download_mac">Download for Mac</a>
         </div>
-        <p class="np-desk-fine">Free to download. Mac version is for Apple Silicon Macs. First install shows a standard security prompt while the app is new. Linux and all versions: <a href="https://github.com/phaneljean/txtanoffer-notepad/releases/tag/v0.1.0">all downloads</a></p>
+        <p class="np-desk-fine">Free to download. Mac version is for Apple Silicon Macs. First install shows a standard security prompt while the app is new. First open on a Mac: right-click the app, then Open. Linux and all versions: <a href="https://github.com/phaneljean/txtanoffer-notepad/releases/tag/v0.1.0">all downloads</a></p>
         <p class="np-orlabel">Or keep it in your browser:</p>
         <div class="np-install" id="txoInstall">
           <button type="button" class="btn solid" id="txoInstallBtn">Install the app</button>
