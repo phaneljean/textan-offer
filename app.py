@@ -12847,6 +12847,43 @@ details.notehist summary{cursor:pointer;font-size:0.85rem;font-weight:600;color:
 """
 
 
+# Phase 2/3 additions (2026-11-11): live detection chips, action items,
+# deadlines panel, pinned TC Check results, draft panel. Kept as a second
+# stylesheet so the Phase 1 CSS above stays untouched.
+_NP2_CSS = """
+.detect{margin-top:0.9rem;}
+.detect .dlabel{font-size:0.75rem;font-weight:700;color:var(--text-dim);
+text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.4rem;}
+.dchip{display:inline-block;padding:0.22rem 0.65rem;border-radius:9999px;font-size:0.75rem;
+font-weight:600;border:1px solid var(--border);color:var(--text-dim);background:#fff;
+margin:0 0.3rem 0.3rem 0;transition:all .15s;}
+.dchip.on{background:var(--accent-tint);border-color:var(--accent);color:var(--accent-dark);}
+.taskrow{display:flex;align-items:flex-start;gap:0.6rem;padding:0.5rem 0.25rem;
+border-bottom:1px solid var(--border);}
+.taskrow:last-child{border-bottom:none;}
+.taskrow input[type=checkbox]{margin-top:0.2rem;width:1rem;height:1rem;accent-color:var(--accent);}
+.taskrow .tlabel{flex:1;font-size:0.92rem;}
+.taskrow.done .tlabel{color:var(--text-dim);text-decoration:line-through;}
+.taskadd{display:flex;gap:0.5rem;margin-top:0.7rem;}
+.taskadd input{flex:1;}
+.dlrow{display:flex;align-items:center;justify-content:space-between;gap:0.75rem;
+padding:0.55rem 0.25rem;border-bottom:1px solid var(--border);}
+.dlrow:last-child{border-bottom:none;}
+.dlwhen{text-align:right;white-space:nowrap;}
+.dldate{font-weight:700;font-size:0.92rem;}
+.dlrel{font-size:0.78rem;color:var(--text-muted);}
+.dlrel.past{color:var(--red);}
+.findrow{display:flex;gap:0.55rem;align-items:flex-start;padding:0.45rem 0.25rem;
+border-bottom:1px solid var(--border);font-size:0.9rem;}
+.findrow:last-child{border-bottom:none;}
+.tag-fix{background:#FDECEC;color:var(--red);}
+.tag-review{background:#FBF3DF;color:var(--amber);}
+.chkhist{font-size:0.85rem;color:var(--text-muted);margin-top:0.6rem;}
+.chkhist div{padding:0.3rem 0.25rem;border-bottom:1px solid var(--border);}
+.chkhist div:last-child{border-bottom:none;}
+"""
+
+
 def _np_signed(path, phone, expires, sig):
     return f"{path}?phone={_urlquote(phone, safe='')}&expires={expires}&sig={sig}"
 
@@ -12922,7 +12959,7 @@ def _np_page(title, body, widget=""):
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
-<style>{_NOTEPAD_CSS}{_NPOP_CSS}</style></head>
+<style>{_NOTEPAD_CSS}{_NP2_CSS}{_NPOP_CSS}</style></head>
 <body><div class="container">{body}</div>{widget}{PWA_JS}</body></html>"""
 
 
@@ -12999,6 +13036,65 @@ def notepad_list():
     {action_block}"""
     return _np_page("Deal Notepad", body,
                     widget=_np_pop_widget(phone, expires, sig, access))
+
+
+def _np_tasks_html(tasks, access):
+    """Server-rendered action-items list (the JS renderTasks mirrors it)."""
+    if not tasks:
+        return ('<p class="sub">Nothing here yet — enhance a note and the '
+                'follow-ups appear.</p>')
+    rows = []
+    for t in tasks:
+        cls = "taskrow done" if t["done"] else "taskrow"
+        box = ctrl = ""
+        if access:
+            box = ('<input type="checkbox" ' + ('checked ' if t["done"] else '')
+                   + f'onchange="npTaskToggle({t["id"]}, this)">')
+            ctrl = (f'<button type="button" class="btn-mini" title="Remove item" '
+                    f'onclick="npTaskDelete({t["id"]})">&times;</button>')
+        rows.append(f'<div class="{cls}">{box}'
+                    f'<span class="tlabel">{escape(t["label"])}</span>{ctrl}</div>')
+    return "".join(rows)
+
+
+def _np_check_results_html(checks):
+    """Server-rendered pinned TC Check results (JS renderCheck mirrors it):
+    latest check in full (must-fix findings first), then a history list."""
+    if not checks:
+        return ('<p class="sub">No checks yet for this deal. Upload the filled '
+                'contract and the result stays pinned here.</p>')
+    latest = checks[0]
+    out = []
+    if not latest["recognized"]:
+        out.append('<div class="notice">The last file uploaded ('
+                   + escape((latest["created_at"] or "")[:10])
+                   + ') could not be read as a TREC or Colorado contract, so '
+                     'there was nothing to report. The file itself was deleted.</div>')
+    else:
+        head = (f'<p style="font-weight:700;">{latest["must_fix_count"]} must fix '
+                f'&middot; {latest["review_count"]} to review')
+        if latest["form_label"]:
+            head += f' &middot; {escape(latest["form_label"])}'
+        out.append(head + '</p>')
+        findings = sorted(latest["findings"],
+                          key=lambda f: 0 if f["severity"] == "blocker" else 1)
+        for f in findings:
+            if f["severity"] == "blocker":
+                tag = '<span class="tag tag-fix">Must fix</span>'
+            else:
+                tag = '<span class="tag tag-review">Review</span>'
+            out.append(f'<div class="findrow">{tag}'
+                       f'<span>{escape(f["message"])}</span></div>')
+    if len(checks) > 1:
+        hist = ""
+        for c in checks[1:]:
+            hist += f'<div>{escape((c["created_at"] or "")[:10])}'
+            if c["form_label"]:
+                hist += f' &middot; {escape(c["form_label"])}'
+            hist += (f' &middot; {c["must_fix_count"]} must fix, '
+                     f'{c["review_count"]} to review</div>')
+        out.append(f'<div class="chkhist"><strong>Earlier checks</strong>{hist}</div>')
+    return "".join(out)
 
 
 def _np_field_row(key, label, field):
@@ -13078,7 +13174,7 @@ function npField(key,action){
     body.value=v;
   }
   postJson(window.NP.fieldsUrl,body).then(function(d){
-    if(d.ok){window.NP.fields=d.fields;renderFields();}
+    if(d.ok){window.NP.fields=d.fields;renderFields();if(d.tasks)renderTasks(d.tasks);}
     else{alert(d.error||'Could not save that field.');}
   }).catch(function(){alert('Network error — please try again.');});
 }
@@ -13091,7 +13187,7 @@ function npEnhance(btn){
   }).then(function(d){
     btn.disabled=false;btn.textContent=old;
     if(!d.ok){alert(d.error||'Enhance failed.');return;}
-    window.NP.fields=d.fields;renderFields();
+    window.NP.fields=d.fields;renderFields();if(d.tasks)renderTasks(d.tasks);
     document.getElementById('npSummary').textContent=d.summary||'';
     document.getElementById('npSummaryEmpty').style.display=d.summary?'none':'';
     document.getElementById('npWarnings').innerHTML=(d.warnings||[]).map(function(w){
@@ -13125,6 +13221,132 @@ function npDownload(){
   a.click();
   document.body.removeChild(a);
   setTimeout(function(){URL.revokeObjectURL(url);},1000);
+}
+var NP_DETECT=[
+  ['address',/\\b\\d{1,6}\\s+[A-Za-z0-9' .\\-]+?\\s+(?:St|Street|Ave|Avenue|Blvd|Dr|Drive|Rd|Road|Ln|Lane|Ct|Court|Way|Cir|Circle|Trl|Trail|Hwy|Pkwy|Pl|Place)\\b/i],
+  ['price',/(?:\\$\\s*[\\d,]{3,})|(?:\\b\\d+(?:\\.\\d+)?\\s*(?:k|m|million)\\b)|(?:\\b\\d{6,}\\b)/i],
+  ['earnest',/\\bearnest\\b/i],
+  ['option',/\\boption\\b/i],
+  ['closing',/\\bclos(?:e|ing|ed|es)\\b/i],
+  ['financing',/\\b(?:conventional|fha|va|usda|cash|loan)\\b/i],
+  ['credit',/\\bcredit\\b/i]
+];
+function npDetect(){
+  var ta=document.getElementById('npNote');
+  var box=document.getElementById('npDetect');
+  if(!ta||!box)return;
+  var text=ta.value||'';
+  NP_DETECT.forEach(function(pair){
+    var chip=box.querySelector('[data-detect="'+pair[0]+'"]');
+    if(chip)chip.classList.toggle('on',pair[1].test(text));
+  });
+}
+var npTaEl=document.getElementById('npNote');
+if(npTaEl){npTaEl.addEventListener('input',npDetect);npDetect();}
+function taskRowHtml(t){
+  return '<div class="taskrow'+(t.done?' done':'')+'">'
+    +'<input type="checkbox" '+(t.done?'checked ':'')+'onchange="npTaskToggle('+t.id+', this)">'
+    +'<span class="tlabel">'+esc(t.label)+'</span>'
+    +'<button type="button" class="btn-mini" title="Remove item" onclick="npTaskDelete('+t.id+')">&times;</button></div>';
+}
+function renderTasks(tasks){
+  var box=document.getElementById('npTasks');
+  if(!box)return;
+  if(!tasks||!tasks.length){
+    box.innerHTML='<p class="sub">Nothing here yet — enhance a note and the follow-ups appear.</p>';
+    return;
+  }
+  box.innerHTML=tasks.map(taskRowHtml).join('');
+}
+function npTaskToggle(id,el){
+  postJson(window.NP.tasksUrl,{action:'toggle',id:id,done:el.checked?1:0}).then(function(d){
+    if(d&&d.ok){renderTasks(d.tasks);}
+    else{el.checked=!el.checked;alert((d&&d.error)||'Could not save that.');}
+  }).catch(function(){el.checked=!el.checked;alert('Network error — please try again.');});
+}
+function npTaskAdd(){
+  var inp=document.getElementById('npTaskInput');
+  var label=(inp.value||'').trim();
+  if(!label)return;
+  postJson(window.NP.tasksUrl,{action:'add',label:label}).then(function(d){
+    if(d&&d.ok){inp.value='';renderTasks(d.tasks);}
+    else{alert((d&&d.error)||'Could not add that item.');}
+  }).catch(function(){alert('Network error — please try again.');});
+}
+function npTaskDelete(id){
+  postJson(window.NP.tasksUrl,{action:'delete',id:id}).then(function(d){
+    if(d&&d.ok){renderTasks(d.tasks);}
+    else{alert((d&&d.error)||'Could not remove that item.');}
+  }).catch(function(){alert('Network error — please try again.');});
+}
+function renderCheck(d){
+  var box=document.getElementById('npCheckResults');
+  if(!box)return;
+  if(!d||!d.ok){
+    box.innerHTML='<div class="warn">'+esc((d&&d.error)||'The check did not run.')+'</div>';
+    return;
+  }
+  var c=d.check;
+  if(!c){box.innerHTML='';return;}
+  var out='';
+  if(!c.recognized){
+    out+='<div class="notice">We could not read that file as a TREC or Colorado contract, so there is nothing to report. The file was deleted.</div>';
+  }else{
+    out+='<p style="font-weight:700;">'+c.must_fix_count+' must fix &middot; '+c.review_count+' to review'
+      +(c.form_label?' &middot; '+esc(c.form_label):'')+'</p>';
+    var finds=(c.findings||[]).slice().sort(function(a,b){
+      return (a.severity==='blocker'?0:1)-(b.severity==='blocker'?0:1);});
+    out+=finds.map(function(f){
+      return '<div class="findrow"><span class="tag '+(f.severity==='blocker'?'tag-fix':'tag-review')+'">'
+        +(f.severity==='blocker'?'Must fix':'Review')+'</span><span>'+esc(f.message)+'</span></div>';
+    }).join('');
+  }
+  var hist=(d.checks||[]).filter(function(x){return x.id!==c.id;});
+  if(hist.length){
+    out+='<div class="chkhist"><strong>Earlier checks</strong>'+hist.map(function(h){
+      return '<div>'+esc((h.created_at||'').slice(0,10))
+        +(h.form_label?' &middot; '+esc(h.form_label):'')
+        +' &middot; '+h.must_fix_count+' must fix, '+h.review_count+' to review</div>';
+    }).join('')+'</div>';
+  }
+  box.innerHTML=out;
+}
+function npCheckSubmit(ev){
+  ev.preventDefault();
+  var form=document.getElementById('npCheckForm');
+  var btn=form.querySelector('button[type=submit]');
+  btn.disabled=true;btn.textContent='Checking...';
+  fetch(window.NP.checkUrl,{method:'POST',body:new FormData(form)})
+    .then(function(r){return r.json();})
+    .then(function(d){btn.disabled=false;btn.textContent='Run TC Check';renderCheck(d);})
+    .catch(function(){
+      btn.disabled=false;btn.textContent='Run TC Check';
+      renderCheck({ok:false,error:'Network error — the check did not run.'});
+    });
+  return false;
+}
+function npDraft(btn){
+  btn.disabled=true;var old=btn.textContent;btn.textContent='Building draft...';
+  postJson(window.NP.draftUrl,{}).then(function(d){
+    btn.disabled=false;btn.textContent=old;
+    var box=document.getElementById('npDraftResult');
+    if(d&&d.ok){
+      box.innerHTML='<div class="notice" style="background:var(--accent-tint);color:var(--accent-dark);">Draft created: '
+        +'<a href="'+d.pdf_url+'" target="_blank" rel="noopener">'+esc(d.filename)+'</a>'
+        +(d.check_line?'<br>'+esc(d.check_line):'')+'</div>';
+    }else if(d&&d.blocking){
+      box.innerHTML='<div class="notice">Almost — confirm these on the Deal Sheet first: '
+        +d.blocking.map(function(x){return esc(x);}).join(', ')+'.</div>';
+    }else if(d&&d.missing){
+      box.innerHTML='<div class="notice">The Deal Sheet still needs: '
+        +d.missing.map(function(x){return esc(x);}).join(', ')+'.</div>';
+    }else{
+      box.innerHTML='<div class="warn">'+esc((d&&d.error)||'The draft could not be created.')+'</div>';
+    }
+  }).catch(function(){
+    btn.disabled=false;btn.textContent=old;
+    document.getElementById('npDraftResult').innerHTML='<div class="warn">Network error — please try again.</div>';
+  });
 }
 """
 
@@ -13348,6 +13570,7 @@ def _np_pop_widget(phone, expires, sig, access, state="TX"):
 
 @app.route("/notepad/<int:tx_id>", methods=["GET"])
 def notepad_detail(tx_id):
+    import deadlines
     import json
     auth = _np_auth()
     if not auth:
@@ -13380,10 +13603,52 @@ def notepad_detail(tx_id):
                                  'right now — you\'re viewing your saved deals. '
                                  '<a href="/pricing">See plans</a></div>')
     confirm_count = notepad.confirm_count(fields)
+    # Phase 2/3 (2026-11-11): action items refresh on view for members
+    # (generation on first view when none exist); deadlines and pinned
+    # checks render for any owner viewing the deal.
+    if access:
+        tasks = notepad.generate_tasks(tx_id, phone)
+    else:
+        tasks = notepad.list_tasks(tx_id, phone)
+    tasks_html = _np_tasks_html(tasks, access)
+    tasks_add_html = ""
+    if access:
+        tasks_add_html = ('<div class="taskadd"><input type="text" id="npTaskInput" '
+                          'maxlength="300" placeholder="Add your own item...">'
+                          '<button type="button" class="btn-mini btn-acc" '
+                          'onclick="npTaskAdd()">Add</button></div>')
+    dl_rows = notepad.deal_deadlines(tx, fields)
+    today_local = (deadlines.texas_date() if tx.get("state") == "TX"
+                   else deadlines.colorado_date())
+    if dl_rows:
+        dl_html = ""
+        for r in dl_rows:
+            rel_cls = "dlrel past" if r["date"] < today_local else "dlrel"
+            note_html = (f' <span class="sub">({escape(r["note"])})</span>'
+                         if r["note"] else "")
+            dl_html += (f'<div class="dlrow"><span>{escape(r["label"])}{note_html}</span>'
+                        f'<span class="dlwhen"><span class="dldate">'
+                        f'{r["date"].strftime("%a, %b %d, %Y")}</span><br>'
+                        f'<span class="{rel_cls}">'
+                        f'{notepad.relative_label(r["date"], today_local)}</span></span></div>')
+    else:
+        dl_html = ('<p class="sub">No dates on the sheet yet. Deadlines appear here '
+                   'once the effective and closing dates are on the sheet — they are '
+                   'computed from your dates, never guessed.</p>')
+    check_html = _np_check_results_html(notepad.list_checks(tx_id, phone))
+    draft_html = ""
+    if tx.get("offer_filename"):
+        pdf_url = sign_pdf_url(tx["offer_filename"], request.host_url.rstrip("/"))
+        draft_html = (f'<p class="sub" style="margin-bottom:0.5rem;">Draft on file: '
+                      f'<a href="{pdf_url}" target="_blank" rel="noopener">'
+                      f'{escape(tx["offer_filename"])}</a></p>')
     np_config = {
         "fieldsUrl": _np_signed(f"/notepad/{tx_id}/fields", phone, expires, sig),
         "enhanceUrl": _np_signed(f"/notepad/{tx_id}/enhance", phone, expires, sig),
         "notesUrl": _np_signed(f"/notepad/{tx_id}/notes", phone, expires, sig),
+        "tasksUrl": _np_signed(f"/notepad/{tx_id}/tasks", phone, expires, sig),
+        "checkUrl": _np_signed(f"/notepad/{tx_id}/check", phone, expires, sig),
+        "draftUrl": _np_signed(f"/notepad/{tx_id}/draft", phone, expires, sig),
         "fields": fields,
         "defs": [[k, label] for k, label, _ in notepad.FIELD_DEFS],
         "kinds": notepad.FIELD_KINDS,
@@ -13412,6 +13677,17 @@ def notepad_detail(tx_id):
             </p>
           </form>
           <p class="sub" style="margin-top:0.7rem;">Enhance organizes your notes into a summary and deal terms. Anything it isn't sure about is marked <strong>Confirm</strong> — it never fills in a term your notes don't contain.</p>
+          <div class="detect" id="npDetect">
+            <div class="dlabel">In your note so far</div>
+            <span class="dchip" data-detect="address">Address</span>
+            <span class="dchip" data-detect="price">Price</span>
+            <span class="dchip" data-detect="earnest">Earnest</span>
+            <span class="dchip" data-detect="option">Option</span>
+            <span class="dchip" data-detect="closing">Closing</span>
+            <span class="dchip" data-detect="financing">Financing</span>
+            <span class="dchip" data-detect="credit">Credit</span>
+            <p class="sub" style="margin-top:0.3rem;">A quick scan of your words as you type — Enhance is what puts terms on the Deal Sheet.</p>
+          </div>
           {hist_html}
         </div>
       </div>
@@ -13426,6 +13702,32 @@ def notepad_detail(tx_id):
           <h2>Deal Sheet</h2>
           <p class="sub" style="margin-bottom:0.5rem;">The central record for this transaction. Confirm a value to put it on the sheet; only values on the sheet can go into a draft.</p>
           <div id="sheetRows">{rows}</div>
+        </div>
+        <div class="card">
+          <h2>Draft</h2>
+          <p class="sub" style="margin-bottom:0.5rem;">Turn the confirmed Deal Sheet into a filled draft PDF. Anything still marked Confirm blocks the draft — nothing uncertain goes into a contract.</p>
+          <div id="npDraftResult">{draft_html}</div>
+          <p style="margin-top:0.4rem;"><button type="button" class="btn" data-evt="notepad_draft_created" onclick="npDraft(this)">Create draft from the Deal Sheet</button></p>
+        </div>
+        <div class="card">
+          <h2>Action items</h2>
+          <div id="npTasks">{tasks_html}</div>
+          {tasks_add_html}
+        </div>
+        <div class="card">
+          <h2>Deadlines</h2>
+          {dl_html}
+        </div>
+        <div class="card">
+          <h2>TC Check</h2>
+          <p class="sub" style="margin-bottom:0.6rem;">Check the filled contract for this deal. The file is checked, then deleted — only the result stays pinned here.</p>
+          <form id="npCheckForm" onsubmit="return npCheckSubmit(event)">
+            <p style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
+              <input type="file" name="file" accept="application/pdf,.pdf" style="flex:1;min-width:200px;">
+              <button type="submit" class="btn">Run TC Check</button>
+            </p>
+          </form>
+          <div id="npCheckResults" style="margin-top:0.7rem;">{check_html}</div>
         </div>
         <p style="margin:0 0 1rem;"><button type="button" class="btn btn-ghost" onclick="npDownload()">Download Deal Sheet</button></p>
         <form method="post" action="{_np_signed(f'/notepad/{tx_id}/delete', phone, expires, sig)}"
@@ -13510,6 +13812,7 @@ def notepad_enhance(tx_id):
         "fields": merged["fields"],
         "warnings": merged["warnings"],
         "confirm_count": notepad.confirm_count(merged["fields"]),
+        "tasks": notepad.generate_tasks(tx_id, phone),
     })
 
 
@@ -13566,7 +13869,236 @@ def notepad_field_update(tx_id):
     if fields is None:
         return jsonify({"error": "Could not save that field."}), 400
     return jsonify({"ok": True, "fields": fields,
-                    "confirm_count": notepad.confirm_count(fields)})
+                    "confirm_count": notepad.confirm_count(fields),
+                    "tasks": notepad.generate_tasks(tx_id, phone)})
+
+
+@app.route("/notepad/<int:tx_id>/tasks", methods=["POST"])
+def notepad_tasks_update(tx_id):
+    """Action items (Phase 2): add / toggle / delete, JSON in and out.
+    Same signed-trio auth, ownership, access, and rate-limit gates as the
+    other notepad writes."""
+    auth = _np_auth()
+    if not auth:
+        return _np_expired()
+    phone, expires, sig = auth
+    tx = notepad.get_transaction(tx_id, phone)
+    if not tx:
+        return jsonify({"error": "Deal not found."}), 404
+    if not has_notepad_access(phone):
+        return jsonify({"error": "The Deal Notepad is part of the Agent plan."}), 403
+    if _np_rate_limited(phone):
+        return jsonify({"error": "Too many requests. Try again in a bit."}), 429
+    payload = request.get_json(silent=True) or {}
+    action = payload.get("action")
+    if action == "add":
+        label = str(payload.get("label") or "").strip()
+        if not label or len(label) > 300:
+            return jsonify({"error": "Write the item first (300 characters max)."}), 400
+        notepad.add_task(tx_id, phone, label)
+    elif action in ("toggle", "delete"):
+        try:
+            task_id = int(payload.get("id"))
+        except (TypeError, ValueError):
+            return jsonify({"error": "Bad task id."}), 400
+        if action == "toggle":
+            ok = notepad.set_task_done(task_id, tx_id, phone, bool(payload.get("done")))
+        else:
+            ok = notepad.delete_task(task_id, tx_id, phone)
+        if not ok:
+            return jsonify({"error": "Item not found."}), 404
+    else:
+        return jsonify({"error": "Unknown action."}), 400
+    return jsonify({"ok": True, "tasks": notepad.list_tasks(tx_id, phone)})
+
+
+@app.route("/notepad/<int:tx_id>/check", methods=["POST"])
+def notepad_check_upload(tx_id):
+    """TC Check pinned to the transaction (Phase 3). Mirrors the public
+    /v1/tc/check validation and temp discipline: the upload lands in a
+    temp file, check_tc_file runs on it, and the bytes are unlinked in a
+    finally -- only the result is stored ("Checked. Then deleted.")."""
+    auth = _np_auth()
+    if not auth:
+        return _np_expired()
+    phone, expires, sig = auth
+    tx = notepad.get_transaction(tx_id, phone)
+    if not tx:
+        return jsonify({"error": "Deal not found."}), 404
+    if not has_notepad_access(phone):
+        return jsonify({"error": "The Deal Notepad is part of the Agent plan."}), 403
+    if _np_rate_limited(phone):
+        return jsonify({"error": "Too many requests. Try again in a bit."}), 429
+    upload = request.files.get("file")
+    if upload is None or not upload.filename:
+        return jsonify({"error": "Attach the filled contract PDF first."}), 400
+    kind = _upload_kind(upload)
+    if kind == "empty":
+        return jsonify({"error": "That file is empty."}), 400
+    if kind == "other":
+        return jsonify({"error": "Only PDF files are supported."}), 400
+    tmp = tempfile.NamedTemporaryFile(suffix=".pdf", delete=False)
+    tmp_path = tmp.name
+    tmp.close()
+    try:
+        upload.save(tmp_path)
+        try:
+            result = check_tc_file([tmp_path])
+        except Exception:
+            return jsonify({"error": "Couldn't read that file as a PDF. If it's a "
+                                     "scan or a photo of a contract, it can't be "
+                                     "checked."}), 400
+    finally:
+        try:
+            os.remove(tmp_path)
+        except OSError:
+            pass
+    issues = result.get("issues") or []
+    must_fix = sum(1 for i in issues if i.get("severity") == "blocker")
+    form_label = result.get("form") or ""
+    if not form_label and result.get("recognized"):
+        # check_tc_file's main path carries no form label; a recognized
+        # non-CO result got there by matching the TREC 20-19 fingerprint.
+        form_label = "Colorado CBS1" if result.get("state") == "CO" else "TREC 20-19"
+    row = notepad.record_check(tx_id, phone, form_label,
+                               bool(result.get("recognized")),
+                               must_fix, len(issues) - must_fix, issues)
+    return jsonify({"ok": True, "check": row,
+                    "checks": notepad.list_checks(tx_id, phone)})
+
+
+def _np_draft_parsed(tx, fields, phone):
+    """Build the parsed dict for fill_offer_pdf from a fully-confirmed
+    Deal Sheet. Returns (parsed, missing_labels). Mirrors the SMS flow's
+    enrichment (build_offer_draft / _build_co_draft): the agent profile
+    fills earnest/option-fee defaults, the down payment and loan derive
+    from whichever down-payment figure is firm, and close timing may
+    derive from a firm closing date. Nothing is guessed: whatever cannot
+    be derived lands in missing_labels and the draft is refused."""
+    from datetime import date as _date
+
+    import deadlines
+    from agent_profiles import get_agent_profile
+
+    parsed = notepad.sheet_to_parsed(fields)
+    firm = {k: f["value"] for k, f in fields.items()
+            if f.get("state") == "found" and f.get("value") not in (None, "")}
+    missing = []
+    price = firm.get("price")
+    if not price:
+        missing.append("Sales price")
+    if not firm.get("address"):
+        missing.append("Property address")
+    agent = get_agent_profile(phone) or {}
+    parsed["agent"] = agent
+    if price:
+        if parsed.get("down_payment_pct") is not None:
+            parsed["down_payment_amount"] = int(price * parsed["down_payment_pct"])
+            parsed["loan_amount"] = price - parsed["down_payment_amount"]
+        elif firm.get("down_payment_amount"):
+            parsed["down_payment_amount"] = int(firm["down_payment_amount"])
+            parsed["down_payment_pct"] = parsed["down_payment_amount"] / price
+            parsed["loan_amount"] = price - parsed["down_payment_amount"]
+        elif str(parsed.get("financing_type") or "").lower() == "cash":
+            parsed["down_payment_pct"] = 1.0
+            parsed["down_payment_amount"] = price
+            parsed["loan_amount"] = 0
+        else:
+            missing.append("Down payment")
+        if firm.get("earnest_money_amount"):
+            parsed["earnest_money"] = int(firm["earnest_money_amount"])
+        elif firm.get("earnest_pct"):
+            parsed["earnest_money"] = int(price * firm["earnest_pct"])
+        else:
+            parsed["earnest_money"] = int(
+                price * (agent.get("default_earnest_pct") or 0.01))
+    if not parsed.get("close_days"):
+        closing_raw = firm.get("closing_date")
+        derived = None
+        if closing_raw:
+            try:
+                closing_d = _date.fromisoformat(str(closing_raw)[:10])
+                today = (deadlines.texas_date() if tx.get("state") == "TX"
+                         else deadlines.colorado_date())
+                derived = (closing_d - today).days
+            except ValueError:
+                derived = None
+        if derived is not None and 1 <= derived <= 365:
+            parsed["close_days"] = derived
+        else:
+            missing.append("Close timing (days to close, or a closing date "
+                           "within the next year)")
+    if tx.get("state") == "CO":
+        parsed["state"] = "CO"
+        parsed["_tx_needs_confirm"] = False
+        if firm.get("address"):
+            from co_filler import split_co_address
+            addr = split_co_address(str(firm["address"]))
+            parsed["street"] = addr["street"]
+            parsed["city"] = parsed.get("city") or addr["city"]
+            parsed["zip"] = addr["zip"]
+            parsed["county"] = parsed.get("county") or addr["county"]
+        parsed["option_fee"] = 0
+        if parsed.get("close_days"):
+            from co_audit import is_business_day as co_business_day
+            from co_filler import contract_dates
+            today = deadlines.colorado_date()
+            acceptance, closing = contract_dates(parsed["close_days"], today)
+            parsed["co_acceptance"] = f"{acceptance:%b} {acceptance.day}"
+            parsed["co_closing"] = f"{closing:%b} {closing.day}"
+            parsed["co_closing_note"] = roll_note(
+                today + timedelta(days=int(parsed["close_days"])), co_business_day)
+    else:
+        if firm.get("option_fee_amount"):
+            parsed["option_fee"] = int(firm["option_fee_amount"])
+        else:
+            parsed["option_fee"] = agent.get("default_option_fee") or 0
+    return parsed, missing
+
+
+@app.route("/notepad/<int:tx_id>/draft", methods=["POST"])
+def notepad_draft_create(tx_id):
+    """Create draft from the Deal Sheet (Phase 3). Refuses while any
+    contract field is still Confirm, then generates through the exact
+    path SMS drafts use: fill_offer_pdf -> record_offer -> signed link,
+    with the same auto-check line (_draft_check_line)."""
+    auth = _np_auth()
+    if not auth:
+        return _np_expired()
+    phone, expires, sig = auth
+    tx = notepad.get_transaction(tx_id, phone)
+    if not tx:
+        return jsonify({"error": "Deal not found."}), 404
+    if not has_notepad_access(phone):
+        return jsonify({"error": "The Deal Notepad is part of the Agent plan."}), 403
+    if _np_rate_limited(phone):
+        return jsonify({"error": "Too many requests. Try again in a bit."}), 429
+    sheet = notepad.get_deal_sheet(tx_id, phone)
+    fields = sheet["fields"] if sheet else {}
+    blocking = notepad.blocking_confirm_fields(fields)
+    if blocking:
+        labels = [notepad.FIELD_LABELS.get(k, k) for k in blocking]
+        return jsonify({"ok": False, "blocking": labels}), 400
+    parsed, missing = _np_draft_parsed(tx, fields, phone)
+    if missing:
+        return jsonify({"ok": False, "missing": missing}), 400
+    can_generate, _reason, _user = can_generate_offer(phone)
+    if not can_generate:
+        return jsonify({"ok": False,
+                        "error": "This account can't generate more offers right now."}), 403
+    try:
+        pdf_path = fill_offer_pdf(parsed, phone)
+    except Exception as exc:
+        return jsonify({"ok": False,
+                        "error": f"Couldn't generate the draft PDF ({exc})."}), 500
+    filename = os.path.basename(pdf_path)
+    record_offer(phone, parsed, filename)
+    increment_offer_count(phone)
+    notepad.update_transaction(tx_id, phone, offer_filename=filename,
+                               status="drafted")
+    return jsonify({"ok": True, "filename": filename,
+                    "pdf_url": sign_pdf_url(filename, request.host_url.rstrip("/")),
+                    "check_line": _draft_check_line(pdf_path)})
 
 
 @app.route("/notepad/<int:tx_id>/delete", methods=["POST"])
