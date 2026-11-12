@@ -1062,6 +1062,8 @@ __TEXT_DEMO_CSS__
   .np-notes:focus{outline:none;border-color:var(--green);background:#fff}
   .np-run{font-family:inherit;cursor:pointer;margin-top:14px}
   .np-hint{font-size:13px;color:var(--mute);margin-top:12px}
+  .np-dl-row{margin-top:16px;text-align:left}
+  .np-dl{font-family:inherit;cursor:pointer;font-size:15px;padding:10px 20px}
   .np-row{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:10px 0;border-bottom:1px solid var(--line)}
   .np-row:last-child{border-bottom:none}
   .np-k{font-size:14px;font-weight:600;color:var(--mute);flex:none}
@@ -1224,6 +1226,7 @@ __SITE_NAV__
         <div class="np-row" data-np-row="inclusions"><span class="np-k">Inclusions</span><span class="np-v miss">Run Clean it up</span></div>
         <div class="np-row" data-np-row="survey"><span class="np-k">Survey</span><span class="np-v miss">Run Clean it up</span></div>
       </div>
+      <div class="np-dl-row"><button type="button" class="btn ghost np-dl" id="npDownload">Download notes + Deal Sheet</button></div>
     </div>
   </div>
   <p class="partner-line">In the product, the notepad lives in your dashboard on the Agent plan. Your notes are saved so the deal stays in one place. Contract files are still checked, then deleted. <a href="#pricing">See the plans</a></p>
@@ -1613,6 +1616,7 @@ NOTEPAD_JS = """<script>
   var ta = document.getElementById('npNotes');
   var btn = document.getElementById('npRun');
   var rowsEl = document.getElementById('npRows');
+  var dlBtn = document.getElementById('npDownload');
   if(!ta || !btn || !rowsEl) return;
   var ps = document.querySelector('.pricing-strip');
   if(ps && !ps.id) ps.id = 'pricing';
@@ -1764,7 +1768,9 @@ NOTEPAD_JS = """<script>
     };
   }
   var FIELDS = ['property', 'buyers', 'price', 'earnest', 'option', 'closing', 'financing', 'credit', 'inclusions', 'survey'];
+  var lastRes = null;
   function render(res){
+    lastRes = res;
     FIELDS.forEach(function(key, i){
       var row = rowsEl.querySelector('[data-np-row="' + key + '"]');
       if(!row) return;
@@ -1792,6 +1798,36 @@ NOTEPAD_JS = """<script>
     render(parse(ta.value));
     if(!fired){ fired = true; if(window.taEvt) window.taEvt('home_notepad_run'); }
   });
+  var LABELS = {property: 'Property', buyers: 'Buyers', price: 'Price', earnest: 'Earnest money',
+                option: 'Option period', closing: 'Closing date', financing: 'Financing',
+                credit: 'Seller credit', inclusions: 'Inclusions', survey: 'Survey'};
+  function buildDoc(){
+    var lines = ['TxtAnOffer - Deal Sheet (homepage sample)', '', 'MY NOTES (verbatim)', ta.value, '', 'DEAL SHEET'];
+    FIELDS.forEach(function(key){
+      var f = lastRes ? lastRes[key] : null;
+      if(!f) lines.push(LABELS[key] + ': Not in your notes');
+      else lines.push(LABELS[key] + ': ' + f.v + ' [' + (f.s === 'confirm' ? 'Confirm' : 'Found') + ']');
+    });
+    lines.push('', 'Generated on txtanoffer.com. In the product, the Deal Notepad lives in your dashboard on the Agent plan. Notes are saved; contract files are checked, then deleted.');
+    return lines.join('\\n');
+  }
+  if(dlBtn){
+    dlBtn.addEventListener('click', function(){
+      if(!lastRes){
+        render(parse(ta.value));
+        if(!fired){ fired = true; if(window.taEvt) window.taEvt('home_notepad_run'); }
+      }
+      var blob = new Blob([buildDoc()], {type: 'text/plain'});
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = 'txtanoffer-deal-sheet.txt';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+    });
+  }
 })();
 </script>
 """
@@ -12950,6 +12986,30 @@ function npEnhance(btn){
     alert('Enhance hit a snag — your note text is still in the box above; save it and try again.');
   });
 }
+function npDownload(){
+  var titleEl=document.querySelector('h1');
+  var noteEl=document.getElementById('npNote');
+  var lines=['TxtAnOffer - Deal Sheet',
+    titleEl?titleEl.textContent:'', '',
+    'MY NOTES (verbatim)',
+    noteEl?noteEl.value:'', '',
+    'DEAL SHEET'];
+  window.NP.defs.forEach(function(def){
+    var f=window.NP.fields[def[0]];
+    if(!f||f.value==null||f.value===''){lines.push(def[1]+': Not in your notes');}
+    else{lines.push(def[1]+': '+fmtVal(def[0],f.value)+' ['+(f.state==='found'?'Found':'Confirm')+']');}
+  });
+  lines.push('', 'Saved in your TxtAnOffer dashboard. Contract files are checked, then deleted.');
+  var blob=new Blob([lines.join('\\n')],{type:'text/plain'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');
+  a.href=url;
+  a.download='deal-sheet-'+window.NP.txId+'.txt';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function(){URL.revokeObjectURL(url);},1000);
+}
 """
 
 
@@ -12994,6 +13054,7 @@ def notepad_detail(tx_id):
         "fields": fields,
         "defs": [[k, label] for k, label, _ in notepad.FIELD_DEFS],
         "kinds": notepad.FIELD_KINDS,
+        "txId": tx_id,
     }
     body = f"""
     <div class="topbar">
@@ -13033,6 +13094,7 @@ def notepad_detail(tx_id):
           <p class="sub" style="margin-bottom:0.5rem;">The central record for this transaction. Confirm a value to put it on the sheet; only values on the sheet can go into a draft.</p>
           <div id="sheetRows">{rows}</div>
         </div>
+        <p style="margin:0 0 1rem;"><button type="button" class="btn btn-ghost" onclick="npDownload()">Download Deal Sheet</button></p>
         <form method="post" action="{_np_signed(f'/notepad/{tx_id}/delete', phone, expires, sig)}"
               onsubmit="return confirm('Delete this deal? It disappears now and its notes are permanently purged after 30 days.');">
           <button type="submit" class="btn-mini">Delete this deal</button>
