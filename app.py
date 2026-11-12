@@ -14444,18 +14444,6 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
         offer_cards = '<div class="empty-state">No offers yet.<br>Text your first offer to get started.</div>'
 
     avg_close = f"{round(sum(o['close_days'] for o in offers) / len(offers))}d" if offers else "—"
-    wins_url = sign_wins_url(phone, request.host_url.rstrip("/"))
-
-    if accepted_count > 0:
-        milestone_html = f"""
-      <div class="milestone-logo"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#0a3f3a" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>
-      <div class="milestone-val">Congrats on ${accepted_volume:,}!</div>
-      <div class="milestone-sub">{accepted_count} offer{'s' if accepted_count != 1 else ''} accepted through TxtAnOffer</div>
-      <a href="{wins_url}" target="_blank" class="milestone-share">Share your milestone &rarr;</a>"""
-    else:
-        milestone_html = """
-      <div class="milestone-logo"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#0a3f3a" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>
-      <div class="milestone-sub">Your first accepted offer will show up here.</div>"""
 
     initials = "".join(part[0] for part in agent.get("name", "").split()[:2]).upper() if agent.get("name") else "?"
 
@@ -14504,39 +14492,58 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
     else:
         profile_body = f'<p class="profile-empty">Not set up yet. Your name, license, and brokerage auto-fill into every contract once saved. <a href="{profile_url}">Set up your profile &rarr;</a></p>'
 
-    # Deal Notepad transactions (2026-11-11): entry point above the offer
-    # archive. Wrapped so a notepad failure can never break the dashboard.
-    notepad_section = ""
+    # Deal Notepad hero (2026-11-11): the notepad leads the dashboard, in
+    # the prime spot under the greeting (it replaces the old milestone
+    # card). Wrapped so a notepad failure can never break the dashboard:
+    # on any error the hero degrades to heading + Open Notepad button.
+    _np_list_url = _np_signed("/notepad", phone, expires, sig)
+    _np_hero_head = """
+  <div class="np-hero-top">
+    <div class="np-hero-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#0a3f3a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg></div>
+    <div>
+      <div class="np-hero-eyebrow">DEAL NOTEPAD</div>
+      <div class="np-hero-title">The notepad that sits on your desk.</div>
+    </div>
+  </div>
+  <p class="np-hero-sub">Notes in, Deal Sheet out. Jot the call, confirm what matters, draft in one tap.</p>"""
     try:
         _np_txs = notepad.list_transactions(phone)
-        _np_list_url = _np_signed("/notepad", phone, expires, sig)
         if _np_txs:
-            _np_cards = ""
-            for _t in _np_txs[:6]:
-                _badge = (f'<span class="status-badge" style="background:#fdf3e0;color:#9a6200;">'
+            _np_waiting = sum(1 for _t in _np_txs if _t["confirm_count"])
+            _np_summary = (f'{len(_np_txs)} active deal{"s" if len(_np_txs) != 1 else ""}'
+                           + (f' &middot; {_np_waiting} waiting on confirm' if _np_waiting else ""))
+            _np_rows = ""
+            for _t in _np_txs[:4]:
+                _badge = (f'<span class="np-badge np-badge-confirm">'
                           f'{_t["confirm_count"]} to confirm</span>') if _t["confirm_count"] else ""
-                _np_cards += (
-                    f'<a href="{_np_signed("/notepad/" + str(_t["id"]), phone, expires, sig)}" '
-                    f'style="display:flex;align-items:center;justify-content:space-between;gap:1rem;'
-                    f'padding:0.75rem 0;border-bottom:1px solid rgba(15,31,47,0.06);color:inherit;text-decoration:none;">'
-                    f'<span style="font-weight:600;">{escape(_t["title"] or "Untitled deal")}</span>'
-                    f'<span style="display:flex;gap:0.4rem;align-items:center;">'
-                    f'<span class="status-badge status-draft">{escape(_t["status"])}</span>{_badge}</span></a>')
-            notepad_section = (
-                f'<h2>Transactions</h2>'
-                f'<p class="section-sub">Your deal notepads — notes in, Deal Sheet out.'
-                f' <a href="{_np_list_url}">All transactions &rarr;</a></p>{_np_cards}')
+                _np_rows += (
+                    f'<a class="np-deal" href="{_np_signed("/notepad/" + str(_t["id"]), phone, expires, sig)}">'
+                    f'<span class="np-deal-title">{escape(_t["title"] or "Untitled deal")}</span>'
+                    f'<span class="np-deal-badges">'
+                    f'<span class="np-badge np-badge-status">{escape(_t["status"])}</span>{_badge}</span></a>')
+            _np_lower = (f'<div class="np-hero-summary">{_np_summary}</div>'
+                         f'<div class="np-hero-deals">{_np_rows}</div>'
+                         f'<a class="np-hero-all" href="{_np_list_url}">All transactions &rarr;</a>')
+            _np_primary = "Open Notepad"
         else:
-            notepad_section = (
-                f'<div class="profile-card" style="margin-bottom:2.25rem;">'
-                f'<div class="profile-card-head"><h2>Deal Notepad</h2></div>'
-                f'<p style="font-size:0.9rem;color:#5a6b7a;line-height:1.6;margin-bottom:0.9rem;">'
-                f'Start a deal notepad — keep your call and showing notes in one place, '
-                f'and let the Deal Sheet build itself from them.</p>'
-                f'<a href="{_np_list_url}" data-evt="notepad_created" '
-                f'style="font-weight:600;">Open the notepad &rarr;</a></div>')
+            _np_lower = """
+  <div class="np-paper">
+    <div class="np-paper-line">123 Main St, Austin &middot; $685k</div>
+    <div class="np-paper-line">Buyers John &amp; Jane, close Dec 18</div>
+    <div class="np-paper-line">Fridge + washer stay</div>
+    <div class="np-paper-line np-paper-arrow">&rarr; Deal Sheet &nbsp;&#10003; Address &nbsp;&#10003; Price &nbsp;&middot;&nbsp; <span class="cf">Confirm: earnest</span></div>
+  </div>"""
+            _np_primary = "Start your first deal"
+        notepad_hero = (f'<div class="np-hero">{_np_hero_head}'
+                        f'<div class="np-hero-actions">'
+                        f'<a class="np-hero-btn" href="{_np_list_url}">{_np_primary} &rarr;</a>'
+                        f'<a class="np-hero-btn ghost" href="{_np_list_url}">＋ New deal</a>'
+                        f'</div>{_np_lower}</div>')
     except Exception:
-        notepad_section = ""
+        notepad_hero = (f'<div class="np-hero">{_np_hero_head}'
+                        f'<div class="np-hero-actions">'
+                        f'<a class="np-hero-btn" href="{_np_list_url}">Open Notepad &rarr;</a>'
+                        f'</div></div>')
 
     # Floating pop-up notepad (paid tiers only; the builder returns ""
     # without access). Same never-break-the-dashboard guard as above.
@@ -14611,20 +14618,49 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
     letter-spacing:0.02em;
   }}
 
-  .milestone-card {{
-    text-align:center;margin-top:1.5rem;border-radius:var(--radius);
-    background:#0a3f3a;padding:2.25rem 2rem;color:#fff;
+  .np-hero {{
+    margin-top:1.5rem;border-radius:var(--radius);color:#fff;
+    background:linear-gradient(135deg,#0a3f3a,#0b5d52);
+    padding:1.75rem 1.75rem 1.5rem;
+    box-shadow:0 8px 24px rgba(10,63,58,0.25);
   }}
-  .milestone-logo {{width:48px;height:48px;margin:0 auto 1.1rem;border-radius:50%;background:#f5c242;
+  .np-hero-top {{display:flex;align-items:center;gap:1rem;}}
+  .np-hero-icon {{width:48px;height:48px;flex-shrink:0;border-radius:14px;background:#f5c242;
     display:flex;align-items:center;justify-content:center;}}
-  .milestone-val {{font-size:2.1rem;font-weight:800;letter-spacing:-0.02em;line-height:1.1;color:#f5c242;}}
-  .milestone-sub {{font-size:0.88rem;color:#c9dcd8;margin-top:0.5rem;}}
-  .milestone-share {{
-    display:inline-block;margin-top:1.4rem;font-size:0.85rem;font-weight:700;
-    color:#0f1f2f;background:#f5c242;border-radius:999px;padding:0.55rem 1.1rem;
-    transition:var(--transition);
+  .np-hero-eyebrow {{font-size:0.68rem;font-weight:800;letter-spacing:0.16em;color:#f5c242;}}
+  .np-hero-title {{font-size:1.4rem;font-weight:800;letter-spacing:-0.02em;line-height:1.2;margin-top:0.15rem;}}
+  .np-hero-sub {{font-size:0.9rem;color:#c9dcd8;line-height:1.55;margin-top:0.85rem;max-width:34rem;}}
+  .np-hero-actions {{display:flex;gap:0.6rem;flex-wrap:wrap;margin-top:1.15rem;}}
+  .np-hero-btn {{
+    display:inline-block;background:#f5c242;color:#0f1f2f;font-weight:700;font-size:0.88rem;
+    padding:0.6rem 1.15rem;border-radius:999px;transition:var(--transition);
   }}
-  .milestone-share:hover {{background:#ffd25e;}}
+  .np-hero-btn:hover {{background:#ffd25e;}}
+  .np-hero-btn.ghost {{background:transparent;color:#fff;border:1.5px solid rgba(255,255,255,0.45);}}
+  .np-hero-btn.ghost:hover {{background:transparent;border-color:#f5c242;color:#f5c242;}}
+  .np-hero-summary {{font-size:0.8rem;font-weight:600;color:#9fc6bd;margin-top:1.25rem;}}
+  .np-hero-deals {{margin-top:0.4rem;border-top:1px solid rgba(255,255,255,0.12);}}
+  .np-deal {{display:flex;align-items:center;justify-content:space-between;gap:1rem;
+    padding:0.7rem 0.1rem;border-bottom:1px solid rgba(255,255,255,0.08);}}
+  .np-deal-title {{font-weight:600;font-size:0.92rem;color:#fff;min-width:0;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;transition:var(--transition);}}
+  .np-deal:hover .np-deal-title {{color:#f5c242;}}
+  .np-deal-badges {{display:flex;gap:0.4rem;align-items:center;flex-shrink:0;}}
+  .np-badge {{font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;
+    padding:0.2rem 0.55rem;border-radius:9999px;}}
+  .np-badge-status {{background:rgba(255,255,255,0.14);color:#e6f2ef;}}
+  .np-badge-confirm {{background:#fdf3e0;color:#9a6200;text-transform:none;letter-spacing:0;}}
+  .np-hero-all {{display:inline-block;margin-top:0.8rem;font-size:0.83rem;font-weight:600;color:#c9dcd8;}}
+  .np-hero-all:hover {{color:#f5c242;}}
+  .np-paper {{
+    margin-top:1.25rem;background-color:#fffdf5;color:#33424f;border-radius:0.6rem;
+    padding:0.55rem 1.15rem 0.45rem;box-shadow:0 2px 8px rgba(0,0,0,0.18);
+    background-image:repeating-linear-gradient(to bottom, transparent 0, transparent 27px, rgba(11,93,82,0.12) 27px, rgba(11,93,82,0.12) 28px);
+    font-size:0.88rem;
+  }}
+  .np-paper-line {{line-height:28px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}}
+  .np-paper-arrow {{font-weight:700;color:#0b5d52;}}
+  .np-paper-arrow .cf {{color:#9a6200;}}
 
   .stats {{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1rem;margin:2rem 0;}}
   .stat {{
@@ -14766,6 +14802,11 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
     .container {{padding:1.5rem 1rem 1rem;}}
     .stats {{grid-template-columns:1fr 1fr;}}
     .greeting {{font-size:1.35rem;}}
+    .np-hero {{padding:1.35rem 1.15rem 1.15rem;}}
+    .np-hero-title {{font-size:1.18rem;}}
+    .np-hero-actions {{flex-direction:column;}}
+    .np-hero-btn {{text-align:center;}}
+    .np-paper-line {{white-space:normal;}}
     .nav-toggle {{ display: flex; }}
     .nav-links {{
       display: none; position: absolute; top: 100%; left: 0; right: 0;
@@ -14815,13 +14856,11 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
   <span class="sub-badge">{sub_status}</span>
   {PWA_INSTALL_HTML}
 
+  {notepad_hero}
+
   <div class="stats">
     <div class="stat"><div class="stat-val">{user['offer_count']}</div><div class="stat-label">Total offers</div></div>
     <div class="stat"><div class="stat-val">{avg_close}</div><div class="stat-label">Avg close</div></div>
-  </div>
-
-  <div class="milestone-card">
-    {milestone_html}
   </div>
 
   <div class="profile-card">
@@ -14831,8 +14870,6 @@ Text <strong>DASHBOARD</strong> to (833) 897-0333 to get a fresh link.</p>
     </div>
     {profile_body}
   </div>
-
-  {notepad_section}
 
   <h2>Your offer archive</h2>
   <p class="section-sub">{archive_sub}</p>
