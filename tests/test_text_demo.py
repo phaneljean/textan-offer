@@ -1,6 +1,8 @@
-"""Homepage "Text an offer" demo (text_demo.py, 2026-10-24): it must keep
-showing the real SMS copy and real PDF crops, keep the SMS consent line, and
-never leave a placeholder on the page.
+"""Homepage "Text an offer" demo (text_demo.py, 2026-10-24): the module's
+SMS copy must keep matching the real flow and its PDF crops must exist.
+The homepage itself was slimmed on 2026-11-12: the interactive demo left
+the page, which now shows the demo's phone mock statically -- but the
+SMS consent line stays on the homepage, and no placeholder may leak.
 
     python3 -m unittest tests.test_text_demo
 """
@@ -30,10 +32,12 @@ def _js_string(name):
 
 
 class TextDemo(unittest.TestCase):
-    def test_homepage_has_demo_and_no_placeholders(self):
+    def test_homepage_text_section_is_slim_and_placeholder_free(self):
         html = app_module.app.test_client().get("/").get_data(as_text=True)
-        self.assertIn('id="textDemo"', html)
+        self.assertIn('<section class="text" id="text">', html)
         self.assertIn("Get a filled draft back.", html)
+        self.assertIn("td-phone", html)  # the demo's phone mock, static now
+        self.assertNotIn('id="textDemo"', html)  # interactive demo is gone
         self.assertNotIn("__TEXT_DEMO", html)
         self.assertNotIn("hand_phone.jpg", html)
 
