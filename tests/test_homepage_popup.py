@@ -2,6 +2,9 @@
 2026-11-11): the homepage section runs the in-page parser on the
 sample note and shows the product's workflow (action items,
 reminders, draft + TC Check) computed client-side from that parse.
+The demo presents inside an app-window frame with a desk block whose
+Install button is the shared PWA flow (PWA_JS drives #txoInstall by
+id, exactly as on the dashboard — no homepage-specific install JS).
 
 The floating pop-up demo (npdPill / npdPanel) and the section's
 "Download notes + Deal Sheet" button were removed at Baptiste's
@@ -137,6 +140,65 @@ class WorkflowMarkup(unittest.TestCase):
         self.assertIn("TC Check on this draft: 2 must-fix: Price Math, "
                       "Earnest Money; 1 to review.", self.js)
         self.assertIn("Draft ready: TREC 20-19 for ", self.js)
+
+
+class AppWindowAndDesk(unittest.TestCase):
+    """The section presents as one app window (chrome bar + gray app
+    backdrop + the hero card's shadow), and closes with the desk
+    block: the PWA Install button (same #txoInstall ids PWA_JS drives
+    on the dashboard) and the honest packaging line. There are NO
+    Windows/Mac download buttons — no installer files exist yet."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.html = _home_html()
+        cls.sec = _section_segment(cls.html)
+
+    def test_window_chrome_markup(self):
+        self.assertIn('class="np-app"', self.sec)
+        self.assertIn('class="np-chrome"', self.sec)
+        self.assertIn('class="np-dots"', self.sec)
+        self.assertIn('class="np-chrome-title">TxtAnOffer Notepad<', self.sec)
+        self.assertIn('class="np-chrome-side">Deal Sheet<', self.sec)
+        self.assertIn('class="np-app-body"', self.sec)
+        # The chrome bar sits above the demo it frames.
+        self.assertLess(self.sec.index('class="np-chrome"'),
+                        self.sec.index('id="npNotes"'))
+
+    def test_frame_wraps_demo_and_workflow(self):
+        self.assertLess(self.sec.index('class="np-app"'),
+                        self.sec.index('id="npRows"'))
+        self.assertLess(self.sec.index('id="npWorkflow"'),
+                        self.sec.index("Take the notepad to your desk."))
+        # The honest closing line stays, verbatim, below the frame.
+        self.assertIn("In the product, the notepad lives in your dashboard "
+                      "on the Agent plan. Your notes are saved so the deal "
+                      "stays in one place. Contract files are still "
+                      "checked, then deleted.", self.sec)
+
+    def test_desk_block_copy(self):
+        self.assertIn("Take the notepad to your desk.", self.sec)
+        self.assertIn("The Notepad as its own app on your computer: parked "
+                      "beside your other tools, one hotkey away, ready "
+                      "when a call comes in.", self.sec)
+        self.assertIn("Windows and Mac desktop installers are in "
+                      "packaging.", self.sec)
+
+    def test_desk_install_controls_use_the_shared_pwa_ids(self):
+        # PWA_JS (already included on the homepage) shows/hides this
+        # block and fires pwa_install_accepted on acceptance — the
+        # same ids as the dashboard block, and only ONE set per page.
+        self.assertEqual(self.html.count('id="txoInstall"'), 1)
+        self.assertEqual(self.html.count('id="txoInstallBtn"'), 1)
+        self.assertEqual(self.html.count('id="txoInstallHint"'), 1)
+        self.assertIn('id="txoInstallBtn">Install the app<', self.sec)
+        self.assertIn("Add to Home Screen", self.sec)
+
+    def test_no_desktop_installer_links_yet(self):
+        self.assertNotIn(".dmg", self.sec)
+        self.assertNotIn(".exe", self.sec)
+        self.assertNotIn("Download for Windows", self.sec)
+        self.assertNotIn("Download for Mac", self.sec)
 
 
 class DemoNeverSaves(unittest.TestCase):
