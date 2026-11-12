@@ -41,10 +41,15 @@ class TextOfferPage(unittest.TestCase):
         self.assertIn('href="/terms"', html)
         self.assertIn('<nav class="nav">', html)
 
-    def test_homepage_learn_more_link(self):
+    def test_homepage_text_section_is_slim(self):
+        # Slimmed 2026-11-12: the homepage text section is a band -- the
+        # heading, one line with the number, and the phone. The Learn more
+        # CTA is gone from the homepage (the deep-dive lives on
+        # /text-an-offer); its event stays registered for past rows.
         html = self.client.get("/", headers=UA).get_data(as_text=True)
         section = html.split('<section class="text" id="text">', 1)[1].split("</section>", 1)[0]
-        self.assertIn('<a class="btn ghost" href="/text-an-offer" data-evt="text_learn_more">Learn more</a>', section)
+        self.assertNotIn('href="/text-an-offer" data-evt="text_learn_more"', section)
+        self.assertIn('href="sms:+18338970333"', section)
         self.assertIn("text_learn_more", app_module._ENGAGEMENT_TYPES)
 
     def test_in_sitemap(self):
