@@ -1340,11 +1340,13 @@ __SITE_NAV__
   </div>
 </section>
 
-<!-- 2e. ONE DESK, THREE TOOLS: the hierarchy in one strip (2026-11-12).
-     TC Check is the free wedge every visitor starts with; the Notepad
-     and Text an Offer are the Agent plan's second act. -->
+<!-- 2e. ONE DESK, TWO TOOLS: the hierarchy in one strip (2026-11-12).
+     TC Check is the free wedge every visitor starts with; Text an Offer
+     is the Agent plan's second act. A third card was removed from
+     the homepage on 2026-11-22 at the owner's direction; that product
+     itself stays live in the dashboard. -->
 <section class="desk">
-  <div class="eyebrow">One desk, three tools</div>
+  <div class="eyebrow">One desk, two tools</div>
   <h2>Check first.<br>Then take it further.</h2>
   <div class="desk-cards">
     <div class="desk-card">
@@ -1355,105 +1357,11 @@ __SITE_NAV__
     </div>
     <div class="desk-card">
       <span class="tag g">AGENT PLAN</span>
-      <h3>Deal Notepad</h3>
-      <p>Call notes in, a structured Deal Sheet out. Unsure terms flagged Confirm, blanks stay blank. Desktop app, or right in your dashboard.</p>
-      <a class="link" href="#notepad" data-evt="home_tools_notepad">See the notepad</a>
-    </div>
-    <div class="desk-card">
-      <span class="tag g">AGENT PLAN</span>
       <h3>Text an Offer</h3>
       <p>Text the terms, reply YES, get a filled draft back.</p>
       <a class="link" href="#text" data-evt="home_tools_text">How texting works</a>
     </div>
   </div>
-</section>
-
-<!-- 4a2. NOTEPAD: deal notes into a Deal Sheet, interactive (2026-11-11).
-     State-agnostic on purpose: the notepad works for Texas and Colorado
-     deals alike. The parse runs in the page (NOTEPAD_JS) on the visitor's
-     own edited note: honest regex extraction, nothing invented; hedged
-     terms land as Confirm, absent terms read "Not in your notes". -->
-<section class="notepad" id="notepad">
-  <div class="eyebrow">New: Deal Notepad</div>
-  <h2>Your deal notes,<br>turned into a Deal Sheet.</h2>
-  <p class="sub">Messy call notes in, a structured deal sheet out. Every uncertain term is flagged Confirm instead of guessed, and anything you didn&rsquo;t write down stays blank.</p>
-  <div class="np-app">
-    <div class="np-chrome" aria-hidden="true">
-      <span class="np-dots"><i></i><i></i><i></i></span>
-      <span class="np-chrome-title">TxtAnOffer Notepad</span>
-      <span class="np-chrome-side">Deal Sheet</span>
-    </div>
-    <div class="np-app-body">
-      <div class="np-grid">
-        <div class="np-card">
-          <div class="np-card-h">Scratch notes</div>
-          <textarea class="np-notes" id="npNotes" rows="9" aria-label="Your deal notes">Elm Creek Dr house, Austin. Buyers John &amp; Jane Doe. Sellers fine with Dec 18 close. $685k. Earnest maybe 7k?? 10 days option, $350 fee. Conventional, 20% down. Fridge + washer stay. Asked 5k seller credit for the roof, not agreed yet. Old survey from 2019. HOA docs still pending.</textarea>
-          <button type="button" class="btn solid np-run" id="npRun">Clean it up</button>
-          <p class="np-hint">Edit the note and run it again. Nothing you type leaves this page.</p>
-        </div>
-        <div class="np-card">
-          <div class="np-card-h">Deal Sheet</div>
-          <div class="np-rows" id="npRows">
-            <div class="np-row" data-np-row="property"><span class="np-k">Property</span><span class="np-v miss">Run Clean it up</span></div>
-            <div class="np-row" data-np-row="buyers"><span class="np-k">Buyers</span><span class="np-v miss">Run Clean it up</span></div>
-            <div class="np-row" data-np-row="price"><span class="np-k">Price</span><span class="np-v miss">Run Clean it up</span></div>
-            <div class="np-row" data-np-row="earnest"><span class="np-k">Earnest money</span><span class="np-v miss">Run Clean it up</span></div>
-            <div class="np-row" data-np-row="option"><span class="np-k">Option period</span><span class="np-v miss">Run Clean it up</span></div>
-            <div class="np-row" data-np-row="closing"><span class="np-k">Closing date</span><span class="np-v miss">Run Clean it up</span></div>
-            <div class="np-row" data-np-row="financing"><span class="np-k">Financing</span><span class="np-v miss">Run Clean it up</span></div>
-            <div class="np-row" data-np-row="credit"><span class="np-k">Seller credit</span><span class="np-v miss">Run Clean it up</span></div>
-            <div class="np-row" data-np-row="inclusions"><span class="np-k">Inclusions</span><span class="np-v miss">Run Clean it up</span></div>
-            <div class="np-row" data-np-row="survey"><span class="np-k">Survey</span><span class="np-v miss">Run Clean it up</span></div>
-          </div>
-        </div>
-      </div>
-      <!-- Workflow (4a2a2): what the product does with the sheet next. Empty
-           until Clean it up runs; everything below is computed in the page
-           from the visitor's own edited note, on the sample deal. -->
-      <div class="npw-area" id="npWorkflow" hidden>
-        <div class="npw-grid">
-          <div class="np-card">
-            <div class="np-card-h">Action items</div>
-            <ul class="npw-list" id="npActions"></ul>
-          </div>
-          <div class="np-card">
-            <div class="np-card-h">Reminders</div>
-            <p class="npw-note">Counted from the contract once it is signed.</p>
-            <ul class="npw-list" id="npReminders"></ul>
-          </div>
-          <div class="np-card">
-            <div class="np-card-h">Draft + TC Check</div>
-            <button type="button" class="btn solid npw-run" id="npDraft">Create draft</button>
-            <div class="npw-out" id="npDraftOut" hidden>
-              <p class="npw-out-label">You text to (833) 897-0333</p>
-              <p class="npw-text" id="npDraftText"></p>
-              <p class="npw-reply" id="npDraftReply"></p>
-              <p class="npw-fine">Sample flow. In the product, the draft is a real filled PDF and the check runs on it.</p>
-            </div>
-          </div>
-        </div>
-      </div>
-      <!-- Desk block: the notepad as its own app. Real desktop
-           downloads (GitHub release v0.1.0) come first; below them,
-           the web-app Install button (the PWA flow — PWA_JS drives
-           #txoInstall by id, as on the dashboard). -->
-      <div class="np-desk">
-        <h3>Take the notepad to your desk.</h3>
-        <p class="np-desk-line">The Notepad as its own app on your computer: parked beside your other tools, one hotkey away, ready when a call comes in.</p>
-        <div class="np-downloads">
-          <a class="btn solid" href="https://github.com/phaneljean/txtanoffer-notepad/releases/download/v0.1.1/TxtAnOffer.Notepad_0.1.1_x64-setup.exe" data-evt="desk_download_windows">Download for Windows</a>
-          <a class="btn ghost" href="https://github.com/phaneljean/txtanoffer-notepad/releases/download/v0.1.1/TxtAnOffer.Notepad_0.1.1_aarch64.dmg" data-evt="desk_download_mac">Download for Mac</a>
-        </div>
-        <p class="np-desk-fine">Free to download. Mac version is for Apple Silicon Macs. First install shows a standard security prompt while the app is new. First open on a Mac: right-click the app, then Open. Linux and all versions: <a href="https://github.com/phaneljean/txtanoffer-notepad/releases/tag/v0.1.0">all downloads</a></p>
-        <p class="np-orlabel">Or keep it in your browser:</p>
-        <div class="np-install" id="txoInstall">
-          <button type="button" class="btn solid" id="txoInstallBtn">Install the app</button>
-          <span class="np-install-hint" id="txoInstallHint" style="display:none">To install: Share &rarr; Add to Home Screen</span>
-        </div>
-      </div>
-    </div>
-  </div>
-  <p class="partner-line">In the product, the notepad lives in your dashboard on the Agent plan. Your notes are saved so the deal stays in one place. Contract files are still checked, then deleted. <a href="#pricing">See the plans</a></p>
 </section>
 
 <!-- 2c. DEADLINE AUTOPILOT: free with every TC Check report (2026-11-05).
@@ -1574,7 +1482,7 @@ __HOME_TRUST__
     <div class="tile price">
       <span class="tag g">AGENT</span>
       <div class="big">$40<small>/mo</small></div>
-      <p>Deal Notepad and Deal Sheet, saved notes, action items and reminders, plus draft offers by text. First 3 offers free.</p>
+      <p>Draft offers by text, with deadline tracking on every deal. First 3 offers free.</p>
     </div>
     <div class="tile price">
       <span class="tag g">BROKERAGE</span>
@@ -1615,7 +1523,6 @@ __SITE_FOOTER__
 __STATE_SWITCH_JS__
 __HOME_SAMPLE_JS__
 __RETENTION_JS__
-__NOTEPAD_JS__
 __PWA_JS__
 <script>
 (function(){
