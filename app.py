@@ -9647,6 +9647,75 @@ _GUIDES = {
 <p><a href="/guides/trec-20-19-checklist">See the full TREC 20-19 pre-title checklist &rarr;</a></p>
 """,
     },
+    "trec-20-19-errors": {
+        "title": "Common TREC 20-19 Errors: What Title Kicks Back (and How to Fix Each One)",
+        "description": "The TREC contract errors title companies send back most: price math that doesn't add up in Paragraph 3, a closing date that doesn't exist, receipts that don't match Paragraph 5, missing initials, a blank Effective Date. What each error is, the paragraph that catches it, and the fix — or run the whole list on your file free.",
+        "kicker": "For transaction coordinators",
+        "h1": "Common TREC 20-19 errors: the mistakes title kicks back, paragraph by paragraph",
+        "lede": "Most TREC contract errors aren't legal problems. They're blanks, mismatches and dates that were easy to fix before the file left your desk — and a round of emails, or a delayed closing, once title finds them. These are the ones that come back most, in the order to check them.",
+        "body": """
+<p class="note"><strong>Need the blank form?</strong> Get the current TREC 20-19 from the Commission itself: <a href="https://www.trec.texas.gov/forms/one-four-family-residential-contract-resale" target="_blank" rel="noopener" data-evt="guide_trec_official">official TREC 20-19 page &rarr;</a> TxtAnOffer doesn't host or modify the form. <strong>Already filled one in?</strong> <a href="/tc-check?demo=1&amp;src=seo_trec-20-19-errors" data-evt="guide_sample_cta">See a sample report</a> first, or check your own file with the button at the end of this page.</p>
+
+<h2>1. The price math doesn't add up (Paragraph 3)</h2>
+<p><strong>What it is:</strong> The cash portion in 3A plus the financing in 3B doesn't equal the sales price written in 3C. On the sample contract used across this site, 3A says $85,000 and 3B says $340,000 — that's $425,000 — but 3C says $435,000.</p>
+<p><strong>Why title kicks it back:</strong> Title and the lender work off the sales price. When the parts and the total disagree, nobody knows which number is the deal, and the file stops until the parties amend.</p>
+<p><strong>Fix it before sending:</strong> Add 3A and 3B yourself and compare the sum to 3C, digit by digit. If the price changed during negotiation, make sure all three lines were updated — a price change usually means the <a href="/guides/40-11-loan-amount-mismatch">40-11 loan amount</a> changed too.</p>
+
+<h2>2. The closing date doesn't exist (Paragraph 9A)</h2>
+<p><strong>What it is:</strong> Paragraph 9A names a closing date that isn't on the calendar — "November 31" is the classic — or a date that falls before the contract is even effective.</p>
+<p><strong>Why title kicks it back:</strong> Title schedules around that date. A date that doesn't exist, or one that has already passed, means the closing plan is fiction until the contract is amended.</p>
+<p><strong>Fix it before sending:</strong> Read the date off a real calendar, count the month length, and confirm it falls after the Effective Date. If the date moved, amend it — don't rely on everyone "knowing what was meant."</p>
+
+<h2>3. The receipts don't match the money paragraphs (Paragraph 5 and page 12)</h2>
+<p><strong>What it is:</strong> The earnest money and option fee amounts written in Paragraph 5A don't match the amounts receipted on page 12 of the contract.</p>
+<p><strong>Why title kicks it back:</strong> The escrow agent's receipts are the proof of what was actually delivered. When the receipt and the contract disagree, title can't tell whether the buyer performed — and an option fee that was never properly delivered can mean there's no termination option at all.</p>
+<p><strong>Fix it before sending:</strong> Compare page 12 against 5A line by line once the money is in. The amounts, and who receipted them, should tell the same story in both places.</p>
+
+<h2>4. The Effective Date is blank (execution block, page 10)</h2>
+<p><strong>What it is:</strong> The "EXECUTED the ___ day of ___, 20__" line is left empty. The form tells the broker to fill in the date of final acceptance — and it's filled in last, which is exactly why it gets missed.</p>
+<p><strong>Why title kicks it back:</strong> Every deadline in the contract counts from the Effective Date: the 3-day window to deliver earnest money and the option fee under 5A, and the end of the option period under 5B. A blank here makes every one of those dates arguable. <a href="/guides/trec-20-19-effective-date">More on why the Effective Date matters &rarr;</a></p>
+<p><strong>Fix it before sending:</strong> Fill it in the moment the last signature lands, before the file goes anywhere. No other date check on the file means anything until this one is set.</p>
+
+<h2>5. Missing initials (pages 1–9)</h2>
+<p><strong>What it is:</strong> One or more pages are missing a buyer's or seller's initials on the "Initialed for identification by Buyer ___ and Seller ___" line at the bottom of pages 1 through 9 — or the initials on a page are from the wrong person.</p>
+<p><strong>Why title kicks it back:</strong> Initials are how title knows each party saw each page. A missing initial usually means another signing round, with the closing clock running. <a href="/guides/trec-20-19-initials">How the initials check works, page by page &rarr;</a></p>
+<p><strong>Fix it before sending:</strong> Flip the pages in order and check the initials line on each one: one initial per buyer and per seller, from the right person. One buyer means one buyer slot filled — the second slot correctly stays blank.</p>
+
+<h2>6. The notice email would bounce (Paragraph 21)</h2>
+<p><strong>What it is:</strong> A notice email address in Paragraph 21 is malformed — the sample on this site uses "john.doe@gmailcom," with no dot before the domain ending.</p>
+<p><strong>Why title kicks it back:</strong> Paragraph 21 is where formal notices go: terminations, objections, deadline notices. An address that bounces means a notice that was "sent" may never have been delivered, and that argument surfaces at the worst possible time.</p>
+<p><strong>Fix it before sending:</strong> Read each notice address character by character, the way you'd read a wiring instruction. If an address looks off, confirm it with the party and amend rather than guess.</p>
+
+<h2>7. The 40-11 doesn't match the contract (Paragraph 3B and the addenda)</h2>
+<p><strong>What it is:</strong> The loan amount on the TREC 40-11 Third Party Financing Addendum disagrees with the financing amount in Paragraph 3B — or the Third Party Financing box is checked in one place and not the other, or checked with no addendum attached.</p>
+<p><strong>Why title kicks it back:</strong> The lender underwrites the addendum; title closes the contract. When the two documents describe different loans, the file waits while the parties sort out which loan is real. <a href="/guides/40-11-loan-amount-mismatch">How the 40-11 and Section 3B have to match &rarr;</a></p>
+<p><strong>Fix it before sending:</strong> Put the 40-11 next to Paragraph 3 and compare the amounts, then check the addenda boxes in 3B and Paragraph 22 agree with what's actually attached.</p>
+
+<h2>8. Two boxes checked where only one applies</h2>
+<p><strong>What it is:</strong> In the "check one box only" sections — the survey election, Seller's Disclosure, the as-is election, possession, the owners association section — two conflicting boxes are checked, or none is.</p>
+<p><strong>Why title kicks it back:</strong> Two checked boxes means two different deals on the same point. Title can't guess which one the parties meant, so the file comes back for an amendment.</p>
+<p><strong>Fix it before sending:</strong> In every either/or section, count the checks. Exactly one box should be marked, and it should be the one the parties actually negotiated.</p>
+
+<h2>Also caught on a filled 20-19</h2>
+<ul>
+  <li><strong>Seller's Disclosure delivery days (Paragraph 7B).</strong> The number of days written for delivery doesn't match how the file was worked, or the delivery box and the day count disagree.</li>
+  <li><strong>Escrow and title blanks (Paragraphs 5A and 6A).</strong> A blank escrow agent or title company means nobody knows where the earnest money goes or who opens the file.</li>
+  <li><strong>Address header drift.</strong> The property address at the top of the contract doesn't match the address header carried through the later pages.</li>
+  <li><strong>Business terms in Special Provisions (Paragraph 11).</strong> Deal terms written into Paragraph 11 that belong in an addendum create conflicts title has to unwind.</li>
+  <li><strong>Amendments that don't match (TREC 39-11).</strong> An amendment that changes one number and silently breaks another. <a href="/guides/trec-39-11-amendment-mismatch">How amendments go wrong &rarr;</a></li>
+</ul>
+
+<p>Working the dates on a live file? The free <a href="/guides/trec-deadline-calculator">TREC deadline calculator</a> works out the option period and earnest money dates from the Effective Date. Want the whole pass in one list? See the <a href="/guides/trec-20-19-checklist">TREC 20-19 pre-title checklist &rarr;</a></p>
+""",
+        "faq": [
+            ("What are the most common errors on a TREC 20-19?",
+             "Price math in Paragraph 3 where 3A plus 3B doesn't equal 3C, a closing date in Paragraph 9A that doesn't exist, page 12 receipts that don't match the Paragraph 5 amounts, a blank Effective Date, missing initials on pages 1 to 9, a malformed notice email in Paragraph 21, and a TREC 40-11 loan amount that disagrees with Paragraph 3B."),
+            ("How do I check a TREC contract for errors before sending it to title?",
+             "Work the file in order: parties and property, the money paragraphs against the page 12 receipts, the 40-11 against Paragraph 3B, initials on every page, the Effective Date, then the dates. Or run it automatically — TC Check reads a filled 20-19 and flags these blanks and mismatches in seconds. The first 3 reports are free and need no signup."),
+            ("Does TC Check use AI to read my contract?",
+             "No. TC Check reads the form's fields against the published TREC 20-19, and the file is deleted after the check. Nothing is kept, and no AI reads your contract."),
+        ],
+    },
     "broker-record-retention-texas": {
         "title": "Texas Broker Record Retention: 4 Years From Closing (22 TAC 535.2)",
         "description": "Short answer: at least 4 years from closing or termination, under TREC rule 22 TAC §535.2(h). When the clock starts, why files go missing when agents leave, and a 4-step setup to pull any file in a minute.",
@@ -15650,7 +15719,7 @@ _SITEMAP_PATHS = ["/", "/tc-check", "/brokers", "/pricing", "/trec-changes", "/t
                   "/tc-check/bulk", "/faq", "/about",
                   "/contact", "/privacy", "/terms", "/guides",
                   "/guides/trec-20-19-checklist", "/guides/trec-20-19-effective-date",
-                  "/guides/broker-record-retention-texas", "/guides/40-11-loan-amount-mismatch",
+                  "/guides/trec-20-19-errors", "/guides/broker-record-retention-texas", "/guides/40-11-loan-amount-mismatch",
                   "/guides/trec-20-19-initials", "/guides/trec-39-11-amendment-mismatch",
                   "/guides/trec-deadline-calculator", "/guides/trec-25-17-farm-and-ranch-contract",
                   "/guides/trec-25-17-lender-required-repair-amendment",
