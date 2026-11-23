@@ -120,12 +120,12 @@ class HeadWiringAndInstallBlock(unittest.TestCase):
         self.assertIn("serviceWorker.register('/sw.js')", html)
 
     def test_homepage_carries_install_block(self):
-        # The homepage desk block reuses the same ids, so the shared
-        # PWA_JS snippet drives it with no homepage-specific wiring.
+        # Superseded 2026-11-22: the homepage install block lived inside
+        # the Deal Notepad section, which Baptiste removed from the
+        # homepage. The dashboard and notepad pages keep their blocks
+        # (see the tests below); the homepage no longer carries one.
         html = self.client.get("/", headers=UA).get_data(as_text=True)
-        self.assertIn('id="txoInstallBtn"', html)
-        self.assertIn("Install the app", html)
-        self.assertIn("Add to Home Screen", html)
+        self.assertNotIn('id="txoInstallBtn"', html)
 
     def test_dashboard_carries_head_tags_and_install_block(self):
         resp = self.client.get("/dashboard", query_string=self.qs, headers=UA)
@@ -149,8 +149,10 @@ class HeadWiringAndInstallBlock(unittest.TestCase):
         # (it used to appear only if beforeinstallprompt fired, so for
         # already-installed / dismissed / unsupported visitors the
         # download option simply did not exist on screen).
+        # The homepage dropped out of this list 2026-11-22: its install
+        # block lived inside the Deal Notepad section Baptiste removed
+        # from the homepage. Dashboard and notepad keep theirs.
         pages = [
-            self.client.get("/", headers=UA).get_data(as_text=True),
             self.client.get("/dashboard", query_string=self.qs,
                             headers=UA).get_data(as_text=True),
             self.client.get("/notepad", query_string=self.qs,
