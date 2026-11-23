@@ -21,10 +21,12 @@ COPY = {
     # home_broker_line) went with the 2026-10-23 homepage simplification;
     # its copy is in app.py's index(). SAMPLE_ROWS below still feeds its card.
 
-    # --- /tc-check (redesign 2026-10-23, ad-creative mockup, trec-qa copy) ---
+    # --- /tc-check (redesign 2026-10-23, ad-creative mockup, trec-qa copy;
+    #     2026-11-23: ONE promise headline for both states -- the state
+    #     switcher below it picks Texas/Colorado, the headline no longer
+    #     splits by state, so tc_h1_co is gone) ---
     "tc_eyebrow": "TC File Check",
-    "tc_h1": "Drop a TREC 20-19.<br>See what&rsquo;s missing.",
-    "tc_h1_co": "Drop a CBS1.<br>See what&rsquo;s missing.",
+    "tc_h1": "Catch the TREC errors title will catch, before title does.",
     "tc_sub_tx": 'Free check for a filled <span style="white-space:nowrap">TREC 20-19</span>. Built for Texas TCs, brokers and their agents.',
     "tc_sub_co": "Free check for a filled Colorado CBS1. Built for Colorado TCs, brokers and their agents.",
     "tc_sample_btn": "No PDF handy? See a sample report &rarr;",
