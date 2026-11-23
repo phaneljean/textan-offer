@@ -242,6 +242,50 @@ _BOT_UA_RE = re.compile(
 
 
 _MOBILE_UA_RE = re.compile(r"Mobi|Android|iPhone|iPad|iPod", re.I)
+
+# Bot guard (added 2026-11-23 at the owner's request, after the /analytics
+# log filled with scanner sweeps -- Palo Alto Xpanse crawling every page,
+# research crawlers, rotating fake devices). Two layers, both scoped to
+# GET/HEAD page loads (POST webhooks/APIs are never touched):
+#   1. Self-identified scanners and scraping tooling get a flat 403. They
+#      name themselves in the User-Agent, so there is no guesswork about who
+#      they are. Search engines (Googlebot, Bingbot...) and social preview
+#      fetchers (facebookexternalhit, LinkedInBot...) are deliberately NOT
+#      blocked -- that would kill indexing and link previews.
+#   2. A per-IP page-load ceiling (rate_limit.py, shared across workers)
+#      slows anonymous floods and fast crawlers that use a plain browser UA.
+#      Loopback is exempt (Railway health checks, local tests).
+# What this cannot do: a crawler that rotates IPs and perfectly imitates a
+# real browser is indistinguishable from a visitor at the app layer; that
+# class needs a network-edge filter (e.g. Cloudflare in front of the domain).
+_SCANNER_UA_RE = re.compile(
+    r"xpanse|palo alto networks|censys|shodan|zgrab|masscan|nmap|qualys|"
+    r"nessus|tenable|binaryedge|stretchoid|modat|onyphe|criminalip|leakix|"
+    r"securityscanner|researchscan|scrapy|python-requests|python-httpx|"
+    r"httpx|aiohttp|libwww-perl|curl/|wget/|headlesschrome|phantomjs|"
+    r"puppeteer|playwright",
+    re.I,
+)
+
+_BOT_GUARD_EXEMPT_PREFIXES = ("/static/", "/v1/", "/robots.txt",
+                              "/sitemap.xml", "/favicon.ico", "/health")
+
+
+@app.before_request
+def _bot_guard():
+    if request.method not in ("GET", "HEAD"):
+        return None
+    if request.path.startswith(_BOT_GUARD_EXEMPT_PREFIXES):
+        return None
+    ua = request.headers.get("User-Agent", "")
+    if _SCANNER_UA_RE.search(ua):
+        return Response("Forbidden\n", status=403, mimetype="text/plain")
+    ip = request.remote_addr or ""
+    if ip and not ip.startswith(("127.", "::1")):
+        if not check_and_increment(f"page:{ip}", limit=300, window_seconds=3600):
+            return Response("Too many requests\n", status=429,
+                            mimetype="text/plain", headers={"Retry-After": "3600"})
+    return None
 # workflow_offer_sms and footer_* were tagged in the HTML but missing here,
 # so /v1/evt dropped them (found 2026-10-13 by tests/test_tracking.py, which
 # now fails on any data-evt not in this list).
@@ -15627,9 +15671,28 @@ def favicon():
 @app.route("/robots.txt")
 def robots_txt():
     body = (
+        # AI training crawlers are not welcome at all (added 2026-11-23 with
+        # the bot guard). Polite crawlers obey this; the ones that don't are
+        # handled by _bot_guard / the edge, not by this file.
+        "User-agent: GPTBot\n"
+        "Disallow: /\n"
+        "\n"
+        "User-agent: ClaudeBot\n"
+        "Disallow: /\n"
+        "\n"
+        "User-agent: CCBot\n"
+        "Disallow: /\n"
+        "\n"
+        "User-agent: Google-Extended\n"
+        "Disallow: /\n"
+        "\n"
+        "User-agent: Bytespider\n"
+        "Disallow: /\n"
+        "\n"
         "User-agent: *\n"
         "Disallow: /admin\n"
         "Disallow: /analytics\n"
+        "Disallow: /notepad\n"
         "Disallow: /broker/dashboard/\n"
         "Disallow: /review/\n"
         "Disallow: /offers/\n"
