@@ -267,6 +267,10 @@ class PricingFormsTest(unittest.TestCase):
             self.assertIn(line, bcard)
 
     def test_homepage_pricing_card_names_the_notepad(self):
+        # Superseded 2026-11-22: Baptiste removed the Deal Notepad from
+        # the homepage, so the homepage Agent tile no longer names it.
+        # The /pricing page still does (see the test above).
         html = _get("/")
-        self.assertIn("Deal Notepad and Deal Sheet, saved notes, action items and reminders, "
-                      "plus draft offers by text. First 3 offers free.", html)
+        self.assertNotIn("Deal Notepad and Deal Sheet, saved notes", html)
+        self.assertIn("Draft offers by text, with deadline tracking on "
+                      "every deal. First 3 offers free.", html)
