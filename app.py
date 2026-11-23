@@ -1037,6 +1037,23 @@ __TEXT_DEMO_CSS__
 
   /* ---------- 4. brokers: one oversized number ---------- */
   .brokers{padding-bottom:110px}
+
+  /* ---------- 4a. land break + brokers photo (2026-11-22) ---------- */
+  .landbreak{position:relative;padding:0;margin-top:110px;text-align:left;overflow:hidden}
+  .landbreak img{width:100%;height:430px;object-fit:cover;display:block}
+  .landbreak .lb-copy{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;padding:0 max(22px,calc((100% - 1080px)/2));background:linear-gradient(90deg,rgba(10,24,20,.74),rgba(10,24,20,.28) 58%,rgba(10,24,20,0));color:#f7f2e3}
+  .landbreak .eyebrow{color:#e9c767}
+  .landbreak h2{color:#f7f2e3}
+  .landbreak .sub{color:#e8e2cd;max-width:520px}
+  .landbreak .link{color:#e9c767;font-weight:700}
+  .brokers-grid{display:grid;grid-template-columns:1.02fr .98fr;gap:48px;align-items:center;max-width:1080px;margin:0 auto;text-align:left}
+  .brokers-grid .ctas{justify-content:flex-start}
+  .brokers-photo{width:100%;border-radius:14px;display:block;box-shadow:0 18px 40px rgba(10,63,58,.22)}
+  @media (max-width:860px){
+    .brokers-grid{grid-template-columns:1fr;text-align:center}
+    .brokers-grid .ctas{justify-content:center}
+    .landbreak img{height:380px}
+  }
 .founder{background:var(--gray);margin-top:110px;padding-bottom:110px}
 .founder .avatar{width:104px;height:104px;border-radius:50%;object-fit:cover;display:block;margin:0 auto 26px;border:3px solid #fff;box-shadow:0 4px 18px rgba(10,63,58,.18)}
 .founder .story{font-size:21px;line-height:1.55;color:var(--ink);max-width:640px;margin:26px auto 0}
@@ -1464,14 +1481,35 @@ __SITE_NAV__
   <p class="partner-line">Forward a filled contract to <strong>tc@check.txtanoffer.com</strong> and the report comes back with the deadline sheet and the calendar file attached.</p>
 </section>
 
-<!-- 4. BROKERS: one number. Texas only: /tc-check/bulk checks TREC 20-19s. -->
+<!-- 3b. LAND BREAK: full-width photo band (2026-11-22, owner pick).
+     TC Check covers the land forms too, not just the house forms:
+     TREC 25-17 Farm & Ranch and 9-18 Unimproved Property. Photo:
+     Pexels 4766351 (free license), static/home-land.jpg. -->
+<section class="landbreak" data-state="tx">
+  <img src="/static/home-land.jpg" alt="Cattle in a Texas pasture at sunset" loading="lazy">
+  <div class="lb-copy">
+    <div class="eyebrow">Land &middot; Farm &amp; Ranch</div>
+    <h2>Land and ranch files<br>get checked too.</h2>
+    <p class="sub">TC Check covers the TREC Farm &amp; Ranch contract (25&#8209;17) and the Unimproved Property contract (9&#8209;18), not just the house forms.</p>
+    <div class="ctas"><a class="link" href="/tc-check" data-evt="home_check_link">Check a contract free</a></div>
+  </div>
+</section>
+
+<!-- 4. BROKERS: one number. Texas only: /tc-check/bulk checks TREC 20-19s.
+     Photo beside the pitch since 2026-11-22 (owner pick): Pexels 8292892
+     (free license), static/home-brokers.jpg. -->
 <section class="brokers" data-state="tx">
-  <div class="num">20</div>
-  <h2>Closed files.<br>Checked free.</h2>
-  <p class="sub">Managing broker? Zip up to 20 of your agents&rsquo; closed contracts and get one free report by email.</p>
-  <div class="ctas">
-    <a class="btn solid" href="/tc-check/bulk" data-evt="hero_broker_cta">Check 20 files free</a>
-    <a class="btn ghost" href="/brokers" data-evt="path_brokerage_cta">For brokerages</a>
+  <div class="brokers-grid">
+    <div>
+      <div class="num">20</div>
+      <h2>Closed files.<br>Checked free.</h2>
+      <p class="sub">Managing broker? Zip up to 20 of your agents&rsquo; closed contracts and get one free report by email.</p>
+      <div class="ctas">
+        <a class="btn solid" href="/tc-check/bulk" data-evt="hero_broker_cta">Check 20 files free</a>
+        <a class="btn ghost" href="/brokers" data-evt="path_brokerage_cta">For brokerages</a>
+      </div>
+    </div>
+    <img class="brokers-photo" src="/static/home-brokers.jpg" alt="An agent reviewing a file with clients across a desk" loading="lazy">
   </div>
 </section>
 
