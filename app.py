@@ -4688,12 +4688,16 @@ def tc_compare():
 def tc_check_page():
     # Redesigned 2026-10-23 (ad-creative mockup, Phanel-approved, copy passed
     # by txo-trec-qa), in the homepage's style with its nav and footer
-    # (_site_nav / _SITE_FOOTER). Five sections: the drop box as the hero
-    # (it shrinks to one "Check another file" line above a report), the
-    # sample, what it checks (#what-it-checks / #colorado), trust, and other
-    # ways to check. Every id, data-evt and flow the old page had is kept:
-    # ?demo=1, ?carry=1, ?state=co, the 3-free-reports gate, the title-team
-    # src line.
+    # (_site_nav / _SITE_FOOTER). Sections: the drop box as the hero (it
+    # shrinks to one "Check another file" line above a report), the sample,
+    # the LinkedIn quotes, what it checks (#what-it-checks / #colorado),
+    # trust, and other ways to check. 2026-11-23 (competitor review,
+    # Phanel-approved): ONE promise headline for both states with the proof
+    # line under it, the forward-by-email path next to the drop box, the
+    # sample leading with its counts plus its Deadline Autopilot sheet, and
+    # the homepage's LinkedIn quotes as a proof block. Every id, data-evt
+    # and flow the old page had is kept: ?demo=1, ?carry=1, ?state=co, the
+    # 3-free-reports gate, the title-team src line.
     html = """<!DOCTYPE html>
 <html lang="en" class="__STATE_CLASS__">
 <head>
@@ -4722,6 +4726,8 @@ def tc_check_page():
   h1{font-size:64px;line-height:1.05;letter-spacing:-.035em;font-weight:800}
   h2{font-size:48px;line-height:1.08;letter-spacing:-.03em;font-weight:800}
   .sub{font-size:21px;line-height:1.4;color:var(--mute);font-weight:500;max-width:640px;margin:16px auto 0}
+  /* proof sub-line under the promise headline (2026-11-23) */
+  .proof-line{font-size:19px;font-weight:700;color:var(--green-deep);margin-top:18px}
   .link{font-size:17px;color:var(--green);font-weight:600}
   .link:after{content:" \\203A"}
   .gray{background:var(--gray)}
@@ -4748,6 +4754,9 @@ def tc_check_page():
   .dz-sub{font-size:17px;color:var(--mute);margin-top:6px}
   .dz-sub u{color:var(--green);text-decoration:none;font-weight:600}
   .dz-meta{font-size:13px;color:var(--mute);margin-top:18px}
+  /* forward-by-email: the drop box's first-class alternative (2026-11-23) */
+  .email-alt{font-size:16px;color:#424245;margin-top:18px}
+  .email-alt a{color:var(--green);font-weight:700;overflow-wrap:anywhere}
   .dz-touch,.dz-again{display:none}
   .under{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:10px 26px;margin-top:18px;font-size:14px;color:#424245}
   .under .ok{display:inline-flex;gap:6px;align-items:center}
@@ -4871,12 +4880,25 @@ def tc_check_page():
   .sample-strip:hover{transform:translateY(-2px)}
   .sample-strip:focus-visible{outline:3px solid #f5c242;outline-offset:2px}
   .ss-label{font-size:13px;color:var(--mute);padding:14px 0 6px}
+  /* the sample's numbers lead the strip; its deadline sheet sits under it (2026-11-23) */
+  .ss-counts{font-size:15.5px;font-weight:600;padding:16px 0 0}
+  .ss-counts .mf{color:var(--red)}
+  .ss-counts .rv{color:var(--amber)}
+  .sample-deadlines{max-width:620px;margin:20px auto 0;text-align:left}
   .sample-strip ul{list-style:none}
   .sample-strip li{display:flex;gap:12px;padding:13px 0;border-top:1px solid var(--line);font-size:15px;line-height:1.45}
   .ss-tag{flex:none;font-size:10.5px;font-weight:800;letter-spacing:.04em;padding:4px 8px;border-radius:6px;height:fit-content}
   .ss-tag.b{background:#fdecec;color:var(--red)}
   .ss-tag.w{background:#fff4dc;color:var(--amber)}
   .ss-go{display:block;text-align:center;font-weight:600;color:var(--green);padding:14px 0 12px;border-top:1px solid var(--line);font-size:15px}
+
+  /* ---------- 2b. said on LinkedIn: the homepage's three cards ---------- */
+  .quotes-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;max-width:1024px;margin:44px auto 0;text-align:left}
+  .quote-card{margin:0;background:#fff;border:1px solid var(--line);border-radius:22px;padding:32px 28px;display:flex;flex-direction:column}
+  .quote-card blockquote{margin:0;font-size:19px;line-height:1.5;color:var(--ink)}
+  .quote-who{margin-top:22px;font-size:15.5px;font-weight:700;color:var(--ink)}
+  .quote-who span{display:block;font-weight:500;color:var(--mute);font-size:14.5px;margin-top:2px}
+  .quote-src{margin-top:14px;font-size:12.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--green)}
 
   /* ---------- 3. what it checks ---------- */
   .scope{max-width:1024px;margin:44px auto 0;text-align:left}
@@ -4926,6 +4948,7 @@ def tc_check_page():
     .gate-headline{font-size:19px}
     .gate-form input{width:100%}
     .scope ul{grid-template-columns:1fr;gap:8px}
+    .quotes-grid{grid-template-columns:1fr}
     .scope li{padding:12px 14px;font-size:14px}
     .ways{grid-template-columns:1fr}
     .facts{flex-direction:column;align-items:center;gap:14px}
@@ -4939,7 +4962,8 @@ __SITE_NAV__
 <section class="hero" id="check">
   __FS_TITLE_LINE__
   <div class="eyebrow">__FS_TC_EYEBROW__</div>
-  <h1><span data-state="tx">__FS_TC_H1__</span><span data-state="co">__FS_TC_H1_CO__</span></h1>
+  <h1>__FS_TC_H1__</h1>
+  <p class="proof-line">No account. No demo call. No new system to learn.</p>
   <p class="sub"><span data-state="tx">__FS_TC_SUB_TX__</span><span data-state="co">__FS_TC_SUB_CO__</span></p>
   <div class="state-switch" role="group" aria-label="Which state's contract">
     <button type="button" data-set-state="tx" aria-pressed="__TX_PRESSED__" data-evt="state_toggle_tx">Texas <small>TREC 20-19</small></button>
@@ -4955,6 +4979,7 @@ __SITE_NAV__
       <div class="dz-meta"><span data-state="tx">Fillable TREC 20-19 PDF</span><span data-state="co">Fillable CBS1 (2026) PDF</span> &middot; not scanned or flattened files &middot; flags likely issues, not legal advice</div>
     </div>
     <input type="file" id="fileInput" accept="application/pdf,.pdf">
+    <p class="email-alt">Or forward any filled contract to <a href="mailto:tc@check.txtanoffer.com">tc@check.txtanoffer.com</a> &mdash; full report back by email, free.</p>
 
     <!-- Uploading: #status, the same generic step labels as before (no fake stages) -->
     <div class="status" id="status"></div>
@@ -4990,9 +5015,42 @@ __SITE_NAV__
   <h2>No PDF handy?<br>Run the sample.</h2>
   <p class="sub">A sample contract with planted mistakes. Not a client file.</p>
   <div class="sample-strip" id="sampleStrip" role="button" tabindex="0" aria-label="Findings from TC Check's sample contract. Open the full sample report.">
+    <p class="ss-counts" data-state="tx"><strong>16 findings</strong> &middot; <span class="mf">12 MUST FIX</span> &middot; <span class="rv">4 REVIEW</span> &middot; 12 pages read</p>
     <div data-state="tx"><p class="ss-label">__FS_TC_STRIP_LABEL_TX__</p><ul>__FS_STRIP_TX__</ul></div>
     <div data-state="co"><p class="ss-label">__FS_TC_STRIP_LABEL_CO__</p><ul>__FS_STRIP_CO__</ul></div>
     <span class="ss-go">See the full sample report &rarr;</span>
+  </div>
+  <div class="deadlines-box sample-deadlines" data-state="tx">
+    <h3>Deadline Autopilot</h3>
+    <p class="dl-sub">The dates in the sample contract, counted as written. Executed Tue, Nov 10, 2026 &mdash; free with every check.</p>
+    <div class="dl-row"><span class="dl-when">Fri, Nov 13, 2026</span><span>Earnest money + option fee due (Para. 5A)</span></div>
+    <div class="dl-row"><span class="dl-when">Tue, Nov 17, 2026, 5:00 PM</span><span>Option period ends (Para. 5B)</span></div>
+    <div class="dl-row"><span class="dl-when">Thu, Dec 10, 2026</span><span>Closing (Para. 9A)</span></div>
+  </div>
+</section>
+
+<!-- 2b. SAID ON LINKEDIN: the homepage's three comments, word for word
+     (2026-11-23). Comments under our posts, not reviews. -->
+<section class="quotes">
+  <div class="eyebrow">From LinkedIn</div>
+  <h2>Said on LinkedIn.</h2>
+  <p class="sub">Comments under our posts. <a href="https://www.linkedin.com/company/143677963/">TxtAnOffer on LinkedIn</a></p>
+  <div class="quotes-grid">
+    <figure class="quote-card">
+      <blockquote>&ldquo;The Effective Date field controls everything downstream. Miss it on page 1 and every option period, financing deadline, and closing date shifts before anyone catches it. One blank, entire timeline corrupted.&rdquo;</blockquote>
+      <figcaption class="quote-who">Mohit Tomar</figcaption>
+      <div class="quote-src">via LinkedIn</div>
+    </figure>
+    <figure class="quote-card">
+      <blockquote>&ldquo;Those tiny missing fields really do create outsized downstream work for TCs&mdash;catching them before title seems like a meaningful time-saver.&rdquo;</blockquote>
+      <figcaption class="quote-who">Albert van Zyl<span>Co-Founder, VAConnect</span></figcaption>
+      <div class="quote-src">via LinkedIn</div>
+    </figure>
+    <figure class="quote-card">
+      <blockquote>&ldquo;Great tool for Texas brokers and transaction coordinators. Catching compliance issues before they become closing delays can save time, money, and unnecessary stress.&rdquo;</blockquote>
+      <figcaption class="quote-who">Jason Hammond<span>real estate funding</span></figcaption>
+      <div class="quote-src">via LinkedIn</div>
+    </figure>
   </div>
 </section>
 
@@ -9646,6 +9704,78 @@ _GUIDES = {
 
 <p><a href="/guides/trec-20-19-checklist">See the full TREC 20-19 pre-title checklist &rarr;</a></p>
 """,
+    },
+    "txtanoffer-vs-skyslope": {
+        "title": "TxtAnOffer vs SkySlope: A Contract Check Next to a Brokerage Suite",
+        "description": "SkySlope is a suite for running a whole brokerage — transactions, forms, audit — sold by demo at suite pricing. TxtAnOffer checks the one thing a suite isn't sold to check: the content of the filled TREC or CBS1 contract, before it's submitted. What each is built for, what each actually checks, and how they fit together.",
+        "kicker": "An honest comparison",
+        "h1": "TxtAnOffer vs SkySlope: the suite runs the brokerage, the check reads the contract",
+        "lede": "SkySlope calls itself “The AI-first way to run a brokerage,” and that is the honest starting point for this comparison: it is built to run a brokerage's transactions end to end. TxtAnOffer is built to do one thing before any of that starts — read the filled contract and flag what's wrong inside it.",
+        "body": """
+<p class="note"><strong>Short version:</strong> SkySlope is a platform your brokerage adopts. TxtAnOffer is a check you run on one file, free, in the next five minutes. <a href="/tc-check?demo=1&amp;src=seo_txtanoffer-vs-skyslope" data-evt="guide_sample_cta">See a sample report</a> to watch the check work, or keep reading for the honest breakdown.</p>
+
+<h2>What SkySlope is built for</h2>
+<p>SkySlope is a suite for running a brokerage's transaction operation: transaction management, forms, and broker-side audit in one system. Its own headline is "The AI-first way to run a brokerage," and its proof is scale — over 900,000 real estate professionals empowered and over 3 million transactions managed a year, by SkySlope's own numbers. Its forms product reaches agents where they already work: SkySlope Forms sits inside OneKey MLS Matrix, in front of that MLS's 43,000 members.</p>
+<p>The suite also has the closest thing to checking among the big platforms: its Smart Assist flags missing signatures and cross-checks files against MLS data for inconsistencies, and its audit tools are pitched on getting broker eyes on files within minutes of submission. All of it is broker-facing compliance, inside a system the brokerage buys. SkySlope doesn't publish Suite pricing on its homepage — third-party pricing checks put the Suite from $340/mo — and getting it starts with requesting a demo, not a signup.</p>
+
+<h2>What TxtAnOffer is built for</h2>
+<p>TxtAnOffer checks one file at a time, before it goes anywhere. TC Check reads an executed TREC 20-19, 30-18, 9-18 or 25-17 (plus the 40-11, 41-3 and 39-11 addenda) or a Colorado CBS1 and checks the content field by field — the Paragraph 3 math, a closing date in 9A that doesn't exist, page 12 receipts that don't match Paragraph 5, initials missing from pages 1 to 9. Every report includes a deadline sheet and an .ics calendar file. The first 3 reports are free with no signup, the file is deleted after the check, and no AI reads your contract — the opposite end of the shelf from an AI-first suite.</p>
+<p>TxtAnOffer also drafts offers by text message and keeps a deal notepad on its paid plans (Agent $40/mo, Brokerage $349/mo). What it does not have: no transaction suite, no forms library, no e-signature, no brokerage audit tooling. It is not a SkySlope replacement and doesn't claim to be.</p>
+
+<h2>Which one checks the contract itself?</h2>
+<p>SkySlope comes closer than most — and still stops at the file's surface. Smart Assist catches a missing signature and a file that disagrees with the MLS record. That's real, and it's aimed at the broker's compliance desk, after the file has been submitted into the suite. What it isn't sold as is a read of the numbers inside the contract: whether 3A plus 3B equals 3C, whether the closing date exists, whether the money receipted on page 12 is the money Paragraph 5 promised. And an agent or TC whose brokerage doesn't run SkySlope can't use any of it.</p>
+<p>TC Check is that read, available to anyone with a filled form. It runs a fixed rulebook against the published TREC and CBS1 forms, so the same file gets the same findings every time — and it runs before submission, while a finding is still a quick edit instead of an amendment or a kicked-back file.</p>
+
+<h2>Using them together</h2>
+<p>If your brokerage runs SkySlope, the check slots in before the suite ever sees the file. Run the filled contract through TC Check, fix the price math, the date, the receipts, then submit it into SkySlope, where the suite does what it's built for: forms, workflow and the broker's audit. The audit starts from a file whose content already holds up, which is the cheapest point in the whole process to be right.</p>
+<p>And if your brokerage doesn't run SkySlope, nothing changes: the check needs no adoption decision, no demo and no implementation. It runs on the file you already have.</p>
+
+<p>Want to see what the check catches? The <a href="/guides/trec-20-19-errors">most common TREC 20-19 errors</a> are listed paragraph by paragraph, and the <a href="/guides/trec-20-19-checklist">pre-title checklist</a> shows the full pass in order.</p>
+""",
+        "faq": [
+            ("Does TxtAnOffer replace SkySlope?",
+             "No. TxtAnOffer has no transaction suite, no forms library, no e-signature and no brokerage audit tooling. SkySlope runs a brokerage's transactions; TxtAnOffer checks the filled contract's content before those transactions start. They sit at different points in the same workflow."),
+            ("My brokerage already uses SkySlope. Is a separate check redundant?",
+             "SkySlope's audit works on files inside the suite, at the broker's stage, and its Smart Assist flags missing signatures and file-versus-MLS inconsistencies. TC Check works earlier — on the filled form itself, before submission — and checks the content: price math, impossible dates, receipt mismatches. It also works on any file, whether or not it will ever enter SkySlope."),
+            ("How do the prices compare?",
+             "TxtAnOffer's first 3 TC Check reports are free with no signup; Agent is $40/mo and Brokerage is $349/mo. SkySlope doesn't publish Suite pricing on its homepage; third-party pricing checks put the Suite from $340/mo, and getting it starts with a demo request. One is a per-person check, the other a brokerage platform — the prices reflect that."),
+        ],
+    },
+    "txtanoffer-vs-dotloop": {
+        "title": "TxtAnOffer vs Dotloop: The Loop Manages the File, TC Check Reads It",
+        "description": "Dotloop runs the transaction: forms, e-signature, tasks and broker review in one loop. TxtAnOffer does the one job a loop doesn't — it reads the filled TREC or CBS1 contract itself and flags price math, impossible dates and missing initials before the file goes to title. What each tool is built for, and how they fit together.",
+        "kicker": "An honest comparison",
+        "h1": "TxtAnOffer vs Dotloop: one manages the transaction, one checks the contract",
+        "lede": "Agents ask whether a contract checker replaces their transaction platform. It doesn't, and it isn't meant to. Dotloop and TxtAnOffer do different jobs on the same file — one moves it through the deal, the other reads what's written inside it before title does.",
+        "body": """
+<p class="note"><strong>Short version:</strong> Dotloop is where the transaction lives. TxtAnOffer is a five-minute stop before the file gets there. <a href="/tc-check?demo=1&amp;src=seo_txtanoffer-vs-dotloop" data-evt="guide_sample_cta">See a sample report</a> to watch the check work, or keep reading for the honest breakdown.</p>
+
+<h2>What Dotloop is built for</h2>
+<p>Dotloop, owned by Zillow, organises a deal into a "loop": one shared workspace where the parties collaborate on the transaction. Its forms library draws on 190+ association and MLS partners, editing and e-signature are built in, and task lists plus an audit trail keep everyone working from the same version of the file. On its broker plans, files move through review stages where a broker or compliance person looks the transaction over before it proceeds.</p>
+<p>It's a mature platform with a long track record — 176 reviews on G2 and 678 on Capterra — and for a brokerage standardising how deals are run, that is exactly the job it is built for: managing the transaction from contract to close.</p>
+
+<h2>What TxtAnOffer is built for</h2>
+<p>TxtAnOffer does one narrow job: it reads the filled contract itself. TC Check takes an executed TREC 20-19, 30-18, 9-18 or 25-17 (plus the 40-11, 41-3 and 39-11 addenda) or a Colorado CBS1 and checks the content field by field — whether the Paragraph 3 math adds up, whether the closing date in 9A exists, whether the page 12 receipts match Paragraph 5, whether every page carries the right initials. Every report comes with a deadline sheet and an .ics calendar file. The first 3 reports are free with no signup, the file is deleted after the check, and no AI reads your contract.</p>
+<p>TxtAnOffer also drafts offers by text message and keeps a deal notepad on its paid plans (Agent $40/mo, Brokerage $349/mo). What it does not have: no e-signature, no forms library, no transaction suite. It is not a Dotloop replacement and doesn't claim to be.</p>
+
+<h2>Which one checks the contract itself?</h2>
+<p>Only one of them reads the numbers. Dotloop's compliance is a workflow: the loop routes the file, the task list tracks what's outstanding, and a person reviews it at the broker's review stage. A human reviewer can catch a bad price — when they have time to add up every paragraph on every file. But nothing in the loop adds 3A and 3B and compares the sum to 3C, tests whether the closing date is a real day, or matches the receipts to Paragraph 5. That validation isn't what the platform sells.</p>
+<p>TC Check sells exactly that, and nothing else. It is a fixed rulebook run against the published form, so the same file gets the same check every time — before the file reaches the loop, the broker, or title.</p>
+
+<h2>Using them together</h2>
+<p>The two stack in the order the work happens. Run the filled contract through TC Check first, while fixing a finding costs an edit instead of an amendment. Fix what's flagged, then put the clean file into the loop, where Dotloop does what it's good at: signatures, tasks, sharing and the broker's review. Files that arrive clean generate fewer kickbacks downstream — from the broker's review stage and from title.</p>
+<p>There's nothing to integrate and nothing for a brokerage to adopt. The check runs on the file you already have, in the minutes before you'd send it anywhere.</p>
+
+<p>Want to see what the check catches? The <a href="/guides/trec-20-19-errors">most common TREC 20-19 errors</a> are listed paragraph by paragraph, and the <a href="/guides/trec-20-19-checklist">pre-title checklist</a> shows the full pass in order.</p>
+""",
+        "faq": [
+            ("Does TxtAnOffer replace Dotloop?",
+             "No. TxtAnOffer has no e-signature, no forms library and no transaction management suite. Dotloop runs the deal; TxtAnOffer checks the filled contract's content before the deal starts moving. The check is designed to sit in front of the tools you already run, not to replace them."),
+            ("Does Dotloop check my contract for errors?",
+             "Dotloop routes the file through task lists and broker review stages, where a person looks it over. It doesn't validate the content field by field — the Paragraph 3 math, whether the closing date exists, whether the receipts match Paragraph 5. That content check is what TC Check does."),
+            ("How much does TxtAnOffer cost?",
+             "The first 3 TC Check reports are free and need no signup. After that, Agent is $40/mo and Brokerage is $349/mo. The check is priced as an add-on to the tools you already run, not as a platform you migrate to."),
+        ],
     },
     "trec-20-19-errors": {
         "title": "Common TREC 20-19 Errors: What Title Kicks Back (and How to Fix Each One)",
@@ -15719,7 +15849,7 @@ _SITEMAP_PATHS = ["/", "/tc-check", "/brokers", "/pricing", "/trec-changes", "/t
                   "/tc-check/bulk", "/faq", "/about",
                   "/contact", "/privacy", "/terms", "/guides",
                   "/guides/trec-20-19-checklist", "/guides/trec-20-19-effective-date",
-                  "/guides/trec-20-19-errors", "/guides/broker-record-retention-texas", "/guides/40-11-loan-amount-mismatch",
+                  "/guides/txtanoffer-vs-dotloop", "/guides/txtanoffer-vs-skyslope", "/guides/trec-20-19-errors", "/guides/broker-record-retention-texas", "/guides/40-11-loan-amount-mismatch",
                   "/guides/trec-20-19-initials", "/guides/trec-39-11-amendment-mismatch",
                   "/guides/trec-deadline-calculator", "/guides/trec-25-17-farm-and-ranch-contract",
                   "/guides/trec-25-17-lender-required-repair-amendment",
