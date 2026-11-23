@@ -924,6 +924,68 @@ def index():
      No customer counts exist to claim; the bar states what the product
      does and what the public sample shows. */
   .proofbar{border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin-top:64px;padding:26px 22px 30px}
+  /* ---------- 1b. title-desk hero (2026-11-22, Baptiste's direction
+     from the 2026-11-18 mock): the hero sits on a title company's desk.
+     Deep-green desk, cream type, gold accents; the sample stage becomes
+     an escrow folder with the report page on it, a red MUST FIX stamp
+     and the deadline sheet pinned below. All hero mechanics unchanged:
+     state switch, CTAs, the live sample card and its scan animation. */
+  .hero{background:#0f2e2a;color:#f4efe3;padding-bottom:84px}
+  .desk-grid{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:minmax(330px,.9fr) minmax(430px,1.1fr);gap:48px;align-items:start;text-align:left}
+  .hero .eyebrow{color:#d8b45a;letter-spacing:.14em}
+  .hero h1{font-family:Georgia,'Times New Roman',serif;font-weight:700;font-size:54px;line-height:1.06;letter-spacing:-.01em;color:#faf6ea}
+  .hero .sub{color:#ddd6c2;margin-left:0;font-size:20px;max-width:52ch}
+  .hero .state-switch{background:rgba(244,239,227,.10)}
+  .hero .state-switch button{color:#cfc7ae}
+  .hero .state-switch button small{color:#9d9377}
+  .hero .state-switch button[aria-pressed="true"]{background:#f4efe3;color:#0f2e2a;box-shadow:none}
+  .hero .state-switch button[aria-pressed="true"] small{color:#5d6a66}
+  .hero .forms{justify-content:flex-start;margin-left:0}
+  .hero .forms li{border-left-color:rgba(244,239,227,.25)}
+  .hero .forms span{color:#f4efe3}
+  .hero .forms small{color:#bdb49a}
+  .hero .forms small b{color:#d8b45a}
+  .hero .ctas{justify-content:flex-start}
+  .hero .btn.solid{background:#d8b45a;border-color:#d8b45a;color:#0f2e2a}
+  .hero .btn.ghost{color:#f4efe3;border-color:rgba(244,239,227,.55)}
+  .hero .fine{color:#bdb49a}
+  .hero .trust-line{color:#e9e2cd}
+  .desk-art .stage{margin-top:6px;height:608px}
+  .desk-art .stage::before{content:"";position:absolute;inset:22px -12px 30px 4px;background:#c9a86a;border-radius:6px;
+    transform:rotate(1.4deg);box-shadow:0 18px 40px rgba(0,0,0,.45)}
+  .desk-art .stage::after{content:"ESCROW FILE \2014 SAMPLE";position:absolute;top:9px;left:30px;background:#c9a86a;color:#5d4a22;
+    border-radius:5px 5px 0 0;font:600 10.5px ui-monospace,Menlo,Consolas,monospace;letter-spacing:1.5px;padding:3px 12px}
+  .desk-art .paper{width:330px;top:34px;left:6px;font-size:12.5px;padding:16px 18px 20px;z-index:1}
+  .desk-art .paper .circ svg{width:118px;right:-10px}
+  .desk-art .card{width:412px;top:196px;right:0;z-index:2}
+  .desk-stamp{position:absolute;z-index:5;right:26px;top:158px;transform:rotate(-9deg);pointer-events:none;
+    border:3px solid #b3261e;color:#b3261e;border-radius:5px;background:rgba(253,252,247,.88);
+    font:700 15px ui-monospace,Menlo,Consolas,monospace;padding:6px 12px;letter-spacing:1.5px;text-align:center;line-height:1.25}
+  .desk-stamp small{display:block;font-size:10.5px;letter-spacing:2px}
+  .desk-slip{position:relative;margin:20px 6px 0 auto;max-width:400px;background:#f7efdb;color:#2c2a24;border-radius:3px;
+    transform:rotate(.8deg);box-shadow:0 14px 30px rgba(0,0,0,.4);padding:16px 18px 13px;text-align:left}
+  .desk-slip::before{content:"";position:absolute;top:-9px;left:50%;margin-left:-5px;width:10px;height:10px;border-radius:50%;
+    background:radial-gradient(circle at 35% 35%,#e2574c,#8f1d16);box-shadow:0 2px 4px rgba(0,0,0,.4)}
+  .desk-slip h3{font:600 11px ui-monospace,Menlo,Consolas,monospace;letter-spacing:2px;color:#7a6a42;margin-bottom:9px}
+  .desk-slip .row{display:flex;justify-content:space-between;gap:14px;font-size:13px;padding:5px 0;border-top:1px dashed #cbbd93}
+  .desk-slip .row:first-of-type{border-top:none}
+  .desk-slip .d{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;white-space:nowrap}
+  .desk-slip .p{color:#7a6a42;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;white-space:nowrap}
+  .hero .proofbar{border-top-color:rgba(244,239,227,.25);border-bottom-color:rgba(244,239,227,.25)}
+  .hero .facts span{color:#f4efe3}
+  .hero .facts i{background:#d8b45a;color:#0f2e2a}
+  @media (max-width:980px){
+    .desk-grid{grid-template-columns:1fr;gap:8px}
+    .desk-art .stage{height:auto;margin-top:44px}
+    .desk-art .stage::before{inset:14px -4px auto 0;height:230px}
+    .desk-art .stage::after{top:1px}
+    .desk-art .paper{position:relative;width:88%;top:0;left:0}
+    .desk-art .card{position:relative;width:100%;top:0;margin-top:-26px}
+    .desk-stamp{top:auto;bottom:196px;right:14px}
+    .desk-slip{margin:22px auto 0}
+    .hero h1{font-size:42px}
+    .hero{padding-bottom:64px}
+  }
   .faq .final-cta{margin-top:56px}
   /* Public sample findings (2026-11-10): the sample section shows its top
      findings on the page, in the hero card's .finding idiom; the email
@@ -1169,6 +1231,8 @@ __SITE_NAV__
 
 <!-- 1. HERO: one idea, the product doing it -->
 <section class="hero">
+  <div class="desk-grid">
+  <div class="desk-pitch">
   <div class="eyebrow">TC Check &middot; contract error-checker for Texas &amp; Colorado real estate</div>
   <!-- Texas | Colorado switch (2026-10-26): same buttons and STATE_SWITCH_JS
        as /tc-check, so Colorado isn't hidden behind a fine-print link. -->
@@ -1196,6 +1260,8 @@ __SITE_NAV__
   <p class="fine" data-state="co">3 free reports, no signup, no credit card &middot; Colorado CBS1 &amp; Land + Amend/Extend and Counterproposal</p>
   <p class="fine trust-line">&#10003; Read for the report, then deleted &middot; No AI reads your contract</p>
 
+  </div><!-- /desk-pitch -->
+  <div class="desk-art">
   <!-- The hero visual IS the public sample, run live (2026-11-10): the
        card animates the check on the sample files (reading, cross-check,
        verdict), then rests on the report below. Scrap values are the
@@ -1204,6 +1270,7 @@ __SITE_NAV__
        first_screen.SAMPLE_ROWS (tests/test_site_polish.py and
        test_first_screen.py check both). No-JS: the report simply shows. -->
   <div class="stage" id="heroStage" aria-hidden="true">
+    <div class="desk-stamp">MUST FIX &middot; 12<small>REVIEW &middot; 4</small></div>
     <div class="paper" data-state="tx">
       <div class="ph"><span>Contract concerning 123 Main St</span><span>Page 1 of 12</span></div>
       <p style="font-weight:700;margin-bottom:6px">3. SALES PRICE:</p>
@@ -1258,7 +1325,15 @@ __SITE_NAV__
       <button type="button" class="replay" id="heroReplay" hidden aria-hidden="true" tabindex="-1">&#8635; Replay the check</button>
       <div class="scan-note">Public sample with planted mistakes &middot; a live run of the same checks &middot; your file is read, then deleted</div>
     </div><!-- /heroReportCard -->
+  </div><!-- /stage -->
+  <div class="desk-slip">
+    <h3>DEADLINE SHEET &mdash; FROM THE CONTRACT AS WRITTEN</h3>
+    <div class="row"><span>Earnest money + option fee due</span><span class="d">Fri, Nov 13</span><span class="p">PAR. 5A</span></div>
+    <div class="row"><span>Option period ends, 5:00 PM</span><span class="d">Tue, Nov 17</span><span class="p">PAR. 5B</span></div>
+    <div class="row"><span>Closing, on or before</span><span class="d">Thu, Dec 10</span><span class="p">PAR. 9A</span></div>
   </div>
+  </div><!-- /desk-art -->
+  </div><!-- /desk-grid -->
   <div class="proofbar">
     <div class="facts facts4">
       <span><i>&#10003;</i>5 forms checked: 4 TREC + Colorado CBS1</span>
