@@ -1,22 +1,20 @@
-"""Homepage Deal Notepad demo (2026-11-11; pop-up + download removed
-2026-11-11): the homepage section runs the in-page parser on the
-sample note and shows the product's workflow (action items,
-reminders, draft + TC Check) computed client-side from that parse.
-The demo presents inside an app-window frame with a desk block whose
-Install button is the shared PWA flow (PWA_JS drives #txoInstall by
-id, exactly as on the dashboard — no homepage-specific install JS).
+"""Homepage Deal Notepad demo — REMOVED from the homepage 2026-11-22
+at Baptiste's direction. The section (interactive demo, app window,
+desk block with the desktop downloads and the PWA Install button) no
+longer renders on "/". The notepad product itself stays live in the
+member dashboard (/notepad); the /pricing page still names it. These
+tests assert the homepage removal so the section does not creep back,
+and keep the NOTEPAD_JS purity checks: the demo script remains in
+app.py (unused by the homepage now) and must still contain no network
+primitives and no reference to the member /notepad endpoints.
 
-The floating pop-up demo (npdPill / npdPanel) and the section's
-"Download notes + Deal Sheet" button were removed at Baptiste's
-direction — the downloadable desktop app replaces the pop-up
-concept, and these tests now assert their absence so neither creeps
-back. The demo still performs no network calls at all, so it can
-never POST to the member /notepad endpoints.
+History: the section shipped 2026-11-11; the floating pop-up demo and
+the section download button were removed the same day; the whole
+section was removed 2026-11-22.
 
     python3 -m unittest tests.test_homepage_popup
 """
 import os
-import re
 import tempfile
 import unittest
 
@@ -45,24 +43,26 @@ def _home_html():
     return resp.get_data(as_text=True)
 
 
-def _section_segment(html):
-    """The notepad section markup: from its comment banner up to the
-    Deadline Autopilot section that follows it (the WHAT IT CATCHES
-    section that used to sit between them was deleted 2026-11-12; the
-    pop-up demo root that used to sit between them is also gone)."""
-    start = html.index("<!-- 4a2. NOTEPAD:")
-    end = html.index("<!-- 2c. DEADLINE AUTOPILOT", start)
-    return html[start:end]
-
-
-class DemoRemoved(unittest.TestCase):
-    """The pop-up demo and the homepage download buttons are gone."""
+class SectionRemoved(unittest.TestCase):
+    """The homepage carries no notepad section, card, or demo."""
 
     @classmethod
     def setUpClass(cls):
         cls.html = _home_html()
-        cls.sec = _section_segment(cls.html)
-        cls.js = app_module.NOTEPAD_JS
+
+    def test_no_notepad_section_markup(self):
+        for marker in ('<section class="notepad"', 'id="notepad"',
+                       "<!-- 4a2. NOTEPAD:", 'id="npNotes"', 'id="npRun"',
+                       'id="npRows"', 'id="npWorkflow"', 'id="npDraft"',
+                       'class="np-app"', "Take the notepad to your desk.",
+                       "Your deal notes,", "home_tools_notepad"):
+            self.assertNotIn(marker, self.html, marker)
+
+    def test_no_desktop_downloads_on_homepage(self):
+        self.assertNotIn("TxtAnOffer.Notepad_0.1.1_x64-setup.exe", self.html)
+        self.assertNotIn("TxtAnOffer.Notepad_0.1.1_aarch64.dmg", self.html)
+        self.assertNotIn('data-evt="desk_download_windows"', self.html)
+        self.assertNotIn('data-evt="desk_download_mac"', self.html)
 
     def test_no_popup_markup_on_homepage(self):
         for marker in ('id="npdPill"', 'id="npdPanel"', 'id="npdClose"',
@@ -74,170 +74,17 @@ class DemoRemoved(unittest.TestCase):
     def test_no_popup_footer_copy(self):
         self.assertNotIn(POPUP_FOOTER, self.html)
 
-    def test_no_section_download_button(self):
-        self.assertNotIn('id="npDownload"', self.sec)
-        self.assertNotIn("Download notes + Deal Sheet", self.html)
-        self.assertNotIn("np-dl", self.sec)
-
-    def test_notepad_js_has_no_popup_or_download_leftovers(self):
-        self.assertNotIn("npd", self.js)
-        self.assertNotIn("npDownload", self.js)
-        self.assertNotIn("downloadText", self.js)
-        self.assertNotIn("docText", self.js)
-        self.assertNotIn("buildDoc", self.js)
-        self.assertNotIn("Blob", self.js)
-
-    def test_section_still_offers_the_demo(self):
-        # What stays: the editable sample note, Clean it up, the rows.
-        self.assertIn('id="npNotes"', self.sec)
-        self.assertIn("Elm Creek Dr house, Austin.", self.sec)
-        self.assertIn('id="npRun"', self.sec)
-        self.assertIn("Clean it up", self.sec)
-        self.assertIn('id="npRows"', self.sec)
-        for key in ("property", "buyers", "price", "earnest", "option",
-                    "closing", "financing", "credit", "inclusions",
-                    "survey"):
-            self.assertIn('data-np-row="%s"' % key, self.sec,
-                          "section row missing: %s" % key)
+    def test_desk_strip_is_two_tools(self):
+        self.assertIn("One desk, two tools", self.html)
+        self.assertIn("<h3>TC Check</h3>", self.html)
+        self.assertIn("<h3>Text an Offer</h3>", self.html)
+        self.assertNotIn("<h3>Deal Notepad</h3>", self.html)
 
 
-class WorkflowMarkup(unittest.TestCase):
-    """The homepage demo shows the product's workflow (action items,
-    reminders, draft + TC Check), populated client-side from the same
-    parse. The containers render empty/hidden in the static HTML; the
-    generators live in NOTEPAD_JS."""
-
-    @classmethod
-    def setUpClass(cls):
-        cls.html = _home_html()
-        cls.sec = _section_segment(cls.html)
-        cls.js = app_module.NOTEPAD_JS
-
-    def test_section_workflow_containers(self):
-        self.assertIn('id="npWorkflow" hidden', self.sec)
-        self.assertIn('id="npActions"', self.sec)
-        self.assertIn('id="npReminders"', self.sec)
-        self.assertIn("Counted from the contract once it is signed.", self.sec)
-        self.assertIn('id="npDraft"', self.sec)
-        self.assertIn("Create draft", self.sec)
-        self.assertIn('id="npDraftOut" hidden', self.sec)
-        self.assertIn('id="npDraftText"', self.sec)
-        self.assertIn('id="npDraftReply"', self.sec)
-        self.assertIn("You text to (833) 897-0333", self.sec)
-        self.assertIn("Sample flow. In the product, the draft is a real "
-                      "filled PDF and the check runs on it.", self.sec)
-
-    def test_workflow_generators_in_js(self):
-        for name in ("buildActions", "buildReminders", "buildDraftText",
-                     "buildDraftReply", "closingLine", "renderWorkflow",
-                     "fillList", "showDraft"):
-            self.assertIn("function " + name, self.js, name)
-        # The honest strings the generators must be able to produce.
-        self.assertIn("Confirm ", self.js)
-        self.assertIn("Deliver earnest money to the escrow agent", self.js)
-        self.assertIn("Collect the HOA documents", self.js)
-        self.assertIn("Earnest money due", self.js)
-        self.assertIn("Option period ends", self.js)
-        self.assertIn("No closing date in your notes yet", self.js)
-        self.assertIn("TC Check on this draft: 2 must-fix: Price Math, "
-                      "Earnest Money; 1 to review.", self.js)
-        self.assertIn("Draft ready: TREC 20-19 for ", self.js)
-
-
-class AppWindowAndDesk(unittest.TestCase):
-    """The section presents as one app window (chrome bar + gray app
-    backdrop + the hero card's shadow), and closes with the desk
-    block: the PWA Install button (same #txoInstall ids PWA_JS drives
-    on the dashboard) and the honest packaging line. There are NO
-    Windows/Mac download buttons — no installer files exist yet."""
-
-    @classmethod
-    def setUpClass(cls):
-        cls.html = _home_html()
-        cls.sec = _section_segment(cls.html)
-
-    def test_window_chrome_markup(self):
-        self.assertIn('class="np-app"', self.sec)
-        self.assertIn('class="np-chrome"', self.sec)
-        self.assertIn('class="np-dots"', self.sec)
-        self.assertIn('class="np-chrome-title">TxtAnOffer Notepad<', self.sec)
-        self.assertIn('class="np-chrome-side">Deal Sheet<', self.sec)
-        self.assertIn('class="np-app-body"', self.sec)
-        # The chrome bar sits above the demo it frames.
-        self.assertLess(self.sec.index('class="np-chrome"'),
-                        self.sec.index('id="npNotes"'))
-
-    def test_frame_wraps_demo_and_workflow(self):
-        self.assertLess(self.sec.index('class="np-app"'),
-                        self.sec.index('id="npRows"'))
-        self.assertLess(self.sec.index('id="npWorkflow"'),
-                        self.sec.index("Take the notepad to your desk."))
-        # The honest closing line stays, verbatim, below the frame.
-        self.assertIn("In the product, the notepad lives in your dashboard "
-                      "on the Agent plan. Your notes are saved so the deal "
-                      "stays in one place. Contract files are still "
-                      "checked, then deleted.", self.sec)
-
-    def test_desk_block_copy(self):
-        self.assertIn("Take the notepad to your desk.", self.sec)
-        self.assertIn("The Notepad as its own app on your computer: parked "
-                      "beside your other tools, one hotkey away, ready "
-                      "when a call comes in.", self.sec)
-        self.assertNotIn("in packaging", self.sec)
-
-    def test_desk_install_controls_use_the_shared_pwa_ids(self):
-        # PWA_JS (already included on the homepage) drives this block
-        # and fires pwa_install_accepted on acceptance — the same ids
-        # as the dashboard block, and only ONE set per page.
-        self.assertEqual(self.html.count('id="txoInstall"'), 1)
-        self.assertEqual(self.html.count('id="txoInstallBtn"'), 1)
-        self.assertEqual(self.html.count('id="txoInstallHint"'), 1)
-        self.assertIn('id="txoInstallBtn">Install the app<', self.sec)
-        self.assertIn("Add to Home Screen", self.sec)
-
-    def test_desk_install_block_is_always_visible(self):
-        # The wrapper must not start hidden: no display:none on the
-        # #txoInstall div. The button renders on page load; a click
-        # with no native prompt available reveals manual instructions
-        # (the fallback text lives in PWA_JS) instead of vanishing.
-        m = re.search(r'<div[^>]*id="txoInstall"[^>]*>', self.html)
-        self.assertIsNotNone(m)
-        self.assertNotIn("display:none", m.group(0))
-        self.assertNotIn("display: none", m.group(0))
-        self.assertIn('open your browser menu and choose "Install app"',
-                      app_module.PWA_JS)
-
-    def test_desktop_download_buttons_live(self):
-        # The desktop v0.1.1 release is public, so the desk block now
-        # links the real installers, Windows first, each click tracked
-        # with its own registered engagement type, plus the fine print
-        # and a link to the release page for Linux / all versions.
-        win = ("https://github.com/phaneljean/txtanoffer-notepad/releases/"
-               "download/v0.1.1/TxtAnOffer.Notepad_0.1.1_x64-setup.exe")
-        mac = ("https://github.com/phaneljean/txtanoffer-notepad/releases/"
-               "download/v0.1.1/TxtAnOffer.Notepad_0.1.1_aarch64.dmg")
-        self.assertIn(win, self.sec)
-        self.assertIn(mac, self.sec)
-        self.assertLess(self.sec.index(win), self.sec.index(mac))
-        self.assertIn("Download for Windows", self.sec)
-        self.assertIn("Download for Mac", self.sec)
-        self.assertIn('data-evt="desk_download_windows"', self.sec)
-        self.assertIn('data-evt="desk_download_mac"', self.sec)
-        self.assertIn("Free to download. Mac version is for Apple "
-                      "Silicon Macs.", self.sec)
-        self.assertIn("https://github.com/phaneljean/txtanoffer-notepad/"
-                      "releases/tag/v0.1.0", self.sec)
-        self.assertIn(">all downloads<", self.sec)
-        self.assertIn("Or keep it in your browser:", self.sec)
-
-
-class DemoNeverSaves(unittest.TestCase):
-    """The demo must not perform any network save. The member widget
-    POSTs to the signed /notepad endpoints; the demo script (NOTEPAD_JS)
-    is checked at the source level for the strongest form of that rule:
-    it contains no fetch(, no XMLHttpRequest, and no sendBeacon at all,
-    and never references a /notepad path — the only outbound call it can
-    make is the pre-existing window.taEvt engagement ping on parse."""
+class DemoScriptPurity(unittest.TestCase):
+    """NOTEPAD_JS stays in app.py (the member product's demo logic is
+    untouched); it must still perform no network calls and never
+    reference the member /notepad endpoints."""
 
     def test_notepad_js_has_no_network_primitives(self):
         js = app_module.NOTEPAD_JS
@@ -247,6 +94,12 @@ class DemoNeverSaves(unittest.TestCase):
 
     def test_notepad_js_never_references_member_notepad_endpoints(self):
         self.assertNotIn("/notepad", app_module.NOTEPAD_JS)
+
+    def test_notepad_js_has_no_popup_or_download_leftovers(self):
+        js = app_module.NOTEPAD_JS
+        self.assertNotIn("npd", js)
+        self.assertNotIn("npDownload", js)
+        self.assertNotIn("downloadText", js)
 
 
 if __name__ == "__main__":
